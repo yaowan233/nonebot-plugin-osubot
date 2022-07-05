@@ -24,7 +24,7 @@ _✨ NoneBot osubot ✨_
 
 ## 📖 介绍
 
-本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了一些源码并修改了一些bug使之更易于使用 
+本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用 
 
 ## 💿 安装
 
