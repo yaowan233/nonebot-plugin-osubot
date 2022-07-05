@@ -24,7 +24,7 @@ _✨ NoneBot osubot ✨_
 
 ## 📖 介绍
 
-Work in progress(WIP)
+本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了一些源码并修改了一些bug使之更易于使用 
 
 ## 💿 安装
 
@@ -80,19 +80,67 @@ Work in progress(WIP)
 </details>
 
 ## ⚙️ 配置
+你需要至[OSU个人设置](https://osu.ppy.sh/home/account/edit)申请新的OAuth应用，然后将得到的客户端ID与客户端密钥填入nonebot2 项目的`.env`文件中
 
-在 nonebot2 项目的`.env`文件中添加下表中的必填配置
-
+配置说明
 | 配置项 | 必填 | 默认值 | 说明 |
 |:-----:|:----:|:----:|:----:|
-| 配置项1 | 是 | 无 | 配置说明 |
-| 配置项2 | 否 | 无 | 配置说明 |
+| OSU_CLIENT | 是 | 无 | 客户端ID |
+| OSU_KEY | 是 | 无 | 客户端密钥 |
 
 ## 🎉 使用
 ### 指令表
-| 指令 | 权限 | 需要@ | 范围 | 说明 |
-|:-----:|:----:|:----:|:----:|:----:|
-| 指令1 | 主人 | 否 | 私聊 |配置说明 |
-| 指令2 | 群员 | 是 | 群聊 |配置说明 |
-### 效果图
-如果有效果图的话
+| 指令    | 功能                 | 可选参数                           | 说明                                 |
+| :------ | :------------------- | :--------------------------------- | :----------------------------------- |
+| osuhelp | 查看指令大全         |                                    |                                      |
+| 更新OAuth| 更新token           |                                    |                                      |
+| info    | 查询信息             | 无                                 | 查询自己                             |
+|         |                      | [user]                             | 查询TA人                             |
+|         |                      | :[mode]                            | 查询自己其它模式，`:`为触发词        |
+|         |                      | [user] :[mode]                     | 查询TA人其它模式                     |
+| bind    | 绑定                 | [user]                             | 绑定用户名                           |
+| unbind  | 解绑                 | 无                                 |                                      |
+| update  | 更改或更新           | mode [mode]                        | 更改模式                             |
+| recent  | 查询最近游玩记录     | 无                                 | 查询自己最近的游玩记录               |
+|         |                      | [user]                             | 查询TA人最近的游玩记录               |
+|         |                      | :[mode]                            | 查询自己最近游玩其它模式记录         |
+|         |                      | [user] :[mode]                     | 查询TA人最近游玩其它模式记录         |
+| score   | 查询成绩             | [mapid]                            | 查询该地图成绩                       |
+|         |                      | [mapid] +[mods]                    | 查询该地图附加mods成绩               |
+|         |                      | [mapid] :[mode]                    | 查询该地图其它模式成绩               |
+|         |                      | [mapid] :[mode] +[mods]            | 查询该地图其它模式加mods的成绩       |
+|         |                      | [user] [mapid]                     | 查询TA人该地图成绩                   |
+|         |                      | [user] [mapid] :[mode]             | 查询TA人该地图其它模式成绩           |
+|         |                      | [user] [mapid] +[mods]             | 查询TA人该地图加mods的成绩           |
+|         |                      | [user] [mapid] :[mode] +[mods]     | 查询TA人该地图其它模式加mods的成绩   |
+| bp      | 查询bp榜成绩         | [num]                              | 查询bp成绩                           |
+|         |                      | [num] +[mods]                      | 查询bp附加mods成绩                   |
+|         |                      | [num] :[mode]                      | 查询其他模式的bp成绩                 |
+|         |                      | [num] :[mode] +[mods]              | 查询其他模式加mods的bp成绩           |
+|         |                      | [user] [num]                       | 查询TA人bp成绩                       |
+|         |                      | [user] [num] +[mods]               | 查询TA人bp附加mods成绩               |
+|         |                      | [user] [num] :[mode]               | 查询TA人其他模式bp成绩               |
+|         |                      | [user] [num] :[mode] +[mods]       | 查询TA人其他模式加mods的bp成绩       |
+| pfm     | 查询bp榜指定范围成绩 | [min]-[max]                        | 查询bp范围内成绩，最多10个           |
+|         |                      | [min]-[max] :[mode]                | 查询其它模式bp范围内成绩             |
+|         |                      | [min]-[max] +[mods]                | 查询bp范围内加mods的成绩             |
+|         |                      | [min]-[max] :[mode] +[mods]        | 查询其它模式bp范围内加mods的成绩     |
+|         |                      | [user] [min]-[max]                 | 查询TA人bp，最多10个                 |
+|         |                      | [user] [min]-[max] :[mode]         | 查询TA人其它模式bp                   |
+|         |                      | [user] [min]-[max] +[mods]         | 查询TA人bp                           |
+|         |                      | [user] [min]-[max] :[mode] +[mods] | 查询TA人其它模式bp范围内加mods的成绩 |
+| tbp     | 查询当天新增bp成绩   | 无                                 | 查询自己当天新增bp成绩               |
+|         |                      | [user]                             | 查询TA人当天新增bp成绩               |
+|         |                      | :[mode]                            | 查询自己其它模式当天新增bp成绩       |
+|         |                      | [user] :[mode]                     | 查询TA人其它模式当天新增bp成绩       |
+| map     | 查询地图信息         | [mapid]                            | 查询地图信息                         |
+|         |                      | [mapid] +[mods]                    | 查询地图加mod的信息，仅计算PP        |
+| getbg   | 提取背景             | [mapid]                            | 提取地图背景                         |
+| bmap    | 查询图组信息         | [setid]                            | 查询图组信息                         |
+|         |                      | -b [mapid]                         | 使用地图id查询图组信息               |
+| osudl   | 下载地图上传到群     | [setid]                            | 下载地图，`setid`为图组id，非单图id  |
+
+*`[]`内为需要填的参数
+
+*`mode`：0-3分别为std，taiko，ctb，mania
+
