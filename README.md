@@ -6,16 +6,16 @@
 
 <div align="center">
 
-# nonebot-plugin-example
+# nonebot-plugin-osubot
 
-_✨ NoneBot 插件简单描述 ✨_
+_✨ NoneBot osubot ✨_
 
 
 <a href="./LICENSE">
-    <img src="https://img.shields.io/github/license/owner/nonebot-plugin-example.svg" alt="license">
+    <img src="https://img.shields.io/github/license/yaowan233/nonebot-plugin-osubot.svg" alt="license">
 </a>
-<a href="https://pypi.python.org/pypi/nonebot-plugin-example">
-    <img src="https://img.shields.io/pypi/v/nonebot-plugin-example.svg" alt="pypi">
+<a href="https://pypi.python.org/pypi/nonebot-plugin-osubot">
+    <img src="https://img.shields.io/pypi/v/nonebot-plugin-osubot.svg" alt="pypi">
 </a>
 <img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="python">
 
