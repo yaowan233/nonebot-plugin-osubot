@@ -1,4 +1,4 @@
-from typing import Union, Type
+from typing import Union
 import aiohttp
 import traceback
 from nonebot.log import logger
@@ -35,7 +35,7 @@ async def renew_token():
 
 
 async def osu_api(project: str, uid: Union[int, str] = 0, mode: str = 'osu', map_id: int = 0, isint: bool = False) -> \
-        Union[str, dict, Type[Exception], dict]:
+        Union[str, dict]:
     try:
         if uid:
             if not isint:
@@ -65,13 +65,13 @@ async def osu_api(project: str, uid: Union[int, str] = 0, mode: str = 'osu', map
         return {}
 
 
-async def sayo_api(setid: int) -> Union[dict, bool]:
+async def sayo_api(setid: int) -> dict:
     try:
         url = f'{sayoapi}/v2/beatmapinfo?0={setid}'
         return await api_info('mapinfo', url)
     except Exception as e:
         logger.error(e)
-        return False
+        return {}
 
 
 async def pp_api(mode: int, map_id: int, acc: float = 0, combo: int = 0, perfect: int = 0, good: int = 0, bad: int = 0,
@@ -150,7 +150,7 @@ async def get_user_info(url: str) -> Union[dict, str]:
         return f'Error: {type(e)}'
 
 
-async def api_info(project: str, url: str) -> Union[dict, str, Type[Exception]]:
+async def api_info(project: str, url: str) -> Union[dict, str]:
     try:
         if project == 'mapinfo' or project == 'PPCalc':
             headers = {

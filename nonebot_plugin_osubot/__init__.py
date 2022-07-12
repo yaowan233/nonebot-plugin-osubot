@@ -237,9 +237,9 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
         return
     if not setid.isdigit():
         await osudl.finish('请输入正确的地图ID', at_sender=True)
-    file = await map_downloaded(setid, True)
-    await bot.upload_group_file(group_id=gid, file=file[0], name=file[1])
-    os.remove(file[0])
+    map_file = await map_downloaded(setid, True)
+    await bot.upload_group_file(group_id=gid, file=map_file[0], name=map_file[1])
+    os.remove(map_file[0])
 
 
 bind = on_command('bind', priority=11, block=True)
