@@ -1,18 +1,29 @@
 import asyncio
 from asyncio.tasks import Task
-from typing import List
 
 from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent
 from nonebot.internal.params import Depends
 from nonebot.params import T_State
 from nonebot.params import CommandArg
 from nonebot import on_command, on_fullmatch
+from nonebot.plugin import PluginMetadata
+
 from nonebot_plugin_apscheduler import scheduler
 
 from .draw import *
-from .file import MapDownload
+from .file import map_downloaded
 from .sql import *
 
+__plugin_meta__ = PluginMetadata(
+    name="OSUBot",
+    description="OSU查分插件",
+    usage="使用/osuhelp查看使用帮助",
+    extra={
+        "unique_name": "osubot",
+        "author": "yaowan233 <572473053@qq.com>",
+        "version": "0.1.1",
+    },
+)
 help_img = os.path.join(os.path.dirname(__file__), 'osufile', 'help.png')
 
 GM = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
@@ -33,6 +44,7 @@ def split_msg():
         user = user_data[0]
         mode = str(user_data[2])
         mods = []
+        isint = True
         arg = msg.extract_plain_text().strip()
         mode_index = max(arg.find(':'), arg.find('：'))
         mods_index = arg.find('+')
@@ -57,6 +69,7 @@ def split_msg():
 
         # 分出user和参数
         if para.find(' ') > 0:
+            isint = False
             user = para[:para.rfind(' ')]
             para = para[para.rfind(' ') + 1:]
         if not mode.isdigit() and (int(mode) < 0 or int(mode) > 3):
@@ -66,6 +79,7 @@ def split_msg():
         state['user'] = user
         state['mode'] = int(mode)
         state['mods'] = mods
+        state['isint'] = isint
     return Depends(dependency)
 
 
@@ -78,7 +92,7 @@ async def _info(state: T_State):
         await info.finish(state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_info(user, GM[mode], True)
+    data = await draw_info(user, GM[mode], state['isint'])
     await info.finish(data, at_sender=True)
 
 
@@ -91,7 +105,7 @@ async def _recent(state: T_State):
         await info.finish(state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('recent', user, GM[mode], True)
+    data = await draw_score('recent', user, GM[mode], [], isint=state['isint'])
     await recent.finish(data, at_sender=True)
 
 
@@ -106,7 +120,7 @@ async def _score(state: T_State):
     mode = state['mode']
     mods = state['mods']
     map_id = state['para']
-    data = await draw_score('score', user, GM[mode], mapid=map_id, mods=mods, isint=True)
+    data = await draw_score('score', user, GM[mode], mapid=map_id, mods=mods, isint=state['isint'])
     await score.finish(data, at_sender=True)
 
 
@@ -126,7 +140,7 @@ async def _bp(state: T_State):
     best = int(best)
     if best <= 0 or best > 100:
         await bp.finish('只允许查询bp 1-100 的成绩', at_sender=True)
-    data = await draw_score('bp', user, GM[mode], best=best, mods=mods, isint=True)
+    data = await draw_score('bp', user, GM[mode], best=best, mods=mods, isint=state['isint'])
     await bp.finish(data, at_sender=True)
 
 
@@ -148,7 +162,7 @@ async def _pfm(state: T_State):
         return
     if not 0 < low < high <= 100:
         await pfm.finish('仅支持查询bp1-100')
-    data = await best_pfm('bp', user, GM[mode], low, high, mods, True)
+    data = await best_pfm('bp', user, GM[mode], mods, low, high, state['isint'])
     await pfm.finish(data, at_sender=True)
 
 
@@ -161,7 +175,7 @@ async def _tbp(state: T_State):
         await info.finish(state['error'])
     user = state['user']
     mode = state['mode']
-    data = await best_pfm('tbp', user, GM[mode], isint=True)
+    data = await best_pfm('tbp', user, GM[mode], [], isint=state['isint'])
     await tbp.finish(data, at_sender=True)
 
 
@@ -223,7 +237,7 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
         return
     if not setid.isdigit():
         await osudl.finish('请输入正确的地图ID', at_sender=True)
-    file = await MapDownload(setid, True)
+    file = await map_downloaded(setid, True)
     await bot.upload_group_file(group_id=gid, file=file[0], name=file[1])
     os.remove(file[0])
 

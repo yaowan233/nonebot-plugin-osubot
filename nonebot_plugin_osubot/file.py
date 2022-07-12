@@ -11,10 +11,10 @@ from nonebot.log import logger
 osufile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'osufile')
 
 
-async def MapDownload(setid: Union[str, int], DL: bool = False):
+async def map_downloaded(setid: Union[str, int], dl: bool = False):
     # 判断是否存在该文件
     setid = str(setid)
-    if not DL:
+    if not dl:
         for file in os.listdir(os.path.join(osufile, 'map')):
             if setid == file:
                 if os.path.exists(os.path.join(osufile, 'map', file)):
@@ -24,13 +24,13 @@ async def MapDownload(setid: Union[str, int], DL: bool = False):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, allow_redirects=False) as req:
                 sayo = req.headers['Location']
-    except:
-        logger.error('Request Failed or Timeout')
+    except Exception as e:
+        logger.error(f'Request Failed or Timeout\n{e}')
         return
-    if DL:
-        filename = await OszFileDl(sayo, setid, True)
+    if dl:
+        filename = await osz_file_dl(sayo, setid, True)
         return os.path.join(osufile, 'map', filename), filename
-    filename = await OszFileDl(sayo, setid)
+    filename = await osz_file_dl(sayo, setid)
     filepath = os.path.join(osufile, 'map', filename)
     # 解压下载的osz文件
     myzip = zipfile.ZipFile(filepath)
@@ -44,13 +44,13 @@ async def MapDownload(setid: Union[str, int], DL: bool = False):
     return filepath[:-4]
 
 
-async def OszFileDl(sayo: str, setid: str, DL: bool = False):
+async def osz_file_dl(sayo: str, setid: str, dl: bool = False):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(sayo) as req:
                 osufilename = req.content_disposition.filename
                 logger.info(f'Start Downloading Map: {osufilename}')
-                filename = f'{setid}.osz' if not DL else osufilename
+                filename = f'{setid}.osz' if not dl else osufilename
                 chunk = await req.read()
                 open(os.path.join(osufile, 'map', filename), 'wb').write(chunk)
         logger.info(f'Map: <{osufilename}> Download Complete')
@@ -60,7 +60,7 @@ async def OszFileDl(sayo: str, setid: str, DL: bool = False):
         return
 
 
-async def OsuFileDl(mapid: int):
+async def osu_file_dl(mapid: int):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f'https://osu.ppy.sh/osu/{mapid}') as req:
