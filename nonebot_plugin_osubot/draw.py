@@ -421,7 +421,7 @@ async def draw_score(project: str,
         return '未查询到游玩记录'
     elif isinstance(score_json, str):
         return score_json
-    if project == 'recent':
+    if project == 'recent' or 'pr':
         score_info = Score(**score_json[0])
         grank = '--'
     elif project == 'bp':
