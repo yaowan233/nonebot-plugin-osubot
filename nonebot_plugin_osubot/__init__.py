@@ -108,11 +108,11 @@ async def _recent(state: T_State):
     data = await draw_score('recent', user, GM[mode], [], isint=state['isint'])
     await recent.finish(data, at_sender=True)
 
-pr = on_command("recent", aliases={'re'}, priority=11, block=True)
+pr = on_command("pr", priority=11, block=True)
 
 
 @pr.handle(parameterless=[split_msg()])
-async def _recent(state: T_State):
+async def _pr(state: T_State):
     if 'error' in state:
         await info.finish(state['error'])
     user = state['para'] if state['para'] else state['user']
