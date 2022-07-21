@@ -458,19 +458,19 @@ async def draw_score(project: str,
                               score_info.statistics.count_50,
                               score_info.statistics.count_miss,
                               score_info.mods)
-        pp = int(score_info.pp) if score_info.pp != -1 else _pp
+        pp = int(score_info.pp) if score_info.pp else _pp
     elif score_info.mode == 'taiko':
         _pp, ifpp, stars = await calc.taiko_pp(score_info.accuracy, score_info.max_combo,
                                                score_info.statistics.count_100, score_info.statistics.count_50,
                                                score_info.mods)
-        pp = int(score_info.pp) if score_info.pp != -1 else _pp
+        pp = int(score_info.pp) if score_info.pp else _pp
     elif score_info.mode == 'fruits':
         _pp, ifpp, stars = await calc.catch_pp(score_info.accuracy, score_info.max_combo,
                                                score_info.statistics.count_miss, score_info.mods)
-        pp = int(score_info.pp) if score_info.pp != -1 else _pp
+        pp = int(score_info.pp) if score_info.pp else _pp
     elif score_info.mode == 'mania':
         _pp, ifpp, stars = await calc.mania_pp(score_info.score, score_info.mods)
-        pp = int(score_info.pp) if score_info.pp != -1 else _pp
+        pp = int(score_info.pp) if score_info.pp else _pp
     else:
         raise
     # 新建图片

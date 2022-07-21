@@ -49,7 +49,7 @@ async def osu_api(project: str, uid: Union[int, str] = 0, mode: str = 'osu', map
         elif project == 'recent':
             url = f'{api}/users/{uid}/scores/{project}?mode={mode}&include_fails=1'
         elif project == 'pr':
-            url = f'{api}/users/{uid}/scores/{project}?mode={mode}'
+            url = f'{api}/users/{uid}/scores/recent?mode={mode}'
         elif project == 'score':
             if mode != 'osu':
                 url = f'{api}/beatmaps/{map_id}/scores/users/{uid}?mode={mode}'

@@ -16,7 +16,7 @@ class Statistics(Base):
 
 class Score(Base):
     id: int
-    best_id: int
+    best_id: Optional[int]
     user_id: int
     accuracy: float
     mods: List[str]
@@ -25,7 +25,7 @@ class Score(Base):
     perfect: int
     statistics: Statistics
     passed: bool
-    pp: float
+    pp: Optional[float]
     rank: str
     created_at: str
     mode: Literal['fruits', 'mania', 'osu', 'taiko']
