@@ -5,14 +5,16 @@ from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, 
 from nonebot.internal.params import Depends
 from nonebot.params import T_State
 from nonebot.params import CommandArg
-from nonebot import on_command, on_fullmatch
 from nonebot.plugin import PluginMetadata
-
-from nonebot_plugin_apscheduler import scheduler
-
+from nonebot import on_command, on_fullmatch, require
 from .draw import *
 from .file import map_downloaded
 from .sql import *
+
+require('nonebot_plugin_apscheduler')
+
+from nonebot_plugin_apscheduler import scheduler
+
 
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
