@@ -8,7 +8,7 @@ from nonebot.params import CommandArg
 from nonebot.plugin import PluginMetadata
 from nonebot import on_command, on_fullmatch, require
 from .draw import *
-from .file import map_downloaded
+from .file import map_downloaded, download_map
 from .sql import *
 
 require('nonebot_plugin_apscheduler')
@@ -26,6 +26,7 @@ __plugin_meta__ = PluginMetadata(
         "version": "0.1.1",
     },
 )
+
 help_img = os.path.join(os.path.dirname(__file__), 'osufile', 'help.png')
 
 GM = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
@@ -250,9 +251,9 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
         return
     if not setid.isdigit():
         await osudl.finish('请输入正确的地图ID', at_sender=True)
-    map_file = await map_downloaded(setid, True)
-    await bot.upload_group_file(group_id=gid, file=map_file[0], name=map_file[1])
-    os.remove(map_file[0])
+    filepath = await download_map(setid)
+    await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=filepath.name)
+    os.remove(filepath)
 
 
 bind = on_command('bind', priority=11, block=True)

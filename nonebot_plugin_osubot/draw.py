@@ -444,7 +444,7 @@ async def draw_score(project: str,
     headericon = header['cover_url']
 
     # 下载地图
-    dirpath = await map_downloaded(score_info.beatmap.beatmapset_id)
+    dirpath = await map_downloaded(str(score_info.beatmap.beatmapset_id))
     osu = await osu_file_dl(score_info.beatmap.id)
     # pp
     calc = PPCalc(FGM[score_info.mode], score_info.beatmap.id)
@@ -791,7 +791,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     mapinfo = Beatmap(**info)
     diffinfo = calc_songlen(mapinfo.total_length), mapinfo.bpm, mapinfo.count_circles, mapinfo.count_sliders
     # 获取地图
-    dirpath = await map_downloaded(mapinfo.beatmapset_id)
+    dirpath = await map_downloaded(str(mapinfo.beatmapset_id))
     osu = await osu_file_dl(mapid)
     # pp
     if mapinfo.mode == 0:
@@ -1015,7 +1015,7 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     elif isinstance(info, str):
         return info
     setid: int = info['beatmapset_id']
-    dirpath = await map_downloaded(setid)
+    dirpath = await map_downloaded(str(setid))
     osu = await osu_file_dl(mapid)
     path = re_map(get_bytes(osu))
     msg = MessageSegment.image(f'file:///{os.path.join(dirpath, path)}')

@@ -6,19 +6,22 @@ import os
 import re
 import shutil
 import zipfile
+from pathlib import Path
 from nonebot.log import logger
 
 osufile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'osufile')
+map_path = Path() / "data" / "osu" / "map"
+if not map_path.exists():
+    map_path.mkdir(parents=True, exist_ok=True)
 
 
-async def map_downloaded(setid: Union[str, int], dl: bool = False):
+async def map_downloaded(setid: str) -> str:
     # 判断是否存在该文件
-    setid = str(setid)
-    if not dl:
-        for file in os.listdir(os.path.join(osufile, 'map')):
-            if setid == file:
-                if os.path.exists(os.path.join(osufile, 'map', file)):
-                    return os.path.join(osufile, 'map', file)
+    for file in os.listdir(map_path):
+        if setid == file:
+            file_path = map_path / file
+            if os.path.exists(file_path):
+                return str(file_path)
     url = f'https://txy1.sayobot.cn/beatmaps/download/novideo/{setid}'
     try:
         async with aiohttp.ClientSession() as session:
@@ -26,38 +29,43 @@ async def map_downloaded(setid: Union[str, int], dl: bool = False):
                 sayo = req.headers['Location']
     except Exception as e:
         logger.error(f'Request Failed or Timeout\n{e}')
-        return
-    if dl:
-        filename = await osz_file_dl(sayo, setid, True)
-        return os.path.join(osufile, 'map', filename), filename
-    filename = await osz_file_dl(sayo, setid)
-    filepath = os.path.join(osufile, 'map', filename)
+    filepath = await osz_file_dl(sayo, setid)
     # 解压下载的osz文件
-    myzip = zipfile.ZipFile(filepath)
-    mystr = myzip.filename
-    print(mystr)
-    myzip.extractall(mystr[:-4])
+    myzip = zipfile.ZipFile(filepath.absolute())
+    myzip.extractall(myzip.filename[:-4])
     myzip.close()
     # 删除文件
-    removefile(filepath[:-4])
+    removefile(str(filepath)[:-4])
     os.remove(filepath)
-    return filepath[:-4]
+    return str(filepath)[:-4]
 
 
-async def osz_file_dl(sayo: str, setid: str, dl: bool = False):
+async def download_map(setid: str) -> Path:
+    url = f'https://txy1.sayobot.cn/beatmaps/download/novideo/{setid}'
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, allow_redirects=False) as req:
+                sayo = req.headers['Location']
+    except Exception as e:
+        logger.error(f'Request Failed or Timeout\n{e}')
+    filepath = await osz_file_dl(sayo, setid, True)
+    return filepath
+
+
+async def osz_file_dl(sayo: str, setid: str, dl: bool = False) -> Path:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(sayo) as req:
                 osufilename = req.content_disposition.filename
                 logger.info(f'Start Downloading Map: {osufilename}')
                 filename = f'{setid}.osz' if not dl else osufilename
+                filepath = map_path / filename
                 chunk = await req.read()
-                open(os.path.join(osufile, 'map', filename), 'wb').write(chunk)
+                open(filepath, 'wb').write(chunk)
         logger.info(f'Map: <{osufilename}> Download Complete')
-        return filename
+        return filepath
     except Exception as e:
         logger.error(f'Map: <{setid}> Download Failed Error:{e}')
-        return
 
 
 async def osu_file_dl(mapid: int):
