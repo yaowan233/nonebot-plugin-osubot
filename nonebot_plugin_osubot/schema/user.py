@@ -51,7 +51,7 @@ class UserCompact(Base):
     is_deleted: bool
     is_online: bool
     is_supporter: bool
-    last_visit: str
+    last_visit: Optional[str]
     profile_colour: Optional[str]
     username: str
     statistics: Optional[UserStatistics]
