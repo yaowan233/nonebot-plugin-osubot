@@ -36,8 +36,8 @@ class UserStatistics(Base):
     replays_watched_by_others: int
     total_hits: int
     total_score: int
-    global_rank: int
-    country_rank: int
+    global_rank: Optional[int]
+    country_rank: Optional[int]
     badges: Optional[List[Badge]]
 
 
