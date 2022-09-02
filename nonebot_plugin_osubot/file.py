@@ -15,13 +15,10 @@ if not map_path.exists():
     map_path.mkdir(parents=True, exist_ok=True)
 
 
-async def map_downloaded(setid: str) -> str:
+async def map_downloaded(setid: str) -> Path:
     # 判断是否存在该文件
-    for file in os.listdir(map_path):
-        if setid == file:
-            file_path = map_path / file
-            if os.path.exists(file_path):
-                return str(file_path)
+    if setid in os.listdir(map_path):
+        return map_path / setid
     url = f'https://txy1.sayobot.cn/beatmaps/download/novideo/{setid}'
     try:
         async with aiohttp.ClientSession() as session:
@@ -37,7 +34,7 @@ async def map_downloaded(setid: str) -> str:
     # 删除文件
     removefile(str(filepath)[:-4])
     os.remove(filepath)
-    return str(filepath)[:-4]
+    return map_path / setid
 
 
 async def download_map(setid: str) -> Path:

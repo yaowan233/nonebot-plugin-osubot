@@ -1018,7 +1018,7 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     dirpath = await map_downloaded(str(setid))
     osu = await osu_file_dl(mapid)
     path = re_map(get_bytes(osu))
-    msg = MessageSegment.image(f'file:///{os.path.join(dirpath, path)}')
+    msg = MessageSegment.image(dirpath / path)
     return msg
 
 

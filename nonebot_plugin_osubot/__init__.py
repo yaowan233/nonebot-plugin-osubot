@@ -336,7 +336,7 @@ async def _get_bg(msg: Message = CommandArg()):
     await getbg.finish(msg, at_sender=True)
 
 
-osu_help = on_fullmatch('osuhelp', priority=11, block=True, ignorecase=True)
+osu_help = on_command('osuhelp', priority=11, block=True)
 
 
 @osu_help.handle()
