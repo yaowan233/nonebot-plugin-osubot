@@ -163,8 +163,9 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
                 await renew_token()
                 token = cache.get('token')
             headers = {'Authorization': f'Bearer {token}'}
+        conn = aiohttp.TCPConnector(verify_ssl=False)  # 防止ssl报错
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as req:
+            async with session.get(url, headers=headers, ssl=False) as req:
                 if req.status == 404:
                     if project == 'info' or project == 'bind':
                         return '未找到该玩家，请确认玩家ID'
