@@ -69,7 +69,8 @@ def split_msg():
                 mode = arg[mode_index + 1: mods_index]
                 mods = mods2list(arg[mods_index + 1:].strip())
             para = arg[:index].strip()
-
+        if not para.isdigit():
+            isint = False
         # 分出user和参数
         if para.find(' ') > 0:
             isint = False
