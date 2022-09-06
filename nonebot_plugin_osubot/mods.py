@@ -1,42 +1,40 @@
 from typing import List
 from .schema import Score
 
-default = {
-    '0': 'NO',
-    '1': 'NF',
-    '2': 'EZ',
-    '4': 'TD',
-    '8': 'HD',
-    '16': 'HR',
-    '32': 'SD',
-    '64': 'DT',
-    '128': 'RX',
-    '256': 'HT',
-    '576': 'NC',
-    '1024': 'FL',
-    '2048': 'AT',
-    '4096': 'SO',
-    '8192': 'RX2',
-    '16384': 'PF',
-    '32768': '4K',
-    '65536': '5K',
-    '131072': '6K',
-    '262144': '7K',
-    '524288': '8K',
-    '1048576': 'FI',
-    '2097152': 'RD',
-    '4194304': 'Cinema',
-    '8388608': 'TG',
-    '16777216': '9K',
-    '33554432': 'KC',
-    '67108864': '1K',
-    '134217728': '3K',
-    '268435456': '2K',
-    '536870912': 'V2',
-    '1073741824': 'MR',
+mods_dic = {
+    'NO': 0,
+    'NF': 1 << 0,
+    'EZ': 1 << 1,
+    'TD': 1 << 2,
+    'HD': 1 << 3,
+    'HR': 1 << 4,
+    'SD': 1 << 5,
+    'DT': 1 << 6,
+    'RX': 1 << 7,
+    'HT': 1 << 8,
+    'NC': 1 << 9,
+    'FL': 1 << 10,
+    'AT': 1 << 11,
+    'SO': 1 << 12,
+    'RX2': 1 << 13,
+    'PF': 1 << 14,
+    '4K': 1 << 15,
+    '5K': 1 << 16,
+    '6K': 1 << 17,
+    '7K': 1 << 18,
+    '8K': 1 << 19,
+    'FI': 1 << 20,
+    'RD': 1 << 21,
+    'Cinema': 1 << 22,
+    'TG': 1 << 23,
+    '9K': 1 << 24,
+    'KC': 1 << 25,
+    '1K': 1 << 26,
+    '3K': 1 << 27,
+    '2K': 1 << 28,
+    'V2': 1 << 29,
+    'MR': 1 << 30
 }
-
-new_mods = {value: key for key, value in default.items()}
 
 
 def get_mods_list(score_ls: List[Score], mods: List[str]) -> List[int]:
@@ -44,18 +42,13 @@ def get_mods_list(score_ls: List[Score], mods: List[str]) -> List[int]:
         return list(range(len(score_ls)))
     mods_index_ls = []
     for i, score in enumerate(score_ls):
-        if score.mods and validate_mods(score, mods):
+        if score.mods and calc_mods(score.mods) == calc_mods(mods):
             mods_index_ls.append(i)
     return mods_index_ls
 
 
 def calc_mods(mods: List[str]) -> int:
     num = 0
-    for i in mods:
-        mod_num = int(new_mods[str(i.upper())])
-        num += mod_num
+    for mod in mods:
+        num ^= mods_dic[mod.upper()]
     return num
-
-
-def validate_mods(score: Score, mods: List[str]) -> bool:
-    return calc_mods(score.mods) == calc_mods(mods)

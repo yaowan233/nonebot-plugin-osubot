@@ -34,16 +34,15 @@ async def renew_token():
                 logger.error(f'更新OSU token出错 错误{req.status}')
 
 
-async def osu_api(project: str, uid: Union[int, str] = 0, mode: str = 'osu', map_id: int = 0, isint: bool = False) -> \
+async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0) -> \
         Union[str, dict]:
     try:
-        if uid:
-            if not isint:
-                info = await get_user_info(f'{api}/users/{uid}')
-                if isinstance(info, str):
-                    return info
-                else:
-                    uid = info['id']
+        if uid and not str(uid).isdigit():
+            info = await get_user_info(f'{api}/users/{uid}')
+            if isinstance(info, str):
+                return info
+            else:
+                uid = info['id']
         if project == 'info' or project == 'bind' or project == 'update':
             url = f'{api}/users/{uid}/{mode}'
         elif project == 'recent':
@@ -163,7 +162,6 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
                 await renew_token()
                 token = cache.get('token')
             headers = {'Authorization': f'Bearer {token}'}
-        conn = aiohttp.TCPConnector(verify_ssl=False)  # 防止ssl报错
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers, ssl=False) as req:
                 if req.status == 404:

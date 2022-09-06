@@ -91,7 +91,7 @@ class UserSQL:
     def insert_user(self, qqid, uid: int, name: str):
         try:
             conn = self.conn()
-            conn.execute(f'INSERT INTO USER VALUES (NULL, {qqid}, {uid}, "{name}", 0)')
+            conn.execute(f'INSERT INTO USER VALUES (NULL, {qqid}, {uid}, {name}, 0)')
             conn.commit()
             return True
         except Exception as e:
@@ -119,7 +119,7 @@ class UserSQL:
             logger.error(e)
             return False
 
-    def update_info(self, uid: int, c_ranked: int, g_ranked: int, pp: int, acc: float, pc: int, count: int, mode: int):
+    def update_info(self, uid, c_ranked: int, g_ranked: int, pp: int, acc: float, pc: int, count: int, mode: int):
         try:
             conn = self.conn()
             conn.execute(

@@ -6,10 +6,9 @@ from nonebot.internal.params import Depends
 from nonebot.params import T_State
 from nonebot.params import CommandArg
 from nonebot.plugin import PluginMetadata
-from nonebot import on_command, on_fullmatch, require
+from nonebot import on_command, require
 from .draw import *
-from .file import map_downloaded, download_map
-from .sql import *
+from .file import download_map
 
 require('nonebot_plugin_apscheduler')
 
@@ -27,7 +26,6 @@ __plugin_meta__ = PluginMetadata(
     },
 )
 
-help_img = os.path.join(os.path.dirname(__file__), 'osufile', 'help.png')
 
 GM = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
 GMN = {0: 'Std', 1: 'Taiko', 2: 'Ctb', 3: 'Mania'}
@@ -72,13 +70,13 @@ def split_msg():
         if not para.isdigit():
             isint = False
         # 分出user和参数
-        if para.find(' ') > 0:
-            isint = False
+        if para.find(' ') > 0 and event.raw_message.split()[0] not in ('pr', 're', 'info', 'tbp', 'recent'):
             user = para[:para.rfind(' ')]
             para = para[para.rfind(' ') + 1:]
+        elif para.find(' ') > 0 and event.raw_message.split()[0] in ('pr', 're', 'info', 'tbp', 'recent'):
+            user = para
         if not mode.isdigit() and (int(mode) < 0 or int(mode) > 3):
             state['err'] = '模式应为0-3的数字！'
-            return
         state['para'] = para.strip()
         state['user'] = user
         state['mode'] = int(mode)
@@ -96,7 +94,7 @@ async def _info(state: T_State):
         await info.finish(state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_info(user, GM[mode], state['isint'])
+    data = await draw_info(user, GM[mode])
     await info.finish(data, at_sender=True)
 
 
@@ -109,7 +107,7 @@ async def _recent(state: T_State):
         await info.finish(state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('recent', user, GM[mode], [], isint=state['isint'])
+    data = await draw_score('recent', user, GM[mode], [])
     await recent.finish(data, at_sender=True)
 
 pr = on_command("pr", priority=11, block=True)
@@ -121,7 +119,7 @@ async def _pr(state: T_State):
         await info.finish(state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('pr', user, GM[mode], [], isint=state['isint'])
+    data = await draw_score('pr', user, GM[mode], [])
     await recent.finish(data, at_sender=True)
 
 score = on_command('score', priority=11, block=True)
@@ -135,7 +133,7 @@ async def _score(state: T_State):
     mode = state['mode']
     mods = state['mods']
     map_id = state['para']
-    data = await draw_score('score', user, GM[mode], mapid=map_id, mods=mods, isint=state['isint'])
+    data = await draw_score('score', user, GM[mode], mapid=map_id, mods=mods)
     await score.finish(data, at_sender=True)
 
 
@@ -155,7 +153,7 @@ async def _bp(state: T_State):
     best = int(best)
     if best <= 0 or best > 100:
         await bp.finish('只允许查询bp 1-100 的成绩', at_sender=True)
-    data = await draw_score('bp', user, GM[mode], best=best, mods=mods, isint=state['isint'])
+    data = await draw_score('bp', user, GM[mode], best=best, mods=mods)
     await bp.finish(data, at_sender=True)
 
 
@@ -177,7 +175,7 @@ async def _pfm(state: T_State):
         return
     if not 0 < low < high <= 100:
         await pfm.finish('仅支持查询bp1-100')
-    data = await best_pfm('bp', user, GM[mode], mods, low, high, state['isint'])
+    data = await best_pfm('bp', user, GM[mode], mods, low, high)
     await pfm.finish(data, at_sender=True)
 
 
@@ -190,7 +188,7 @@ async def _tbp(state: T_State):
         await info.finish(state['error'])
     user = state['user']
     mode = state['mode']
-    data = await best_pfm('tbp', user, GM[mode], [], isint=state['isint'])
+    data = await best_pfm('tbp', user, GM[mode], [])
     await tbp.finish(data, at_sender=True)
 
 
@@ -342,7 +340,7 @@ osu_help = on_command('osuhelp', priority=11, block=True)
 
 @osu_help.handle()
 async def _help():
-    await osu_help.finish(MessageSegment.image(Path(help_img)), at_sender=True)
+    await osu_help.finish(MessageSegment.image(Path(__file__) / 'osufile' / 'help.png'), at_sender=True)
 
 
 @scheduler.scheduled_job('cron', hour='0')

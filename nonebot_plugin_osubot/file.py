@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from nonebot.log import logger
 
-osufile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'osufile')
+osufile = Path(__file__) / 'osufile'
 map_path = Path() / "data" / "osu" / "map"
 if not map_path.exists():
     map_path.mkdir(parents=True, exist_ok=True)
@@ -86,7 +86,7 @@ async def get_projectimg(url: str):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as req:
                 if req.status == 403:
-                    return os.path.join(osufile, 'work', 'mapbg.png')
+                    return osufile / 'work' / 'mapbg.png'
                 data = await req.read()
                 im = BytesIO(data)
         return im

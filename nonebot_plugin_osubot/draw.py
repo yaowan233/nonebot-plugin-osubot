@@ -11,7 +11,7 @@ from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .api import osu_api, sayo_api
 from .schema import User, Score, Beatmap, SayoBeatmap
-from .mods import get_mods_list, validate_mods
+from .mods import get_mods_list, calc_mods
 from .file import *
 from .pp import *
 from .sql import *
@@ -135,7 +135,7 @@ def wedge_acc(acc: float) -> BytesIO:
     return img
 
 
-def crop_bg(size: str, path: Union[str, BytesIO]):
+def crop_bg(size: str, path: Union[str, BytesIO, Path]):
     bg = Image.open(path).convert('RGBA')
     bg_w, bg_h = bg.size[0], bg.size[1]
     if size == 'BG':
@@ -266,8 +266,8 @@ def get_bytes(osu_file: bytes) -> TextIOWrapper:
     return TextIOWrapper(BytesIO(osu_file), 'utf-8')
 
 
-async def draw_info(uid: Union[int, str], mode: str, isint: bool) -> Union[str, MessageSegment]:
-    info_json = await osu_api('info', uid, mode, isint=isint)
+async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegment]:
+    info_json = await osu_api('info', uid, mode)
     if isinstance(info_json, str):
         return info_json
     info = User(**info_json)
@@ -414,9 +414,8 @@ async def draw_score(project: str,
                      mode: str,
                      mods: Optional[List[str]],
                      best: int = 0,
-                     mapid: int = 0,
-                     isint: bool = False) -> Union[str, MessageSegment]:
-    score_json = await osu_api(project, uid, mode, mapid, isint=isint)
+                     mapid: int = 0) -> Union[str, MessageSegment]:
+    score_json = await osu_api(project, uid, mode, mapid)
     if not score_json:
         return '未查询到游玩记录'
     elif isinstance(score_json, str):
@@ -434,13 +433,13 @@ async def draw_score(project: str,
     elif project == 'score':
         score_info = Score(**score_json['score'])
         grank = score_json['position']
-        if not validate_mods(score_info, mods):
+        if not calc_mods(score_info.mods) == calc_mods(mods):
             return '非常抱歉，暂不支持指定mods查分>_<'
     else:
         raise 'Project Error'
     map_json = await osu_api('map', map_id=score_info.beatmap.id)
     mapinfo = Beatmap(**map_json)
-    header = await osu_api('info', uid, isint=isint)
+    header = await osu_api('info', uid)
     headericon = header['cover_url']
 
     # 下载地图
@@ -745,9 +744,9 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
     return msg
 
 
-async def best_pfm(project: str, uid: Union[str, int], mode: str, mods: Optional[List],
-                   low_bound: int = 0, high_bound: int = 0, isint: bool = False) -> Union[str, MessageSegment]:
-    bp_info = await osu_api('bp', uid, mode, isint=isint)
+async def best_pfm(project: str, uid: str, mode: str, mods: Optional[List],
+                   low_bound: int = 0, high_bound: int = 0) -> Union[str, MessageSegment]:
+    bp_info = await osu_api('bp', uid, mode)
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [Score(**i) for i in bp_info]
@@ -807,7 +806,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     # BG做地图
     im = Image.new('RGBA', (1200, 600))
     cover = re_map(get_bytes(osu))
-    cover_crop = crop_bg('MB', os.path.join(dirpath, cover))
+    cover_crop = crop_bg('MB', dirpath / cover)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info
@@ -1022,13 +1021,13 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     return msg
 
 
-async def update_user_info(uid: int, update: bool = False):
+async def update_user_info(uid: str, update: bool = False):
     for mode in range(4):
         if not update:
             new = USER.get_info(uid, mode)
             if new:
                 continue
-        userinfo_dic = await osu_api('update', uid, GM[mode], isint=True)
+        userinfo_dic = await osu_api('update', uid, GM[mode])
         userinfo = User(**userinfo_dic)
         if userinfo.statistics.play_count != 0:
             if update:
