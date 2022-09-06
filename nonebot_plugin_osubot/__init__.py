@@ -22,7 +22,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.5.0",
+        "version": "0.5.1",
     },
 )
 
@@ -70,10 +70,10 @@ def split_msg():
         if not para.isdigit():
             isint = False
         # 分出user和参数
-        if para.find(' ') > 0 and event.raw_message.split()[0] not in ('pr', 're', 'info', 'tbp', 'recent'):
+        if para.find(' ') > 0 and state['_prefix']['command'][0] not in ('pr', 're', 'info', 'tbp', 'recent'):
             user = para[:para.rfind(' ')]
             para = para[para.rfind(' ') + 1:]
-        elif para.find(' ') > 0 and event.raw_message.split()[0] in ('pr', 're', 'info', 'tbp', 'recent'):
+        elif para.find(' ') > 0 and state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent'):
             user = para
         if not mode.isdigit() and (int(mode) < 0 or int(mode) > 3):
             state['err'] = '模式应为0-3的数字！'
