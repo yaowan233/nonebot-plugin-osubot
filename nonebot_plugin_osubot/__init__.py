@@ -1,4 +1,5 @@
 import asyncio
+import os
 from asyncio.tasks import Task
 
 from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent
@@ -22,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.5.1",
+        "version": "0.6.0",
     },
 )
 
@@ -340,7 +341,7 @@ osu_help = on_command('osuhelp', priority=11, block=True)
 
 @osu_help.handle()
 async def _help():
-    await osu_help.finish(MessageSegment.image(Path(__file__) / 'osufile' / 'help.png'), at_sender=True)
+    await osu_help.finish(MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'), at_sender=True)
 
 
 @scheduler.scheduled_job('cron', hour='0')

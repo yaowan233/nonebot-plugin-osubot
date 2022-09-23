@@ -1,29 +1,31 @@
 import base64
 import math
 from datetime import datetime, timedelta
+from io import BytesIO
 from time import mktime, strptime
-from typing import Optional, List
+from typing import Optional, List, Union
 from numbers import Real
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
+from nonebot import logger
 
-from .api import osu_api, sayo_api
-from .schema import User, Score, Beatmap, SayoBeatmap
+from .api import osu_api, sayo_api, pp_api
+from .schema import User, Score, Beatmap, SayoBeatmap, PP
 from .mods import get_mods_list, calc_mods
-from .file import *
-from .pp import *
-from .sql import *
+from .file import re_map, get_projectimg, map_downloaded, osu_file_dl
+from .sql import UserSQL
 
 USER = UserSQL()
-osufile = os.path.join(os.path.dirname(__file__), 'osufile')
+osufile = Path(__file__).parent / 'osufile'
 
-Torus_Regular = os.path.join(osufile, 'fonts', 'Torus Regular.otf')
-Torus_SemiBold = os.path.join(osufile, 'fonts', 'Torus SemiBold.otf')
-Meiryo_Regular = os.path.join(osufile, 'fonts', 'Meiryo Regular.ttf')
-Meiryo_SemiBold = os.path.join(osufile, 'fonts', 'Meiryo SemiBold.ttf')
-Venera = os.path.join(osufile, 'fonts', 'Venera.otf')
+Torus_Regular = osufile / 'fonts' / 'Torus Regular.otf'
+Torus_SemiBold = osufile / 'fonts' / 'Torus SemiBold.otf'
+Meiryo_Regular = osufile / 'fonts' / 'Meiryo Regular.ttf'
+Meiryo_SemiBold = osufile / 'fonts' / 'Meiryo SemiBold.ttf'
+Venera = osufile / 'fonts' / 'Venera.otf'
 
 GM = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
 GMN = {'osu': 'Std', 'taiko': 'Taiko', 'fruits': 'Ctb', 'mania': 'Mania'}
@@ -56,12 +58,12 @@ class ToBase64:
 
 class DataText:
     # L=X轴，T=Y轴，size=字体大小，fontpath=字体文件，
-    def __init__(self, length, height, size, text, path, anchor='lt'):
+    def __init__(self, length, height, size, text, path: Path, anchor='lt'):
         self.length = length
         self.height = height
         self.text = str(text)
         self.path = path
-        self.font = ImageFont.truetype(self.path, size)
+        self.font = ImageFont.truetype(str(self.path), size)
         self.anchor = anchor
 
 
@@ -223,13 +225,13 @@ def stars_diff(mode: Union[str, int], stars: float):
     elif stars < 8:
         xp = 815
     else:
-        return Image.open(os.path.join(osufile, 'work', f'{mode}_expertplus.png')).convert('RGBA')
+        return Image.open(osufile / 'work' / f'{mode}_expertplus.png').convert('RGBA')
     # 取色
     x = (stars - math.floor(stars)) * default + xp
-    color = Image.open(os.path.join(osufile, 'work', 'color.png')).load()
+    color = Image.open(osufile / 'work' / 'color.png').load()
     r, g, b = color[x, 1]
     # 打开底图
-    im = Image.open(os.path.join(osufile, 'work', f'{mode}.png')).convert('RGBA')
+    im = Image.open(osufile / 'work' / f'{mode}.png').convert('RGBA')
     xx, yy = im.size
     # 填充背景
     sm = Image.new('RGBA', im.size, (r, g, b))
@@ -243,7 +245,7 @@ def stars_diff(mode: Union[str, int], stars: float):
     return sm
 
 
-def get_modeimage(mode: int) -> str:
+def get_modeimage(mode: int) -> Path:
     if mode == 0:
         img = 'pfm_std.png'
     elif mode == 1:
@@ -252,7 +254,7 @@ def get_modeimage(mode: int) -> str:
         img = 'pfm_ctb.png'
     else:
         img = 'pfm_mania.png'
-    return os.path.join(osufile, img)
+    return osufile / img
 
 
 def calc_songlen(length: int) -> str:
@@ -260,10 +262,6 @@ def calc_songlen(length: int) -> str:
     map_len[1] = map_len[1] if map_len[1] >= 10 else f'0{map_len[1]}'
     music_len = f'{map_len[0]}:{map_len[1]}'
     return music_len
-
-
-def get_bytes(osu_file: bytes) -> TextIOWrapper:
-    return TextIOWrapper(BytesIO(osu_file), 'utf-8')
 
 
 async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegment]:
@@ -287,16 +285,16 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     # 获取头图，头像，地区，状态，supporter
     user_header = await get_projectimg(info.cover_url)
     user_icon = await get_projectimg(info.avatar_url)
-    country = os.path.join(osufile, 'flags', f'{info.country_code}.png')
-    supporter = os.path.join(osufile, 'work', 'suppoter.png')
-    exp_l = os.path.join(osufile, 'work', 'left.png')
-    exp_c = os.path.join(osufile, 'work', 'center.png')
-    exp_r = os.path.join(osufile, 'work', 'right.png')
+    country = osufile / 'flags' / f'{info.country_code}.png'
+    supporter = osufile / 'work' / 'suppoter.png'
+    exp_l = osufile / 'work' / 'left.png'
+    exp_c = osufile / 'work' / 'center.png'
+    exp_r = osufile / 'work' / 'right.png'
     # 头图
     header_img = crop_bg('HI', user_header)
     im.alpha_composite(header_img, (0, 100))
     # 底图
-    info_bg = os.path.join(osufile, 'info.png')
+    info_bg = osufile / 'info.png'
     info_img = Image.open(info_bg).convert('RGBA')
     im.alpha_composite(info_img)
     # 头像
@@ -410,7 +408,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
 
 
 async def draw_score(project: str,
-                     uid: str,
+                     uid: int,
                      mode: str,
                      mods: Optional[List[str]],
                      best: int = 0,
@@ -420,7 +418,7 @@ async def draw_score(project: str,
         return '未查询到游玩记录'
     elif isinstance(score_json, str):
         return score_json
-    if project == 'recent' or 'pr':
+    if project in ('recent', 'pr'):
         score_info = Score(**score_json[0])
         grank = '--'
     elif project == 'bp':
@@ -446,40 +444,16 @@ async def draw_score(project: str,
     dirpath = await map_downloaded(str(score_info.beatmap.beatmapset_id))
     osu = await osu_file_dl(score_info.beatmap.id)
     # pp
-    calc = PPCalc(FGM[score_info.mode], score_info.beatmap.id)
-    sspp, aim_pp, speed_pp, acc_pp, ar, od = 0, 0, 0, 0, 0, 0
-    if score_info.mode == 'osu':
-        _pp, ifpp, sspp, aim_pp, speed_pp, acc_pp, stars, ar, od = \
-            await calc.osu_pp(score_info.accuracy,
-                              score_info.max_combo,
-                              score_info.statistics.count_300,
-                              score_info.statistics.count_100,
-                              score_info.statistics.count_50,
-                              score_info.statistics.count_miss,
-                              score_info.mods)
-        pp = int(score_info.pp) if score_info.pp else _pp
-    elif score_info.mode == 'taiko':
-        _pp, ifpp, stars = await calc.taiko_pp(score_info.accuracy, score_info.max_combo,
-                                               score_info.statistics.count_100, score_info.statistics.count_50,
-                                               score_info.mods)
-        pp = int(score_info.pp) if score_info.pp else _pp
-    elif score_info.mode == 'fruits':
-        _pp, ifpp, stars = await calc.catch_pp(score_info.accuracy, score_info.max_combo,
-                                               score_info.statistics.count_miss, score_info.mods)
-        pp = int(score_info.pp) if score_info.pp else _pp
-    elif score_info.mode == 'mania':
-        _pp, ifpp, stars = await calc.mania_pp(score_info.score, score_info.mods)
-        pp = int(score_info.pp) if score_info.pp else _pp
-    else:
-        raise
+    pp_data = await pp_api(FGM[score_info.mode], score_info)
+    pp_info = PP(**pp_data)
     # 新建图片
     im = Image.new('RGBA', (1500, 800))
     # 获取cover并裁剪，高斯，降低亮度
-    cover = re_map(get_bytes(osu))
+    cover = re_map(osu)
     if cover == 'mapbg.png':
-        cover_path = os.path.join(osufile, 'work', cover)
+        cover_path = osufile / 'work' / cover
     else:
-        cover_path = os.path.join(dirpath, cover)
+        cover_path = dirpath / cover
     cover_crop = crop_bg('BG', cover_path)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(1))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
@@ -489,11 +463,11 @@ async def draw_score(project: str,
     recent_bg = Image.open(bg).convert('RGBA')
     im.alpha_composite(recent_bg)
     # 模式
-    mode_bg = stars_diff(score_info.mode, stars)
+    mode_bg = stars_diff(score_info.mode, pp_info.StarRating)
     mode_img = mode_bg.resize((30, 30))
     im.alpha_composite(mode_img, (75, 154))
     # 难度星星
-    stars_bg = stars_diff('stars', stars)
+    stars_bg = stars_diff('stars', pp_info.StarRating)
     stars_img = stars_bg.resize((23, 23))
     im.alpha_composite(stars_img, (134, 158))
     # mods
@@ -503,13 +477,13 @@ async def draw_score(project: str,
         ranking = ['X', 'S', 'A', 'B', 'C', 'D', 'F']
     if score_info.mods:
         for mods_num, s_mods in enumerate(score_info.mods):
-            mods_bg = os.path.join(osufile, 'mods', f'{s_mods}.png')
+            mods_bg = osufile / 'mods' / f'{s_mods}.png'
             mods_img = Image.open(mods_bg).convert('RGBA')
             im.alpha_composite(mods_img, (500 + 50 * mods_num, 240))
     # 成绩S-F
     rank_ok = False
     for rank_num, i in enumerate(ranking):
-        rank_img = os.path.join(osufile, 'ranking', f'ranking-{i}.png')
+        rank_img = osufile / 'ranking' / f'ranking-{i}.png'
         if rank_ok:
             rank_b = Image.open(rank_img).convert('RGBA').resize((48, 24))
             rank_new = Image.new('RGBA', rank_b.size, (0, 0, 0, 0))
@@ -540,23 +514,20 @@ async def draw_score(project: str,
     icon_img = draw_fillet(icon_bg, 15)
     im.alpha_composite(icon_img, (90, 606))
     # 地区
-    country = os.path.join(osufile, 'flags', f'{score_info.user.country_code}.png')
+    country = osufile / 'flags' / f'{score_info.user.country_code}.png'
     country_bg = Image.open(country).convert('RGBA').resize((58, 39))
     im.alpha_composite(country_bg, (195, 606))
     # 在线状态
-    status = os.path.join(osufile, 'work', 'on-line.png' if score_info.user.is_online else 'off-line.png')
+    status = osufile / 'work' / ('on-line.png' if score_info.user.is_online else 'off-line.png')
     status_bg = Image.open(status).convert('RGBA').resize((45, 45))
     im.alpha_composite(status_bg, (114, 712))
     # supporter
     if score_info.user.is_supporter:
-        supporter = os.path.join(osufile, 'work', 'suppoter.png')
+        supporter = osufile / 'work' / 'suppoter.png'
         supporter_bg = Image.open(supporter).convert('RGBA').resize((40, 40))
         im.alpha_composite(supporter_bg, (267, 606))
     # cs, ar, od, hp, stardiff
-    if score_info.mode == 'osu':
-        mapdiff = [mapinfo.cs, mapinfo.drain, od, ar, stars]
-    else:
-        mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, stars]
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, mapinfo.difficulty_rating]
     for num, i in enumerate(mapdiff):
         color = (255, 255, 255, 255)
         if num == 4:
@@ -583,7 +554,7 @@ async def draw_score(project: str,
                        Meiryo_SemiBold, anchor='lm')
     im = draw_text(im, w_title)
     # 星级
-    w_diff = DataText(162, 169, 18, stars, Torus_SemiBold, anchor='lm')
+    w_diff = DataText(162, 169, 18, f'{pp_info.StarRating:.1f}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_diff)
     # 谱面版本，mapper
     w_version = DataText(225, 169, 22, f'{mapinfo.version} | mapper by {mapinfo.beatmapset.creator}', Torus_SemiBold,
@@ -619,20 +590,19 @@ async def draw_score(project: str,
     im = draw_text(im, w_line)
     # acc,cb,pp,300,100,50,miss
     if score_info.mode == 'osu':
-        w_sspp = DataText(650, 625, 30, sspp, Torus_Regular, anchor='mm')
+        w_sspp = DataText(650, 625, 30, pp_info.sspp, Torus_Regular, anchor='mm')
         im = draw_text(im, w_sspp)
-        w_ifpp = DataText(770, 625, 30, ifpp, Torus_Regular, anchor='mm')
+        w_ifpp = DataText(770, 625, 30, pp_info.ifpp, Torus_Regular, anchor='mm')
         im = draw_text(im, w_ifpp)
-        w_pp = DataText(890, 625, 30, pp, Torus_Regular, anchor='mm')
-        w_aimpp = DataText(650, 720, 30, aim_pp, Torus_Regular, anchor='mm')
+        w_pp = DataText(890, 625, 30, pp_info.pp, Torus_Regular, anchor='mm')
+        w_aimpp = DataText(650, 720, 30, pp_info.aim, Torus_Regular, anchor='mm')
         im = draw_text(im, w_aimpp)
-        w_spdpp = DataText(770, 720, 30, speed_pp, Torus_Regular, anchor='mm')
+        w_spdpp = DataText(770, 720, 30, pp_info.speed, Torus_Regular, anchor='mm')
         im = draw_text(im, w_spdpp)
-        w_accpp = DataText(890, 720, 30, acc_pp, Torus_Regular, anchor='mm')
+        w_accpp = DataText(890, 720, 30, pp_info.accuracy, Torus_Regular, anchor='mm')
         im = draw_text(im, w_accpp)
         w_acc = DataText(1087, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
-        w_maxcb = DataText(1315, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
-                           Torus_Regular, anchor='mm')
+        w_maxcb = DataText(1315, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}', Torus_Regular, anchor='mm')
         w_300 = DataText(1030, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
         w_100 = DataText(1144, 720, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
         w_50 = DataText(1258, 720, 30, score_info.statistics.count_50, Torus_Regular, anchor='mm')
@@ -642,7 +612,7 @@ async def draw_score(project: str,
         w_acc = DataText(1050, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1202, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
                            Torus_Regular, anchor='mm')
-        w_pp = DataText(1352, 625, 30, f'{pp}/{ifpp}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1352, 625, 30, f'{pp_info.pp}/{pp_info.ifpp}', Torus_Regular, anchor='mm')
         w_300 = DataText(1050, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
         w_100 = DataText(1202, 720, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
         w_miss = DataText(1352, 720, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
@@ -650,7 +620,7 @@ async def draw_score(project: str,
         w_acc = DataText(1016, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1180, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
                            Torus_Regular, anchor='mm')
-        w_pp = DataText(1344, 625, 30, f'{pp}/{ifpp}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1344, 625, 30, f'{pp_info.pp}/{pp_info.ifpp}', Torus_Regular, anchor='mm')
         w_300 = DataText(995, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
         w_100 = DataText(1118, 720, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
         w_katu = DataText(1242, 720, 30, score_info.statistics.count_katu, Torus_Regular, anchor='mm')
@@ -659,7 +629,7 @@ async def draw_score(project: str,
     else:
         w_acc = DataText(935, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1130, 625, 30, f'{score_info.max_combo:,}', Torus_Regular, anchor='mm')
-        w_pp = DataText(1328, 625, 30, f'{pp}/{ifpp}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1328, 625, 30, f'{pp_info.pp}/{pp_info.ifpp}', Torus_Regular, anchor='mm')
         w_geki = DataText(886, 720, 30, score_info.statistics.count_geki, Torus_Regular, anchor='mm')
         im = draw_text(im, w_geki)
         w_300 = DataText(984, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
@@ -681,11 +651,11 @@ async def draw_score(project: str,
     return msg
 
 
-def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0) ->\
+def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0) -> \
         Union[str, MessageSegment]:
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
-    bp_bg = os.path.join(osufile, 'Best Performance.png')
+    bp_bg = osufile / 'Best Performance.png'
     bg_img = Image.open(bp_bg).convert('RGBA')
     im.alpha_composite(bg_img)
     f_div = Image.new('RGBA', (1500, 2), (255, 255, 255, 255)).convert('RGBA')
@@ -701,7 +671,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         # mods
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
-                mods_bg = os.path.join(osufile, 'mods', f'{s_mods}.png')
+                mods_bg = osufile / 'mods' / f'{s_mods}.png'
                 mods_img = Image.open(mods_bg).convert('RGBA')
                 im.alpha_composite(mods_img, (1000 + 50 * mods_num, 126 + h_num))
             if (bp.rank == 'X' or bp.rank == 'S') and ('HD' in bp.mods or 'FL' in bp.mods):
@@ -710,7 +680,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         rank_bp = DataText(15, 144 + h_num, 20, num + 1, Meiryo_Regular, anchor='lm')
         im = draw_text(im, rank_bp)
         # rank
-        rank_img = os.path.join(osufile, 'ranking', f'ranking-{bp.rank}.png')
+        rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
         rank_bg = Image.open(rank_img).convert('RGBA').resize((64, 32))
         im.alpha_composite(rank_bg, (45, 128 + h_num))
         # 曲名&作曲
@@ -744,7 +714,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
     return msg
 
 
-async def best_pfm(project: str, uid: str, mode: str, mods: Optional[List],
+async def best_pfm(project: str, uid: int, mode: str, mods: Optional[List],
                    low_bound: int = 0, high_bound: int = 0) -> Union[str, MessageSegment]:
     bp_info = await osu_api('bp', uid, mode)
     if isinstance(bp_info, str):
@@ -793,10 +763,13 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     dirpath = await map_downloaded(str(mapinfo.beatmapset_id))
     osu = await osu_file_dl(mapid)
     # pp
-    if mapinfo.mode == 0:
-        pp, stars, ar, od = await PPCalc(FGM[mapinfo.mode], mapid).if_pp(mods=mods)
-    else:
-        pp, stars, ar, od = await PPCalc(FGM[mapinfo.mode], mapid).if_pp(mods=mods)
+    data = {
+        'BeatmapID': mapid,
+        'Mode': FGM[mapinfo.mode],
+        'Mods': mods
+    }
+    pp = await pp_api(FGM[mapinfo.mode], None, data=data)
+    pp_info = PP(**pp)
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
         old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace('+00:00', ''), '%Y-%m-%dT%H:%M:%S')
@@ -805,23 +778,20 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
         new_time = '??-??-?? ??:??:??'
     # BG做地图
     im = Image.new('RGBA', (1200, 600))
-    cover = re_map(get_bytes(osu))
+    cover = re_map(osu)
     cover_crop = crop_bg('MB', dirpath / cover)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info
-    map_bg = os.path.join(osufile, 'beatmapinfo.png')
+    map_bg = osufile / 'beatmapinfo.png'
     mapbg = Image.open(map_bg).convert('RGBA')
     im.alpha_composite(mapbg)
     # 模式
-    mode_bg = stars_diff(mapinfo.mode, stars)
+    mode_bg = stars_diff(mapinfo.mode, pp_info.StarRating)
     mode_img = mode_bg.resize((50, 50))
     im.alpha_composite(mode_img, (50, 100))
     # cs - diff
-    if mapinfo.mode == 0:
-        mapdiff = [mapinfo.cs, mapinfo.drain, od, ar, stars]
-    else:
-        mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, stars]
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.StarRating]
     for num, i in enumerate(mapdiff):
         color = (255, 255, 255, 255)
         if num == 4:
@@ -953,7 +923,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
             stars_img = stars_bg.resize((20, 20))
             im.alpha_composite(stars_img, (50, 320 + h_num))
             # diff
-            bar_bg = os.path.join(osufile, 'work', 'bmap.png')
+            bar_bg = osufile / 'work' / 'bmap.png'
             bar_img = Image.open(bar_bg).convert('RGBA')
             im.alpha_composite(bar_img, (10, 365 + h_num))
             gc = ['CS', 'HP', 'OD', 'AR']
@@ -1016,12 +986,12 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     setid: int = info['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
     osu = await osu_file_dl(mapid)
-    path = re_map(get_bytes(osu))
+    path = re_map(osu)
     msg = MessageSegment.image(dirpath / path)
     return msg
 
 
-async def update_user_info(uid: str, update: bool = False):
+async def update_user_info(uid: int, update: bool = False):
     for mode in range(4):
         if not update:
             new = USER.get_info(uid, mode)
