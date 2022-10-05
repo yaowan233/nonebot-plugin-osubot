@@ -1,4 +1,3 @@
-import base64
 import math
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -32,28 +31,10 @@ GMN = {'osu': 'Std', 'taiko': 'Taiko', 'fruits': 'Ctb', 'mania': 'Mania'}
 FGM = {'osu': 0, 'taiko': 1, 'fruits': 2, 'mania': 3}
 
 
-class ToBase64:
-
-    def __init__(self, img: Image, fmt: Optional[str] = 'PNG'):
-        """`img : Union[str, Image] 图片`
-        `format : Optional[str] 图片类型，默认PNG`"""
-        self.img = img
-        self.format = fmt
-
-    @staticmethod
-    def _to_b64str(byt: BytesIO) -> str:
-        if isinstance(byt, BytesIO):
-            byt = byt.getvalue()
-        else:
-            byt = byt
-        base64_str = base64.b64encode(byt).decode()
-        return 'base64://' + base64_str
-
-    def image(self) -> str:
-        """`Image` 图片转 `base64` 编码"""
-        byt = BytesIO()
-        self.img.save(byt, self.format)
-        return self._to_b64str(byt)
+def image2bytesio(pic: Image):
+    byt = BytesIO()
+    pic.save(byt, "png")
+    return byt
 
 
 class DataText:
@@ -402,7 +383,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     w_name = DataText(935, 1245, 40, t_time, Torus_Regular, anchor='rt')
     im = draw_text(im, w_name)
     # 输出
-    base = ToBase64(im).image()
+    base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg
 
@@ -646,7 +627,7 @@ async def draw_score(project: str,
     im = draw_text(im, w_100)
     im = draw_text(im, w_miss)
 
-    base = ToBase64(im).image()
+    base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg
 
@@ -709,7 +690,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         div = Image.new('RGBA', (1450, 2), (46, 53, 56, 255)).convert('RGBA')
         im.alpha_composite(div, (25, 180 + h_num))
 
-    base = ToBase64(im).image()
+    base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg
 
@@ -846,7 +827,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     w_pp = DataText(320, 570, 20, f'SS PP: {pp}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_pp)
     # 输出
-    base = ToBase64(im).image()
+    base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg
 
@@ -958,7 +939,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
             w_plusnum = DataText(600, 350 + 102 * 20, 50, plusnum, Torus_SemiBold, anchor='mm')
             im = draw_text(im, w_plusnum)
 
-    base = ToBase64(im).image()
+    base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg
 
