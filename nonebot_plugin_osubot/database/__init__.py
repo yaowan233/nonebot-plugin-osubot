@@ -4,21 +4,6 @@ from pathlib import Path
 
 db = Path() / 'data' / 'osu' / 'osu.sqlite'
 
-DATABASE = {
-    "connections": {
-        'osu': {
-            "engine": "tortoise.backends.sqlite",
-            "credentials": {"file_path": db},
-        },
-    },
-    "apps": {
-        "osu": {
-            "models": ['nonebot_plugin_osubot.database.models'],
-            "default_connection": "osu",
-        }
-    },
-}
-
 
 async def connect():
     """
@@ -27,7 +12,8 @@ async def connect():
     if not db.exists():
         db.parent.mkdir(parents=True, exist_ok=True)
     try:
-        await Tortoise.init(DATABASE)
+        await Tortoise.init(db_url='sqlite://data/osu/osu.sqlite',
+                            modules={"models": ['nonebot_plugin_osubot.database.models']})
         await Tortoise.generate_schemas()
         logger.opt(colors=True).success("<u><y>[数据库]</y></u><g>连接成功</g>")
     except Exception as e:
