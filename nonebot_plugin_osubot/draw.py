@@ -9,15 +9,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
-from nonebot import logger
 
 from .api import osu_api, sayo_api, pp_api
 from .schema import User, Score, Beatmap, SayoBeatmap, PP
 from .mods import get_mods_list, calc_mods
 from .file import re_map, get_projectimg, map_downloaded, osu_file_dl
-from .sql import UserSQL
+from .database.models import UserData, InfoData
+from .utils import update_user_info, GM, GMN, FGM
 
-USER = UserSQL()
 osufile = Path(__file__).parent / 'osufile'
 
 Torus_Regular = osufile / 'fonts' / 'Torus Regular.otf'
@@ -25,10 +24,6 @@ Torus_SemiBold = osufile / 'fonts' / 'Torus SemiBold.otf'
 Meiryo_Regular = osufile / 'fonts' / 'Meiryo Regular.ttf'
 Meiryo_SemiBold = osufile / 'fonts' / 'Meiryo SemiBold.ttf'
 Venera = osufile / 'fonts' / 'Venera.otf'
-
-GM = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
-GMN = {'osu': 'Std', 'taiko': 'Taiko', 'fruits': 'Ctb', 'mania': 'Mania'}
-FGM = {'osu': 0, 'taiko': 1, 'fruits': 2, 'mania': 3}
 
 
 def image2bytesio(pic: Image):
@@ -254,9 +249,9 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     if statistics.play_count == 0:
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
-    user = USER.get_info(info.id, FGM[mode])
+    user = await InfoData.get_or_none(osu_id=info.id, osu_mode=FGM[mode])
     if user:
-        n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user
+        n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
     else:
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = statistics.country_rank, statistics.global_rank, \
                                                        statistics.pp, statistics.hit_accuracy, \
@@ -952,7 +947,7 @@ async def bindinfo(project: str, uid, qid) -> str:
         return info
     uid = info['id']
     name = info['username']
-    USER.insert_user(qid, uid, name)
+    await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=0)
     await update_user_info(uid)
     msg = f'用户 {name} 已成功绑定QQ {qid}'
     return msg
@@ -970,28 +965,3 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     path = re_map(osu)
     msg = MessageSegment.image(dirpath / path)
     return msg
-
-
-async def update_user_info(uid: int, update: bool = False):
-    for mode in range(4):
-        if not update:
-            new = USER.get_info(uid, mode)
-            if new:
-                continue
-        userinfo_dic = await osu_api('update', uid, GM[mode])
-        userinfo = User(**userinfo_dic)
-        if userinfo.statistics.play_count != 0:
-            if update:
-                USER.update_info(uid, userinfo.statistics.country_rank, userinfo.statistics.global_rank,
-                                 userinfo.statistics.pp, round(userinfo.statistics.hit_accuracy, 2),
-                                 userinfo.statistics.play_count, userinfo.statistics.total_hits, mode)
-            else:
-                USER.insert_info(uid, userinfo.statistics.country_rank, userinfo.statistics.global_rank,
-                                 userinfo.statistics.pp, round(userinfo.statistics.hit_accuracy, 2),
-                                 userinfo.statistics.play_count, userinfo.statistics.total_hits, mode)
-        else:
-            if update:
-                USER.update_info(uid, 0, 0, 0, 0, 0, 0, mode)
-            else:
-                USER.insert_info(uid, 0, 0, 0, 0, 0, 0, mode)
-        logger.info(f'玩家:[{userinfo.username}] {GM[mode]}模式 个人信息更新完毕')

@@ -1,15 +1,22 @@
 import asyncio
 import os
 from asyncio.tasks import Task
+from typing import List
+from pathlib import Path
 
-from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent
+from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment
 from nonebot.internal.params import Depends
 from nonebot.params import T_State
 from nonebot.params import CommandArg
 from nonebot.plugin import PluginMetadata
-from nonebot import on_command, require
-from .draw import *
+from nonebot.log import logger
+from nonebot import on_command, require, get_driver
+from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo, get_map_bg
 from .file import download_map
+from .utils import GM, GMN, update_user_info
+from .database.models import UserData
+from .database import connect, disconnect
+
 
 require('nonebot_plugin_apscheduler')
 
@@ -23,28 +30,33 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.6.1",
+        "version": "0.7.0",
     },
 )
 
+driver = get_driver()
 
-GM = {0: 'osu', 1: 'taiko', 2: 'fruits', 3: 'mania'}
-GMN = {0: 'Std', 1: 'Taiko', 2: 'Ctb', 3: 'Mania'}
-USER = UserSQL()
+
+@driver.on_startup
+async def startup():
+    await connect()
+
+
+driver.on_shutdown(disconnect)
 
 
 def split_msg():
-    def dependency(event: MessageEvent, state: T_State, msg: Message = CommandArg()):
+    async def dependency(event: MessageEvent, state: T_State, msg: Message = CommandArg()):
         qq = event.user_id
         for msg_seg in event.message:
             if msg_seg.type == "at":
                 qq = str(msg_seg.data.get("qq", ""))
-        user_data = USER.get_user(qq)
+        user_data = await UserData.get_or_none(user_id=qq)
         if not user_data:
             state['error'] = '该账号尚未绑定，请输入 bind 用户名 绑定账号'
             return
-        user = user_data[0]
-        mode = str(user_data[2])
+        user = user_data.osu_id
+        mode = str(user_data.osu_mode)
         mods = []
         isint = True
         arg = msg.extract_plain_text().strip()
@@ -265,7 +277,7 @@ async def _bind(ev: Event, msg: Message = CommandArg()):
     name = msg.extract_plain_text()
     if not name:
         await bind.finish('请输入您的 osuid', at_sender=True)
-    if USER.get_user(qqid):
+    if _ := await UserData.get_or_none(user_id=qqid):
         await bind.finish('您已绑定，如需要解绑请输入unbind', at_sender=True)
     msg = await bindinfo('bind', name, qqid)
     await bind.finish(msg, at_sender=True)
@@ -277,14 +289,9 @@ unbind = on_command('unbind', priority=11, block=True)
 @unbind.handle()
 async def _unbind(ev: Event):
     qqid = ev.get_user_id()
-    user = USER.get_user(qqid)
-    if user:
-        deluser = USER.delete_user(qqid)
-        if deluser:
-            await unbind.send('解绑成功！', at_sender=True)
-            USER.delete_info(user[0])
-        else:
-            await unbind.send('数据库错误')
+    if _ := await UserData.get_or_none(user_id=qqid):
+        await UserData.filter(user_id=qqid).delete()
+        await unbind.send('解绑成功！', at_sender=True)
     else:
         await unbind.finish('尚未绑定，无需解绑', at_sender=True)
 
@@ -298,7 +305,7 @@ async def _recent(ev: Event, msg: Message = CommandArg()):
     args: List[str] = msg.extract_plain_text().strip().split()
     while '' in args:
         args.remove('')
-    user = USER.get_user(qqid)
+    user = await UserData.get_or_none(user_id=qqid)
     if not user:
         msg = '该账号尚未绑定，请输入 bind 用户名 绑定账号'
     elif not args:
@@ -311,11 +318,8 @@ async def _recent(ev: Event, msg: Message = CommandArg()):
             await update.finish('请输入正确的模式 0-3', at_sender=True)
             return
         if mode >= 0 or mode < 4:
-            result = USER.update_mode(qqid, mode)
-            if result:
-                msg = f'已将默认模式更改为 {GMN[mode]}'
-            else:
-                msg = '数据库错误'
+            await UserData.filter(user_id=qqid).update(osu_mode=mode)
+            msg = f'已将默认模式更改为 {GMN[mode]}'
         else:
             msg = '请输入正确的模式 0-3'
     else:
@@ -347,12 +351,12 @@ async def _help():
 @scheduler.scheduled_job('cron', hour='0')
 async def update_info():
     tasks: List[Task] = []
-    result = USER.get_user_osuid()
+    result = await UserData.all()
     if not result:
         return
     loop = asyncio.get_event_loop()
-    for n, qqid in enumerate(result):
-        task = loop.create_task(update_user_info(qqid[0], True))
+    for n, data in enumerate(result):
+        task = loop.create_task(update_user_info(data.osu_id))
         tasks.append(task)
         if n == 0:
             await asyncio.sleep(10)
