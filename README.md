@@ -87,6 +87,7 @@ _✨ NoneBot osubot ✨_
 |:-----:|:----:|:----:|:----:|
 | OSU_CLIENT | 是 | 无 | 客户端ID |
 | OSU_KEY | 是 | 无 | 客户端密钥 |
+| DB_URL | 否 | sqlite://db.sqlite3 | 数据库地址 |
 
 ## 🎉 使用
 ### 指令表
