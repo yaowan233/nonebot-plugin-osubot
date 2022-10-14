@@ -10,12 +10,12 @@ from nonebot.params import T_State
 from nonebot.params import CommandArg
 from nonebot.plugin import PluginMetadata
 from nonebot.log import logger
-from nonebot import on_command, require, get_driver
+from nonebot import on_command, require
+from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo, get_map_bg
 from .file import download_map
 from .utils import GM, GMN, update_user_info
 from .database.models import UserData
-from .database import connect, disconnect
 
 
 require('nonebot_plugin_apscheduler')
@@ -30,19 +30,11 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.7.1",
+        "version": "0.7.2",
     },
 )
 
-driver = get_driver()
-
-
-@driver.on_startup
-async def startup():
-    await connect()
-
-
-driver.on_shutdown(disconnect)
+add_model('nonebot_plugin_osubot.database.models')
 
 
 def split_msg():

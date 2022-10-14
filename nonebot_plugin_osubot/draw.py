@@ -77,7 +77,9 @@ def draw_fillet(img, radii):
     return img
 
 
-def info_calc(n1: Real, n2: Real, rank: bool = False, pp: bool = False):
+def info_calc(n1: Optional[Real], n2: Optional[Real], rank: bool = False, pp: bool = False):
+    if not n1 or n2:
+        return '', 0
     num = n1 - n2
     if num < 0:
         if rank:
@@ -249,6 +251,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     if statistics.play_count == 0:
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
+    print()
     user = await InfoData.get_or_none(osu_id=info.id, osu_mode=FGM[mode])
     if user:
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
@@ -320,8 +323,11 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     im = draw_text(im, w_name)
     # 地区排名
     op, value = info_calc(statistics.country_rank, n_crank, rank=True)
-    t_crank = f"#{statistics.country_rank:,}({op}{value:,})" \
-        if value != 0 else f"#{statistics.country_rank:,}"
+    if not statistics.country_rank:
+        t_crank = "#0"
+    else:
+        t_crank = f"#{statistics.country_rank:,}({op}{value:,})" \
+            if value != 0 else f"#{statistics.country_rank:,}"
     w_crank = DataText(495, 448, 30, t_crank, Meiryo_Regular, anchor='lb')
     im = draw_text(im, w_crank)
     # 等级
@@ -331,7 +337,10 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     w_progress = DataText(750, 660, 20, f'{statistics.level.progress}%', Torus_Regular, anchor='rt')
     im = draw_text(im, w_progress)
     # 全球排名
-    w_grank = DataText(55, 785, 35, f"#{statistics.global_rank:,}", Torus_Regular)
+    if not statistics.global_rank:
+        w_grank = DataText(55, 785, 35, "#0", Torus_Regular)
+    else:
+        w_grank = DataText(55, 785, 35, f"#{statistics.global_rank:,}", Torus_Regular)
     im = draw_text(im, w_grank)
     op, value = info_calc(statistics.global_rank, n_grank, rank=True)
     if value != 0:
