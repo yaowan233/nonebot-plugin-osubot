@@ -143,3 +143,7 @@ _✨ NoneBot osubot ✨_
 
 *`mode`：0-3分别为std，taiko，ctb，mania
 
+## 💡 贡献
+由于当前开发缺乏测试，欢迎提各种issue来反馈bug
+或者你可以加群(228986744)来直接反馈！
+![1665504476458_temp_qrcode_share_9993](https://user-images.githubusercontent.com/30517062/195143643-5c212f4e-5ee2-49fd-8e71-4f360eef2d46.png)
