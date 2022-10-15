@@ -1,5 +1,5 @@
 from nonebot.log import logger
-from ..database.models import UserData, InfoData
+from ..database.models import InfoData
 from ..schema import User
 from ..api import osu_api
 

@@ -30,7 +30,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.7.2",
+        "version": "0.6.3",
     },
 )
 
@@ -311,7 +311,7 @@ async def _recent(ev: Event, msg: Message = CommandArg()):
             return
         if mode >= 0 or mode < 4:
             await UserData.filter(user_id=qqid).update(osu_mode=mode)
-            msg = f'已将默认模式更改为 {GMN[mode]}'
+            msg = f'已将默认模式更改为 {GM[mode]}'
         else:
             msg = '请输入正确的模式 0-3'
     else:
