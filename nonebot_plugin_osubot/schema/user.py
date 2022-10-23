@@ -65,3 +65,5 @@ class User(UserCompact):
     occupation: Optional[str]
     playmode: Optional[Literal['fruits', 'mania', 'osu', 'taiko']]
     playstyle: Optional[List[str]]
+    badges: Optional[List[Badge]]
+

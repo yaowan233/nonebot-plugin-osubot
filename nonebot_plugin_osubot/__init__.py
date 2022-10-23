@@ -30,7 +30,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.7.4",
+        "version": "0.7.5",
     },
 )
 

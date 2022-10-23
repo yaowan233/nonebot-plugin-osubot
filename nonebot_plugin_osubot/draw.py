@@ -281,9 +281,9 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     icon_img = draw_fillet(icon_bg, 25)
     im.alpha_composite(icon_img, (50, 148))
     # 奖牌
-    if statistics.badges:
-        badges_num = len(statistics.badges)
-        for num, badge in enumerate(statistics.badges):
+    if info.badges:
+        badges_num = len(info.badges)
+        for num, badge in enumerate(info.badges):
             if badges_num <= 9:
                 length = 50 + 100 * num
                 height = 530
@@ -303,7 +303,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     country_bg = Image.open(country).convert('RGBA').resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
     # supporter
-    if info.has_supported:
+    if info.is_supporter:
         supporter_bg = Image.open(supporter).convert('RGBA').resize((54, 54))
         im.alpha_composite(supporter_bg, (400, 280))
     # 经验
