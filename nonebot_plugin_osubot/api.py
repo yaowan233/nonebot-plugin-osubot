@@ -9,7 +9,7 @@ from .schema import Score
 
 api = 'https://osu.ppy.sh/api/v2'
 sayoapi = 'https://api.sayobot.cn'
-pp_calc_api = 'https://api.yuzuai.xyz/osu'
+pp_calc_api = 'https://api.yuzuai.xyz/osu/ppcalc'
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 plugin_config = Config.parse_obj(get_driver().config.dict())
 
