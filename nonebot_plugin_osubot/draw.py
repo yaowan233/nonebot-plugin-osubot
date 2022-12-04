@@ -559,7 +559,7 @@ async def draw_score(project: str,
     # 时间
     w_date = DataText(498, 421, 18, 'Submitted on:', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_date)
-    old_time = datetime.strptime(score_info.created_at.replace('+00:00', ''), '%Y-%m-%dT%H:%M:%S')
+    old_time = datetime.strptime(score_info.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
     new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
     w_time = DataText(630, 421, 18, new_time, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_time)
@@ -674,7 +674,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
                                   anchor='lm')
         im = draw_text(im, w_title_artist)
         # 地图版本&时间
-        old_time = datetime.strptime(bp.created_at.replace('+00:00', ''), '%Y-%m-%dT%H:%M:%S')
+        old_time = datetime.strptime(bp.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
         new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
         w_version_time = DataText(125, 158 + h_num, 18, f'{bp.beatmap.version} | {new_time}', Torus_Regular,
                                   anchor='lm')
@@ -723,7 +723,7 @@ async def best_pfm(project: str, uid: int, mode: str, mods: Optional[List],
         for i, score in enumerate(score_ls):
             today = datetime.now().date()
             today_stamp = mktime(strptime(str(today), '%Y-%m-%d'))
-            playtime = datetime.strptime(score.created_at.replace('+00:00', ''), '%Y-%m-%dT%H:%M:%S') + timedelta(
+            playtime = datetime.strptime(score.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S') + timedelta(
                 hours=8)
             play_stamp = mktime(strptime(str(playtime), '%Y-%m-%d %H:%M:%S'))
 
@@ -757,7 +757,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     pp_info = PP(**pp)
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
-        old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace('+00:00', ''), '%Y-%m-%dT%H:%M:%S')
+        old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
         new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
     else:
         new_time = '??-??-?? ??:??:??'
@@ -784,7 +784,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
         difflen = int(250 * i / 10) if i <= 10 else 250
         diff_len = Image.new('RGBA', (difflen, 8), color)
         im.alpha_composite(diff_len, (890, 426 + 35 * num))
-        w_diff = DataText(1170, 426 + 35 * num, 20, i, Torus_SemiBold, anchor='mm')
+        w_diff = DataText(1170, 426 + 35 * num, 20, "%.1f" % i, Torus_SemiBold, anchor='mm')
         im = draw_text(im, w_diff)
     # mapper
     icon_url = f'https://a.ppy.sh/{mapinfo.user_id}'
