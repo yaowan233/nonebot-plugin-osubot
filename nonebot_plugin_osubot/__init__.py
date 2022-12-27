@@ -30,7 +30,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.8.0",
+        "version": "0.8.1",
     },
 )
 
@@ -45,7 +45,7 @@ def split_msg():
                 qq = str(msg_seg.data.get("qq", ""))
         user_data = await UserData.get_or_none(user_id=qq)
         if not user_data:
-            state['error'] = '该账号尚未绑定，请输入 bind 用户名 绑定账号'
+            state['error'] = '该账号尚未绑定，请输入 /bind 用户名 绑定账号'
             return
         user = user_data.osu_id
         mode = str(user_data.osu_mode)
@@ -270,7 +270,7 @@ async def _bind(ev: Event, msg: Message = CommandArg()):
     if not name:
         await bind.finish('请输入您的 osuid', at_sender=True)
     if _ := await UserData.get_or_none(user_id=qqid):
-        await bind.finish('您已绑定，如需要解绑请输入unbind', at_sender=True)
+        await bind.finish('您已绑定，如需要解绑请输入/unbind', at_sender=True)
     msg = await bindinfo('bind', name, qqid)
     await bind.finish(msg, at_sender=True)
 
@@ -299,7 +299,7 @@ async def _recent(ev: Event, msg: Message = CommandArg()):
         args.remove('')
     user = await UserData.get_or_none(user_id=qqid)
     if not user:
-        msg = '该账号尚未绑定，请输入 bind 用户名 绑定账号'
+        msg = '该账号尚未绑定，请输入 /bind 用户名 绑定账号'
     elif not args:
         msg = '请输入需要更新内容的参数'
     elif args[0] == 'mode':

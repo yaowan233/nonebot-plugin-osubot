@@ -251,7 +251,6 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     if statistics.play_count == 0:
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
-    print()
     user = await InfoData.get_or_none(osu_id=info.id, osu_mode=FGM[mode])
     if user:
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
@@ -400,7 +399,7 @@ async def draw_score(project: str,
                      mapid: int = 0) -> Union[str, MessageSegment]:
     score_json = await osu_api(project, uid, mode, mapid)
     if not score_json:
-        return '未查询到游玩记录'
+        return f'未查询到在 {GMN[mode]} 的游玩记录'
     elif isinstance(score_json, str):
         return score_json
     if project in ('recent', 'pr'):
@@ -731,7 +730,7 @@ async def best_pfm(project: str, uid: int, mode: str, mods: Optional[List],
                 ls.append(i)
         score_ls = [score_ls[i] for i in ls]
         if not score_ls:
-            return '今天没有新增的BP成绩'
+            return f'今天在 {GMN[mode]} 没有新增的BP成绩'
     msg = image_pfm(project, user, score_ls, mode, low_bound, high_bound)
     return msg
 
