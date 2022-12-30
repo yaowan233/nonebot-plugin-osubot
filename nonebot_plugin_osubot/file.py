@@ -17,8 +17,9 @@ if not map_path.exists():
 
 async def map_downloaded(setid: str) -> Path:
     # 判断是否存在该文件
-    if setid in os.listdir(map_path):
-        return map_path / setid
+    path = map_path / setid
+    if setid in os.listdir(map_path) and list(path.glob('*.osu')):
+        return path
     url = f'https://txy1.sayobot.cn/beatmaps/download/novideo/{setid}'
     try:
         async with aiohttp.ClientSession() as session:
@@ -34,7 +35,7 @@ async def map_downloaded(setid: str) -> Path:
     # 删除文件
     remove_file(Path(str(filepath)[:-4]))
     os.remove(filepath)
-    return map_path / setid
+    return path
 
 
 async def download_map(setid: str) -> Path:
@@ -62,16 +63,6 @@ async def osz_file_dl(sayo: str, setid: str, dl: bool = False) -> Path:
     return filepath
 
 
-async def osu_file_dl(mapid: int):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f'https://osu.ppy.sh/osu/{mapid}') as req:
-            filename = req.content_disposition.filename
-            logger.info(f'Start Downloading .osu File: {filename}')
-            osu = await req.read()
-    logger.info(f'.osu File: <{filename}> Download Complete')
-    return osu
-
-
 async def get_projectimg(url: str):
     try:
         if 'avatar-guest.png' in url:
@@ -94,10 +85,12 @@ def remove_file(path: Path) -> bool:
         if '.osu' in file:
             bg = re_map(path / file)
             bg_list.add(bg)
+            bid = get_map_id(path / file)
+            os.rename(path / file, path / f'{bid}.osu')
 
     for root, dir, files in os.walk(path, topdown=False):
         for name in files:
-            if name not in bg_list:
+            if name not in bg_list and '.osu' not in name:
                 os.remove(os.path.join(root, name))
         for dirname in dir:
             shutil.rmtree(os.path.join(root, dirname))
@@ -113,3 +106,10 @@ def re_map(file: Union[bytes, Path]) -> str:
     res = re.search(r'\d,\d,\"(.+)\"', text)
     bg = 'mapbg.png' if not res else res.group(1).strip()
     return bg
+
+
+def get_map_id(file: Path) -> str:
+    with open(file, 'r', encoding='utf-8') as f:
+        text = f.read()
+    res = re.search(r'BeatmapID:(\d*)', text)
+    return res.group(1).strip()

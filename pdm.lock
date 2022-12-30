@@ -362,6 +362,12 @@ requires_python = ">=3.6"
 summary = "YAML parser and emitter for Python"
 
 [[package]]
+name = "rosu-pp-py"
+version = "0.9.1"
+requires_python = ">=3.7"
+summary = "osu! difficulty and pp calculation for all modes"
+
+[[package]]
 name = "setuptools"
 version = "63.1.0"
 requires_python = ">=3.7"
@@ -508,7 +514,7 @@ dependencies = [
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:8408710d7073ba197e36a5d36e148376080f750691a40dba97342030561079db"
+content_hash = "sha256:fc6abb6abafcb34bdc82f21cac3da3f85733bc9c71f7ce271ed0a5bea6b29762"
 
 [metadata.files]
 "aiohttp 3.8.1" = [
@@ -600,10 +606,6 @@ content_hash = "sha256:8408710d7073ba197e36a5d36e148376080f750691a40dba973420305
 "anyio 3.6.1" = [
     {url = "https://files.pythonhosted.org/packages/67/c4/fd50bbb2fb72532a4b778562e28ba581da15067cfb2537dbd3a2e64689c1/anyio-3.6.1.tar.gz", hash = "sha256:413adf95f93886e442aea925f3ee43baa5a765a64a0f52c6081894f9992fdd0b"},
     {url = "https://files.pythonhosted.org/packages/c3/22/4cba7e1b4f45ffbefd2ca817a6800ba1c671c26f288d7705f20289872012/anyio-3.6.1-py3-none-any.whl", hash = "sha256:cb29b9c70620506a9a8f87a309591713446953302d7d995344d0d7c6c0c9a7be"},
-]
-"apscheduler 3.9.1" = [
-    {url = "https://files.pythonhosted.org/packages/3a/7c/f21a6fb73810191d16162f3fce325ff2a62673f63223c390bea48741ea00/APScheduler-3.9.1.tar.gz", hash = "sha256:65e6574b6395498d371d045f2a8a7e4f7d50c6ad21ef7313d15b1c7cf20df1e3"},
-    {url = "https://files.pythonhosted.org/packages/e4/9f/c3937d4babe62504b874d4bf2c0d85aa69c7f59fa84cf6050f3b9dc5d83e/APScheduler-3.9.1-py2.py3-none-any.whl", hash = "sha256:ddc25a0ddd899de44d7f451f4375fb971887e65af51e41e5dcf681f59b8b2c9a"},
 ]
 "asgiref 3.5.2" = [
     {url = "https://files.pythonhosted.org/packages/1f/35/e7d59b92ceffb1dc62c65156278de378670b46ab2364a3ea7216fe194ba3/asgiref-3.5.2.tar.gz", hash = "sha256:4a29362a6acebe09bf1d6640db38c1dc3d9217c68e6f9f6204d72667fc19a424"},
@@ -1214,6 +1216,35 @@ content_hash = "sha256:8408710d7073ba197e36a5d36e148376080f750691a40dba973420305
     {url = "https://files.pythonhosted.org/packages/f5/6f/b8b4515346af7c33d3b07cd8ca8ea0700ca72e8d7a750b2b87ac0268ca4e/PyYAML-6.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:055d937d65826939cb044fc8c9b08889e8c743fdc6a32b33e2390f66013e449b"},
     {url = "https://files.pythonhosted.org/packages/f8/54/799b059314b13e1063473f76e908f44106014d18f54b16c83a16edccd5ec/PyYAML-6.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:d4b0ba9512519522b118090257be113b9468d804b19d63c71dbcf4a48fa32358"},
     {url = "https://files.pythonhosted.org/packages/fc/48/531ecd926fe0a374346dd811bf1eda59a95583595bb80eadad511f3269b8/PyYAML-6.0-cp311-cp311-win32.whl", hash = "sha256:bfaef573a63ba8923503d27530362590ff4f576c626d86a9fed95822a8255fd7"},
+]
+"rosu-pp-py 0.9.1" = [
+    {url = "https://files.pythonhosted.org/packages/11/8a/e105905d7fedfafc63660ad0d87f66b72c680694c97dad663be42798eaa3/rosu_pp_py-0.9.1-cp39-cp39-macosx_10_7_x86_64.whl", hash = "sha256:78013a7dac2d38ecef8a44de6b13725199120e66661089c5a3d2958eef07afad"},
+    {url = "https://files.pythonhosted.org/packages/13/3d/72d165a7085171304c2f57df11c2021110a0089e88c71781c36808b5bdec/rosu_pp_py-0.9.1-cp310-none-win32.whl", hash = "sha256:1f437b66b0f11db1f2cf89b44284d237f9aabfbc644db00622bc6ba4e9635c92"},
+    {url = "https://files.pythonhosted.org/packages/1d/4f/1b0cb28583ab15aeea0b97cf58dda67b5ed919a260a9032751215df99d52/rosu_pp_py-0.9.1-cp310-cp310-macosx_10_7_x86_64.whl", hash = "sha256:00a2d88f17a950ccda49500c029ce01d0ba52af19c9a7860098621381327d2a0"},
+    {url = "https://files.pythonhosted.org/packages/1e/f5/0a4204db187635dbba0c43e0167b10e989ff8fa88ad71ea57dd48567064e/rosu_pp_py-0.9.1-cp38-cp38-macosx_10_7_x86_64.whl", hash = "sha256:c5fc27607db75d86a80cbd2227dceb055a2b7ec30c8a0fbee9cfce3f45c66b18"},
+    {url = "https://files.pythonhosted.org/packages/22/d7/9b9ab8609e3005500d10d3e566bc25bf9b3f0a63118f15351ae1d9393d70/rosu_pp_py-0.9.1.tar.gz", hash = "sha256:d515ba5cc677746990165bc61b7d41cba9224b5b5a6556465efa0f8e6cd26fc9"},
+    {url = "https://files.pythonhosted.org/packages/23/88/3c34f41ab48fe9bd5a5cd65b017e8c41e39ecb62f58e9503e6e2183f5355/rosu_pp_py-0.9.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:299e5d429a43bfee80ad0f6e60f37dcaa469dd4d91ef4125fb694d471c8dcbf2"},
+    {url = "https://files.pythonhosted.org/packages/3b/b1/cc3e70a049f894308c5e471e3122f6c09ebd649fa467455f498086245a3e/rosu_pp_py-0.9.1-pp37-pypy37_pp73-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:b1c3747661ef57c789326a3f91a0e10012f481eec7c7fc3cae46a9f8522c3322"},
+    {url = "https://files.pythonhosted.org/packages/48/58/4c896bb635e43dd04ec498de78aa6dcd0d146ca079ba29a409926d3a7bab/rosu_pp_py-0.9.1-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:903df22135d18ac10a125378107f0482a010b6c6642f30fb5805c0c0ebeda752"},
+    {url = "https://files.pythonhosted.org/packages/4c/b2/648b42f365218e313a417dc408c74936692cbd8a7964e7918f1a07dc783d/rosu_pp_py-0.9.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6dabd207392416b73fcc8661e59438b5b5fe5d01dfee85692c4074e29cff7f52"},
+    {url = "https://files.pythonhosted.org/packages/5b/b7/8efdff850ce223995cf482da3ce6ae9cb5172a79ea1ae1e35b6f68fd586b/rosu_pp_py-0.9.1-cp310-cp310-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:715a8629546d8acd3029d67c3e57ff63b536d3b7960c75540ca29636b2253130"},
+    {url = "https://files.pythonhosted.org/packages/8a/5b/16c57785af1efd24dd91b86bb79500eab81960a3436f57aaac69e312c429/rosu_pp_py-0.9.1-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:7622028bb41f9281cc9b80d7bb732b017480872d388db3b668aebf69d6344a61"},
+    {url = "https://files.pythonhosted.org/packages/90/a2/a6a16875a31f103e612ce2cc346b673cb7ea39f0aa32cf9aa2d7e2941969/rosu_pp_py-0.9.1-cp37-none-win_amd64.whl", hash = "sha256:17463b1c6230779003d3751361bfe92072880def1fcbc4a02d6a88008b26f638"},
+    {url = "https://files.pythonhosted.org/packages/94/b6/8f36773dbbc370ba79f8e87f594e3fa8b0157b47b317b3dfb54c0a1af9ee/rosu_pp_py-0.9.1-cp310-none-win_amd64.whl", hash = "sha256:f74a6a36f3f20adeefbc9c60f18dd5da48e3f7eca8f9681c47308455d6b96b78"},
+    {url = "https://files.pythonhosted.org/packages/98/62/7545f44006ad57fd64c60c4b71deaafa107498b548b40f605653145cae54/rosu_pp_py-0.9.1-cp38-cp38-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:a9e07859d8711f010fd2a4f91867f06387bb4f4c41577306a3fe231dcfb2c429"},
+    {url = "https://files.pythonhosted.org/packages/9c/af/295e4ebaebd75547b36aa0fb568603078de8bdc26b7a3160d1b8af498c61/rosu_pp_py-0.9.1-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:b7a547a4441baf1fe8b7c823848f44865672b81531d5c1049c98a30502ae01a7"},
+    {url = "https://files.pythonhosted.org/packages/a0/29/7a24594bacf991008daa9cce1f2deb6a521627cd395542a8496ec8eca755/rosu_pp_py-0.9.1-cp39-none-win32.whl", hash = "sha256:d93bfdf8d4d63bb55e37fce99f09df0e6e376fabcd023ca5b256068fe1518474"},
+    {url = "https://files.pythonhosted.org/packages/a0/d7/f7afc8815d07d3c3e130be18c134f2234a64d64cea12773540434043301e/rosu_pp_py-0.9.1-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:3309c4760bc7fb62e070c80e556ca6fc7cc399442631e9de186a7eaa18bb5efe"},
+    {url = "https://files.pythonhosted.org/packages/ad/f8/f5df42d7079dde1040911464b3043511a0bd44f420f0d13dd1f71b018545/rosu_pp_py-0.9.1-cp38-none-win_amd64.whl", hash = "sha256:c9d72f563c6301fbbe0cb23ab5fff0640d05e4023e4472c35786d4c89e637cdd"},
+    {url = "https://files.pythonhosted.org/packages/b5/28/acde60f017e6a5861ead7227a2555ff8cd3d582c16a760641ecf908abd21/rosu_pp_py-0.9.1-cp39-none-win_amd64.whl", hash = "sha256:4b5010c9e62f6653cc5dc835678655d8357d49098cb70b0e89e96c10cb8200e2"},
+    {url = "https://files.pythonhosted.org/packages/b7/2a/9e06dd4fc03315a0b64d7419d5e2fe7c6862fbf8885133b4dc482b801795/rosu_pp_py-0.9.1-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bd57fe7f30063301bff25ecbef614d9147013f619d28d83de0c898f365e9c8e4"},
+    {url = "https://files.pythonhosted.org/packages/bf/26/e3620f5bdc441bcf318118094c0169ef6f41eacb5912dfb830ca23f50a89/rosu_pp_py-0.9.1-cp37-none-win32.whl", hash = "sha256:a0d185c406b6ef7ce882ddaf584e32cf3d55375009ee43dc11f9f8cf0fe0438c"},
+    {url = "https://files.pythonhosted.org/packages/d1/9b/ca6512aad587e34dfb8320ee5841d20f8b19702222bbc0e2b6c791c7e910/rosu_pp_py-0.9.1-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:33cb14fe2c41cfe094ab2bef0da6e233a6b21a7b28d219365dc8ea6e14b4502e"},
+    {url = "https://files.pythonhosted.org/packages/d2/2c/43e0eef2d40af6bc7a39194ca5e8eaeb96eef030df9b0d2af88376155d87/rosu_pp_py-0.9.1-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:5c80d2a28adc9cfd0aed1fa8952c5607b1a02ff520b513eaab19a7559e01acdf"},
+    {url = "https://files.pythonhosted.org/packages/d8/a6/09380ad4661db95ea1c14e86ca71f4fdc518f32a2149ffd8842abb3b2e4e/rosu_pp_py-0.9.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7c137cfde0741b864428832bfd8e0697db7e914aac7b166e70d020bd194a22b7"},
+    {url = "https://files.pythonhosted.org/packages/d8/b2/8ec4b4cd9a0c9845b372742e90af193c8cb8cb173421e83250ba6dee7220/rosu_pp_py-0.9.1-cp39-cp39-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:b02fa7f257f7fe6c40e9e9a16438ab3a80ce36cde1c65e0682777e7b8e026f28"},
+    {url = "https://files.pythonhosted.org/packages/de/45/1d3a878b62ae89964b65ccab1657b1af40be2815f1e9ba34b4fc07bdea2b/rosu_pp_py-0.9.1-cp38-none-win32.whl", hash = "sha256:59e0a21d37f81c39c161da24e0e8db77f2897d935d3224098df0eb988af146ed"},
+    {url = "https://files.pythonhosted.org/packages/f8/7a/affb6b5d87b4601481e38f2d7f5926b80bdf1a35383da9a9e631eb8a0197/rosu_pp_py-0.9.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c70ebe8a17f086b00e7801f2b0b49d50b53d30e6f13a0efccbfb46090e4c9b1d"},
 ]
 "setuptools 63.1.0" = [
     {url = "https://files.pythonhosted.org/packages/67/25/42e2d6664c3e106c33ecad8356a55e3ae5d81708c89098061a97fbff7cee/setuptools-63.1.0.tar.gz", hash = "sha256:16923d366ced322712c71ccb97164d07472abeecd13f3a6c283f6d5d26722793"},

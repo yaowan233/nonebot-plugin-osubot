@@ -10,15 +10,15 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-from .api import osu_api, sayo_api, pp_api
-from .schema import User, Score, Beatmap, SayoBeatmap, PP
+from .api import osu_api, sayo_api
+from .schema import User, Score, Beatmap, SayoBeatmap
 from .mods import get_mods_list, calc_mods
-from .file import re_map, get_projectimg, map_downloaded, osu_file_dl
+from .file import re_map, get_projectimg, map_downloaded
 from .database.models import UserData, InfoData
 from .utils import update_user_info, GM, GMN, FGM
+from .pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 
 osufile = Path(__file__).parent / 'osufile'
-
 Torus_Regular = osufile / 'fonts' / 'Torus Regular.otf'
 Torus_SemiBold = osufile / 'fonts' / 'Torus SemiBold.otf'
 Meiryo_Regular = osufile / 'fonts' / 'Meiryo Regular.ttf'
@@ -426,10 +426,12 @@ async def draw_score(project: str,
 
     # 下载地图
     dirpath = await map_downloaded(str(score_info.beatmap.beatmapset_id))
-    osu = await osu_file_dl(score_info.beatmap.id)
+    osu = dirpath / f"{score_info.beatmap.id}.osu"
     # pp
-    pp_data = await pp_api(FGM[score_info.mode], score_info)
-    pp_info = PP(**pp_data)
+    pp_info = cal_pp(score_info, str(osu.absolute()))
+    if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
+    # pp_data = await pp_api(FGM[score_info.mode], score_info)
+    # pp_info = PP(**pp_data)
     # 新建图片
     im = Image.new('RGBA', (1500, 800))
     # 获取cover并裁剪，高斯，降低亮度
@@ -447,11 +449,11 @@ async def draw_score(project: str,
     recent_bg = Image.open(bg).convert('RGBA')
     im.alpha_composite(recent_bg)
     # 模式
-    mode_bg = stars_diff(score_info.mode, pp_info.StarRating)
+    mode_bg = stars_diff(score_info.mode, pp_info.difficulty.stars)
     mode_img = mode_bg.resize((30, 30))
     im.alpha_composite(mode_img, (75, 154))
     # 难度星星
-    stars_bg = stars_diff('stars', pp_info.StarRating)
+    stars_bg = stars_diff('stars', pp_info.difficulty.stars)
     stars_img = stars_bg.resize((23, 23))
     im.alpha_composite(stars_img, (134, 158))
     # mods
@@ -538,7 +540,7 @@ async def draw_score(project: str,
                        Meiryo_SemiBold, anchor='lm')
     im = draw_text(im, w_title)
     # 星级
-    w_diff = DataText(162, 169, 18, f'{pp_info.StarRating:.1f}', Torus_SemiBold, anchor='lm')
+    w_diff = DataText(162, 169, 18, f'{pp_info.difficulty.stars:.1f}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_diff)
     # 谱面版本，mapper
     w_version = DataText(225, 169, 22, f'{mapinfo.version} | mapper by {mapinfo.beatmapset.creator}', Torus_SemiBold,
@@ -574,16 +576,16 @@ async def draw_score(project: str,
     im = draw_text(im, w_line)
     # acc,cb,pp,300,100,50,miss
     if score_info.mode == 'osu':
-        w_sspp = DataText(650, 625, 30, pp_info.sspp, Torus_Regular, anchor='mm')
+        w_sspp = DataText(650, 625, 30, ss_pp, Torus_Regular, anchor='mm')
         im = draw_text(im, w_sspp)
-        w_ifpp = DataText(770, 625, 30, pp_info.ifpp, Torus_Regular, anchor='mm')
+        w_ifpp = DataText(770, 625, 30, if_pp, Torus_Regular, anchor='mm')
         im = draw_text(im, w_ifpp)
-        w_pp = DataText(890, 625, 30, pp_info.pp, Torus_Regular, anchor='mm')
-        w_aimpp = DataText(650, 720, 30, pp_info.aim, Torus_Regular, anchor='mm')
+        w_pp = DataText(890, 625, 30, int(round(pp_info.pp, 0)), Torus_Regular, anchor='mm')
+        w_aimpp = DataText(650, 720, 30, int(round(pp_info.pp_aim, 0)), Torus_Regular, anchor='mm')
         im = draw_text(im, w_aimpp)
-        w_spdpp = DataText(770, 720, 30, pp_info.speed, Torus_Regular, anchor='mm')
+        w_spdpp = DataText(770, 720, 30, int(round(pp_info.pp_speed, 0)), Torus_Regular, anchor='mm')
         im = draw_text(im, w_spdpp)
-        w_accpp = DataText(890, 720, 30, pp_info.accuracy, Torus_Regular, anchor='mm')
+        w_accpp = DataText(890, 720, 30, int(round(pp_info.pp_acc, 0)), Torus_Regular, anchor='mm')
         im = draw_text(im, w_accpp)
         w_acc = DataText(1087, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1315, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}', Torus_Regular, anchor='mm')
@@ -596,7 +598,7 @@ async def draw_score(project: str,
         w_acc = DataText(1050, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1202, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
                            Torus_Regular, anchor='mm')
-        w_pp = DataText(1352, 625, 30, f'{pp_info.pp}/{pp_info.ifpp}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1352, 625, 30, f'{int(round(pp_info.pp, 0))}/{if_pp}', Torus_Regular, anchor='mm')
         w_300 = DataText(1050, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
         w_100 = DataText(1202, 720, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
         w_miss = DataText(1352, 720, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
@@ -604,7 +606,7 @@ async def draw_score(project: str,
         w_acc = DataText(1016, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1180, 625, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
                            Torus_Regular, anchor='mm')
-        w_pp = DataText(1344, 625, 30, f'{pp_info.pp}/{pp_info.ifpp}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1344, 625, 30, f'{int(round(pp_info.pp, 0))}/{if_pp}', Torus_Regular, anchor='mm')
         w_300 = DataText(995, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
         w_100 = DataText(1118, 720, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
         w_katu = DataText(1242, 720, 30, score_info.statistics.count_katu, Torus_Regular, anchor='mm')
@@ -613,7 +615,7 @@ async def draw_score(project: str,
     else:
         w_acc = DataText(935, 625, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1130, 625, 30, f'{score_info.max_combo:,}', Torus_Regular, anchor='mm')
-        w_pp = DataText(1328, 625, 30, f'{pp_info.pp}/{pp_info.ifpp}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1328, 625, 30, f'{int(round(pp_info.pp, 0))}/{if_pp}', Torus_Regular, anchor='mm')
         w_geki = DataText(886, 720, 30, score_info.statistics.count_geki, Torus_Regular, anchor='mm')
         im = draw_text(im, w_geki)
         w_300 = DataText(984, 720, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
@@ -745,15 +747,8 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     diffinfo = calc_songlen(mapinfo.total_length), mapinfo.bpm, mapinfo.count_circles, mapinfo.count_sliders
     # 获取地图
     dirpath = await map_downloaded(str(mapinfo.beatmapset_id))
-    osu = await osu_file_dl(mapid)
-    # pp
-    data = {
-        'BeatmapID': mapid,
-        'Mode': FGM[mapinfo.mode],
-        'Mods': mods
-    }
-    pp = await pp_api(FGM[mapinfo.mode], None, data=data)
-    pp_info = PP(**pp)
+    osu = dirpath / f"{mapinfo.id}.osu"
+    ss_pp_info = get_ss_pp(str(osu.absolute()), calc_mods(mods))
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
         old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
@@ -771,11 +766,11 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     mapbg = Image.open(map_bg).convert('RGBA')
     im.alpha_composite(mapbg)
     # 模式
-    mode_bg = stars_diff(mapinfo.mode, pp_info.StarRating)
+    mode_bg = stars_diff(mapinfo.mode, ss_pp_info.difficulty.stars)
     mode_img = mode_bg.resize((50, 50))
     im.alpha_composite(mode_img, (50, 100))
     # cs - diff
-    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.StarRating]
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, ss_pp_info.difficulty.stars]
     for num, i in enumerate(mapdiff):
         color = (255, 255, 255, 255)
         if num == 4:
@@ -827,7 +822,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     w_mapcb = DataText(50, 570, 20, f'Max Combo: {mapinfo.max_combo}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_mapcb)
     # pp
-    w_pp = DataText(320, 570, 20, f'SS PP: {pp}', Torus_SemiBold, anchor='lm')
+    w_pp = DataText(320, 570, 20, f'SS PP: {int(round(ss_pp_info.pp, 0))}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_pp)
     # 输出
     base = image2bytesio(im)
@@ -969,7 +964,7 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
         return info
     setid: int = info['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
-    osu = await osu_file_dl(mapid)
+    osu = dirpath / f"{setid}.osu"
     path = re_map(osu)
     msg = MessageSegment.image(dirpath / path)
     return msg

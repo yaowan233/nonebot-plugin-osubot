@@ -16,6 +16,7 @@ dependencies = [
     "aiohttp>=3.8.1",
     "tortoise-orm>=0.19.2",
     "nonebot-plugin-tortoise-orm>=0.0.1a3",
+    "rosu-pp-py>=0.9.1",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
