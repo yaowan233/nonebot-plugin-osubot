@@ -964,7 +964,7 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
         return info
     setid: int = info['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
-    osu = dirpath / f"{setid}.osu"
+    osu = dirpath / f"{mapid}.osu"
     path = re_map(osu)
     msg = MessageSegment.image(dirpath / path)
     return msg

@@ -1,5 +1,6 @@
 import asyncio
 import os
+import urllib
 from asyncio.tasks import Task
 from typing import List
 from pathlib import Path
@@ -30,7 +31,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.8.2",
+        "version": "0.8.3",
     },
 )
 
@@ -256,7 +257,8 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
     if not setid.isdigit():
         await osudl.finish('请输入正确的地图ID', at_sender=True)
     filepath = await download_map(setid)
-    await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=filepath.name)
+    name = urllib.parse.unquote(filepath.name)
+    await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=name)
     os.remove(filepath)
 
 
