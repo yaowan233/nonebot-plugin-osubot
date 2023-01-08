@@ -24,12 +24,12 @@ _✨ NoneBot osubot ✨_
 
 ## 📖 介绍
 
-本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用 
+本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用，可能与其他使用了tortoise-orm的插件会相冲突如harukabot
 
 ## 💿 安装
 
 <details>
-<summary>使用 nb-cli 安装</summary>
+<summary>使用 nb-cli 安装（推荐）</summary>
 在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装
 
     nb plugin install nonebot-plugin-osubot
@@ -37,7 +37,7 @@ _✨ NoneBot osubot ✨_
 </details>
 
 <details>
-<summary>使用包管理器安装</summary>
+<summary>使用包管理器安装（推荐）</summary>
 在 nonebot2 项目的插件目录下, 打开命令行, 根据你使用的包管理器, 输入相应的安装命令
 
 <details>
@@ -73,6 +73,10 @@ _✨ NoneBot osubot ✨_
 
     git clone https://github.com/yaowan233/nonebot-plugin-osubot.git
 
+修改[nonebot_plugin_osubot的__init__.py](https://github.com/yaowan233/nonebot-plugin-osubot/blob/a7c7098f39d92b8fe74dfe85c262397b81db721c/nonebot_plugin_osubot/__init__.py#L37)为
+  
+    add_model('src.plugins.database.models')
+  
 打开 nonebot2 项目的 `bot.py` 文件, 在其中写入
 
     nonebot.load_plugin('src.plugins.nonebot_plugin_osubot')
