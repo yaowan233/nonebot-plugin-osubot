@@ -532,7 +532,7 @@ async def draw_score(project: str,
     w_status = DataText(1400, 264, 20, mapinfo.status.capitalize(), Torus_SemiBold, anchor='mm')
     im = draw_text(im, w_status)
     # mapid
-    w_mapid = DataText(1425, 40, 27, f'Setid: {score_info.beatmap.beatmapset_id}  |  Mapid: {score_info.id}',
+    w_mapid = DataText(1425, 40, 27, f'Setid: {score_info.beatmap.beatmapset_id}  |  Mapid: {score_info.beatmap.id}',
                        Torus_SemiBold, anchor='rm')
     im = draw_text(im, w_mapid)
     # 曲名
