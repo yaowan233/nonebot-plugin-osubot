@@ -1,9 +1,9 @@
 import asyncio
 import os
-import urllib
 from asyncio.tasks import Task
 from typing import List
 from pathlib import Path
+import urllib
 
 from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment
 from nonebot.internal.params import Depends
@@ -14,9 +14,11 @@ from nonebot.log import logger
 from nonebot import on_command, require
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo, get_map_bg
-from .file import download_map
+from .file import download_map, map_downloaded
 from .utils import GM, GMN, update_user_info
 from .database.models import UserData
+from .mania import generate_full_ln_osz, generate_preview_pic
+from .api import osu_api
 
 
 require('nonebot_plugin_apscheduler')
@@ -256,7 +258,7 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
         return
     if not setid.isdigit():
         await osudl.finish('请输入正确的地图ID', at_sender=True)
-    filepath = await download_map(setid)
+    filepath = await download_map(int(setid))
     name = urllib.parse.unquote(filepath.name)
     await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=name)
     os.remove(filepath)
@@ -333,6 +335,49 @@ async def _get_bg(msg: Message = CommandArg()):
         msg = await get_map_bg(bg_id)
     await getbg.finish(msg, at_sender=True)
 
+generate_full_ln = on_command('convert', priority=11, block=True)
+
+
+@generate_full_ln.handle()
+async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+    args = msg.extract_plain_text().strip().split()
+    if not args:
+        await generate_full_ln.finish('请输入需要转ln的地图setID')
+    set_id = args[0]
+    if not set_id.isdigit():
+        await generate_full_ln.finish('请输入正确的setID')
+    if len(args) >= 2:
+        gap = args[1]
+    else:
+        gap = 150
+    if len(args) >= 3:
+        ln_as_hit_thres = args[2]
+    else:
+        ln_as_hit_thres = 100
+    osz_file = await generate_full_ln_osz(int(set_id), gap, ln_as_hit_thres)
+    name = urllib.parse.unquote(osz_file.name)
+    await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+    os.remove(osz_file)
+
+
+generate_preview = on_command('预览', aliases={'preview'}, priority=11, block=True)
+
+
+@generate_preview.handle()
+async def _(msg: Message = CommandArg()):
+    osu_id = msg.extract_plain_text().strip()
+    if not osu_id:
+        return
+    if not osu_id.isdigit():
+        await osudl.finish('请输入正确的地图mapID', at_sender=True)
+    data = await osu_api('map', map_id=int(osu_id))
+    if not data:
+        await generate_preview.finish('未查询到该地图')
+    setid: int = data['beatmapset_id']
+    dirpath = await map_downloaded(str(setid))
+    osu = dirpath / f"{osu_id}.osu"
+    pic = await generate_preview_pic(osu)
+    await generate_preview.finish(MessageSegment.image(pic))
 
 osu_help = on_command('osuhelp', priority=11, block=True)
 

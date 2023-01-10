@@ -27,7 +27,7 @@ async def map_downloaded(setid: str) -> Path:
                 sayo = req.headers['Location']
     except Exception as e:
         logger.error(f'Request Failed or Timeout\n{e}')
-    filepath = await osz_file_dl(sayo, setid)
+    filepath = await osz_file_dl(sayo, int(setid))
     # 解压下载的osz文件
     myzip = zipfile.ZipFile(filepath.absolute())
     myzip.extractall(myzip.filename[:-4])
@@ -38,7 +38,7 @@ async def map_downloaded(setid: str) -> Path:
     return path
 
 
-async def download_map(setid: str) -> Path:
+async def download_map(setid: int) -> Path:
     url = f'https://txy1.sayobot.cn/beatmaps/download/novideo/{setid}'
     try:
         async with aiohttp.ClientSession() as session:
@@ -50,7 +50,7 @@ async def download_map(setid: str) -> Path:
     return filepath
 
 
-async def osz_file_dl(sayo: str, setid: str, dl: bool = False) -> Path:
+async def osz_file_dl(sayo: str, setid: int, dl: bool = False) -> Path:
     async with aiohttp.ClientSession() as session:
         async with session.get(sayo) as req:
             osufilename = req.content_disposition.filename
