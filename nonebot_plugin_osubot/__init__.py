@@ -62,8 +62,8 @@ detail_usage = """以下<>内是必填内容，()内是选填内容，user可以
 /preview <mapid>
 /convert <setid> (gap) (ln_as_hit_thres)
 其中gap为ln的间距时间默认为150
-ln_as_hit_thres为ln转换为note的时间的阈值
-"""
+ln_as_hit_thres为ln转换为note的时间的阈值"""
+
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
     description="OSU查分插件",
@@ -71,7 +71,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.9.0",
+        "version": "0.9.1",
     },
 )
 
@@ -385,11 +385,11 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     if not set_id.isdigit():
         await generate_full_ln.finish('请输入正确的setID')
     if len(args) >= 2:
-        gap = args[1]
+        gap = float(args[1])
     else:
         gap = 150
     if len(args) >= 3:
-        ln_as_hit_thres = args[2]
+        ln_as_hit_thres = float(args[2])
     else:
         ln_as_hit_thres = 100
     osz_file = await generate_full_ln_osz(int(set_id), gap, ln_as_hit_thres)
