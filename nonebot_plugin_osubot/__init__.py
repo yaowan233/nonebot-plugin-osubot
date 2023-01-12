@@ -61,8 +61,8 @@ detail_usage = """以下<>内是必填内容，()内是选填内容，user可以
 /osudl <setid>
 /preview <mapid>
 /convert <setid> (gap) (ln_as_hit_thres)
-其中gap为ln的间距时间默认为150
-ln_as_hit_thres为ln转换为note的时间的阈值"""
+其中gap为ln的间距时间默认为150 (ms)
+ln_as_hit_thres为ln转换为note的时间的阈值默认为100 (ms)"""
 
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
@@ -71,7 +71,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.9.1",
+        "version": "0.9.2",
     },
 )
 
