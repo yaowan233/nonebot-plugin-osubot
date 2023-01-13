@@ -543,7 +543,7 @@ async def draw_score(project: str,
     w_diff = DataText(162, 169, 18, f'{pp_info.difficulty.stars:.1f}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_diff)
     # 谱面版本，mapper
-    w_version = DataText(225, 169, 22, f'{mapinfo.version} | mapper by: {mapinfo.beatmapset.creator}', Torus_SemiBold,
+    w_version = DataText(225, 169, 22, f'{mapinfo.version} | mapper by {mapinfo.beatmapset.creator}', Torus_SemiBold,
                          anchor='lm')
     im = draw_text(im, w_version)
     # 评价
