@@ -449,7 +449,7 @@ async def draw_score(project: str,
     recent_bg = Image.open(bg).convert('RGBA')
     im.alpha_composite(recent_bg)
     # 模式
-    mode_bg = stars_diff(score_info.mode, pp_info.difficulty.stars)
+    mode_bg = stars_diff(FGM[score_info.mode], pp_info.difficulty.stars)
     mode_img = mode_bg.resize((30, 30))
     im.alpha_composite(mode_img, (75, 154))
     # 难度星星
