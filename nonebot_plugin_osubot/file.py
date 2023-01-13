@@ -1,5 +1,5 @@
 from io import BytesIO, TextIOWrapper
-from typing import Union
+from typing import Union, Optional
 
 import aiohttp
 import os
@@ -15,7 +15,7 @@ if not map_path.exists():
     map_path.mkdir(parents=True, exist_ok=True)
 
 
-async def map_downloaded(setid: str) -> Path:
+async def map_downloaded(setid: str) -> Optional[Path]:
     # 判断是否存在该文件
     path = map_path / setid
     if setid in os.listdir(map_path) and list(path.glob('*.osu')):
@@ -38,7 +38,7 @@ async def map_downloaded(setid: str) -> Path:
     return path
 
 
-async def download_map(setid: int) -> Path:
+async def download_map(setid: int) -> Optional[Path]:
     url = f'https://txy1.sayobot.cn/beatmaps/download/novideo/{setid}'
     try:
         async with aiohttp.ClientSession() as session:
@@ -50,9 +50,11 @@ async def download_map(setid: int) -> Path:
     return filepath
 
 
-async def osz_file_dl(sayo: str, setid: int, dl: bool = False) -> Path:
+async def osz_file_dl(sayo: str, setid: int, dl: bool = False) -> Optional[Path]:
     async with aiohttp.ClientSession() as session:
         async with session.get(sayo) as req:
+            if not req.content_disposition:
+                return
             osufilename = req.content_disposition.filename
             logger.info(f'Start Downloading Map: {osufilename}')
             filename = f'{setid}.osz' if not dl else osufilename

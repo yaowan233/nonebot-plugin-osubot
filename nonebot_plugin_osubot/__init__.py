@@ -371,7 +371,7 @@ async def _get_bg(msg: Message = CommandArg()):
         msg = '请输入需要提取BG的地图ID'
     else:
         msg = await get_map_bg(bg_id)
-    await getbg.finish(msg, at_sender=True)
+    await getbg.finish(msg)
 
 generate_full_ln = on_command('convert', priority=11, block=True)
 
@@ -393,6 +393,8 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     else:
         ln_as_hit_thres = 100
     osz_file = await generate_full_ln_osz(int(set_id), gap, ln_as_hit_thres)
+    if not osz_file:
+        await generate_full_ln.finish('未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
     await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
     os.remove(osz_file)
@@ -404,13 +406,13 @@ generate_preview = on_command('预览', aliases={'preview'}, priority=11, block=
 @generate_preview.handle()
 async def _(msg: Message = CommandArg()):
     osu_id = msg.extract_plain_text().strip()
-    if not osu_id:
-        return
-    if not osu_id.isdigit():
+    if not osu_id or not osu_id.isdigit():
         await osudl.finish('请输入正确的地图mapID', at_sender=True)
     data = await osu_api('map', map_id=int(osu_id))
     if not data:
         await generate_preview.finish('未查询到该地图')
+    if isinstance(data, str):
+        await generate_preview.finish(data)
     setid: int = data['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
     osu = dirpath / f"{osu_id}.osu"
