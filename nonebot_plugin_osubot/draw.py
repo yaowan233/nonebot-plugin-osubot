@@ -296,7 +296,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
             badges_img = Image.open(badges_path).convert('RGBA').resize((86, 40))
             im.alpha_composite(badges_img, (length, height))
     else:
-        w_badges = DataText(500, 545, 35, "你没有 badge", Torus_Regular, anchor='mm')
+        w_badges = DataText(500, 545, 35, "You don't have a badge", Torus_Regular, anchor='mm')
         im = draw_text(im, w_badges)
     # 地区
     country_bg = Image.open(country).convert('RGBA').resize((80, 54))
@@ -543,7 +543,7 @@ async def draw_score(project: str,
     w_diff = DataText(162, 169, 18, f'{pp_info.difficulty.stars:.1f}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_diff)
     # 谱面版本，mapper
-    w_version = DataText(225, 169, 22, f'{mapinfo.version} | 谱面作者: {mapinfo.beatmapset.creator}', Torus_SemiBold,
+    w_version = DataText(225, 169, 22, f'{mapinfo.version} | mapper by: {mapinfo.beatmapset.creator}', Torus_SemiBold,
                          anchor='lm')
     im = draw_text(im, w_version)
     # 评价
@@ -553,12 +553,12 @@ async def draw_score(project: str,
     w_score = DataText(498, 331, 75, f'{score_info.score:,}', Torus_Regular, anchor='lm')
     im = draw_text(im, w_score)
     # 玩家
-    w_played = DataText(498, 396, 18, '玩家:', Torus_SemiBold, anchor='lm')
+    w_played = DataText(498, 396, 18, 'Played by:', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_played)
     w_username = DataText(630, 396, 18, score_info.user.username, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_username)
     # 时间
-    w_date = DataText(498, 421, 18, '达成时间:', Torus_SemiBold, anchor='lm')
+    w_date = DataText(498, 421, 18, 'Submitted on:', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_date)
     old_time = datetime.strptime(score_info.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
     new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
@@ -571,7 +571,7 @@ async def draw_score(project: str,
     w_l_username = DataText(195, 670, 24, score_info.user.username, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_l_username)
     # 在线，离线
-    w_line = DataText(195, 732, 30, '在线' if score_info.user.is_online else '离线', Torus_SemiBold,
+    w_line = DataText(195, 732, 30, 'online' if score_info.user.is_online else 'offline', Torus_SemiBold,
                       anchor='lm')
     im = draw_text(im, w_line)
     # acc,cb,pp,300,100,50,miss
@@ -950,7 +950,7 @@ async def bindinfo(project: str, uid, qid) -> str:
         return info
     uid = info['id']
     name = info['username']
-    await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=3)
+    await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=0)
     await update_user_info(uid)
     msg = f'用户 {name} 已成功绑定QQ {qid}'
     return msg
