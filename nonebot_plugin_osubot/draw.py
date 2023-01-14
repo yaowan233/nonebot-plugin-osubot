@@ -858,10 +858,10 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 曲名
-    w_title = DataText(25, 40, 38, data.titleU, Torus_SemiBold)
+    w_title = DataText(25, 40, 38, data.title, Torus_SemiBold)
     im = draw_text(im, w_title)
     # 曲师
-    w_artist = DataText(25, 75, 20, f'by {data.artistU}', Torus_SemiBold)
+    w_artist = DataText(25, 75, 20, f'by {data.artist}', Torus_SemiBold)
     im = draw_text(im, w_artist)
     # mapper
     w_mapper = DataText(25, 110, 20, f'mapper by {data.creator}', Torus_SemiBold)
@@ -916,7 +916,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
                     w_d = DataText(300 + 300 * index, 369 + h_num, 20, '|', Torus_SemiBold, anchor='lm')
                     im = draw_text(im, w_d)
             # 难度
-            w_star = DataText(80, 328 + h_num, 20, cmap.star, Torus_SemiBold, anchor='lm')
+            w_star = DataText(80, 328 + h_num, 20, f'{cmap.star:.1f}', Torus_SemiBold, anchor='lm')
             im = draw_text(im, w_star)
             # version
             w_version = DataText(125, 328 + h_num, 20, f' |  {cmap.version}', Torus_SemiBold, anchor='lm')
