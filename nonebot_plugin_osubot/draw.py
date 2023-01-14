@@ -21,8 +21,6 @@ from .pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 osufile = Path(__file__).parent / 'osufile'
 Torus_Regular = osufile / 'fonts' / 'Torus Regular.otf'
 Torus_SemiBold = osufile / 'fonts' / 'Torus SemiBold.otf'
-Meiryo_Regular = osufile / 'fonts' / 'Meiryo Regular.ttf'
-Meiryo_SemiBold = osufile / 'fonts' / 'Meiryo SemiBold.ttf'
 Venera = osufile / 'fonts' / 'Venera.otf'
 
 
@@ -327,7 +325,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     else:
         t_crank = f"#{statistics.country_rank:,}({op}{value:,})" \
             if value != 0 else f"#{statistics.country_rank:,}"
-    w_crank = DataText(495, 448, 30, t_crank, Meiryo_Regular, anchor='lb')
+    w_crank = DataText(495, 448, 30, t_crank, Torus_Regular, anchor='lb')
     im = draw_text(im, w_crank)
     # 等级
     w_current = DataText(900, 650, 25, statistics.level.current, Torus_Regular, anchor='mm')
@@ -343,14 +341,14 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     im = draw_text(im, w_grank)
     op, value = info_calc(statistics.global_rank, n_grank, rank=True)
     if value != 0:
-        w_n_grank = DataText(65, 820, 20, f'{op}{value:,}', Meiryo_Regular)
+        w_n_grank = DataText(65, 820, 20, f'{op}{value:,}', Torus_Regular)
         im = draw_text(im, w_n_grank)
     # pp
     w_pp = DataText(295, 785, 35, f'{statistics.pp:,}', Torus_Regular)
     im = draw_text(im, w_pp)
     op, value = info_calc(statistics.pp, n_pp, pp=True)
     if value != 0:
-        w_n_pc = DataText(305, 820, 20, f'{op}{value:.2f}', Meiryo_Regular)
+        w_n_pc = DataText(305, 820, 20, f'{op}{value:.2f}', Torus_Regular)
         im = draw_text(im, w_n_pc)
     # SS - A
     # gc_x = 493
@@ -537,7 +535,7 @@ async def draw_score(project: str,
     im = draw_text(im, w_mapid)
     # 曲名
     w_title = DataText(75, 118, 30, f'{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}',
-                       Meiryo_SemiBold, anchor='lm')
+                       Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_title)
     # 星级
     w_diff = DataText(162, 169, 18, f'{pp_info.difficulty.stars:.1f}', Torus_SemiBold, anchor='lm')
@@ -663,7 +661,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
             if (bp.rank == 'X' or bp.rank == 'S') and ('HD' in bp.mods or 'FL' in bp.mods):
                 bp.rank += 'H'
         # BP排名
-        rank_bp = DataText(15, 144 + h_num, 20, num + 1, Meiryo_Regular, anchor='lm')
+        rank_bp = DataText(15, 144 + h_num, 20, num + 1, Torus_Regular, anchor='lm')
         im = draw_text(im, rank_bp)
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
@@ -671,7 +669,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         im.alpha_composite(rank_bg, (45, 128 + h_num))
         # 曲名&作曲
         w_title_artist = DataText(125, 130 + h_num, 20, f'{bp.beatmapset.title}'
-                                                        f' | by {bp.beatmapset.artist}', Meiryo_Regular,
+                                                        f' | by {bp.beatmapset.artist}', Torus_Regular,
                                   anchor='lm')
         im = draw_text(im, w_title_artist)
         # 地图版本&时间
@@ -793,13 +791,13 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     w_version = DataText(120, 125, 25, mapinfo.version, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_version)
     # 曲名
-    w_title = DataText(50, 170, 30, mapinfo.beatmapset.title, Meiryo_SemiBold)
+    w_title = DataText(50, 170, 30, mapinfo.beatmapset.title, Torus_SemiBold)
     im = draw_text(im, w_title)
     # 曲师
-    w_artist = DataText(50, 210, 25, f'by {mapinfo.beatmapset.artist_unicode}', Meiryo_SemiBold)
+    w_artist = DataText(50, 210, 25, f'by {mapinfo.beatmapset.artist_unicode}', Torus_SemiBold)
     im = draw_text(im, w_artist)
     # 来源
-    w_source = DataText(50, 260, 25, f'Source:{mapinfo.beatmapset.source}', Meiryo_SemiBold)
+    w_source = DataText(50, 260, 25, f'Source:{mapinfo.beatmapset.source}', Torus_SemiBold)
     im = draw_text(im, w_source)
     # mapper
     w_mapper_by = DataText(160, 400, 20, 'mapper by:', Torus_SemiBold)
@@ -860,10 +858,10 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 曲名
-    w_title = DataText(25, 40, 38, data.titleU, Meiryo_SemiBold)
+    w_title = DataText(25, 40, 38, data.titleU, Torus_SemiBold)
     im = draw_text(im, w_title)
     # 曲师
-    w_artist = DataText(25, 75, 20, f'by {data.artistU}', Meiryo_SemiBold)
+    w_artist = DataText(25, 75, 20, f'by {data.artistU}', Torus_SemiBold)
     im = draw_text(im, w_artist)
     # mapper
     w_mapper = DataText(25, 110, 20, f'mapper by {data.creator}', Torus_SemiBold)
@@ -877,7 +875,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     w_apptime = DataText(25, 145, 20, f'Approved Time: {approved_date}', Torus_SemiBold)
     im = draw_text(im, w_apptime)
     # 来源
-    w_source = DataText(25, 180, 20, f'Source: {data.source}', Meiryo_SemiBold)
+    w_source = DataText(25, 180, 20, f'Source: {data.source}', Torus_SemiBold)
     im = draw_text(im, w_source)
     # bpm
     w_bpm = DataText(1150, 110, 20, f'BPM: {data.bpm}', Torus_SemiBold, anchor='rt')
