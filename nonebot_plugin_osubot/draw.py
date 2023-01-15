@@ -6,7 +6,6 @@ from typing import Optional, List, Union
 from numbers import Real
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
 
@@ -98,18 +97,23 @@ def info_calc(n1: Optional[Real], n2: Optional[Real], rank: bool = False, pp: bo
     return [op, value]
 
 
-def wedge_acc(acc: float) -> BytesIO:
-    size = [acc, 100 - acc]
-    insize = [60, 20, 7, 7, 5, 1]
-    insizecolor = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
-    fig, ax = plt.subplots()
-    patches, texts = ax.pie(size, radius=1.1, startangle=90, counterclock=False, pctdistance=0.9,
-                            wedgeprops=dict(width=0.27))
-    ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9,
-           wedgeprops=dict(width=0.05))
-    patches[1].set_alpha(0)
-    img = BytesIO()
-    plt.savefig(img, transparent=True)
+def draw_acc(img: Image, acc: float, mode: str):
+    draw = ImageDraw.Draw(img)
+    if mode == 'osu':
+        size = [60, 20, 7, 7, 5, 1]
+    elif mode == 'taiko':
+        size = [60, 20, 5, 5, 4, 1]
+    elif mode == 'fruits':
+        size = [85, 5, 4, 4, 1, 1]
+    else:
+        size = [70, 10, 10, 5, 4, 1]
+    start = -90
+    color = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
+    for s, c in zip(size, color):
+        end = start + s / 100 * 360
+        draw.arc((195, 263, 435, 503), start, end, fill=c, width=5)
+        start = end
+    draw.arc((165, 233, 465, 533), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
     return img
 
 
@@ -481,9 +485,7 @@ async def draw_score(project: str,
             rank_ok = True
         im.alpha_composite(rank_bg, (75, 243 + 39 * rank_num))
     # 成绩+acc
-    score_acc = wedge_acc(score_info.accuracy * 100)
-    score_acc_bg = Image.open(score_acc).convert('RGBA').resize((576, 432))
-    im.alpha_composite(score_acc_bg, (15, 153))
+    im = draw_acc(im, score_info.accuracy, score_info.mode)
     # 获取头图，头像，地区，状态，support
     user_headericon = await get_projectimg(headericon)
     user_icon = await get_projectimg(score_info.user.avatar_url)
@@ -545,7 +547,7 @@ async def draw_score(project: str,
                          anchor='lm')
     im = draw_text(im, w_version)
     # 评价
-    w_rank = DataText(309, 375, 75, score_info.rank, Venera, anchor='mm')
+    w_rank = DataText(316, 387, 75, score_info.rank, Venera, anchor='mm')
     im = draw_text(im, w_rank)
     # 分数
     w_score = DataText(498, 331, 75, f'{score_info.score:,}', Torus_Regular, anchor='lm')
