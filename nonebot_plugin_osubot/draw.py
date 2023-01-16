@@ -21,6 +21,15 @@ osufile = Path(__file__).parent / 'osufile'
 Torus_Regular = osufile / 'fonts' / 'Torus Regular.otf'
 Torus_SemiBold = osufile / 'fonts' / 'Torus SemiBold.otf'
 Venera = osufile / 'fonts' / 'Venera.otf'
+ColorPic = Image.open(osufile / 'work' / 'color.png').load()
+InfoImg = Image.open(osufile / 'info.png').convert('RGBA')
+SupporterBg = Image.open(osufile / 'work' / 'suppoter.png').convert('RGBA')
+ExpLeftBg = Image.open(osufile / 'work' / 'left.png').convert('RGBA')
+ExpCenterBg = Image.open(osufile / 'work' / 'center.png').convert('RGBA')
+ExpRightBg = Image.open(osufile / 'work' / 'right.png').convert('RGBA')
+BgImg = Image.open(osufile / 'Best Performance.png').convert('RGBA')
+MapBg = Image.open(osufile / 'beatmapinfo.png').convert('RGBA')
+BarImg = Image.open(osufile / 'work' / 'bmap.png').convert('RGBA')
 
 
 def image2bytesio(pic: Image):
@@ -208,8 +217,7 @@ def stars_diff(mode: Union[str, int], stars: float):
         return Image.open(osufile / 'work' / f'{mode}_expertplus.png').convert('RGBA')
     # 取色
     x = (stars - math.floor(stars)) * default + xp
-    color = Image.open(osufile / 'work' / 'color.png').load()
-    r, g, b = color[x, 1]
+    r, g, b = ColorPic[x, 1]
     # 打开底图
     im = Image.open(osufile / 'work' / f'{mode}.png').convert('RGBA')
     xx, yy = im.size
@@ -266,17 +274,11 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     user_header = await get_projectimg(info.cover_url)
     user_icon = await get_projectimg(info.avatar_url)
     country = osufile / 'flags' / f'{info.country_code}.png'
-    supporter = osufile / 'work' / 'suppoter.png'
-    exp_l = osufile / 'work' / 'left.png'
-    exp_c = osufile / 'work' / 'center.png'
-    exp_r = osufile / 'work' / 'right.png'
     # 头图
     header_img = crop_bg('HI', user_header)
     im.alpha_composite(header_img, (0, 100))
     # 底图
-    info_bg = osufile / 'info.png'
-    info_img = Image.open(info_bg).convert('RGBA')
-    im.alpha_composite(info_img)
+    im.alpha_composite(InfoImg)
     # 头像
     icon_bg = Image.open(user_icon).convert('RGBA').resize((300, 300))
     icon_img = draw_fillet(icon_bg, 25)
@@ -305,17 +307,13 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     im.alpha_composite(country_bg, (400, 394))
     # supporter
     if info.is_supporter:
-        supporter_bg = Image.open(supporter).convert('RGBA').resize((54, 54))
-        im.alpha_composite(supporter_bg, (400, 280))
+        im.alpha_composite(SupporterBg.resize((54,54)), (400, 280))
     # 经验
     if statistics.level.progress != 0:
-        exp_left_bg = Image.open(exp_l).convert('RGBA')
-        im.alpha_composite(exp_left_bg, (50, 646))
+        im.alpha_composite(ExpLeftBg, (50, 646))
         exp_width = statistics.level.progress * 7 - 3
-        exp_center_bg = Image.open(exp_c).convert('RGBA').resize((exp_width, 10))
-        im.alpha_composite(exp_center_bg, (54, 646))
-        exp_right_bg = Image.open(exp_r).convert('RGBA')
-        im.alpha_composite(exp_right_bg, (int(54 + exp_width), 646))
+        im.alpha_composite(ExpCenterBg.resize((exp_width, 10)), (54, 646))
+        im.alpha_composite(ExpRightBg, (int(54 + exp_width), 646))
     # 模式
     w_mode = DataText(935, 50, 45, GMN[mode], Torus_Regular, anchor='rm')
     im = draw_text(im, w_mode)
@@ -509,9 +507,7 @@ async def draw_score(project: str,
     im.alpha_composite(status_bg, (114, 712))
     # supporter
     if score_info.user.is_supporter:
-        supporter = osufile / 'work' / 'suppoter.png'
-        supporter_bg = Image.open(supporter).convert('RGBA').resize((40, 40))
-        im.alpha_composite(supporter_bg, (267, 606))
+        im.alpha_composite(SupporterBg.resize((40, 40)), (267, 606))
     # cs, ar, od, hp, stardiff
     mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, mapinfo.difficulty_rating]
     for num, i in enumerate(mapdiff):
@@ -641,9 +637,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         Union[str, MessageSegment]:
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
-    bp_bg = osufile / 'Best Performance.png'
-    bg_img = Image.open(bp_bg).convert('RGBA')
-    im.alpha_composite(bg_img)
+    im.alpha_composite(BgImg)
     f_div = Image.new('RGBA', (1500, 2), (255, 255, 255, 255)).convert('RGBA')
     im.alpha_composite(f_div, (0, 100))
     if project == 'bp':
@@ -762,9 +756,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info
-    map_bg = osufile / 'beatmapinfo.png'
-    mapbg = Image.open(map_bg).convert('RGBA')
-    im.alpha_composite(mapbg)
+    im.alpha_composite(MapBg)
     # 模式
     mode_bg = stars_diff(mapinfo.mode, ss_pp_info.difficulty.stars)
     mode_img = mode_bg.resize((50, 50))
@@ -902,9 +894,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
             stars_img = stars_bg.resize((20, 20))
             im.alpha_composite(stars_img, (50, 320 + h_num))
             # diff
-            bar_bg = osufile / 'work' / 'bmap.png'
-            bar_img = Image.open(bar_bg).convert('RGBA')
-            im.alpha_composite(bar_img, (10, 365 + h_num))
+            im.alpha_composite(BarImg, (10, 365 + h_num))
             gc = ['CS', 'HP', 'OD', 'AR']
             for index, i in enumerate((cmap.CS, cmap.HP, cmap.OD, cmap.AR)):
                 diff_len = int(200 * i / 10) if i <= 10 else 200
