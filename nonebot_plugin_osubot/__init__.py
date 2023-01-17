@@ -16,7 +16,7 @@ from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo
 from .file import download_map, map_downloaded
 from .utils import GM, GMN, update_user_info
 from .database.models import UserData
-from .mania import generate_full_ln_osz, generate_preview_pic
+from .mania import generate_full_ln_osz, generate_preview_pic, change_rate
 from .api import osu_api
 
 
@@ -36,9 +36,10 @@ usage = "/osuhelp detail  #查看详细帮助\n" \
         "/bp 数字          #查询bp成绩\n" \
         "/pfm 数字-数字     #查询bp范围成绩\n" \
         "/tbp             #查询当天新增bp\n" \
-        "/preview mapid   #预览mania铺面\n" \
         "/map mapid       #查询地图信息\n" \
         "/getbg mapid     #提取背景\n" \
+        "/preview mapid   #预览mania铺面\n" \
+        "/倍速 setid       #改变mania铺面速率" \
         "/convert setid   #转换mania铺面为反键\n" \
         "/bmap setid      #查询图组信息\n" \
         "/osudl setid     #下载地图\n" \
@@ -59,10 +60,12 @@ detail_usage = """以下<>内是必填内容，()内是选填内容，user可以
 /bmap <setid>
 /bmap -b <mapid>
 /osudl <setid>
+/倍速 <setid> (rate) 
 /preview <mapid>
 /convert <setid> (gap) (ln_as_hit_thres)
 其中gap为ln的间距时间默认为150 (ms)
-ln_as_hit_thres为ln转换为note的时间的阈值默认为100 (ms)"""
+ln_as_hit_thres为ln转换为note的时间的阈值默认为100 (ms)
+rate为倍速速率默认为1.1 可改为任意小数"""
 
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
@@ -71,7 +74,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.9.5",
+        "version": "0.10.0",
     },
 )
 
@@ -372,6 +375,28 @@ async def _get_bg(msg: Message = CommandArg()):
     else:
         msg = await get_map_bg(bg_id)
     await getbg.finish(msg)
+
+change = on_command('变速', priority=11, block=True)
+
+
+@change.handle()
+async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+    args = msg.extract_plain_text().strip().split()
+    if not args:
+        await change.finish('请输入需要变速的地图setID')
+    set_id = args[0]
+    if not set_id.isdigit():
+        await change.finish('请输入正确的setID')
+    if len(args) >= 2:
+        rate = float(args[1])
+    else:
+        rate = 1.1
+    osz_file = await change_rate(int(set_id), rate)
+    if not osz_file:
+        await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
+    name = urllib.parse.unquote(osz_file.name)
+    await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+    os.remove(osz_file)
 
 generate_full_ln = on_command('convert', priority=11, block=True)
 
