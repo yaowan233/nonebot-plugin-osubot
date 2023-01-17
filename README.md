@@ -26,6 +26,8 @@ _✨ NoneBot osubot ✨_
 
 本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用，可能与其他使用了tortoise-orm的插件会相冲突如harukabot
 
+变速功能依赖ffmpeg，需要[自行安装ffmpeg](https://docs.go-cqhttp.org/guide/quick_start.html#%E5%AE%89%E8%A3%85-ffmpeg)才能正常使用
+
 ## 💿 安装
 
 <details>
