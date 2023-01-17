@@ -60,7 +60,8 @@ async def change_rate(set_id: int, rate: float = 1.1):
         osu = OsuMap.read_file(str(file.absolute()))
         osu2 = osu.rate(rate)
         osu2.version = osu.version + f' x{rate}'
-        osu2.audio_file_name = osu.audio_file_name.rstrip('.mp3') + f'x{rate}.mp3'
+        audio = Path(path / osu.audio_file_name)
+        osu2.audio_file_name = audio.stem + f'x{rate}{audio.suffix}'
         audio_path = path / osu.audio_file_name
         osu_ls.append((file, osu2))
         if audio_path in processed:
