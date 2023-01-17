@@ -354,7 +354,7 @@ async def _recent(ev: Event, msg: Message = CommandArg()):
             logger.error(e)
             await update.finish('请输入正确的模式 0-3', at_sender=True)
             return
-        if mode >= 0 or mode < 4:
+        if 0 <= mode < 4:
             await UserData.filter(user_id=qqid).update(osu_mode=mode)
             msg = f'已将默认模式更改为 {GM[mode]}'
         else:
