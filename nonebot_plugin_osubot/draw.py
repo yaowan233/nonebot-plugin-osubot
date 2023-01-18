@@ -84,7 +84,7 @@ def draw_fillet(img, radii):
 
 
 def info_calc(n1: Optional[Real], n2: Optional[Real], rank: bool = False, pp: bool = False):
-    if not n1 or n2:
+    if not n1 or not n2:
         return '', 0
     num = n1 - n2
     if num < 0:
@@ -350,7 +350,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     im = draw_text(im, w_pp)
     op, value = info_calc(statistics.pp, n_pp, pp=True)
     if value != 0:
-        w_n_pc = DataText(305, 820, 20, f'{op}{value:.2f}', Torus_Regular)
+        w_n_pc = DataText(305, 820, 20, f'{op}{int(value)}', Torus_Regular)
         im = draw_text(im, w_n_pc)
     # SS - A
     # gc_x = 493
