@@ -94,7 +94,6 @@ def split_msg():
         user = user_data.osu_id
         mode = str(user_data.osu_mode)
         mods = []
-        isint = True
         arg = msg.extract_plain_text().strip()
         mode_index = max(arg.find(':'), arg.find('：'))
         mods_index = arg.find('+')
@@ -116,8 +115,7 @@ def split_msg():
                 mode = arg[mode_index + 1: mods_index]
                 mods = mods2list(arg[mods_index + 1:].strip())
             para = arg[:index].strip()
-        if not para.isdigit():
-            isint = False
+            state['full_para'] = para.strip()
         # 分出user和参数
         if para.find(' ') > 0 and state['_prefix']['command'][0] not in ('pr', 're', 'info', 'tbp', 'recent'):
             user = para[:para.rfind(' ')]
@@ -130,7 +128,6 @@ def split_msg():
         state['user'] = user
         state['mode'] = int(mode)
         state['mods'] = mods
-        state['isint'] = isint
     return Depends(dependency)
 
 
@@ -154,7 +151,7 @@ recent = on_command("recent", aliases={'re'}, priority=11, block=True)
 async def _recent(state: T_State):
     if 'error' in state:
         await info.finish(state['error'])
-    user = state['para'] if state['para'] else state['user']
+    user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_score('recent', user, GM[mode], [])
     await recent.finish(data, at_sender=True)
@@ -166,7 +163,7 @@ pr = on_command("pr", priority=11, block=True)
 async def _pr(state: T_State):
     if 'error' in state:
         await info.finish(state['error'])
-    user = state['para'] if state['para'] else state['user']
+    user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_score('pr', user, GM[mode], [])
     await recent.finish(data, at_sender=True)
@@ -235,7 +232,7 @@ tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 async def _tbp(state: T_State):
     if 'error' in state:
         await info.finish(state['error'])
-    user = state['user']
+    user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await best_pfm('tbp', user, GM[mode], [])
     await tbp.finish(data, at_sender=True)
@@ -244,47 +241,30 @@ async def _tbp(state: T_State):
 osu_map = on_command('map', priority=11, block=True)
 
 
-@osu_map.handle()
-async def _map(msg: Message = CommandArg()):
-    mapid: list = msg.extract_plain_text().strip().split()
-    mods = []
-    while '' in mapid:
-        mapid.remove('')
-    if not mapid:
+@osu_map.handle(parameterless=[split_msg()])
+async def _map(state: T_State):
+    map_id = state['para']
+    mods = state['mods']
+    if not map_id:
         await osu_map.finish('请输入地图ID', at_sender=True)
-    elif not mapid[0].isdigit():
+    elif not map_id.isdigit():
         await osu_map.finish('请输入正确的地图ID', at_sender=True)
-    if '+' in mapid[-1]:
-        mods = mods2list(mapid[-1][1:])
-        del mapid[-1]
-    m = await map_info(mapid[0], mods)
+    m = await map_info(map_id, mods)
     await osu_map.finish(m, at_sender=True)
 
 
 bmap = on_command('bmap', priority=11, block=True)
 
 
-@bmap.handle()
-async def _bmap(msg: Message = CommandArg()):
-    msg: List[str] = msg.extract_plain_text().strip().split()
-    while '' in msg:
-        msg.remove('')
-    if not msg:
-        await bmap.finish('请输入地图ID', at_sender=True)
-    op = False
-    if len(msg) == 1:
-        if not msg[0].isdigit():
-            await bmap.finish('请输入正确的地图ID', at_sender=True)
-        setid = msg[0]
-    elif msg[0] == '-b':
-        if not msg[1].isdigit():
-            await bmap.finish('请输入正确的地图ID', at_sender=True)
-        op = True
-        setid = msg[1]
-    else:
-        await bmap.finish('请输入正确的地图ID', at_sender=True)
+@bmap.handle(parameterless=[split_msg()])
+async def _bmap(state: T_State):
+    set_id = state['para']
+    if not set_id:
+        await bmap.finish('请输入setID', at_sender=True)
+    if not set_id.isdigit():
+        await bmap.finish('请输入正确的setID', at_sender=True)
         return
-    m = await bmap_info(setid, op)
+    m = await bmap_info(set_id)
     await bmap.finish(m, at_sender=True)
 
 
@@ -337,7 +317,7 @@ update = on_command('update', priority=11, block=True)
 
 
 @update.handle()
-async def _recent(ev: Event, msg: Message = CommandArg()):
+async def _(ev: Event, msg: Message = CommandArg()):
     qqid = ev.get_user_id()
     args: List[str] = msg.extract_plain_text().strip().split()
     while '' in args:
