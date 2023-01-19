@@ -4,10 +4,11 @@ import urllib
 from asyncio.tasks import Task
 from typing import List
 
-from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment
+from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, \
+    ActionFailed
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
-from nonebot.params import T_State, ShellCommandArgv, CommandArg, ShellCommandArgs
+from nonebot.params import T_State, ShellCommandArgv, CommandArg
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
@@ -167,8 +168,12 @@ async def _(
     if not osz_file:
         await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
-    await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
-    os.remove(osz_file)
+    try:
+        await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+    except ActionFailed:
+        await convert.finish('上传文件失败，可能是群空间满或没有权限导致的')
+    finally:
+        os.remove(osz_file)
 
 
 info = on_command("info", block=True, priority=11)
@@ -321,8 +326,12 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
         await osudl.finish('请输入正确的地图ID', at_sender=True)
     filepath = await download_map(int(setid))
     name = urllib.parse.unquote(filepath.name)
-    await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=name)
-    os.remove(filepath)
+    try:
+        await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=name)
+    except ActionFailed:
+        await osudl.finish('上传文件失败，可能是群空间满或没有权限导致的')
+    finally:
+        os.remove(filepath)
 
 
 bind = on_command('bind', priority=11, block=True)
@@ -424,8 +433,12 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     if not osz_file:
         await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
-    await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
-    os.remove(osz_file)
+    try:
+        await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+    except ActionFailed:
+        await change.finish('上传文件失败，可能是群空间满或没有权限导致的')
+    finally:
+        os.remove(osz_file)
 
 generate_full_ln = on_command('反键', priority=11, block=True)
 
@@ -452,8 +465,12 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     if not osz_file:
         await generate_full_ln.finish('未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
-    await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
-    os.remove(osz_file)
+    try:
+        await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+    except ActionFailed:
+        await generate_full_ln.finish('上传文件失败，可能是群空间满或没有权限导致的')
+    finally:
+        os.remove(osz_file)
 
 
 generate_preview = on_command('预览', aliases={'preview'}, priority=11, block=True)
