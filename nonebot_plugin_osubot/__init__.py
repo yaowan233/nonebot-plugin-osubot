@@ -1,22 +1,23 @@
 import asyncio
 import os
+import urllib
 from asyncio.tasks import Task
 from typing import List
-import urllib
 
 from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment
+from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
-from nonebot.params import T_State
-from nonebot.params import CommandArg
+from nonebot.params import T_State, ShellCommandArgv, CommandArg, ShellCommandArgs
 from nonebot.plugin import PluginMetadata
+from nonebot.rule import ArgumentParser
 from nonebot.log import logger
-from nonebot import on_command, require
+from nonebot import on_command, require, on_shell_command
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo, get_map_bg
 from .file import download_map, map_downloaded
 from .utils import GM, GMN, update_user_info
 from .database.models import UserData
-from .mania import generate_full_ln_osz, generate_preview_pic, change_rate
+from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api
 
 
@@ -40,7 +41,7 @@ usage = "/osuhelp detail  #查看详细帮助\n" \
         "/getbg mapid     #提取背景\n" \
         "/preview mapid   #预览mania铺面\n" \
         "/倍速 setid       #改变mania铺面速率" \
-        "/convert setid   #转换mania铺面为反键\n" \
+        "/反键 setid   #转换mania铺面为反键\n" \
         "/bmap setid      #查询图组信息\n" \
         "/osudl setid     #下载地图\n" \
         "注意：mapid与setid是不一样的，mapid是单图id，setid是图组id\n" \
@@ -61,7 +62,7 @@ detail_usage = """以下<>内是必填内容，()内是选填内容，user可以
 /bmap -b <mapid>
 /osudl <setid>
 /倍速 <setid> (rate) 
-/preview <mapid>
+/反键 <mapid>
 /convert <setid> (gap) (ln_as_hit_thres)
 其中gap为ln的间距时间默认为150 (ms)
 ln_as_hit_thres为ln转换为note的时间的阈值默认为100 (ms)
@@ -129,6 +130,45 @@ def split_msg():
         state['mode'] = int(mode)
         state['mods'] = mods
     return Depends(dependency)
+
+
+parser = ArgumentParser('convert', description='变换mania谱面')
+parser.add_argument('--set', '-s', type=int, help='要转换的谱面的setid')
+parser.add_argument('--fln', action='store_true', help='将谱面转换为反键')
+parser.add_argument('--rate', type=float, help='谱面倍速速率')
+parser.add_argument('--end_rate', type=float, help='谱面倍速速率的最大值')
+parser.add_argument('--step', type=float, help='谱面倍速的step')
+parser.add_argument('--od', type=float, help='改变谱面od到指定值', )
+parser.add_argument('--nsv', action='store_true', help='移除谱面所有sv')
+parser.add_argument('--nln', action='store_true', help='移除谱面所有ln')
+parser.add_argument('--gap', nargs='?', default='150', type=float, help='指定反键的间距时间，默认150ms', )
+parser.add_argument('--thres', nargs='?', default='100', type=float, help='指定转反键时ln转换为note的阈值，默认100ms', )
+
+convert = on_shell_command("convert", parser=parser, block=True, priority=13)
+
+
+@convert.handle()
+async def _(
+        bot: Bot, event: GroupMessageEvent, argv: List[str] = ShellCommandArgv()
+):
+    try:
+        args = parser.parse_args(argv)
+    except ParserExit as e:
+        if e.status == 0:
+            await convert.finish(parser.format_help())
+        await convert.finish(str(e))
+        return
+    options = Options(**vars(args))
+    if not options.set:
+        await convert.finish('请提供需要转换的谱面setid')
+    if options.nln and options.fln:
+        await convert.finish('指令矛盾！')
+    osz_file = await convert_mania_map(options)
+    if not osz_file:
+        await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
+    name = urllib.parse.unquote(osz_file.name)
+    await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+    os.remove(osz_file)
 
 
 info = on_command("info", block=True, priority=11)
@@ -356,48 +396,59 @@ async def _get_bg(msg: Message = CommandArg()):
         msg = await get_map_bg(bg_id)
     await getbg.finish(msg)
 
-change = on_command('变速', priority=11, block=True)
+change = on_command('倍速', priority=11, block=True)
 
 
 @change.handle()
 async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
+    argv = ['--set']
     if not args:
-        await change.finish('请输入需要变速的地图setID')
+        await change.finish('请输入需要倍速的地图setID')
     set_id = args[0]
     if not set_id.isdigit():
         await change.finish('请输入正确的setID')
+    argv.append(set_id)
     if len(args) >= 2:
-        rate = float(args[1])
+        argv.append('--rate')
+        if '-' in args[1]:
+            low, high = args[1].split('-')
+            argv.extend([low, '--end_rate', high, '--step', '0.05'])
+        else:
+            argv.append(args[1])
     else:
-        rate = 1.1
-    osz_file = await change_rate(int(set_id), rate)
+        await change.finish('请输入倍速速率')
+    args = parser.parse_args(argv)
+    options = Options(**vars(args))
+    osz_file = await convert_mania_map(options)
     if not osz_file:
         await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
     await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
     os.remove(osz_file)
 
-generate_full_ln = on_command('convert', priority=11, block=True)
+generate_full_ln = on_command('反键', priority=11, block=True)
 
 
 @generate_full_ln.handle()
 async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
+    argv = ['--fln', '--set']
     if not args:
         await generate_full_ln.finish('请输入需要转ln的地图setID')
     set_id = args[0]
     if not set_id.isdigit():
         await generate_full_ln.finish('请输入正确的setID')
+    argv.append(set_id)
     if len(args) >= 2:
-        gap = float(args[1])
-    else:
-        gap = 150
+        argv.append('--gap')
+        argv.append(args[1])
     if len(args) >= 3:
-        ln_as_hit_thres = float(args[2])
-    else:
-        ln_as_hit_thres = 100
-    osz_file = await generate_full_ln_osz(int(set_id), gap, ln_as_hit_thres)
+        argv.append('--thres')
+        argv.append(args[2])
+    args = parser.parse_args(argv)
+    options = Options(**vars(args))
+    osz_file = await convert_mania_map(options)
     if not osz_file:
         await generate_full_ln.finish('未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
