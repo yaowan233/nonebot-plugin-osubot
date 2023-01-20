@@ -76,7 +76,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.10.3",
+        "version": "0.10.4",
     },
 )
 
@@ -102,6 +102,7 @@ def split_msg():
         # 没有:与+时
         if max(mode_index, mods_index) < 0:
             para = arg
+            state['full_para'] = para.strip()
         else:
             # 只有+时
             if mode_index < 0:
