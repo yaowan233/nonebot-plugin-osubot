@@ -2,6 +2,7 @@ import asyncio
 import os
 import urllib
 from asyncio.tasks import Task
+from pathlib import Path
 from typing import List
 
 from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, \
@@ -27,47 +28,20 @@ require('nonebot_plugin_apscheduler')
 from nonebot_plugin_apscheduler import scheduler
 
 
-usage = "/osuhelp detail  #查看详细帮助\n" \
-        "/info            #查询游玩信息\n" \
-        "/bind 用户名      #绑定用户名\n" \
-        "/unbind          #解绑\n" \
-        "/update mode 数字 #更改模式\n" \
-        "/recent          #查询最近含死亡游玩记录\n" \
-        "/pr              #查询最近不含死亡游玩记录\n" \
-        "/score mapid     #查询地图成绩\n" \
-        "/bp 数字          #查询bp成绩\n" \
-        "/pfm 数字-数字     #查询bp范围成绩\n" \
-        "/tbp             #查询当天新增bp\n" \
-        "/map mapid       #查询地图信息\n" \
-        "/getbg mapid     #提取背景\n" \
-        "/preview mapid   #预览mania铺面\n" \
-        "/倍速 setid       #改变mania铺面速率" \
-        "/反键 setid   #转换mania铺面为反键\n" \
-        "/bmap setid      #查询图组信息\n" \
-        "/osudl setid     #下载地图\n" \
-        "注意：mapid与setid是不一样的，mapid是单图id，setid是图组id\n" \
-        "/update mode 2 表示更改为ctb模式 0-3分别为std, taiko, ctb, mania"
+usage = "发送/osuhelp 查看帮助"
 detail_usage = """以下<>内是必填内容，()内是选填内容，user可以是用户名也可以@他人，mode为0-3的一个数字
 /info (user)(:mode)
-/bind <user>
-/unbind
-/update mode <mode>
 /re (user)(:mode)
 /score <mapid>(:mode)(+mods)
 /bp (user) <num> (:mode)(+mods)
 /pfm (user) <min>-<max> (:mode)(+mods)
 /tbp (user) (:mode)
 /map <mapid> (+mods)
-/getbg <mapid>
-/bmap <setid>
-/bmap -b <mapid>
-/osudl <setid>
-/倍速 <setid> (rate) 
-/反键 <mapid>
-/convert <setid> (gap) (ln_as_hit_thres)
-其中gap为ln的间距时间默认为150 (ms)
-ln_as_hit_thres为ln转换为note的时间的阈值默认为100 (ms)
-rate为倍速速率默认为1.1 可改为任意小数"""
+/倍速 <setid> (rate)-(rate)
+/反键 <mapid> (gap) (ln_as_hit_thres)
+其中gap为ln的间距默认为150 (ms)
+ln_as_hit_thres为ln转为note的阈值默认为100 (ms)
+rate可为任意小数"""
 
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
@@ -76,7 +50,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.10.4",
+        "version": "0.11.0",
     },
 )
 
@@ -174,8 +148,10 @@ async def _(
     except ActionFailed:
         await convert.finish('上传文件失败，可能是群空间满或没有权限导致的')
     finally:
-        os.remove(osz_file)
-
+        try:
+            os.remove(osz_file)
+        except PermissionError:
+            ...
 
 info = on_command("info", block=True, priority=11)
 
@@ -190,7 +166,7 @@ async def _info(state: T_State):
     await info.finish(data, at_sender=True)
 
 
-recent = on_command("recent", aliases={'re'}, priority=11, block=True)
+recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=True)
 
 
 @recent.handle(parameterless=[split_msg()])
@@ -202,7 +178,7 @@ async def _recent(state: T_State):
     data = await draw_score('recent', user, GM[mode], [])
     await recent.finish(data, at_sender=True)
 
-pr = on_command("pr", priority=11, block=True)
+pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
 
 
 @pr.handle(parameterless=[split_msg()])
@@ -260,11 +236,12 @@ async def _pfm(state: T_State):
     mode = state['mode']
     mods = state['mods']
     para = state['para']
-    try:
-        low, high = limits(para)
-    except Exception as e:
-        await pfm.finish(f'{e}\n参数为 "数字-数字"的形式!')
+    ls = para.split('-')
+    low, high = ls[0], ls[1]
+    if not low.isdigit() or not high.isdigit():
+        await pfm.finish(f'参数应为 "数字-数字"的形式!')
         return
+    low, high = int(low), int(high)
     if not 0 < low < high <= 100:
         await pfm.finish('仅支持查询bp1-100')
     data = await best_pfm('bp', user, GM[mode], mods, low, high)
@@ -332,8 +309,10 @@ async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
     except ActionFailed:
         await osudl.finish('上传文件失败，可能是群空间满或没有权限导致的')
     finally:
-        os.remove(filepath)
-
+        try:
+            os.remove(filepath)
+        except PermissionError:
+            ...
 
 bind = on_command('bind', priority=11, block=True)
 
@@ -363,34 +342,27 @@ async def _unbind(ev: Event):
         await unbind.finish('尚未绑定，无需解绑', at_sender=True)
 
 
-update = on_command('update', priority=11, block=True)
+update = on_command('更新模式', priority=11, block=True)
 
 
 @update.handle()
 async def _(ev: Event, msg: Message = CommandArg()):
     qqid = ev.get_user_id()
-    args: List[str] = msg.extract_plain_text().strip().split()
-    while '' in args:
-        args.remove('')
+    args = msg.extract_plain_text().strip()
     user = await UserData.get_or_none(user_id=qqid)
     if not user:
-        msg = '该账号尚未绑定，请输入 /bind 用户名 绑定账号'
+        await update.finish('该账号尚未绑定，请输入 /bind 用户名 绑定账号')
     elif not args:
-        msg = '请输入需要更新内容的参数'
-    elif args[0] == 'mode':
-        try:
-            mode = int(args[1])
-        except Exception as e:
-            logger.error(e)
-            await update.finish('请输入正确的模式 0-3', at_sender=True)
-            return
-        if 0 <= mode < 4:
-            await UserData.filter(user_id=qqid).update(osu_mode=mode)
-            msg = f'已将默认模式更改为 {GM[mode]}'
-        else:
-            msg = '请输入正确的模式 0-3'
+        await update.finish('请输入需要更新内容的模式')
+    if not args.isdigit():
+        await update.finish('请输入正确的模式 0-3', at_sender=True)
+        return
+    mode = int(args)
+    if 0 <= mode < 4:
+        await UserData.filter(user_id=qqid).update(osu_mode=mode)
+        msg = f'已将默认模式更改为 {GM[mode]}'
     else:
-        msg = '参数错误，请输入正确的模式 0-3'
+        msg = '请输入正确的模式 0-3'
     await update.finish(msg, at_sender=True)
 
 
@@ -439,7 +411,10 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     except ActionFailed:
         await change.finish('上传文件失败，可能是群空间满或没有权限导致的')
     finally:
-        os.remove(osz_file)
+        try:
+            os.remove(osz_file)
+        except PermissionError:
+            ...
 
 generate_full_ln = on_command('反键', priority=11, block=True)
 
@@ -471,8 +446,10 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     except ActionFailed:
         await generate_full_ln.finish('上传文件失败，可能是群空间满或没有权限导致的')
     finally:
-        os.remove(osz_file)
-
+        try:
+            os.remove(osz_file)
+        except PermissionError:
+            ...
 
 generate_preview = on_command('预览', aliases={'preview'}, priority=11, block=True)
 
@@ -500,7 +477,7 @@ osu_help = on_command('osuhelp', priority=11, block=True)
 async def _help(msg: Message = CommandArg()):
     arg = msg.extract_plain_text().strip()
     if not arg:
-        await osu_help.finish(usage)
+        await osu_help.finish(MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'))
     if arg == 'detail':
         await osu_help.finish(detail_usage)
     else:
@@ -526,12 +503,6 @@ async def update_info():
     for _ in tasks:
         _.cancel()
     logger.info(f'已更新{len(result)}位玩家数据')
-
-
-def limits(args: str) -> tuple:
-    limit = args.split('-')
-    low, high = int(limit[0]), int(limit[1])
-    return low, high
 
 
 def mods2list(args: str) -> list:

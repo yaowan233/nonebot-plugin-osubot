@@ -47,9 +47,11 @@ async def generate_preview_pic(file: Path):
     return Path("data/osu/preview.png")
 
 
-async def convert_mania_map(options: Options) -> Path:
+async def convert_mania_map(options: Options) -> Optional[Path]:
     path = osu_path / f"{options.set}"
     osz_file = await download_map(options.set)
+    if not osz_file:
+        return
     with ZipFile(osz_file.absolute()) as my_zip:
         my_zip.extractall(path)
     os.remove(osz_file)
