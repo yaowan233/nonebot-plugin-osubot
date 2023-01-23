@@ -96,59 +96,10 @@ _✨ NoneBot osubot ✨_
 | DB_URL | 否 | sqlite://db.sqlite3 | 数据库地址 |
 
 ## 🎉 使用
-### 指令表
-| 指令    | 功能                 | 可选参数                           | 说明                                 |
-| :------ | :------------------- | :--------------------------------- | :----------------------------------- |
-| osuhelp | 查看指令大全         |                                    |                                      |
-| info    | 查询信息             | 无                                 | 查询自己                             |
-|         |                      | [user]                             | 查询TA人                             |
-|         |                      | :[mode]                            | 查询自己其它模式，`:`为触发词        |
-|         |                      | [user] :[mode]                     | 查询TA人其它模式                     |
-| bind    | 绑定                 | [user]                             | 绑定用户名                           |
-| unbind  | 解绑                 | 无                                 |                                      |
-| update  | 更改或更新           | mode [mode]                        | 更改模式                             |
-| recent(pr)| 查询最近(不)包含死亡的游玩记录     | 无                     | 查询自己最近(不)包含死亡的游玩记录               |
-|         |                      | [user]                             | 查询TA人最近(不)包含死亡的游玩记录               |
-|         |                      | :[mode]                            | 查询自己最近游玩其它模式(不)包含死亡记录         |
-|         |                      | [user] :[mode]                     | 查询TA人最近游玩其它模式(不)包含死亡记录         |
-| score   | 查询成绩             | [mapid]                            | 查询该地图成绩                       |
-|         |                      | [mapid] +[mods]                    | 查询该地图附加mods成绩               |
-|         |                      | [mapid] :[mode]                    | 查询该地图其它模式成绩               |
-|         |                      | [mapid] :[mode] +[mods]            | 查询该地图其它模式加mods的成绩       |
-|         |                      | [user] [mapid]                     | 查询TA人该地图成绩                   |
-|         |                      | [user] [mapid] :[mode]             | 查询TA人该地图其它模式成绩           |
-|         |                      | [user] [mapid] +[mods]             | 查询TA人该地图加mods的成绩           |
-|         |                      | [user] [mapid] :[mode] +[mods]     | 查询TA人该地图其它模式加mods的成绩   |
-| bp      | 查询bp榜成绩         | [num]                              | 查询bp成绩                           |
-|         |                      | [num] +[mods]                      | 查询bp附加mods成绩                   |
-|         |                      | [num] :[mode]                      | 查询其他模式的bp成绩                 |
-|         |                      | [num] :[mode] +[mods]              | 查询其他模式加mods的bp成绩           |
-|         |                      | [user] [num]                       | 查询TA人bp成绩                       |
-|         |                      | [user] [num] +[mods]               | 查询TA人bp附加mods成绩               |
-|         |                      | [user] [num] :[mode]               | 查询TA人其他模式bp成绩               |
-|         |                      | [user] [num] :[mode] +[mods]       | 查询TA人其他模式加mods的bp成绩       |
-| pfm     | 查询bp榜指定范围成绩 | [min]-[max]                        | 查询bp范围内成绩，最多10个           |
-|         |                      | [min]-[max] :[mode]                | 查询其它模式bp范围内成绩             |
-|         |                      | [min]-[max] +[mods]                | 查询bp范围内加mods的成绩             |
-|         |                      | [min]-[max] :[mode] +[mods]        | 查询其它模式bp范围内加mods的成绩     |
-|         |                      | [user] [min]-[max]                 | 查询TA人bp，最多10个                 |
-|         |                      | [user] [min]-[max] :[mode]         | 查询TA人其它模式bp                   |
-|         |                      | [user] [min]-[max] +[mods]         | 查询TA人bp                           |
-|         |                      | [user] [min]-[max] :[mode] +[mods] | 查询TA人其它模式bp范围内加mods的成绩 |
-| tbp     | 查询当天新增bp成绩   | 无                                 | 查询自己当天新增bp成绩               |
-|         |                      | [user]                             | 查询TA人当天新增bp成绩               |
-|         |                      | :[mode]                            | 查询自己其它模式当天新增bp成绩       |
-|         |                      | [user] :[mode]                     | 查询TA人其它模式当天新增bp成绩       |
-| map     | 查询地图信息         | [mapid]                            | 查询地图信息                         |
-|         |                      | [mapid] +[mods]                    | 查询地图加mod的信息，仅计算PP        |
-| getbg   | 提取背景             | [mapid]                            | 提取地图背景                         |
-| bmap    | 查询图组信息         | [setid]                            | 查询图组信息                         |
-|         |                      | -b [mapid]                         | 使用地图id查询图组信息               |
-| osudl   | 下载地图上传到群     | [setid]                            | 下载地图，`setid`为图组id，非单图id  |
+### 指令
 
-*`[]`内为需要填的参数
+![help](https://user-images.githubusercontent.com/30517062/214065830-6d061d86-b4b5-4e53-8144-c6bb5b9129ef.png)
 
-*`mode`：0-3分别为std，taiko，ctb，mania
 
 ## 💡 贡献
 由于当前开发缺乏测试，欢迎提各种issue来反馈bug
