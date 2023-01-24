@@ -103,7 +103,7 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
             i[1].holds.df = i[1].holds.df[:0]
             i[1].version += " NLN"
             i[0] += " NLN"
-        if options.od:
+        if options.od is not None:
             i[1].overall_difficulty = options.od
             i[1].version += f" OD {options.od}"
             i[0] += f" od{options.od}"
