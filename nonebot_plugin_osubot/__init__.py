@@ -5,8 +5,7 @@ from asyncio.tasks import Task
 from pathlib import Path
 from typing import List
 
-from nonebot.adapters.onebot.v11 import Event, Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, \
-    ActionFailed
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
 from nonebot.params import T_State, ShellCommandArgv, CommandArg
@@ -50,7 +49,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.11.0",
+        "version": "0.11.1",
     },
 )
 
@@ -114,11 +113,11 @@ parser.add_argument('--fln', action='store_true', help='将谱面转换为反键
 parser.add_argument('--rate', type=float, help='谱面倍速速率')
 parser.add_argument('--end_rate', type=float, help='谱面倍速速率的最大值')
 parser.add_argument('--step', type=float, help='谱面倍速的step')
-parser.add_argument('--od', type=float, help='改变谱面od到指定值', )
+parser.add_argument('--od', type=float, help='改变谱面od到指定值')
 parser.add_argument('--nsv', action='store_true', help='移除谱面所有sv')
 parser.add_argument('--nln', action='store_true', help='移除谱面所有ln')
-parser.add_argument('--gap', nargs='?', default='150', type=float, help='指定反键的间距时间，默认150ms', )
-parser.add_argument('--thres', nargs='?', default='100', type=float, help='指定转反键时ln转换为note的阈值，默认100ms', )
+parser.add_argument('--gap', nargs='?', default='150', type=float, help='指定反键的间距时间，默认150ms')
+parser.add_argument('--thres', nargs='?', default='100', type=float, help='指定转反键时ln转换为note的阈值，默认100ms')
 
 convert = on_shell_command("convert", parser=parser, block=True, priority=13)
 
@@ -131,22 +130,22 @@ async def _(
         args = parser.parse_args(argv)
     except ParserExit as e:
         if e.status == 0:
-            await convert.finish(parser.format_help())
-        await convert.finish(str(e))
+            await convert.finish(MessageSegment.reply(event.message_id) + parser.format_help())
+        await convert.finish(MessageSegment.reply(event.message_id) + str(e))
         return
     options = Options(**vars(args))
     if not options.set:
-        await convert.finish('请提供需要转换的谱面setid')
+        await convert.finish(MessageSegment.reply(event.message_id) + '请提供需要转换的谱面setid')
     if options.nln and options.fln:
-        await convert.finish('指令矛盾！')
+        await convert.finish(MessageSegment.reply(event.message_id) + '指令矛盾！')
     osz_file = await convert_mania_map(options)
     if not osz_file:
-        await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
+        await change.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
     except ActionFailed:
-        await convert.finish('上传文件失败，可能是群空间满或没有权限导致的')
+        await convert.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
             os.remove(osz_file)
@@ -157,81 +156,81 @@ info = on_command("info", block=True, priority=11)
 
 
 @info.handle(parameterless=[split_msg()])
-async def _info(state: T_State):
+async def _info(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
     data = await draw_info(user, GM[mode])
-    await info.finish(data, at_sender=True)
+    await info.finish(MessageSegment.reply(event.message_id) + data)
 
 
 recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=True)
 
 
 @recent.handle(parameterless=[split_msg()])
-async def _recent(state: T_State):
+async def _recent(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_score('recent', user, GM[mode], [])
-    await recent.finish(data, at_sender=True)
+    await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
 
 
 @pr.handle(parameterless=[split_msg()])
-async def _pr(state: T_State):
+async def _pr(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_score('pr', user, GM[mode], [])
-    await recent.finish(data, at_sender=True)
+    await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 score = on_command('score', priority=11, block=True)
 
 
 @score.handle(parameterless=[split_msg()])
-async def _score(state: T_State):
+async def _score(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
     map_id = state['para']
     data = await draw_score('score', user, GM[mode], mapid=map_id, mods=mods)
-    await score.finish(data, at_sender=True)
+    await score.finish(MessageSegment.reply(event.message_id) + data)
 
 
 bp = on_command('bp', priority=11, block=True)
 
 
 @bp.handle(parameterless=[split_msg()])
-async def _bp(state: T_State):
+async def _bp(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
     best = state['para']
     if not best.isdigit():
-        await bp.finish('只能接受纯数字的bp参数')
+        await bp.finish(MessageSegment.reply(event.message_id) + '只能接受纯数字的bp参数')
     best = int(best)
     if best <= 0 or best > 100:
-        await bp.finish('只允许查询bp 1-100 的成绩', at_sender=True)
+        await bp.finish(MessageSegment.reply(event.message_id) + '只允许查询bp 1-100 的成绩')
     data = await draw_score('bp', user, GM[mode], best=best, mods=mods)
-    await bp.finish(data, at_sender=True)
+    await bp.finish(MessageSegment.reply(event.message_id) + data)
 
 
 pfm = on_command('pfm', priority=11, block=True)
 
 
 @pfm.handle(parameterless=[split_msg()])
-async def _pfm(state: T_State):
+async def _pfm(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
@@ -239,75 +238,74 @@ async def _pfm(state: T_State):
     ls = para.split('-')
     low, high = ls[0], ls[1]
     if not low.isdigit() or not high.isdigit():
-        await pfm.finish(f'参数应为 "数字-数字"的形式!')
+        await pfm.finish(MessageSegment.reply(event.message_id) + '参数应为 "数字-数字"的形式!')
         return
     low, high = int(low), int(high)
     if not 0 < low < high <= 100:
-        await pfm.finish('仅支持查询bp1-100')
+        await pfm.finish(MessageSegment.reply(event.message_id) + '仅支持查询bp1-100')
     data = await best_pfm('bp', user, GM[mode], mods, low, high)
-    await pfm.finish(data, at_sender=True)
+    await pfm.finish(MessageSegment.reply(event.message_id) + data)
 
 
 tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 
 
 @tbp.handle(parameterless=[split_msg()])
-async def _tbp(state: T_State):
+async def _tbp(state: T_State, event: MessageEvent):
     if 'error' in state:
-        await info.finish(state['error'])
+        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await best_pfm('tbp', user, GM[mode], [])
-    await tbp.finish(data, at_sender=True)
+    await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 
 osu_map = on_command('map', priority=11, block=True)
 
 
 @osu_map.handle(parameterless=[split_msg()])
-async def _map(state: T_State):
+async def _map(state: T_State, event: MessageEvent):
     map_id = state['para']
     mods = state['mods']
     if not map_id:
-        await osu_map.finish('请输入地图ID', at_sender=True)
+        await osu_map.finish(MessageSegment.reply(event.message_id) + '请输入地图ID')
     elif not map_id.isdigit():
-        await osu_map.finish('请输入正确的地图ID', at_sender=True)
+        await osu_map.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图ID')
     m = await map_info(map_id, mods)
-    await osu_map.finish(m, at_sender=True)
+    await osu_map.finish(MessageSegment.reply(event.message_id) + m)
 
 
 bmap = on_command('bmap', priority=11, block=True)
 
 
 @bmap.handle(parameterless=[split_msg()])
-async def _bmap(state: T_State):
+async def _bmap(state: T_State, event: MessageEvent):
     set_id = state['para']
     if not set_id:
-        await bmap.finish('请输入setID', at_sender=True)
+        await bmap.finish(MessageSegment.reply(event.message_id) + '请输入setID')
     if not set_id.isdigit():
-        await bmap.finish('请输入正确的setID', at_sender=True)
+        await bmap.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
         return
     m = await bmap_info(set_id)
-    await bmap.finish(m, at_sender=True)
+    await bmap.finish(MessageSegment.reply(event.message_id) + m)
 
 
 osudl = on_command('osudl', priority=11, block=True)
 
 
 @osudl.handle()
-async def _osudl(bot: Bot, ev: GroupMessageEvent, msg: Message = CommandArg()):
-    gid = ev.group_id
+async def _osudl(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     setid = msg.extract_plain_text().strip()
     if not setid:
         return
     if not setid.isdigit():
-        await osudl.finish('请输入正确的地图ID', at_sender=True)
+        await osudl.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图ID')
     filepath = await download_map(int(setid))
     name = urllib.parse.unquote(filepath.name)
     try:
-        await bot.upload_group_file(group_id=gid, file=str(filepath.absolute()), name=name)
+        await bot.upload_group_file(group_id=event.group_id, file=str(filepath.absolute()), name=name)
     except ActionFailed:
-        await osudl.finish('上传文件失败，可能是群空间满或没有权限导致的')
+        await osudl.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
             os.remove(filepath)
@@ -318,65 +316,62 @@ bind = on_command('bind', priority=11, block=True)
 
 
 @bind.handle()
-async def _bind(ev: Event, msg: Message = CommandArg()):
-    qqid = ev.get_user_id()
+async def _bind(event: MessageEvent, msg: Message = CommandArg()):
     name = msg.extract_plain_text()
     if not name:
-        await bind.finish('请输入您的 osuid', at_sender=True)
-    if _ := await UserData.get_or_none(user_id=qqid):
-        await bind.finish('您已绑定，如需要解绑请输入/unbind', at_sender=True)
-    msg = await bindinfo('bind', name, qqid)
-    await bind.finish(msg, at_sender=True)
+        await bind.finish(MessageSegment.reply(event.message_id) + '请输入您的 osuid')
+    if _ := await UserData.get_or_none(user_id=event.get_user_id()):
+        await bind.finish(MessageSegment.reply(event.message_id) + '您已绑定，如需要解绑请输入/unbind')
+    msg = await bindinfo('bind', name, event.get_user_id())
+    await bind.finish(MessageSegment.reply(event.message_id) + msg)
 
 
 unbind = on_command('unbind', priority=11, block=True)
 
 
 @unbind.handle()
-async def _unbind(ev: Event):
-    qqid = ev.get_user_id()
-    if _ := await UserData.get_or_none(user_id=qqid):
-        await UserData.filter(user_id=qqid).delete()
-        await unbind.send('解绑成功！', at_sender=True)
+async def _unbind(event: MessageEvent):
+    if _ := await UserData.get_or_none(user_id=event.get_user_id()):
+        await UserData.filter(user_id=event.get_user_id()).delete()
+        await unbind.finish(MessageSegment.reply(event.message_id) + '解绑成功！')
     else:
-        await unbind.finish('尚未绑定，无需解绑', at_sender=True)
+        await unbind.finish(MessageSegment.reply(event.message_id) + '尚未绑定，无需解绑')
 
 
 update = on_command('更新模式', priority=11, block=True)
 
 
 @update.handle()
-async def _(ev: Event, msg: Message = CommandArg()):
-    qqid = ev.get_user_id()
+async def _(event: MessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip()
-    user = await UserData.get_or_none(user_id=qqid)
+    user = await UserData.get_or_none(user_id=event.get_user_id())
     if not user:
-        await update.finish('该账号尚未绑定，请输入 /bind 用户名 绑定账号')
+        await update.finish(MessageSegment.reply(event.message_id) + '该账号尚未绑定，请输入 /bind 用户名 绑定账号')
     elif not args:
-        await update.finish('请输入需要更新内容的模式')
+        await update.finish(MessageSegment.reply(event.message_id) + '请输入需要更新内容的模式')
     if not args.isdigit():
-        await update.finish('请输入正确的模式 0-3', at_sender=True)
+        await update.finish(MessageSegment.reply(event.message_id) + '请输入正确的模式 0-3')
         return
     mode = int(args)
     if 0 <= mode < 4:
-        await UserData.filter(user_id=qqid).update(osu_mode=mode)
+        await UserData.filter(user_id=event.get_user_id()).update(osu_mode=mode)
         msg = f'已将默认模式更改为 {GM[mode]}'
     else:
         msg = '请输入正确的模式 0-3'
-    await update.finish(msg, at_sender=True)
+    await update.finish(MessageSegment.reply(event.message_id) + msg)
 
 
 getbg = on_command('getbg', priority=11, block=True)
 
 
 @getbg.handle()
-async def _get_bg(msg: Message = CommandArg()):
+async def _get_bg(event: MessageEvent, msg: Message = CommandArg()):
     bg_id = msg.extract_plain_text().strip()
     if not bg_id:
         msg = '请输入需要提取BG的地图ID'
     else:
         msg = await get_map_bg(bg_id)
-    await getbg.finish(msg)
+    await getbg.finish(MessageSegment.reply(event.message_id) + msg)
 
 change = on_command('倍速', priority=11, block=True)
 
@@ -386,10 +381,10 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ['--set']
     if not args:
-        await change.finish('请输入需要倍速的地图setID')
+        await change.finish(MessageSegment.reply(event.message_id) + '请输入需要倍速的地图setID')
     set_id = args[0]
     if not set_id.isdigit():
-        await change.finish('请输入正确的setID')
+        await change.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
     argv.append(set_id)
     if len(args) >= 2:
         argv.append('--rate')
@@ -399,17 +394,17 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
         else:
             argv.append(args[1])
     else:
-        await change.finish('请输入倍速速率')
+        await change.finish(MessageSegment.reply(event.message_id) + '请输入倍速速率')
     args = parser.parse_args(argv)
     options = Options(**vars(args))
     osz_file = await convert_mania_map(options)
     if not osz_file:
-        await change.finish('未找到该地图，请检查是否搞混了mapID与setID')
+        await change.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
     except ActionFailed:
-        await change.finish('上传文件失败，可能是群空间满或没有权限导致的')
+        await change.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
             os.remove(osz_file)
@@ -424,10 +419,10 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ['--fln', '--set']
     if not args:
-        await generate_full_ln.finish('请输入需要转ln的地图setID')
+        await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入需要转ln的地图setID')
     set_id = args[0]
     if not set_id.isdigit():
-        await generate_full_ln.finish('请输入正确的setID')
+        await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
     argv.append(set_id)
     if len(args) >= 2:
         argv.append('--gap')
@@ -439,12 +434,12 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     options = Options(**vars(args))
     osz_file = await convert_mania_map(options)
     if not osz_file:
-        await generate_full_ln.finish('未找到该地图，请检查是否搞混了mapID与setID')
+        await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
     except ActionFailed:
-        await generate_full_ln.finish('上传文件失败，可能是群空间满或没有权限导致的')
+        await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
             os.remove(osz_file)
@@ -455,33 +450,33 @@ generate_preview = on_command('预览', aliases={'preview'}, priority=11, block=
 
 
 @generate_preview.handle()
-async def _(msg: Message = CommandArg()):
+async def _(event: MessageEvent, msg: Message = CommandArg()):
     osu_id = msg.extract_plain_text().strip()
     if not osu_id or not osu_id.isdigit():
-        await osudl.finish('请输入正确的地图mapID', at_sender=True)
+        await osudl.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图mapID')
     data = await osu_api('map', map_id=int(osu_id))
     if not data:
-        await generate_preview.finish('未查询到该地图')
+        await generate_preview.finish(MessageSegment.reply(event.message_id) + '未查询到该地图')
     if isinstance(data, str):
-        await generate_preview.finish(data)
+        await generate_preview.finish(MessageSegment.reply(event.message_id) + data)
     setid: int = data['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
     osu = dirpath / f"{osu_id}.osu"
     pic = await generate_preview_pic(osu)
-    await generate_preview.finish(MessageSegment.image(pic))
+    await generate_preview.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(pic))
 
 osu_help = on_command('osuhelp', priority=11, block=True)
 
 
 @osu_help.handle()
-async def _help(msg: Message = CommandArg()):
+async def _help(event: MessageEvent, msg: Message = CommandArg()):
     arg = msg.extract_plain_text().strip()
     if not arg:
-        await osu_help.finish(MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'))
+        await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'))
     if arg == 'detail':
-        await osu_help.finish(detail_usage)
+        await osu_help.finish(MessageSegment.reply(event.message_id) + detail_usage)
     else:
-        await osu_help.finish('呜呜，detail都打不对吗(ノ｀Д)ノ')
+        await osu_help.finish(MessageSegment.reply(event.message_id) + '呜呜，detail都打不对吗(ノ｀Д)ノ')
 
 
 @scheduler.scheduled_job('cron', hour='0')
