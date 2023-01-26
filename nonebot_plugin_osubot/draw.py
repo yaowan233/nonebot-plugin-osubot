@@ -509,7 +509,7 @@ async def draw_score(project: str,
     if score_info.user.is_supporter:
         im.alpha_composite(SupporterBg.resize((40, 40)), (267, 606))
     # cs, ar, od, hp, stardiff
-    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, mapinfo.difficulty_rating]
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.difficulty.stars]
     for num, i in enumerate(mapdiff):
         color = (255, 255, 255, 255)
         if num == 4:
@@ -517,7 +517,7 @@ async def draw_score(project: str,
         diff_len = int(250 * i / 10) if i <= 10 else 250
         diff_len = Image.new('RGBA', (diff_len, 8), color)
         im.alpha_composite(diff_len, (1190, 386 + 35 * num))
-        w_diff = DataText(1470, 386 + 35 * num, 20, i, Torus_SemiBold, anchor='mm')
+        w_diff = DataText(1470, 386 + 35 * num, 20, f'{i:.1f}', Torus_SemiBold, anchor='mm')
         im = draw_text(im, w_diff)
     # 时长 - 滑条
     diff_info = calc_songlen(mapinfo.total_length), mapinfo.bpm, mapinfo.count_circles, mapinfo.count_sliders
