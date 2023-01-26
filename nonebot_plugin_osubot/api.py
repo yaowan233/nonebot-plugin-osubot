@@ -1,11 +1,9 @@
-import json
-from typing import Union, Optional
+from typing import Union
 import aiohttp
 from nonebot.log import logger
 from nonebot import get_driver
 from expiringdict import ExpiringDict
 from .config import Config
-from .schema import Score
 
 api = 'https://osu.ppy.sh/api/v2'
 sayoapi = 'https://api.sayobot.cn'
@@ -34,8 +32,7 @@ async def renew_token():
                 logger.error(f'更新OSU token出错 错误{req.status}')
 
 
-async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0) -> \
-        Union[str, dict]:
+async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0) -> Union[str, dict]:
     if uid and not str(uid).isdigit():
         info = await get_user_info(f'{api}/users/{uid}')
         if isinstance(info, str):
@@ -65,29 +62,6 @@ async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0
 async def sayo_api(setid: int) -> dict:
     url = f'{sayoapi}/v2/beatmapinfo?0={setid}'
     return await api_info('mapinfo', url)
-
-
-async def pp_api(mode: int, score: Optional[Score], data=None) -> dict:
-    if data is None:
-        data = {
-            'BeatmapID': score.beatmap.id,
-            'Mode': mode,
-            'Accuracy': score.accuracy,
-            'Combo': score.max_combo,
-            'C300': score.statistics.count_300,
-            'C100': score.statistics.count_100,
-            'C50': score.statistics.count_50,
-            'Geki': score.statistics.count_geki,
-            'Katu': score.statistics.count_katu,
-            'Miss': score.statistics.count_miss,
-            'Mods': ''.join(score.mods),
-            'Score': score.score,
-            'isPlay': 'True'
-        }
-    async with aiohttp.ClientSession() as session:
-        async with session.get(pp_calc_api, params=data) as req:
-            text = await req.text()
-            return json.loads(text)
 
 
 async def get_user_info(url: str) -> Union[dict, str]:

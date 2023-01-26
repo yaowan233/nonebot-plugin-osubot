@@ -93,6 +93,7 @@ _✨ NoneBot osubot ✨_
 |:-----:|:----:|:----:|:----:|
 | OSU_CLIENT | 是 | 无 | 客户端ID |
 | OSU_KEY | 是 | 无 | 客户端密钥 |
+| OSZ_MIRROR | 否 | 0 | 0-2分别代表sayo,kitsu,chimu的镜像下载 |
 | DB_URL | 否 | sqlite://db.sqlite3 | 数据库地址 |
 
 ## 🎉 使用
