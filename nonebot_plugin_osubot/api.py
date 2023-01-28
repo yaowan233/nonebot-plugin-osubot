@@ -33,7 +33,7 @@ async def renew_token():
 
 
 async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0) -> Union[str, dict]:
-    if uid and not str(uid).isdigit():
+    if uid:
         info = await get_user_info(f'{api}/users/{uid}')
         if isinstance(info, str):
             return info

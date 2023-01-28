@@ -108,6 +108,7 @@ def split_msg():
 
 
 parser = ArgumentParser('convert', description='变换mania谱面')
+parser.add_argument('set', type=int, help='要转换的谱面的setid')
 parser.add_argument('--set', '-s', type=int, help='要转换的谱面的setid')
 parser.add_argument('--fln', action='store_true', help='将谱面转换为反键')
 parser.add_argument('--rate', type=float, help='谱面倍速速率')
