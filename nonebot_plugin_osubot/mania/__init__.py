@@ -60,7 +60,11 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
     for file in path.rglob('*.osu'):
         osu = OsuMap.read_file(str(file.absolute()))
         if options.rate:
+            if options.rate > 10:
+                options.rate = 10
             end = options.end_rate if options.end_rate else options.rate + 0.01
+            if end > 10:
+                end = 10.1
             if options.step and abs(options.step) < 0.05:
                 options.step = 0.05 if options.step > 0 else -0.05
             if not options.step:

@@ -49,7 +49,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.12.1",
+        "version": "0.12.2",
     },
 )
 
@@ -109,7 +109,6 @@ def split_msg():
 
 parser = ArgumentParser('convert', description='变换mania谱面')
 parser.add_argument('set', type=int, help='要转换的谱面的setid')
-parser.add_argument('--set', '-s', type=int, help='要转换的谱面的setid')
 parser.add_argument('--fln', action='store_true', help='将谱面转换为反键')
 parser.add_argument('--rate', type=float, help='谱面倍速速率')
 parser.add_argument('--end_rate', type=float, help='谱面倍速速率的最大值')
@@ -380,7 +379,7 @@ change = on_command('倍速', priority=11, block=True)
 @change.handle()
 async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
-    argv = ['--set']
+    argv = []
     if not args:
         await change.finish(MessageSegment.reply(event.message_id) + '请输入需要倍速的地图setID')
     set_id = args[0]
@@ -418,13 +417,12 @@ generate_full_ln = on_command('反键', priority=11, block=True)
 @generate_full_ln.handle()
 async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
-    argv = ['--fln', '--set']
     if not args:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入需要转ln的地图setID')
     set_id = args[0]
     if not set_id.isdigit():
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
-    argv.append(set_id)
+    argv = [set_id, '--fln']
     if len(args) >= 2:
         argv.append('--gap')
         argv.append(args[1])
