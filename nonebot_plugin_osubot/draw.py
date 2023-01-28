@@ -415,8 +415,6 @@ async def draw_score(project: str,
     elif project == 'score':
         score_info = Score(**score_json['score'])
         grank = score_json['position']
-        if not calc_mods(score_info.mods) == calc_mods(mods):
-            return '非常抱歉，暂不支持指定mods查分>_<'
     else:
         raise 'Project Error'
     map_json = await osu_api('map', map_id=score_info.beatmap.id)
