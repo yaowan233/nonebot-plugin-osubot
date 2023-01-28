@@ -34,9 +34,12 @@ async def map_downloaded(setid: str) -> Optional[Path]:
         return path
     filepath = await download_map(int(setid))
     # 解压下载的osz文件
-    myzip = zipfile.ZipFile(filepath.absolute())
-    myzip.extractall(myzip.filename[:-4])
-    myzip.close()
+    try:
+        with zipfile.ZipFile(filepath.absolute()) as file:
+            file.extractall(file.filename[:-4])
+    # 当下载图包失败时自动重试
+    except zipfile.BadZipfile:
+        return await map_downloaded(setid)
     # 删除文件
     remove_file(Path(str(filepath)[:-4]))
     os.remove(filepath)
