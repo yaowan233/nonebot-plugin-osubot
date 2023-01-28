@@ -15,7 +15,7 @@ def cal_pp(score: Score, path: str) -> PerformanceAttributes:
                    n50=score.statistics.count_50,
                    n100=score.statistics.count_100,
                    n300=score.statistics.count_300,
-                   mods=mods)
+                   mods=mods, mode=score.mode_int)
     return c.performance(beatmap)
 
 
@@ -31,10 +31,10 @@ def get_if_pp_ss_pp(score: Score, path: str) -> tuple:
                    n50=score.statistics.count_50,
                    n100=score.statistics.count_100,
                    n300=score.statistics.count_300,
-                   mods=mods)
+                   mods=mods, mode=score.mode_int)
     if_pp = c.performance(beatmap).pp
     c = Calculator(acc=100,
-                   mods=mods)
+                   mods=mods, mode=score.mode_int)
     ss_pp = c.performance(beatmap).pp
     return int(round(if_pp, 0)), int(round(ss_pp, 0))
 
