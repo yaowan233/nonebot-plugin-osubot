@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Union
 
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
-from nonebot_plugin_guild_patch import Bot, GuildMessageEvent, Message, MessageSegment
+from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
 from nonebot.params import T_State, ShellCommandArgv, CommandArg
@@ -50,7 +50,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.12.2",
+        "version": "0.12.3",
     },
 )
 
@@ -144,7 +144,7 @@ async def _(
         await convert.finish(MessageSegment.reply(event.message_id) + '指令矛盾！')
     osz_file = await convert_mania_map(options)
     if not osz_file:
-        await change.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
+        await convert.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)

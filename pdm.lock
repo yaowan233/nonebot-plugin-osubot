@@ -228,6 +228,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nonebot-plugin-guild-patch"
+version = "0.2.2"
+requires_python = ">=3.7.3,<4.0.0"
+summary = "Patch plugin for NoneBot2 QQ guild (go-cqhttp) support."
+dependencies = [
+    "nonebot-adapter-onebot<3.0.0,>=2.1.0",
+    "nonebot2<3.0.0,>=2.0.0-beta.1",
+]
+
+[[package]]
 name = "nonebot-plugin-tortoise-orm"
 version = "0.0.1a3"
 requires_python = ">=3.7.3,<4.0.0"
@@ -546,7 +556,7 @@ dependencies = [
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:0d9e93883b45a949bcafebcb598f67eb058fa3b6242365f2eeb4613d214e42ea"
+content_hash = "sha256:53aa8812cb9858dde350f4d9cd6cd6282d0a5d34b20d3caca57b0661ec4ae6dc"
 
 [metadata.files]
 "aiohttp 3.8.1" = [
@@ -1045,6 +1055,10 @@ content_hash = "sha256:0d9e93883b45a949bcafebcb598f67eb058fa3b6242365f2eeb4613d2
 "nonebot-plugin-apscheduler 0.2.0" = [
     {url = "https://files.pythonhosted.org/packages/77/34/11d54a11bf7c6256bf61598e9f2b93df6bf4b1cc2b58f26ff1140539be81/nonebot-plugin-apscheduler-0.2.0.tar.gz", hash = "sha256:7b63e99a611b657533b48fcf1f8c6627c18c2eb3fa820a906cd4ec4666c0ceb0"},
     {url = "https://files.pythonhosted.org/packages/b4/e0/08455966af13f69ee39b14ac345f77c5a7c5b2fbd671b0182a18e195173f/nonebot_plugin_apscheduler-0.2.0-py3-none-any.whl", hash = "sha256:9285ee84ca1cfa4db73c86cedb5911bbbd25a21ec0cd5f22447cd12f89e48fb4"},
+]
+"nonebot-plugin-guild-patch 0.2.2" = [
+    {url = "https://files.pythonhosted.org/packages/5b/41/54277c20dc206ae27d014f43ec816aaf97d03bb8b585d359acffbf09b3f3/nonebot_plugin_guild_patch-0.2.2-py3-none-any.whl", hash = "sha256:63e85e0528519d33752e59630d814af5959ec7d577b50271f4f682354918b6e3"},
+    {url = "https://files.pythonhosted.org/packages/83/c9/70df757d3ead68aaa539fcb3890d8e45ee1cd8c2b8153f7b08cbfce7f823/nonebot_plugin_guild_patch-0.2.2.tar.gz", hash = "sha256:9bbbb6e519ce713ad462d014247c7d7a6ed9beeffff1752842ecebc9fb7ef52d"},
 ]
 "nonebot-plugin-tortoise-orm 0.0.1a3" = [
     {url = "https://files.pythonhosted.org/packages/8d/f4/984ab4f1458d72a0978cb34b36aa47f4a951bee7c8fedd60f1fbc97834f6/nonebot_plugin_tortoise_orm-0.0.1a3-py3-none-any.whl", hash = "sha256:9b03f09d0dc24cb4f018467c98bcd0d1c10978e48e44036fc2836a545734d0a7"},
