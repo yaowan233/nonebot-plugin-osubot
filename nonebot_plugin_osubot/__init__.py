@@ -127,6 +127,9 @@ convert = on_shell_command("convert", parser=parser, block=True, priority=13)
 async def _(
         bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], argv: List[str] = ShellCommandArgv()
 ):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:
@@ -296,6 +299,9 @@ osudl = on_command('osudl', priority=11, block=True)
 
 @osudl.handle()
 async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     setid = msg.extract_plain_text().strip()
     if not setid:
         return
@@ -304,10 +310,7 @@ async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], m
     filepath = await download_map(int(setid))
     name = urllib.parse.unquote(filepath.name)
     try:
-        if isinstance(event, GroupMessageEvent):
-            await bot.upload_group_file(group_id=event.group_id, file=str(filepath.absolute()), name=name)
-        if isinstance(event, GuildMessageEvent):
-            await osudl.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        await bot.upload_group_file(group_id=event.group_id, file=str(filepath.absolute()), name=name)
     except ActionFailed:
         await osudl.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
@@ -382,6 +385,9 @@ change = on_command('倍速', priority=11, block=True)
 
 @change.handle()
 async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     args = msg.extract_plain_text().strip().split()
     argv = []
     if not args:
@@ -420,6 +426,9 @@ generate_full_ln = on_command('反键', priority=11, block=True)
 
 @generate_full_ln.handle()
 async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     args = msg.extract_plain_text().strip().split()
     if not args:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入需要转ln的地图setID')
