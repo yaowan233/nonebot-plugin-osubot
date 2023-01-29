@@ -3,9 +3,10 @@ import os
 import urllib
 from asyncio.tasks import Task
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
+from nonebot_plugin_guild_patch import Bot, GuildMessageEvent, Message, MessageSegment
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
 from nonebot.params import T_State, ShellCommandArgv, CommandArg
@@ -57,7 +58,7 @@ add_model('nonebot_plugin_osubot.database.models')
 
 
 def split_msg():
-    async def dependency(event: MessageEvent, state: T_State, msg: Message = CommandArg()):
+    async def dependency(event: Union[MessageEvent, GuildMessageEvent], state: T_State, msg: Message = CommandArg()):
         qq = event.user_id
         for msg_seg in event.message:
             if msg_seg.type == "at":
@@ -124,8 +125,11 @@ convert = on_shell_command("convert", parser=parser, block=True, priority=13)
 
 @convert.handle()
 async def _(
-        bot: Bot, event: GroupMessageEvent, argv: List[str] = ShellCommandArgv()
+        bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], argv: List[str] = ShellCommandArgv()
 ):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:
@@ -156,7 +160,7 @@ info = on_command("info", block=True, priority=11)
 
 
 @info.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: MessageEvent):
+async def _info(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
@@ -169,7 +173,7 @@ recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=Tru
 
 
 @recent.handle(parameterless=[split_msg()])
-async def _recent(state: T_State, event: MessageEvent):
+async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
@@ -181,7 +185,7 @@ pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
 
 
 @pr.handle(parameterless=[split_msg()])
-async def _pr(state: T_State, event: MessageEvent):
+async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
@@ -193,7 +197,7 @@ score = on_command('score', priority=11, block=True)
 
 
 @score.handle(parameterless=[split_msg()])
-async def _score(state: T_State, event: MessageEvent):
+async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
@@ -208,7 +212,7 @@ bp = on_command('bp', priority=11, block=True)
 
 
 @bp.handle(parameterless=[split_msg()])
-async def _bp(state: T_State, event: MessageEvent):
+async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
@@ -228,7 +232,7 @@ pfm = on_command('pfm', priority=11, block=True)
 
 
 @pfm.handle(parameterless=[split_msg()])
-async def _pfm(state: T_State, event: MessageEvent):
+async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
@@ -251,7 +255,7 @@ tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 
 
 @tbp.handle(parameterless=[split_msg()])
-async def _tbp(state: T_State, event: MessageEvent):
+async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
@@ -264,7 +268,7 @@ osu_map = on_command('map', priority=11, block=True)
 
 
 @osu_map.handle(parameterless=[split_msg()])
-async def _map(state: T_State, event: MessageEvent):
+async def _map(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     map_id = state['para']
     mods = state['mods']
     if not map_id:
@@ -279,7 +283,7 @@ bmap = on_command('bmap', priority=11, block=True)
 
 
 @bmap.handle(parameterless=[split_msg()])
-async def _bmap(state: T_State, event: MessageEvent):
+async def _bmap(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     set_id = state['para']
     if not set_id:
         await bmap.finish(MessageSegment.reply(event.message_id) + '请输入setID')
@@ -294,7 +298,10 @@ osudl = on_command('osudl', priority=11, block=True)
 
 
 @osudl.handle()
-async def _osudl(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     setid = msg.extract_plain_text().strip()
     if not setid:
         return
@@ -316,7 +323,7 @@ bind = on_command('bind', priority=11, block=True)
 
 
 @bind.handle()
-async def _bind(event: MessageEvent, msg: Message = CommandArg()):
+async def _bind(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     name = msg.extract_plain_text()
     if not name:
         await bind.finish(MessageSegment.reply(event.message_id) + '请输入您的 osuid')
@@ -330,7 +337,7 @@ unbind = on_command('unbind', priority=11, block=True)
 
 
 @unbind.handle()
-async def _unbind(event: MessageEvent):
+async def _unbind(event: Union[MessageEvent, GuildMessageEvent]):
     if _ := await UserData.get_or_none(user_id=event.get_user_id()):
         await UserData.filter(user_id=event.get_user_id()).delete()
         await unbind.finish(MessageSegment.reply(event.message_id) + '解绑成功！')
@@ -342,7 +349,7 @@ update = on_command('更新模式', priority=11, block=True)
 
 
 @update.handle()
-async def _(event: MessageEvent, msg: Message = CommandArg()):
+async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip()
     user = await UserData.get_or_none(user_id=event.get_user_id())
     if not user:
@@ -365,7 +372,7 @@ getbg = on_command('getbg', priority=11, block=True)
 
 
 @getbg.handle()
-async def _get_bg(event: MessageEvent, msg: Message = CommandArg()):
+async def _get_bg(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     bg_id = msg.extract_plain_text().strip()
     if not bg_id:
         msg = '请输入需要提取BG的地图ID'
@@ -377,7 +384,10 @@ change = on_command('倍速', priority=11, block=True)
 
 
 @change.handle()
-async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     args = msg.extract_plain_text().strip().split()
     argv = []
     if not args:
@@ -415,7 +425,10 @@ generate_full_ln = on_command('反键', priority=11, block=True)
 
 
 @generate_full_ln.handle()
-async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    if isinstance(event, GuildMessageEvent):
+        await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
+        pass
     args = msg.extract_plain_text().strip().split()
     if not args:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入需要转ln的地图setID')
@@ -449,7 +462,7 @@ generate_preview = on_command('预览', aliases={'preview'}, priority=11, block=
 
 
 @generate_preview.handle()
-async def _(event: MessageEvent, msg: Message = CommandArg()):
+async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     osu_id = msg.extract_plain_text().strip()
     if not osu_id or not osu_id.isdigit():
         await osudl.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图mapID')
@@ -468,7 +481,7 @@ osu_help = on_command('osuhelp', priority=11, block=True)
 
 
 @osu_help.handle()
-async def _help(event: MessageEvent, msg: Message = CommandArg()):
+async def _help(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     arg = msg.extract_plain_text().strip()
     if not arg:
         await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'))
