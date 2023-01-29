@@ -17,7 +17,7 @@ dependencies = [
     "nonebot-plugin-tortoise-orm>=0.0.1a3",
     "rosu-pp-py>=0.9.1",
     "reamber>=0.1.7",
-    "nonebot_plugin_guild_patch>=0.2.1"
+    "nonebot-plugin-guild-patch>=0.2.1"
 ]
 requires-python = ">=3.8"
 readme = "README.md"
