@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from .basemodel import Base
 
@@ -54,4 +54,4 @@ class MapInfo(Base):
 
 class SayoBeatmap(Base):
     status: int
-    data: MapInfo
+    data: Optional[MapInfo]

@@ -129,7 +129,6 @@ async def _(
 ):
     if isinstance(event, GuildMessageEvent):
         await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
-        pass
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:
@@ -301,7 +300,6 @@ osudl = on_command('osudl', priority=11, block=True)
 async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     if isinstance(event, GuildMessageEvent):
         await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
-        pass
     setid = msg.extract_plain_text().strip()
     if not setid:
         return
@@ -387,7 +385,6 @@ change = on_command('倍速', priority=11, block=True)
 async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     if isinstance(event, GuildMessageEvent):
         await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
-        pass
     args = msg.extract_plain_text().strip().split()
     argv = []
     if not args:
@@ -428,7 +425,6 @@ generate_full_ln = on_command('反键', priority=11, block=True)
 async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     if isinstance(event, GuildMessageEvent):
         await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
-        pass
     args = msg.extract_plain_text().strip().split()
     if not args:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入需要转ln的地图setID')

@@ -8,12 +8,11 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
-from nonebot_plugin_guild_patch import MessageSegment
 
 from .api import osu_api, sayo_api
 from .schema import User, Score, Beatmap, SayoBeatmap
 from .mods import get_mods_list, calc_mods
-from .file import re_map, get_projectimg, map_downloaded
+from .file import re_map, get_projectimg, map_downloaded, download_osu
 from .database.models import UserData, InfoData
 from .utils import update_user_info, GM, GMN, FGM
 from .pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
@@ -426,6 +425,8 @@ async def draw_score(project: str,
     # 下载地图
     dirpath = await map_downloaded(str(score_info.beatmap.beatmapset_id))
     osu = dirpath / f"{score_info.beatmap.id}.osu"
+    if not osu.exists():
+        await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
     # pp
     pp_info = cal_pp(score_info, str(osu.absolute()))
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
@@ -740,6 +741,8 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     diffinfo = calc_songlen(mapinfo.total_length), mapinfo.bpm, mapinfo.count_circles, mapinfo.count_sliders
     # 获取地图
     dirpath = await map_downloaded(str(mapinfo.beatmapset_id))
+    if not dirpath.exists():
+        await download_osu(mapinfo.beatmapset_id, mapinfo.id)
     osu = dirpath / f"{mapinfo.id}.osu"
     ss_pp_info = get_ss_pp(str(osu.absolute()), calc_mods(mods))
     # 计算时间
@@ -834,7 +837,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
         return info
     sayo_info = SayoBeatmap(**info)
     if sayo_info.status == -1:
-        return '未查询到地图'
+        return '在sayobot未查询到该地图'
     data = sayo_info.data
 
     coverurl = f'https://assets.ppy.sh/beatmaps/{mapid}/covers/cover@2x.jpg'
@@ -954,6 +957,8 @@ async def get_map_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     setid: int = info['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
     osu = dirpath / f"{mapid}.osu"
+    if not osu.exists():
+        await download_osu(setid, mapid)
     path = re_map(osu)
     msg = MessageSegment.image(dirpath / path)
     return msg

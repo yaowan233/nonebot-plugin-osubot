@@ -10,7 +10,10 @@ from pathlib import Path
 
 from nonebot import get_driver
 from nonebot.log import logger
+
 from .config import Config
+from .api import sayo_api
+from .schema import SayoBeatmap
 
 plugin_config = Config.parse_obj(get_driver().config.dict())
 
@@ -19,15 +22,18 @@ osufile = Path(__file__).parent / 'osufile'
 map_path = Path() / "data" / "osu" / "map"
 chimu_api = 'https://api.chimu.moe/v1/download/'
 kitsu_api = 'https://kitsu.moe/api/d/'
-sayo_api = 'https://txy1.sayobot.cn/beatmaps/download/novideo/'
-api_ls = [sayo_api, kitsu_api, chimu_api]
+sayobot_api = 'https://txy1.sayobot.cn/beatmaps/download/novideo/'
+api_ls = [sayobot_api, kitsu_api, chimu_api]
 download_api = api_ls[plugin_config.osz_mirror]
 
 if not map_path.exists():
     map_path.mkdir(parents=True, exist_ok=True)
 
 
-async def map_downloaded(setid: str) -> Optional[Path]:
+async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
+    # 当重试次数大于三时，报错
+    if retry_time > 3:
+        raise TimeoutError('osz文件下载失败，请尝试更换其他镜像')
     # 判断是否存在该文件
     path = map_path / setid
     if setid in os.listdir(map_path) and list(path.glob('*.osu')):
@@ -39,9 +45,9 @@ async def map_downloaded(setid: str) -> Optional[Path]:
             file.extractall(file.filename[:-4])
     # 当下载图包失败时自动重试
     except zipfile.BadZipfile:
-        return await map_downloaded(setid)
+        return await map_downloaded(setid, retry_time + 1)
     # 删除文件
-    remove_file(Path(str(filepath)[:-4]))
+    await remove_file(Path(str(filepath)[:-4]))
     os.remove(filepath)
     return path
 
@@ -63,6 +69,22 @@ async def download_map(setid: int) -> Optional[Path]:
     return filepath
 
 
+async def download_osu(set_id, map_id):
+    url = f'https://osu.ppy.sh/osu/{map_id}'
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, allow_redirects=True) as req:
+                logger.info(f'Start Downloading Osu: <{map_id}>')
+                filename = f'{map_id}.osu'
+                filepath = map_path / str(set_id) / filename
+                chunk = await req.read()
+                with open(filepath, 'wb') as f:
+                    f.write(chunk)
+    except Exception as e:
+        logger.error(f'Request Failed or Timeout\n{e}')
+    return filepath
+
+
 async def get_projectimg(url: str):
     try:
         if 'avatar-guest.png' in url:
@@ -79,14 +101,19 @@ async def get_projectimg(url: str):
         return e
 
 
-def remove_file(path: Path) -> bool:
+async def remove_file(path: Path) -> bool:
     bg_list = set()
     for file in os.listdir(path):
         if '.osu' in file:
             bg = re_map(path / file)
             bg_list.add(bg)
-            bid = get_map_id(path / file)
-            os.rename(path / file, path / f'{bid}.osu')
+            bid = await get_map_id(path / file)
+            osu_path = path / f'{bid}.osu'
+            if osu_path.exists():
+                os.remove(osu_path)
+                await download_osu(path.name, bid)
+            else:
+                os.rename(path / file, path / f'{bid}.osu')
 
     for root, dir, files in os.walk(path, topdown=False):
         for name in files:
@@ -108,8 +135,20 @@ def re_map(file: Union[bytes, Path]) -> str:
     return bg
 
 
-def get_map_id(file: Path) -> str:
+async def get_map_id(file: Path) -> str:
     with open(file, 'r', encoding='utf-8') as f:
         text = f.read()
     res = re.search(r'BeatmapID:(\d*)', text)
+    if res is None:
+        res = re.search(r'Version:(.*)\n', text)
+        version = res.group(1).strip()
+        data = await sayo_api(int(file.parent.name))
+        if isinstance(data, str):
+            raise Exception(data)
+        sayo_info = SayoBeatmap(**data)
+        if sayo_info.status == -1:
+            raise Exception('未能在sayobot查找到地图信息')
+        for map_data in sayo_info.data.bid_data:
+            if map_data.version == version:
+                return str(map_data.bid)
     return res.group(1).strip()
