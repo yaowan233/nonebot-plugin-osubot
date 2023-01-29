@@ -639,9 +639,9 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
     f_div = Image.new('RGBA', (1500, 2), (255, 255, 255, 255)).convert('RGBA')
     im.alpha_composite(f_div, (0, 100))
     if project == 'bp':
-        uinfo = f"{user}'s | {mode.capitalize()} | BP {low_bound} - {high_bound}"
+        uinfo = f"{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     else:
-        uinfo = f"{user}'s | {mode.capitalize()} | Today New BP"
+        uinfo = f"{user} | {mode.capitalize()} 模式 | 今日新增 BP"
     w_user = DataText(1450, 50, 25, uinfo, Torus_SemiBold, anchor='rm')
     im = draw_text(im, w_user)
     for num, bp in enumerate(score_ls):
@@ -746,7 +746,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
         old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
         new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
     else:
-        new_time = '??-??-?? ??:??:??'
+        new_time = '谱面状态可能非ranked'
     # BG做地图
     im = Image.new('RGBA', (1200, 600))
     cover = re_map(osu)
@@ -756,7 +756,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     # 获取地图info
     im.alpha_composite(MapBg)
     # 模式
-    mode_bg = stars_diff(mapinfo.mode, ss_pp_info.difficulty.stars)
+    mode_bg = stars_diff(FGM[mapinfo.mode], ss_pp_info.difficulty.stars)
     mode_img = mode_bg.resize((50, 50))
     im.alpha_composite(mode_img, (50, 100))
     # cs - diff
@@ -792,12 +792,12 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     w_source = DataText(50, 260, 25, f'Source:{mapinfo.beatmapset.source}', Torus_SemiBold)
     im = draw_text(im, w_source)
     # mapper
-    w_mapper_by = DataText(160, 400, 20, 'mapper by:', Torus_SemiBold)
+    w_mapper_by = DataText(160, 400, 20, '谱师:', Torus_SemiBold)
     im = draw_text(im, w_mapper_by)
     w_mapper = DataText(160, 425, 20, mapinfo.beatmapset.creator, Torus_SemiBold)
     im = draw_text(im, w_mapper)
     # ranked时间
-    w_time_by = DataText(160, 460, 20, 'ranked by:', Torus_SemiBold)
+    w_time_by = DataText(160, 460, 20, '上架时间:', Torus_SemiBold)
     im = draw_text(im, w_time_by)
     w_time = DataText(160, 485, 20, new_time, Torus_SemiBold)
     im = draw_text(im, w_time)
@@ -809,7 +809,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
         w_info = DataText(770 + 120 * num, 365, 20, i, Torus_Regular, anchor='lm')
         im = draw_text(im, w_info, (255, 204, 34, 255))
     # maxcb
-    w_mapcb = DataText(50, 570, 20, f'Max Combo: {mapinfo.max_combo}', Torus_SemiBold, anchor='lm')
+    w_mapcb = DataText(50, 570, 20, f'最大连击: {mapinfo.max_combo}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_mapcb)
     # pp
     w_pp = DataText(320, 570, 20, f'SS PP: {int(round(ss_pp_info.pp, 0))}', Torus_SemiBold, anchor='lm')
@@ -856,15 +856,15 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     w_artist = DataText(25, 75, 20, f'by {data.artist}', Torus_SemiBold)
     im = draw_text(im, w_artist)
     # mapper
-    w_mapper = DataText(25, 110, 20, f'mapper by {data.creator}', Torus_SemiBold)
+    w_mapper = DataText(25, 110, 20, f'谱面作者: {data.creator}', Torus_SemiBold)
     im = draw_text(im, w_mapper)
     # rank时间
     if data.approved_date == -1:
-        approved_date = '??-??-?? ??:??:??'
+        approved_date = '谱面状态可能非ranked'
     else:
         datearray = datetime.utcfromtimestamp(data.approved_date)
         approved_date = (datearray + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
-    w_apptime = DataText(25, 145, 20, f'Approved Time: {approved_date}', Torus_SemiBold)
+    w_apptime = DataText(25, 145, 20, f'上架时间: {approved_date}', Torus_SemiBold)
     im = draw_text(im, w_apptime)
     # 来源
     w_source = DataText(25, 180, 20, f'Source: {data.source}', Torus_SemiBold)
