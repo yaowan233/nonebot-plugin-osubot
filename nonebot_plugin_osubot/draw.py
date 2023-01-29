@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
+from nonebot_plugin_guild_patch import MessageSegment
 
 from .api import osu_api, sayo_api
 from .schema import User, Score, Beatmap, SayoBeatmap
