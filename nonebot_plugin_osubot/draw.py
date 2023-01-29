@@ -6,7 +6,6 @@ from typing import Optional, List, Union
 from numbers import Real
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
 
@@ -21,9 +20,16 @@ from .pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 osufile = Path(__file__).parent / 'osufile'
 Torus_Regular = osufile / 'fonts' / 'Torus Regular.otf'
 Torus_SemiBold = osufile / 'fonts' / 'Torus SemiBold.otf'
-Meiryo_Regular = osufile / 'fonts' / 'Meiryo Regular.ttf'
-Meiryo_SemiBold = osufile / 'fonts' / 'Meiryo SemiBold.ttf'
 Venera = osufile / 'fonts' / 'Venera.otf'
+ColorPic = Image.open(osufile / 'work' / 'color.png').load()
+InfoImg = Image.open(osufile / 'info.png').convert('RGBA')
+SupporterBg = Image.open(osufile / 'work' / 'suppoter.png').convert('RGBA')
+ExpLeftBg = Image.open(osufile / 'work' / 'left.png').convert('RGBA')
+ExpCenterBg = Image.open(osufile / 'work' / 'center.png').convert('RGBA')
+ExpRightBg = Image.open(osufile / 'work' / 'right.png').convert('RGBA')
+BgImg = Image.open(osufile / 'Best Performance.png').convert('RGBA')
+MapBg = Image.open(osufile / 'beatmapinfo.png').convert('RGBA')
+BarImg = Image.open(osufile / 'work' / 'bmap.png').convert('RGBA')
 
 
 def image2bytesio(pic: Image):
@@ -78,7 +84,7 @@ def draw_fillet(img, radii):
 
 
 def info_calc(n1: Optional[Real], n2: Optional[Real], rank: bool = False, pp: bool = False):
-    if not n1 or n2:
+    if not n1 or not n2:
         return '', 0
     num = n1 - n2
     if num < 0:
@@ -100,18 +106,23 @@ def info_calc(n1: Optional[Real], n2: Optional[Real], rank: bool = False, pp: bo
     return [op, value]
 
 
-def wedge_acc(acc: float) -> BytesIO:
-    size = [acc, 100 - acc]
-    insize = [60, 20, 7, 7, 5, 1]
-    insizecolor = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
-    fig, ax = plt.subplots()
-    patches, texts = ax.pie(size, radius=1.1, startangle=90, counterclock=False, pctdistance=0.9,
-                            wedgeprops=dict(width=0.27))
-    ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9,
-           wedgeprops=dict(width=0.05))
-    patches[1].set_alpha(0)
-    img = BytesIO()
-    plt.savefig(img, transparent=True)
+def draw_acc(img: Image, acc: float, mode: str):
+    draw = ImageDraw.Draw(img)
+    if mode == 'osu':
+        size = [60, 20, 7, 7, 5, 1]
+    elif mode == 'taiko':
+        size = [60, 20, 5, 5, 4, 1]
+    elif mode == 'fruits':
+        size = [85, 5, 4, 4, 1, 1]
+    else:
+        size = [70, 10, 10, 5, 4, 1]
+    start = -90
+    color = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
+    for s, c in zip(size, color):
+        end = start + s / 100 * 360
+        draw.arc((195, 263, 435, 503), start, end, fill=c, width=5)
+        start = end
+    draw.arc((165, 233, 465, 533), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
     return img
 
 
@@ -206,8 +217,7 @@ def stars_diff(mode: Union[str, int], stars: float):
         return Image.open(osufile / 'work' / f'{mode}_expertplus.png').convert('RGBA')
     # 取色
     x = (stars - math.floor(stars)) * default + xp
-    color = Image.open(osufile / 'work' / 'color.png').load()
-    r, g, b = color[x, 1]
+    r, g, b = ColorPic[x, 1]
     # 打开底图
     im = Image.open(osufile / 'work' / f'{mode}.png').convert('RGBA')
     xx, yy = im.size
@@ -264,17 +274,11 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     user_header = await get_projectimg(info.cover_url)
     user_icon = await get_projectimg(info.avatar_url)
     country = osufile / 'flags' / f'{info.country_code}.png'
-    supporter = osufile / 'work' / 'suppoter.png'
-    exp_l = osufile / 'work' / 'left.png'
-    exp_c = osufile / 'work' / 'center.png'
-    exp_r = osufile / 'work' / 'right.png'
     # 头图
     header_img = crop_bg('HI', user_header)
     im.alpha_composite(header_img, (0, 100))
     # 底图
-    info_bg = osufile / 'info.png'
-    info_img = Image.open(info_bg).convert('RGBA')
-    im.alpha_composite(info_img)
+    im.alpha_composite(InfoImg)
     # 头像
     icon_bg = Image.open(user_icon).convert('RGBA').resize((300, 300))
     icon_img = draw_fillet(icon_bg, 25)
@@ -296,24 +300,20 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
             badges_img = Image.open(badges_path).convert('RGBA').resize((86, 40))
             im.alpha_composite(badges_img, (length, height))
     else:
-        w_badges = DataText(500, 545, 35, "You don't have a badge", Torus_Regular, anchor='mm')
+        w_badges = DataText(500, 545, 35, "你还没有 badges", Torus_Regular, anchor='mm')
         im = draw_text(im, w_badges)
     # 地区
     country_bg = Image.open(country).convert('RGBA').resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
     # supporter
     if info.is_supporter:
-        supporter_bg = Image.open(supporter).convert('RGBA').resize((54, 54))
-        im.alpha_composite(supporter_bg, (400, 280))
+        im.alpha_composite(SupporterBg.resize((54,54)), (400, 280))
     # 经验
     if statistics.level.progress != 0:
-        exp_left_bg = Image.open(exp_l).convert('RGBA')
-        im.alpha_composite(exp_left_bg, (50, 646))
+        im.alpha_composite(ExpLeftBg, (50, 646))
         exp_width = statistics.level.progress * 7 - 3
-        exp_center_bg = Image.open(exp_c).convert('RGBA').resize((exp_width, 10))
-        im.alpha_composite(exp_center_bg, (54, 646))
-        exp_right_bg = Image.open(exp_r).convert('RGBA')
-        im.alpha_composite(exp_right_bg, (int(54 + exp_width), 646))
+        im.alpha_composite(ExpCenterBg.resize((exp_width, 10)), (54, 646))
+        im.alpha_composite(ExpRightBg, (int(54 + exp_width), 646))
     # 模式
     w_mode = DataText(935, 50, 45, GMN[mode], Torus_Regular, anchor='rm')
     im = draw_text(im, w_mode)
@@ -327,7 +327,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     else:
         t_crank = f"#{statistics.country_rank:,}({op}{value:,})" \
             if value != 0 else f"#{statistics.country_rank:,}"
-    w_crank = DataText(495, 448, 30, t_crank, Meiryo_Regular, anchor='lb')
+    w_crank = DataText(495, 448, 30, t_crank, Torus_Regular, anchor='lb')
     im = draw_text(im, w_crank)
     # 等级
     w_current = DataText(900, 650, 25, statistics.level.current, Torus_Regular, anchor='mm')
@@ -343,14 +343,14 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     im = draw_text(im, w_grank)
     op, value = info_calc(statistics.global_rank, n_grank, rank=True)
     if value != 0:
-        w_n_grank = DataText(65, 820, 20, f'{op}{value:,}', Meiryo_Regular)
+        w_n_grank = DataText(65, 820, 20, f'{op}{value:,}', Torus_Regular)
         im = draw_text(im, w_n_grank)
     # pp
     w_pp = DataText(295, 785, 35, f'{statistics.pp:,}', Torus_Regular)
     im = draw_text(im, w_pp)
     op, value = info_calc(statistics.pp, n_pp, pp=True)
     if value != 0:
-        w_n_pc = DataText(305, 820, 20, f'{op}{value:.2f}', Meiryo_Regular)
+        w_n_pc = DataText(305, 820, 20, f'{op}{int(value)}', Torus_Regular)
         im = draw_text(im, w_n_pc)
     # SS - A
     # gc_x = 493
@@ -415,8 +415,6 @@ async def draw_score(project: str,
     elif project == 'score':
         score_info = Score(**score_json['score'])
         grank = score_json['position']
-        if not calc_mods(score_info.mods) == calc_mods(mods):
-            return '非常抱歉，暂不支持指定mods查分>_<'
     else:
         raise 'Project Error'
     map_json = await osu_api('map', map_id=score_info.beatmap.id)
@@ -449,7 +447,7 @@ async def draw_score(project: str,
     recent_bg = Image.open(bg).convert('RGBA')
     im.alpha_composite(recent_bg)
     # 模式
-    mode_bg = stars_diff(score_info.mode, pp_info.difficulty.stars)
+    mode_bg = stars_diff(FGM[score_info.mode], pp_info.difficulty.stars)
     mode_img = mode_bg.resize((30, 30))
     im.alpha_composite(mode_img, (75, 154))
     # 难度星星
@@ -483,9 +481,7 @@ async def draw_score(project: str,
             rank_ok = True
         im.alpha_composite(rank_bg, (75, 243 + 39 * rank_num))
     # 成绩+acc
-    score_acc = wedge_acc(score_info.accuracy * 100)
-    score_acc_bg = Image.open(score_acc).convert('RGBA').resize((576, 432))
-    im.alpha_composite(score_acc_bg, (15, 153))
+    im = draw_acc(im, score_info.accuracy, score_info.mode)
     # 获取头图，头像，地区，状态，support
     user_headericon = await get_projectimg(headericon)
     user_icon = await get_projectimg(score_info.user.avatar_url)
@@ -509,11 +505,9 @@ async def draw_score(project: str,
     im.alpha_composite(status_bg, (114, 712))
     # supporter
     if score_info.user.is_supporter:
-        supporter = osufile / 'work' / 'suppoter.png'
-        supporter_bg = Image.open(supporter).convert('RGBA').resize((40, 40))
-        im.alpha_composite(supporter_bg, (267, 606))
+        im.alpha_composite(SupporterBg.resize((40, 40)), (267, 606))
     # cs, ar, od, hp, stardiff
-    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, mapinfo.difficulty_rating]
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.difficulty.stars]
     for num, i in enumerate(mapdiff):
         color = (255, 255, 255, 255)
         if num == 4:
@@ -521,7 +515,7 @@ async def draw_score(project: str,
         diff_len = int(250 * i / 10) if i <= 10 else 250
         diff_len = Image.new('RGBA', (diff_len, 8), color)
         im.alpha_composite(diff_len, (1190, 386 + 35 * num))
-        w_diff = DataText(1470, 386 + 35 * num, 20, i, Torus_SemiBold, anchor='mm')
+        w_diff = DataText(1470, 386 + 35 * num, 20, f'{i:.1f}', Torus_SemiBold, anchor='mm')
         im = draw_text(im, w_diff)
     # 时长 - 滑条
     diff_info = calc_songlen(mapinfo.total_length), mapinfo.bpm, mapinfo.count_circles, mapinfo.count_sliders
@@ -537,28 +531,28 @@ async def draw_score(project: str,
     im = draw_text(im, w_mapid)
     # 曲名
     w_title = DataText(75, 118, 30, f'{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}',
-                       Meiryo_SemiBold, anchor='lm')
+                       Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_title)
     # 星级
     w_diff = DataText(162, 169, 18, f'{pp_info.difficulty.stars:.1f}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_diff)
     # 谱面版本，mapper
-    w_version = DataText(225, 169, 22, f'{mapinfo.version} | mapper by {mapinfo.beatmapset.creator}', Torus_SemiBold,
+    w_version = DataText(225, 169, 22, f'{mapinfo.version} | 谱面作者: {mapinfo.beatmapset.creator}', Torus_SemiBold,
                          anchor='lm')
     im = draw_text(im, w_version)
     # 评价
-    w_rank = DataText(309, 375, 75, score_info.rank, Venera, anchor='mm')
+    w_rank = DataText(316, 387, 75, score_info.rank, Venera, anchor='mm')
     im = draw_text(im, w_rank)
     # 分数
     w_score = DataText(498, 331, 75, f'{score_info.score:,}', Torus_Regular, anchor='lm')
     im = draw_text(im, w_score)
     # 玩家
-    w_played = DataText(498, 396, 18, 'Played by:', Torus_SemiBold, anchor='lm')
+    w_played = DataText(498, 396, 18, '玩家:', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_played)
     w_username = DataText(630, 396, 18, score_info.user.username, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_username)
     # 时间
-    w_date = DataText(498, 421, 18, 'Submitted on:', Torus_SemiBold, anchor='lm')
+    w_date = DataText(498, 421, 18, '达成时间:', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_date)
     old_time = datetime.strptime(score_info.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
     new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
@@ -571,7 +565,7 @@ async def draw_score(project: str,
     w_l_username = DataText(195, 670, 24, score_info.user.username, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_l_username)
     # 在线，离线
-    w_line = DataText(195, 732, 30, 'online' if score_info.user.is_online else 'offline', Torus_SemiBold,
+    w_line = DataText(195, 732, 30, '在线' if score_info.user.is_online else '离线', Torus_SemiBold,
                       anchor='lm')
     im = draw_text(im, w_line)
     # acc,cb,pp,300,100,50,miss
@@ -641,9 +635,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         Union[str, MessageSegment]:
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
-    bp_bg = osufile / 'Best Performance.png'
-    bg_img = Image.open(bp_bg).convert('RGBA')
-    im.alpha_composite(bg_img)
+    im.alpha_composite(BgImg)
     f_div = Image.new('RGBA', (1500, 2), (255, 255, 255, 255)).convert('RGBA')
     im.alpha_composite(f_div, (0, 100))
     if project == 'bp':
@@ -663,7 +655,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
             if (bp.rank == 'X' or bp.rank == 'S') and ('HD' in bp.mods or 'FL' in bp.mods):
                 bp.rank += 'H'
         # BP排名
-        rank_bp = DataText(15, 144 + h_num, 20, num + 1, Meiryo_Regular, anchor='lm')
+        rank_bp = DataText(15, 144 + h_num, 20, num + 1, Torus_Regular, anchor='lm')
         im = draw_text(im, rank_bp)
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
@@ -671,7 +663,7 @@ def image_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bou
         im.alpha_composite(rank_bg, (45, 128 + h_num))
         # 曲名&作曲
         w_title_artist = DataText(125, 130 + h_num, 20, f'{bp.beatmapset.title}'
-                                                        f' | by {bp.beatmapset.artist}', Meiryo_Regular,
+                                                        f' | by {bp.beatmapset.artist}', Torus_Regular,
                                   anchor='lm')
         im = draw_text(im, w_title_artist)
         # 地图版本&时间
@@ -762,9 +754,7 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info
-    map_bg = osufile / 'beatmapinfo.png'
-    mapbg = Image.open(map_bg).convert('RGBA')
-    im.alpha_composite(mapbg)
+    im.alpha_composite(MapBg)
     # 模式
     mode_bg = stars_diff(mapinfo.mode, ss_pp_info.difficulty.stars)
     mode_img = mode_bg.resize((50, 50))
@@ -793,13 +783,13 @@ async def map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     w_version = DataText(120, 125, 25, mapinfo.version, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_version)
     # 曲名
-    w_title = DataText(50, 170, 30, mapinfo.beatmapset.title, Meiryo_SemiBold)
+    w_title = DataText(50, 170, 30, mapinfo.beatmapset.title, Torus_SemiBold)
     im = draw_text(im, w_title)
     # 曲师
-    w_artist = DataText(50, 210, 25, f'by {mapinfo.beatmapset.artist_unicode}', Meiryo_SemiBold)
+    w_artist = DataText(50, 210, 25, f'by {mapinfo.beatmapset.artist_unicode}', Torus_SemiBold)
     im = draw_text(im, w_artist)
     # 来源
-    w_source = DataText(50, 260, 25, f'Source:{mapinfo.beatmapset.source}', Meiryo_SemiBold)
+    w_source = DataText(50, 260, 25, f'Source:{mapinfo.beatmapset.source}', Torus_SemiBold)
     im = draw_text(im, w_source)
     # mapper
     w_mapper_by = DataText(160, 400, 20, 'mapper by:', Torus_SemiBold)
@@ -860,10 +850,10 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 曲名
-    w_title = DataText(25, 40, 38, data.titleU, Meiryo_SemiBold)
+    w_title = DataText(25, 40, 38, data.title, Torus_SemiBold)
     im = draw_text(im, w_title)
     # 曲师
-    w_artist = DataText(25, 75, 20, f'by {data.artistU}', Meiryo_SemiBold)
+    w_artist = DataText(25, 75, 20, f'by {data.artist}', Torus_SemiBold)
     im = draw_text(im, w_artist)
     # mapper
     w_mapper = DataText(25, 110, 20, f'mapper by {data.creator}', Torus_SemiBold)
@@ -877,7 +867,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     w_apptime = DataText(25, 145, 20, f'Approved Time: {approved_date}', Torus_SemiBold)
     im = draw_text(im, w_apptime)
     # 来源
-    w_source = DataText(25, 180, 20, f'Source: {data.source}', Meiryo_SemiBold)
+    w_source = DataText(25, 180, 20, f'Source: {data.source}', Torus_SemiBold)
     im = draw_text(im, w_source)
     # bpm
     w_bpm = DataText(1150, 110, 20, f'BPM: {data.bpm}', Torus_SemiBold, anchor='rt')
@@ -902,9 +892,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
             stars_img = stars_bg.resize((20, 20))
             im.alpha_composite(stars_img, (50, 320 + h_num))
             # diff
-            bar_bg = osufile / 'work' / 'bmap.png'
-            bar_img = Image.open(bar_bg).convert('RGBA')
-            im.alpha_composite(bar_img, (10, 365 + h_num))
+            im.alpha_composite(BarImg, (10, 365 + h_num))
             gc = ['CS', 'HP', 'OD', 'AR']
             for index, i in enumerate((cmap.CS, cmap.HP, cmap.OD, cmap.AR)):
                 diff_len = int(200 * i / 10) if i <= 10 else 200
@@ -918,7 +906,7 @@ async def bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
                     w_d = DataText(300 + 300 * index, 369 + h_num, 20, '|', Torus_SemiBold, anchor='lm')
                     im = draw_text(im, w_d)
             # 难度
-            w_star = DataText(80, 328 + h_num, 20, cmap.star, Torus_SemiBold, anchor='lm')
+            w_star = DataText(80, 328 + h_num, 20, f'{cmap.star:.1f}', Torus_SemiBold, anchor='lm')
             im = draw_text(im, w_star)
             # version
             w_version = DataText(125, 328 + h_num, 20, f' |  {cmap.version}', Torus_SemiBold, anchor='lm')
