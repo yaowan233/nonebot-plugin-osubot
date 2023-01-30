@@ -492,22 +492,11 @@ async def _help(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Co
 
 @scheduler.scheduled_job('cron', hour='0')
 async def update_info():
-    tasks: List[Task] = []
     result = await UserData.all()
     if not result:
         return
-    loop = asyncio.get_event_loop()
-    for n, data in enumerate(result):
-        task = loop.create_task(update_user_info(data.osu_id))
-        tasks.append(task)
-        if n == 0:
-            await asyncio.sleep(10)
-        else:
-            await asyncio.sleep(1)
-    await asyncio.sleep(10)
-
-    for _ in tasks:
-        _.cancel()
+    for user in result:
+        await update_user_info(user.osu_id)
     logger.info(f'已更新{len(result)}位玩家数据')
 
 
