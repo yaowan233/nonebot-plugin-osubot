@@ -1,8 +1,6 @@
-import asyncio
 import os
 import shutil
 import urllib
-from asyncio.tasks import Task
 from pathlib import Path
 from typing import List, Union
 
