@@ -485,7 +485,7 @@ async def _help(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Co
     if not arg:
         await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'))
     if arg == 'detail':
-        await osu_help.finish(MessageSegment.reply(event.message_id) + detail_usage)
+        await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(Path(__file__).parent / 'osufile' / 'detail.png'))
     else:
         await osu_help.finish(MessageSegment.reply(event.message_id) + '呜呜，detail都打不对吗(ノ｀Д)ノ')
 
