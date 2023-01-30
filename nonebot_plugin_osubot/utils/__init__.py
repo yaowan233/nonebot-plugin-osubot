@@ -49,3 +49,13 @@ async def update_user_info(uid: int):
         await info.save()
         logger.info(f'玩家:[{userinfo.username}] {GM[mode]}模式 个人信息更新完毕')
 
+
+def mods2list(args: str) -> list:
+    if '，' in args:
+        sep = '，'
+    elif ',' in args:
+        sep = ','
+    else:
+        sep = ' '
+    args = args.upper()
+    return args.split(sep)

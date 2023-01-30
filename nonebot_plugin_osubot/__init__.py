@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 import urllib
 from asyncio.tasks import Task
 from pathlib import Path
@@ -16,8 +17,8 @@ from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo, get_map_bg
-from .file import download_map, map_downloaded
-from .utils import GM, GMN, update_user_info
+from .file import download_map, map_downloaded, download_osu
+from .utils import GM, GMN, update_user_info, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api
@@ -50,7 +51,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.13.0",
+        "version": "0.13.1",
     },
 )
 
@@ -470,6 +471,8 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Comman
     setid: int = data['beatmapset_id']
     dirpath = await map_downloaded(str(setid))
     osu = dirpath / f"{osu_id}.osu"
+    if not osu.exists():
+        await download_osu(setid, osu_id)
     pic = await generate_preview_pic(osu)
     await generate_preview.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(pic))
 
@@ -508,12 +511,8 @@ async def update_info():
     logger.info(f'已更新{len(result)}位玩家数据')
 
 
-def mods2list(args: str) -> list:
-    if '，' in args:
-        sep = '，'
-    elif ',' in args:
-        sep = ','
-    else:
-        sep = ' '
-    args = args.upper()
-    return args.split(sep)
+@scheduler.scheduled_job('cron', hour='4', day_of_week='0,4')
+async def delete_cached_map():
+    map_path = Path('data/osu/map')
+    shutil.rmtree(map_path)
+    map_path.mkdir(parents=True, exist_ok=True)

@@ -32,7 +32,7 @@ if not map_path.exists():
 
 async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
     # 当重试次数大于三时，报错
-    if retry_time > 3:
+    if retry_time > 2:
         raise TimeoutError('osz文件下载失败，请尝试更换其他镜像')
     # 判断是否存在该文件
     path = map_path / setid
