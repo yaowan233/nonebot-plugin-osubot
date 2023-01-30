@@ -1,3 +1,4 @@
+import asyncio
 import math
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -397,7 +398,12 @@ async def draw_score(project: str,
                      mods: Optional[List[str]],
                      best: int = 0,
                      mapid: int = 0) -> Union[str, MessageSegment]:
-    score_json = await osu_api(project, uid, mode, mapid)
+    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid))
+    task1 = asyncio.create_task(osu_api('info', uid))
+    score_json = await task0
+    header = await task1
+    header_icon = header['cover_url']
+
     if not score_json:
         return f'未查询到在 {GMN[mode]} 的游玩记录'
     elif isinstance(score_json, str):
@@ -417,21 +423,23 @@ async def draw_score(project: str,
         grank = score_json['position']
     else:
         raise 'Project Error'
-    map_json = await osu_api('map', map_id=score_info.beatmap.id)
+    # 从官网获取信息
+    task2 = asyncio.create_task(osu_api('map', map_id=score_info.beatmap.id))
+    task3 = asyncio.create_task(map_downloaded(str(score_info.beatmap.beatmapset_id)))
+    task4 = asyncio.create_task(get_projectimg(score_info.user.avatar_url))
+    task5 = asyncio.create_task(get_projectimg(header_icon))
+    map_json = await task2
+    dirpath = await task3
+    user_icon = await task4
+    user_headericon = await task5
     mapinfo = Beatmap(**map_json)
-    header = await osu_api('info', uid)
-    headericon = header['cover_url']
-
     # 下载地图
-    dirpath = await map_downloaded(str(score_info.beatmap.beatmapset_id))
     osu = dirpath / f"{score_info.beatmap.id}.osu"
     if not osu.exists():
         await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
     # pp
     pp_info = cal_pp(score_info, str(osu.absolute()))
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
-    # pp_data = await pp_api(FGM[score_info.mode], score_info)
-    # pp_info = PP(**pp_data)
     # 新建图片
     im = Image.new('RGBA', (1500, 800))
     # 获取cover并裁剪，高斯，降低亮度
@@ -484,9 +492,6 @@ async def draw_score(project: str,
         im.alpha_composite(rank_bg, (75, 243 + 39 * rank_num))
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.mode)
-    # 获取头图，头像，地区，状态，support
-    user_headericon = await get_projectimg(headericon)
-    user_icon = await get_projectimg(score_info.user.avatar_url)
     # 头图
     headericon_crop = crop_bg('H', user_headericon)
     headericon_gb = headericon_crop.filter(ImageFilter.GaussianBlur(1))
