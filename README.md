@@ -99,7 +99,8 @@ _✨ NoneBot osubot ✨_
 ## 🎉 使用
 ### 指令
 
-![help](https://user-images.githubusercontent.com/30517062/214065830-6d061d86-b4b5-4e53-8144-c6bb5b9129ef.png)
+
+![help](https://user-images.githubusercontent.com/30517062/217259521-7cd4b6b1-f16f-48b3-ba3c-8d49c022ab33.png)
 
 
 ## 💡 贡献
