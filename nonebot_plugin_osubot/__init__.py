@@ -14,12 +14,14 @@ from nonebot.rule import ArgumentParser
 from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
 from nonebot_plugin_tortoise_orm import add_model
-from .draw import draw_info, draw_score, best_pfm, map_info, bmap_info, bindinfo, get_map_bg
+from nonebot_plugin_imageutils import text2image
+from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu
-from .utils import GM, GMN, update_user_info, mods2list
+from .utils import GM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api
+from .info import get_map_bg, bind_user_info, update_user_info
 
 
 require('nonebot_plugin_apscheduler')
@@ -49,7 +51,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "0.13.2",
+        "version": "1.0.0",
     },
 )
 
@@ -131,9 +133,13 @@ async def _(
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:
+        pic = text2image(parser.format_help())
+        pic_msg = MessageSegment.image(image2bytesio(pic))
         if e.status == 0:
-            await convert.finish(MessageSegment.reply(event.message_id) + parser.format_help())
-        await convert.finish(MessageSegment.reply(event.message_id) + str(e))
+            await convert.finish(MessageSegment.reply(event.message_id) + pic_msg)
+        pic = text2image(str(e))
+        pic_msg = MessageSegment.image(image2bytesio(pic))
+        await convert.finish(MessageSegment.reply(event.message_id) + pic_msg)
         return
     options = Options(**vars(args))
     if not options.set:
@@ -245,7 +251,7 @@ async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     low, high = int(low), int(high)
     if not 0 < low < high <= 100:
         await pfm.finish(MessageSegment.reply(event.message_id) + '仅支持查询bp1-100')
-    data = await best_pfm('bp', user, GM[mode], mods, low, high)
+    data = await draw_bp('bp', user, GM[mode], mods, low, high)
     await pfm.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -258,7 +264,7 @@ async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
-    data = await best_pfm('tbp', user, GM[mode], [])
+    data = await draw_bp('tbp', user, GM[mode], [])
     await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -273,7 +279,7 @@ async def _map(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await osu_map.finish(MessageSegment.reply(event.message_id) + '请输入地图ID')
     elif not map_id.isdigit():
         await osu_map.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图ID')
-    m = await map_info(map_id, mods)
+    m = await draw_map_info(map_id, mods)
     await osu_map.finish(MessageSegment.reply(event.message_id) + m)
 
 
@@ -288,7 +294,7 @@ async def _bmap(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if not set_id.isdigit():
         await bmap.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
         return
-    m = await bmap_info(set_id)
+    m = await draw_bmap_info(set_id)
     await bmap.finish(MessageSegment.reply(event.message_id) + m)
 
 
@@ -326,7 +332,7 @@ async def _bind(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Co
         await bind.finish(MessageSegment.reply(event.message_id) + '请输入您的 osuid')
     if _ := await UserData.get_or_none(user_id=event.get_user_id()):
         await bind.finish(MessageSegment.reply(event.message_id) + '您已绑定，如需要解绑请输入/unbind')
-    msg = await bindinfo('bind', name, event.get_user_id())
+    msg = await bind_user_info('bind', name, event.get_user_id())
     await bind.finish(MessageSegment.reply(event.message_id) + msg)
 
 

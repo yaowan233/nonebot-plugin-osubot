@@ -1,5 +1,5 @@
+from httpx import AsyncClient
 from typing import Union
-import aiohttp
 from nonebot.log import logger
 from nonebot import get_driver
 from expiringdict import ExpiringDict
@@ -20,16 +20,17 @@ else:
 
 async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json={'client_id': f'{client_id}', 'client_secret': f'{key}',
-                                           'grant_type': 'client_credentials', 'scope': 'public'}) as req:
-            if req.status == 200:
-                osu_token = await req.json()
-                cache.update({
-                    'token': osu_token['access_token']
-                })
-            else:
-                logger.error(f'更新OSU token出错 错误{req.status}')
+    async with AsyncClient() as client:
+        client: AsyncClient
+        req = await client.post(url, json={'client_id': f'{client_id}', 'client_secret': f'{key}',
+                                           'grant_type': 'client_credentials', 'scope': 'public'})
+    if req.status_code == 200:
+        osu_token = req.json()
+        cache.update({
+            'token': osu_token['access_token']
+        })
+    else:
+        logger.error(f'更新OSU token出错 错误{req.status_code}')
 
 
 async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0) -> Union[str, dict]:
@@ -70,17 +71,18 @@ async def get_user_info(url: str) -> Union[dict, str]:
         await renew_token()
         token = cache.get('token')
     header = {'Authorization': f'Bearer {token}'}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=header) as req:
-            if req.status == 401:
-                await token.update_token()
-                return await get_user_info(url)
-            elif req.status == 404:
-                return '未找到该玩家，请确认玩家ID'
-            elif req.status == 200:
-                return await req.json()
-            else:
-                return 'API请求失败，请联系管理员'
+    async with AsyncClient() as client:
+        client: AsyncClient
+        req = await client.get(url, headers=header)
+    if req.status_code == 401:
+        await token.update_token()
+        return await get_user_info(url)
+    elif req.status_code == 404:
+        return '未找到该玩家，请确认玩家ID'
+    elif req.status_code == 200:
+        return req.json()
+    else:
+        return 'API请求失败，请联系管理员'
 
 
 async def api_info(project: str, url: str) -> Union[dict, str]:
@@ -93,22 +95,23 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             await renew_token()
             token = cache.get('token')
         headers = {'Authorization': f'Bearer {token}'}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers, ssl=False) as req:
-            if req.status == 404:
-                if project == 'info' or project == 'bind':
-                    return '未找到该玩家，请确认玩家ID'
-                elif project == 'recent':
-                    return '未找到该玩家，请确认玩家ID'
-                elif project == 'score':
-                    return '未找到该地图成绩，请检查是否搞混了mapID与setID或模式'
-                elif project == 'bp':
-                    return '未找到该玩家BP'
-                elif project == 'map':
-                    return '未找到该地图，请检查是否搞混了mapID与setID'
-                else:
-                    return 'API请求失败，请联系管理员或稍后再尝试'
-            if project == 'mapinfo':
-                return await req.json(content_type='text/html', encoding='utf-8')
-            else:
-                return await req.json()
+    async with AsyncClient(timeout=100) as client:
+        client: AsyncClient
+        req = await client.get(url, headers=headers)
+    if req.status_code == 404:
+        if project == 'info' or project == 'bind':
+            return '未找到该玩家，请确认玩家ID'
+        elif project == 'recent':
+            return '未找到该玩家，请确认玩家ID'
+        elif project == 'score':
+            return '未找到该地图成绩，请检查是否搞混了mapID与setID或模式'
+        elif project == 'bp':
+            return '未找到该玩家BP'
+        elif project == 'map':
+            return '未找到该地图，请检查是否搞混了mapID与setID'
+        else:
+            return 'API请求失败，请联系管理员或稍后再尝试'
+    if project == 'mapinfo':
+        return req.json(content_type='text/html', encoding='utf-8')
+    else:
+        return req.json()

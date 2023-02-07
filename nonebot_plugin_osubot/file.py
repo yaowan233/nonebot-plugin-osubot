@@ -1,12 +1,12 @@
 from io import BytesIO, TextIOWrapper
 from typing import Union, Optional
 
-import aiohttp
 import os
 import re
 import shutil
 import zipfile
 from pathlib import Path
+from httpx import AsyncClient
 
 from nonebot import get_driver
 from nonebot.log import logger
@@ -54,51 +54,43 @@ async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
 
 async def download_map(setid: int) -> Optional[Path]:
     url = download_api + str(setid)
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, allow_redirects=True) as req:
-                logger.info(f'Start Downloading Map: <{setid}>')
-                filename = f'{setid}.osz'
-                filepath = map_path / filename
-                chunk = await req.read()
-                with open(filepath, 'wb') as f:
-                    f.write(chunk)
-            logger.info(f'Map: <{setid}> Download Complete')
-    except Exception as e:
-        logger.error(f'Request Failed or Timeout\n{e}')
+    logger.info(f'开始下载地图: <{setid}>')
+    async with AsyncClient(timeout=100) as client:
+        client: AsyncClient
+        req = await client.get(url, follow_redirects=True)
+    filename = f'{setid}.osz'
+    filepath = map_path / filename
+    with open(filepath, 'wb') as f:
+        f.write(req.read())
+    logger.info(f'地图: <{setid}> 下载完毕')
     return filepath
 
 
 async def download_osu(set_id, map_id):
     url = f'https://osu.ppy.sh/osu/{map_id}'
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, allow_redirects=True) as req:
-                logger.info(f'Start Downloading Osu: <{map_id}>')
-                filename = f'{map_id}.osu'
-                filepath = map_path / str(set_id) / filename
-                chunk = await req.read()
-                with open(filepath, 'wb') as f:
-                    f.write(chunk)
-    except Exception as e:
-        logger.error(f'Request Failed or Timeout\n{e}')
+    logger.info(f'开始下载谱面: <{map_id}>')
+    async with AsyncClient(timeout=100) as client:
+        client: AsyncClient
+        req = await client.get(url, follow_redirects=True)
+    filename = f'{map_id}.osu'
+    filepath = map_path / str(set_id) / filename
+    chunk = req.read()
+    with open(filepath, 'wb') as f:
+        f.write(chunk)
     return filepath
 
 
 async def get_projectimg(url: str):
-    try:
-        if 'avatar-guest.png' in url:
-            url = 'https://osu.ppy.sh/images/layout/avatar-guest.png'
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as req:
-                if req.status == 403:
-                    return osufile / 'work' / 'mapbg.png'
-                data = await req.read()
-                im = BytesIO(data)
-        return im
-    except Exception as e:
-        logger.error(f'Image Failed: {e}')
-        return e
+    if 'avatar-guest.png' in url:
+        url = 'https://osu.ppy.sh/images/layout/avatar-guest.png'
+    async with AsyncClient() as client:
+        client: AsyncClient
+        req = await client.get(url)
+    if req.status_code == 403:
+        return osufile / 'work' / 'mapbg.png'
+    data = req.read()
+    im = BytesIO(data)
+    return im
 
 
 async def remove_file(path: Path) -> bool:
@@ -138,17 +130,16 @@ def re_map(file: Union[bytes, Path]) -> str:
 async def get_map_id(file: Path) -> str:
     with open(file, 'r', encoding='utf-8') as f:
         text = f.read()
-    res = re.search(r'BeatmapID:(\d*)', text)
-    if res is None:
-        res = re.search(r'Version:(.*)\n', text)
-        version = res.group(1).strip()
-        data = await sayo_api(int(file.parent.name))
-        if isinstance(data, str):
-            raise Exception(data)
-        sayo_info = SayoBeatmap(**data)
-        if sayo_info.status == -1:
-            raise Exception('未能在sayobot查找到地图信息')
-        for map_data in sayo_info.data.bid_data:
-            if map_data.version == version:
-                return str(map_data.bid)
-    return res.group(1).strip()
+    if res := re.search(r'BeatmapID:(\d*)', text):
+        return res.group(1).strip()
+    res = re.search(r'Version:(.*)\n', text)
+    version = res.group(1).strip()
+    data = await sayo_api(int(file.parent.name))
+    if isinstance(data, str):
+        raise Exception(data)
+    sayo_info = SayoBeatmap(**data)
+    if sayo_info.status == -1:
+        raise Exception('未能在sayobot查找到地图信息')
+    for map_data in sayo_info.data.bid_data:
+        if map_data.version == version:
+            return str(map_data.bid)
