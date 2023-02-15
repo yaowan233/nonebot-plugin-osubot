@@ -111,7 +111,4 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             return '未找到该地图，请检查是否搞混了mapID与setID'
         else:
             return 'API请求失败，请联系管理员或稍后再尝试'
-    if project == 'mapinfo':
-        return req.json(content_type='text/html', encoding='utf-8')
-    else:
-        return req.json()
+    return req.json()
