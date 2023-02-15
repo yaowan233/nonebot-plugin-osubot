@@ -4,6 +4,7 @@ from nonebot.log import logger
 from nonebot import get_driver
 from expiringdict import ExpiringDict
 from .config import Config
+from .network import auto_retry
 
 api = 'https://osu.ppy.sh/api/v2'
 sayoapi = 'https://api.sayobot.cn'
@@ -65,6 +66,7 @@ async def sayo_api(setid: int) -> dict:
     return await api_info('mapinfo', url)
 
 
+@auto_retry
 async def get_user_info(url: str) -> Union[dict, str]:
     token = cache.get('token')
     if not token:
@@ -85,6 +87,7 @@ async def get_user_info(url: str) -> Union[dict, str]:
         return 'API请求失败，请联系管理员'
 
 
+@auto_retry
 async def api_info(project: str, url: str) -> Union[dict, str]:
     if project == 'mapinfo' or project == 'PPCalc':
         headers = {
