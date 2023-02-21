@@ -14,7 +14,6 @@ from nonebot.rule import ArgumentParser
 from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
 from nonebot_plugin_tortoise_orm import add_model
-from nonebot_plugin_imageutils import text2image
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu
 from .utils import GM, GMN, mods2list
@@ -25,8 +24,11 @@ from .info import get_map_bg, bind_user_info, update_user_info
 
 
 require('nonebot_plugin_apscheduler')
+require('nonebot_plugin_imageutils')
+
 
 from nonebot_plugin_apscheduler import scheduler
+from nonebot_plugin_imageutils import text2image
 
 
 usage = "发送/osuhelp 查看帮助"
