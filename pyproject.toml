@@ -17,7 +17,6 @@ dependencies = [
     "rosu-pp-py==0.9.1",
     "reamber>=0.1.7",
     "nonebot-plugin-guild-patch>=0.2.2",
-    "nonebot-plugin-imageutils==0.1.13.5",
     "httpx>=0.23.3",
 ]
 requires-python = ">=3.8"

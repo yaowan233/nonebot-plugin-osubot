@@ -24,11 +24,7 @@ from .info import get_map_bg, bind_user_info, update_user_info
 
 
 require('nonebot_plugin_apscheduler')
-require('nonebot_plugin_imageutils')
-
-
 from nonebot_plugin_apscheduler import scheduler
-from nonebot_plugin_imageutils import text2image
 
 
 usage = "发送/osuhelp 查看帮助"
@@ -135,13 +131,10 @@ async def _(
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:
-        pic = text2image(parser.format_help())
-        pic_msg = MessageSegment.image(image2bytesio(pic))
         if e.status == 0:
-            await convert.finish(MessageSegment.reply(event.message_id) + pic_msg)
-        pic = text2image(str(e))
-        pic_msg = MessageSegment.image(image2bytesio(pic))
-        await convert.finish(MessageSegment.reply(event.message_id) + pic_msg)
+            await convert.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(
+                Path(__file__).parent / 'osufile' / 'convert.jpg'))
+        await convert.finish(MessageSegment.reply(event.message_id) + str(e))
         return
     options = Options(**vars(args))
     if not options.set:

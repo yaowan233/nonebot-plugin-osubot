@@ -51,11 +51,6 @@ requires_python = ">=3.6"
 summary = "Backport of the standard library zoneinfo module"
 
 [[package]]
-name = "bbcode"
-version = "1.1.0"
-summary = "A pure python bbcode parser and formatter."
-
-[[package]]
 name = "certifi"
 version = "2022.12.7"
 requires_python = ">=3.6"
@@ -200,23 +195,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nonebot-plugin-imageutils"
-version = "0.1.13.5"
-requires_python = ">=3.8,<4.0"
-summary = "Nonebot2 PIL工具插件"
-dependencies = [
-    "Pillow<10.0.0,>=9.0.0",
-    "bbcode<2.0.0,>=1.1.0",
-    "fonttools<5.0.0,>=4.0.0",
-    "httpx>=0.19.0",
-    "loguru<0.7.0,>=0.6.0",
-    "matplotlib<4.0.0,>=3.0.0",
-    "nonebot2<3.0.0,>=2.0.0-beta.1",
-    "numpy<2.0.0,>=1.20.0",
-    "opencv-python-headless<5.0.0,>=4.0.0",
-]
-
-[[package]]
 name = "nonebot-plugin-tortoise-orm"
 version = "0.0.1a3"
 requires_python = ">=3.7.3,<4.0.0"
@@ -247,21 +225,6 @@ name = "numpy"
 version = "1.24.1"
 requires_python = ">=3.8"
 summary = "Fundamental package for array computing in Python"
-
-[[package]]
-name = "opencv-python-headless"
-version = "4.7.0.68"
-requires_python = ">=3.6"
-summary = "Wrapper package for OpenCV python bindings."
-dependencies = [
-    "numpy>=1.17.0; python_version >= \"3.7\"",
-    "numpy>=1.17.3; python_version >= \"3.8\"",
-    "numpy>=1.19.3; python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\"",
-    "numpy>=1.19.3; python_version >= \"3.9\"",
-    "numpy>=1.21.0; python_version <= \"3.9\" and platform_system == \"Darwin\" and platform_machine == \"arm64\"",
-    "numpy>=1.21.2; python_version >= \"3.10\"",
-    "numpy>=1.21.4; python_version >= \"3.10\" and platform_system == \"Darwin\"",
-]
 
 [[package]]
 name = "osrparse"
@@ -505,7 +468,7 @@ dependencies = [
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:90d497d4d0c89e4e0bffebcbc9c97b6cc902acb5033804df76157d3977480abb"
+content_hash = "sha256:308e5ca3c7b980e87ca209c5002a08c5a812268945c738c3d6f11f15bd4c5716"
 
 [metadata.files]
 "aiomysql 0.1.1" = [
@@ -565,10 +528,6 @@ content_hash = "sha256:90d497d4d0c89e4e0bffebcbc9c97b6cc902acb5033804df76157d397
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/d4/79/249bd3c4f794741f04f1e0ff33ad3cca9b2d1f4299b73f78d0d9bc9ec8dc/backports.zoneinfo-0.2.1-cp36-cp36m-win32.whl", hash = "sha256:e8236383a20872c0cdf5a62b554b27538db7fa1bbec52429d8d106effbaeca08"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/ef/9a/8de8f379d5b3961a517762cc051b366de3f7d4d3a2250120e7a71e25fab4/backports.zoneinfo-0.2.1-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:89a48c0d158a3cc3f654da4c2de1ceba85263fafb861b98b59040a5086259722"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/f9/04/33e910faffe91a5680d68a064162525779259ae5de3b0c0c5bd9c4e900e0/backports.zoneinfo-0.2.1-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:1c5742112073a563c81f786e77514969acb58649bcdf6cdf0b4ed31a348d4546"},
-]
-"bbcode 1.1.0" = [
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/2c/6d/18cdee16855ecf972c64969bb920735a4fbebb4f2b0a3b3881acb5fb7728/bbcode-1.1.0-py2.py3-none-any.whl", hash = "sha256:83802f4b40c92426841a98350bd6ff9ea8fdf8f9b37df1968a88c5864fd225fa"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/70/67/526c92e1c4cbba188766871c2fed76d98748c3b1d5a2028166fdd51d4204/bbcode-1.1.0.tar.gz", hash = "sha256:eac4fb1d0f6c7ce5c41e4b5c0522562b15a1ac036fb9131adc59e9a28c7dc1d0"},
 ]
 "certifi 2022.12.7" = [
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/37/f7/2b1b0ec44fdc30a3d31dfebe52226be9ddc40cd6c0f34ffc8923ba423b69/certifi-2022.12.7.tar.gz", hash = "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3"},
@@ -823,10 +782,6 @@ content_hash = "sha256:90d497d4d0c89e4e0bffebcbc9c97b6cc902acb5033804df76157d397
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/5b/41/54277c20dc206ae27d014f43ec816aaf97d03bb8b585d359acffbf09b3f3/nonebot_plugin_guild_patch-0.2.2-py3-none-any.whl", hash = "sha256:63e85e0528519d33752e59630d814af5959ec7d577b50271f4f682354918b6e3"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/83/c9/70df757d3ead68aaa539fcb3890d8e45ee1cd8c2b8153f7b08cbfce7f823/nonebot_plugin_guild_patch-0.2.2.tar.gz", hash = "sha256:9bbbb6e519ce713ad462d014247c7d7a6ed9beeffff1752842ecebc9fb7ef52d"},
 ]
-"nonebot-plugin-imageutils 0.1.13.5" = [
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/6b/e9/1f25f7e587ff653c8fec26b43b9a1a04802b14e1f3dc452466b18a4f90bd/nonebot_plugin_imageutils-0.1.13.5-py3-none-any.whl", hash = "sha256:ce34e77e060928070f0d900c1ff52c6fc3b0831f7e2234d82d062d701ee6788b"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/bb/71/707b23f1dc5f151c5549e03630aad6a27af58b1fc27f4b0e6fde52c5980e/nonebot_plugin_imageutils-0.1.13.5.tar.gz", hash = "sha256:5f0e98eef3e60d892bf5bcf6d3ca58757fa4c74113c69d1dd55bb6cbfa021291"},
-]
 "nonebot-plugin-tortoise-orm 0.0.1a3" = [
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/8d/f4/984ab4f1458d72a0978cb34b36aa47f4a951bee7c8fedd60f1fbc97834f6/nonebot_plugin_tortoise_orm-0.0.1a3-py3-none-any.whl", hash = "sha256:9b03f09d0dc24cb4f018467c98bcd0d1c10978e48e44036fc2836a545734d0a7"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/a2/79/e722f8a455ff7eb3bc307501ce17910b6821f1b489d7a5fadce39912af5c/nonebot-plugin-tortoise-orm-0.0.1a3.tar.gz", hash = "sha256:79c0cf30e7e5291089d034d561ad53744963de629b49737332467f3eaefa10e3"},
@@ -864,15 +819,6 @@ content_hash = "sha256:90d497d4d0c89e4e0bffebcbc9c97b6cc902acb5033804df76157d397
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/ee/70/c9055fe381e9e5103222e2f5efeb0cfb4524ab3c7d75b4eedc330380f9f5/numpy-1.24.1-cp310-cp310-win_amd64.whl", hash = "sha256:b07b40f5fb4fa034120a5796288f24c1fe0e0580bbfff99897ba6267af42def2"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/f9/03/94ee2d37561d77538e9f2c933a8b22ff234f15404420517b3f51cc3a0749/numpy-1.24.1-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:cfa1161c6ac8f92dea03d625c2d0c05e084668f4a06568b77a25a89111621566"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/fa/c2/00bed438bc58fd80429b7ea2b28382f99156659ebc6dfa750d1520df59d6/numpy-1.24.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:b162ac10ca38850510caf8ea33f89edcb7b0bb0dfa5592d59909419986b72407"},
-]
-"opencv-python-headless 4.7.0.68" = [
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/10/44/501dfcb9547deca7ab237e801ae80b2bbdbbffdc195cfe8aad8c0982b360/opencv-python-headless-4.7.0.68.tar.gz", hash = "sha256:a2109193e88570bbbdf5335541c74b5b27573f1c922e38f523febaeae77a81be"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/65/93/0414e8d157d024e8925eee570c1cc33967c37ca7a8f6deaec73a6719ee50/opencv_python_headless-4.7.0.68-cp37-abi3-win_amd64.whl", hash = "sha256:e1cb2120720e54e0e563615ae4ccccf0f63d4f8a29b27722a185a22a7638103b"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/71/24/57f45cf413c448db9d4819a7ef6944c76b2434ba70e45402a5045b9437d6/opencv_python_headless-4.7.0.68-cp37-abi3-macosx_10_13_x86_64.whl", hash = "sha256:e0c5ab677ff730c87317f3d2e4ee97ce1d95052bec35886a1bf8c8ef328c82a2"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/91/a7/be4e357aee3548646be313b23fe19aee9a78d5e61d88f405d34657f1a8eb/opencv_python_headless-4.7.0.68-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cdda3cc5b65bf41be8c76f7d2ab9fda78a204a4837689351206d054444b5bb24"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/9d/c2/f7cb7bf40f5b45fe4369182a8ff857b7486d407ec869ddbade47146d78e4/opencv_python_headless-4.7.0.68-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:f39df64ca733eebe1ed78fe4ac13bedb0ef77beeabddbb2c0e291cc6bf5fbcdc"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/ef/d2/8ad06cc8e04d632dec53ab082376c09412fad29404c16a837166d3e621ec/opencv_python_headless-4.7.0.68-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:abfbac281ab85d90c4d17f13febf5adb640b727e2c3557e1ae49a71359a87c31"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/f7/a7/8638b7fc9af42f8c925e85321e9650f547e796331eceab8163e592921194/opencv_python_headless-4.7.0.68-cp37-abi3-win32.whl", hash = "sha256:636d9517d946048c3ba34bc0addbe1b9fd4273954e228d3dcd96687cd5d447c7"},
 ]
 "osrparse 5.0.0" = [
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/8d/f3/967bdcbee3452da60ae5582a21b12db761a8307eb3adc5ec70e82ac0045f/osrparse-5.0.0.tar.gz", hash = "sha256:512c2fdedba8269446006dc58c9a43df7cf5fcfa1386ba3400dd5b5c96790536"},
