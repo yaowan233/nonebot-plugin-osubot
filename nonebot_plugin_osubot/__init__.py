@@ -15,7 +15,7 @@ from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
-from .file import download_map, map_downloaded, download_osu
+from .file import download_map, map_downloaded, download_osu, download_tmp_osu
 from .utils import GM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
@@ -474,11 +474,7 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Comman
         await generate_preview.finish(MessageSegment.reply(event.message_id) + '未查询到该地图')
     if isinstance(data, str):
         await generate_preview.finish(MessageSegment.reply(event.message_id) + data)
-    setid: int = data['beatmapset_id']
-    dirpath = await map_downloaded(str(setid))
-    osu = dirpath / f"{osu_id}.osu"
-    if not osu.exists():
-        await download_osu(setid, osu_id)
+    osu = await download_tmp_osu(osu_id)
     pic = await generate_preview_pic(osu)
     await generate_preview.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(pic))
 

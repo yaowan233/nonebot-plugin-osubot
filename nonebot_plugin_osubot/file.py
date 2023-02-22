@@ -19,7 +19,7 @@ plugin_config = Config.parse_obj(get_driver().config.dict())
 
 
 osufile = Path(__file__).parent / 'osufile'
-map_path = Path() / "data" / "osu" / "map"
+map_path = Path() / 'data' / 'osu' / 'map'
 chimu_api = 'https://api.chimu.moe/v1/download/'
 kitsu_api = 'https://kitsu.moe/api/d/'
 sayobot_api = 'https://txy1.sayobot.cn/beatmaps/download/novideo/'
@@ -63,6 +63,20 @@ async def download_map(setid: int) -> Optional[Path]:
     with open(filepath, 'wb') as f:
         f.write(req.read())
     logger.info(f'地图: <{setid}> 下载完毕')
+    return filepath
+
+
+async def download_tmp_osu(map_id):
+    url = f'https://osu.ppy.sh/osu/{map_id}'
+    logger.info(f'开始下载谱面: <{map_id}>')
+    async with AsyncClient(timeout=100) as client:
+        client: AsyncClient
+        req = await client.get(url, follow_redirects=True)
+    filename = f'{map_id}.osu'
+    filepath = map_path / filename
+    chunk = req.read()
+    with open(filepath, 'wb') as f:
+        f.write(chunk)
     return filepath
 
 
