@@ -12,7 +12,7 @@ from nonebot.params import T_State, ShellCommandArgv, CommandArg
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
-from nonebot import on_command, require, on_shell_command
+from nonebot import on_command, require, on_shell_command, get_driver
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu, download_tmp_osu
@@ -21,11 +21,13 @@ from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api
 from .info import get_map_bg, bind_user_info, update_user_info
+from .config import Config
 
 
 require('nonebot_plugin_apscheduler')
 from nonebot_plugin_apscheduler import scheduler
 
+plugin_config = Config.parse_obj(get_driver().config.dict())
 
 usage = "发送/osuhelp 查看帮助"
 detail_usage = """以下<>内是必填内容，()内是选填内容，user可以是用户名也可以@他人，mode为0-3的一个数字
@@ -49,7 +51,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "1.1.2",
+        "version": "1.1.3",
     },
 )
 
@@ -145,8 +147,9 @@ async def _(
     if not osz_file:
         await convert.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
+    file_path = Path(plugin_config.file_path) / osz_file.name if plugin_config.file_path else osz_file.absolute()
     try:
-        await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+        await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
         await convert.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
@@ -305,15 +308,16 @@ async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], m
         return
     if not setid.isdigit():
         await osudl.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图ID')
-    filepath = await download_map(int(setid))
-    name = urllib.parse.unquote(filepath.name)
+    osz_path = await download_map(int(setid))
+    name = urllib.parse.unquote(osz_path.name)
+    file_path = Path(plugin_config.file_path) / osz_path.name if plugin_config.file_path else osz_path.absolute()
     try:
-        await bot.upload_group_file(group_id=event.group_id, file=str(filepath.absolute()), name=name)
+        await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
         await osudl.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(filepath)
+            os.remove(osz_path)
         except PermissionError:
             ...
 
@@ -404,17 +408,18 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
         await change.finish(MessageSegment.reply(event.message_id) + '请输入倍速速率')
     args = parser.parse_args(argv)
     options = Options(**vars(args))
-    osz_file = await convert_mania_map(options)
-    if not osz_file:
+    osz_path = await convert_mania_map(options)
+    if not osz_path:
         await change.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
-    name = urllib.parse.unquote(osz_file.name)
+    name = urllib.parse.unquote(osz_path.name)
+    file_path = Path(plugin_config.file_path) / osz_path.name if plugin_config.file_path else osz_path.absolute()
     try:
-        await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+        await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
         await change.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(osz_file)
+            os.remove(osz_path)
         except PermissionError:
             ...
 
@@ -440,17 +445,18 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
         argv.append(args[2])
     args = parser.parse_args(argv)
     options = Options(**vars(args))
-    osz_file = await convert_mania_map(options)
-    if not osz_file:
+    osz_path = await convert_mania_map(options)
+    if not osz_path:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
-    name = urllib.parse.unquote(osz_file.name)
+    name = urllib.parse.unquote(osz_path.name)
+    file_path = Path(plugin_config.file_path) / osz_path.name if plugin_config.file_path else osz_path.absolute()
     try:
-        await bot.upload_group_file(group_id=event.group_id, file=str(osz_file.absolute()), name=name)
+        await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(osz_file)
+            os.remove(osz_path)
         except PermissionError:
             ...
 

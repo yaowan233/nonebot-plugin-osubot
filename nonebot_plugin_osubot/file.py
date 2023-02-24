@@ -42,12 +42,12 @@ async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
     # 解压下载的osz文件
     try:
         with zipfile.ZipFile(filepath.absolute()) as file:
-            file.extractall(file.filename[:-4])
+            file.extractall(path)
     # 当下载图包失败时自动重试
     except zipfile.BadZipfile:
         return await map_downloaded(setid, retry_time + 1)
     # 删除文件
-    await remove_file(Path(str(filepath)[:-4]))
+    await remove_file(path)
     os.remove(filepath)
     return path
 
@@ -59,7 +59,7 @@ async def download_map(setid: int) -> Optional[Path]:
         client: AsyncClient
         req = await client.get(url, follow_redirects=True)
     filename = f'{setid}.osz'
-    filepath = map_path / filename
+    filepath = map_path.parent / filename
     with open(filepath, 'wb') as f:
         f.write(req.read())
     logger.info(f'地图: <{setid}> 下载完毕')
