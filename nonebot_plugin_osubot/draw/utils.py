@@ -94,9 +94,9 @@ def draw_acc(img: Image, acc: float, mode: str):
     color = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
     for s, c in zip(size, color):
         end = start + s / 100 * 360
-        draw.arc((195, 263, 435, 503), start, end, fill=c, width=5)
+        draw.arc((195, 183, 435, 423), start, end, fill=c, width=5)
         start = end
-    draw.arc((165, 233, 465, 533), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
+    draw.arc((165, 153, 465, 453), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
     return img
 
 
