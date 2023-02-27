@@ -6,7 +6,6 @@ class Config(BaseSettings):
     osu_client: Optional[int] = None
     osu_key: Optional[str] = None
     osz_mirror: Optional[int] = 0
-    file_path: Optional[str] = None
 
     class Config:
         extra = Extra.ignore

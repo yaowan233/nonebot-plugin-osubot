@@ -27,8 +27,6 @@ from .config import Config
 require('nonebot_plugin_apscheduler')
 from nonebot_plugin_apscheduler import scheduler
 
-plugin_config = Config.parse_obj(get_driver().config.dict())
-
 usage = "发送/osuhelp 查看帮助"
 detail_usage = """以下<>内是必填内容，()内是选填内容，user可以是用户名也可以@他人，mode为0-3的一个数字
 /info (user)(:mode)
@@ -147,7 +145,7 @@ async def _(
     if not osz_file:
         await convert.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_file.name)
-    file_path = Path(plugin_config.file_path) / osz_file.name if plugin_config.file_path else osz_file.absolute()
+    file_path = osz_file.absolute()
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
@@ -310,7 +308,7 @@ async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], m
         await osudl.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图ID')
     osz_path = await download_map(int(setid))
     name = urllib.parse.unquote(osz_path.name)
-    file_path = Path(plugin_config.file_path) / osz_path.name if plugin_config.file_path else osz_path.absolute()
+    file_path = osz_path.absolute()
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
@@ -412,7 +410,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
     if not osz_path:
         await change.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_path.name)
-    file_path = Path(plugin_config.file_path) / osz_path.name if plugin_config.file_path else osz_path.absolute()
+    file_path = osz_path.absolute()
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
@@ -449,7 +447,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
     if not osz_path:
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
     name = urllib.parse.unquote(osz_path.name)
-    file_path = Path(plugin_config.file_path) / osz_path.name if plugin_config.file_path else osz_path.absolute()
+    file_path = osz_path.absolute()
     try:
         await bot.upload_group_file(group_id=event.group_id, file=str(file_path), name=name)
     except ActionFailed:
