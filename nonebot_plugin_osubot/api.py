@@ -80,7 +80,7 @@ async def get_user_info(url: str) -> Union[dict, str]:
         await token.update_token()
         return await get_user_info(url)
     elif req.status_code == 404:
-        return '未找到该玩家，请确认玩家ID'
+        return '未找到该玩家，请确认玩家ID是否正确，有无多余或缺少的空格'
     elif req.status_code == 200:
         return req.json()
     else:

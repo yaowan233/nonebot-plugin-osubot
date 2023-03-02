@@ -8,7 +8,7 @@ from ..api import osu_api
 async def bind_user_info(project: str, uid, qid) -> str:
     info = await osu_api(project, uid, GM[0])
     if not info:
-        return '未查询到该玩家'
+        return f'未查询到玩家“{uid}”，请检查是否有多于或缺少的空格'
     elif isinstance(info, str):
         return info
     uid = info['id']
