@@ -13,7 +13,7 @@ from nonebot.params import T_State, ShellCommandArgv, CommandArg
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
-from nonebot import on_command, require, on_shell_command, get_driver
+from nonebot import on_command, require, on_shell_command, get_driver, on_regex
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu, download_tmp_osu
