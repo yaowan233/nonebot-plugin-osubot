@@ -497,7 +497,7 @@ async def _url(bot: Bot, event: GroupMessageEvent):
     get_msg = str(event.message)
     msg_id = event.message_id
     new_data_num = re.findall("https://osu.ppy.sh/beatmapsets/(.*)#", get_msg)
-    url_1 = "https://kitdu.moe/api/d/"
+    url_1 = "https://kitsu.moe/api/d/"
     url_2 = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
     url_total = f"[CQ:reply,id={msg_id}]kitsu镜像站：{url_1}{new_data_num[0]}\n小夜镜像站：{url_2}{new_data_num[0]}"
     await full.finish(Message(url_total))
