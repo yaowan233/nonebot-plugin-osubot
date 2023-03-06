@@ -1,7 +1,6 @@
 import os
 import shutil
 import urllib
-import re
 from pathlib import Path
 from typing import List, Union
 
@@ -9,11 +8,11 @@ from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Message
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
-from nonebot.params import T_State, ShellCommandArgv, CommandArg
+from nonebot.params import T_State, ShellCommandArgv, CommandArg, RegexGroup
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
-from nonebot import on_command, require, on_shell_command, get_driver, on_regex
+from nonebot import on_command, require, on_shell_command, on_regex
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu, download_tmp_osu
@@ -489,18 +488,16 @@ async def _help(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Co
     else:
         await osu_help.finish(MessageSegment.reply(event.message_id) + '呜呜，detail都打不对吗(ノ｀Д)ノ')
 
-full = on_regex("https://osu.ppy.sh/beatmapsets/(.*)#")
+url_match = on_regex("https://osu.ppy.sh/beatmapsets/(.*)#")
 
 
-@full.handle()
-async def _url(bot: Bot, event: GroupMessageEvent):
-    get_msg = str(event.message)
-    msg_id = event.message_id
-    new_data_num = re.findall("https://osu.ppy.sh/beatmapsets/(.*)#", get_msg)
+@url_match.handle()
+async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: str = RegexGroup()):
     url_1 = "https://kitsu.moe/api/d/"
     url_2 = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
-    url_total = f"[CQ:reply,id={msg_id}]kitsu镜像站：{url_1}{new_data_num[0]}\n小夜镜像站：{url_2}{new_data_num[0]}"
-    await full.finish(Message(url_total))
+    url_total = f"kitsu镜像站：{url_1}{bid[0]}\n小夜镜像站：{url_2}{bid[0]}"
+    await url_match.finish(MessageSegment.reply(event.message_id) + url_total)
+
 
 @scheduler.scheduled_job('cron', hour='0')
 async def update_info():
