@@ -175,7 +175,7 @@ recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=Tru
 @recent.handle(parameterless=[split_msg()])
 async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await recent.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_score('recent', user, GM[mode], [])
@@ -187,11 +187,11 @@ pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
 @pr.handle(parameterless=[split_msg()])
 async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await pr.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_score('pr', user, GM[mode], [])
-    await recent.finish(MessageSegment.reply(event.message_id) + data)
+    await pr.finish(MessageSegment.reply(event.message_id) + data)
 
 score = on_command('score', priority=11, block=True)
 
@@ -199,7 +199,7 @@ score = on_command('score', priority=11, block=True)
 @score.handle(parameterless=[split_msg()])
 async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await score.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
@@ -214,7 +214,7 @@ bp = on_command('bp', priority=11, block=True)
 @bp.handle(parameterless=[split_msg()])
 async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await bp.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
@@ -234,7 +234,7 @@ pfm = on_command('pfm', priority=11, block=True)
 @pfm.handle(parameterless=[split_msg()])
 async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await pfm.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
@@ -257,7 +257,7 @@ tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 @tbp.handle(parameterless=[split_msg()])
 async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await info.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['full_para'] if state['full_para'] else state['user']
     mode = state['mode']
     data = await draw_bp('tbp', user, GM[mode], [])
