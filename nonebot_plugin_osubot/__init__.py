@@ -514,3 +514,6 @@ async def delete_cached_map():
     map_path = Path('data/osu/map')
     shutil.rmtree(map_path)
     map_path.mkdir(parents=True, exist_ok=True)
+    user_path = Path('data/osu/user')
+    shutil.rmtree(user_path)
+    user_path.mkdir(parents=True, exist_ok=True)
