@@ -115,3 +115,11 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
         else:
             return 'API请求失败，请联系管理员或稍后再尝试'
     return req.json()
+
+
+@auto_retry
+async def get_random_bg() -> bytes:
+    async with AsyncClient() as client:
+        client: AsyncClient
+    res = await client.get('https://api.gmit.vip/Api/DmImg?format=image', follow_redirects=True)
+    return res.content
