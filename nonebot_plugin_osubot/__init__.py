@@ -156,7 +156,7 @@ async def _(
         except PermissionError:
             ...
 
-info = on_command("info", block=True, priority=11)
+info = on_command("info", aliases={'Info', 'INFO'}, block=True, priority=11)
 
 
 @info.handle(parameterless=[split_msg()])

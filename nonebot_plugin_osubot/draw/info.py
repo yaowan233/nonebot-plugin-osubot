@@ -7,7 +7,7 @@ from .utils import draw_text, draw_fillet, crop_bg, DataText, info_calc, image2b
 
 from ..api import osu_api
 from ..schema import User
-from ..file import get_projectimg
+from ..file import make_badge_cache_file, user_cache_path, badge_cache_path, get_projectimg
 from ..database.models import InfoData
 from ..utils import GMN, FGM
 
@@ -31,8 +31,19 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     # 新建
     im = Image.new('RGBA', (1000, 1322))
     # 获取头图，头像，地区，状态，supporter
-    user_header = await get_projectimg(info.cover_url)
-    user_icon = await get_projectimg(info.avatar_url)
+    path = user_cache_path / str(info.id)
+    if not path.exists():
+        path.mkdir()
+    user_header = user_cache_path / str(info.id) / 'header.png'
+    user_icon = user_cache_path / str(info.id) / 'icon.png'
+    if not user_header.exists():
+        user_header = await get_projectimg(info.cover_url)
+        with open(path / 'header.png', 'wb') as f:
+            f.write(user_header.getvalue())
+    if not user_icon.exists():
+        user_icon = await get_projectimg(info.avatar_url)
+        with open(path / 'icon.png', 'wb') as f:
+            f.write(user_icon.getvalue())
     country = osufile / 'flags' / f'{info.country_code}.png'
     # 头图
     header_img = crop_bg('HI', user_header)
@@ -56,18 +67,21 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
             else:
                 length = 50 + 100 * (num - 9)
                 height = 554
-            badges_path = await get_projectimg(badge.image_url)
+            badges_path = badge_cache_path / f'{badge.description}.png'
+            if not badges_path.exists():
+                await make_badge_cache_file(badge)
             badges_img = Image.open(badges_path).convert('RGBA').resize((86, 40))
             im.alpha_composite(badges_img, (length, height))
     else:
-        w_badges = DataText(500, 545, 35, "你还没有 badges", Torus_Regular, anchor='mm')
-        im = draw_text(im, w_badges)
+        # w_badges = DataText(500, 545, 35, "你还没有 badges", Torus_Regular, anchor='mm')
+        # im = draw_text(im, w_badges)
+        ...
     # 地区
     country_bg = Image.open(country).convert('RGBA').resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
     # supporter
     if info.is_supporter:
-        im.alpha_composite(SupporterBg.resize((54,54)), (400, 280))
+        im.alpha_composite(SupporterBg.resize((54, 54)), (400, 280))
     # 经验
     if statistics.level.progress != 0:
         im.alpha_composite(ExpLeftBg, (50, 646))
