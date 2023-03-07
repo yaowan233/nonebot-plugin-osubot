@@ -121,5 +121,5 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
 async def get_random_bg() -> bytes:
     async with AsyncClient() as client:
         client: AsyncClient
-    res = await client.get('https://api.gmit.vip/Api/DmImg?format=image', follow_redirects=True)
+        res = await client.get('https://api.gmit.vip/Api/DmImg?format=image', follow_redirects=True)
     return res.content
