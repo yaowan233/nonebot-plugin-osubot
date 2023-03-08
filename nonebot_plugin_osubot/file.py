@@ -14,6 +14,7 @@ from nonebot.log import logger
 from .config import Config
 from .api import sayo_api
 from .schema import SayoBeatmap, User, Badge
+from .network import auto_retry
 
 plugin_config = Config.parse_obj(get_driver().config.dict())
 
@@ -58,6 +59,7 @@ async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
     return path
 
 
+@auto_retry
 async def download_map(setid: int) -> Optional[Path]:
     url = download_api + str(setid)
     logger.info(f'开始下载地图: <{setid}>')
@@ -72,6 +74,7 @@ async def download_map(setid: int) -> Optional[Path]:
     return filepath
 
 
+@auto_retry
 async def download_tmp_osu(map_id):
     url = f'https://osu.ppy.sh/osu/{map_id}'
     logger.info(f'开始下载谱面: <{map_id}>')
@@ -86,6 +89,7 @@ async def download_tmp_osu(map_id):
     return filepath
 
 
+@auto_retry
 async def download_osu(set_id, map_id):
     url = f'https://osu.ppy.sh/osu/{map_id}'
     logger.info(f'开始下载谱面: <{map_id}>')
@@ -100,6 +104,7 @@ async def download_osu(set_id, map_id):
     return filepath
 
 
+@auto_retry
 async def get_projectimg(url: str):
     if 'avatar-guest.png' in url:
         url = 'https://osu.ppy.sh/images/layout/avatar-guest.png'
