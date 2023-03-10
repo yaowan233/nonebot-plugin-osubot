@@ -345,7 +345,7 @@ async def _unbind(event: Union[MessageEvent, GuildMessageEvent]):
         await unbind.finish(MessageSegment.reply(event.message_id) + '尚未绑定，无需解绑')
 
 
-update = on_command('更新模式', priority=11, block=True)
+update = on_command('更新模式', priority=11, aliases={'更改模式'}, block=True)
 
 
 @update.handle()
