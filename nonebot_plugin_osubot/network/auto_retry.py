@@ -1,9 +1,14 @@
 from functools import wraps
+from typing import TypeVar, Callable, ParamSpec
 from httpx import HTTPError
 from nonebot import logger
 
 
-def auto_retry(func):
+T = TypeVar('T')
+P = ParamSpec('P')
+
+
+def auto_retry(func: Callable[P, T]) -> Callable[P, T]:
     @wraps(func)
     async def wrapper(*args, **kwargs):
         for i in range(10):
