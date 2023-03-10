@@ -26,6 +26,8 @@ class BidData(Base):
     maxcombo: int
     playcount: int
     passcount: int
+    bg: str
+    audio: str
 
 
 class MapInfo(Base):

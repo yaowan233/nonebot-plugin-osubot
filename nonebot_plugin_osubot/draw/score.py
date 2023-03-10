@@ -4,10 +4,10 @@ from typing import Optional, List, Union
 from PIL import ImageFilter, ImageEnhance
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-from ..api import osu_api
+from ..api import osu_api, get_map_bg
 from ..schema import Score, Beatmap, User
 from ..mods import get_mods_list
-from ..file import re_map, get_projectimg, map_downloaded, download_osu, user_cache_path
+from ..file import re_map, get_projectimg, download_osu, user_cache_path, map_path
 from ..utils import GMN, FGM
 from ..pp import cal_pp, get_if_pp_ss_pp
 
@@ -23,7 +23,7 @@ async def draw_score(project: str,
                      best: int = 0,
                      mapid: int = 0) -> Union[str, MessageSegment]:
     task0 = asyncio.create_task(osu_api(project, uid, mode, mapid))
-    task1 = asyncio.create_task(osu_api('info', uid))
+    task1 = asyncio.create_task(osu_api('info', uid, mode))
     score_json = await task0
     if not score_json:
         return f'未查询到在 {GMN[mode]} 的游玩记录'
@@ -45,30 +45,31 @@ async def draw_score(project: str,
     else:
         raise 'Project Error'
     # 从官网获取信息
-    task2 = asyncio.create_task(osu_api('map', map_id=score_info.beatmap.id))
-    task3 = asyncio.create_task(map_downloaded(str(score_info.beatmap.beatmapset_id)))
-    info_json = await task1
-    info = User(**info_json)
-    path = user_cache_path / str(info.id)
+    path = map_path / str(score_info.beatmap.beatmapset_id)
     if not path.exists():
         path.mkdir()
-    user_header = user_cache_path / str(info.id) / 'header.png'
+    osu = path / f"{score_info.beatmap.id}.osu"
+    task2 = asyncio.create_task(osu_api('map', map_id=score_info.beatmap.id))
+    if not osu.exists():
+        task3 = asyncio.create_task(download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id))
+    info_json = await task1
+    info = User(**info_json)
+    user_path = user_cache_path / str(info.id)
+    if not user_path.exists():
+        user_path.mkdir()
+    # user_header = user_cache_path / str(info.id) / 'header.png'
     user_icon = user_cache_path / str(info.id) / 'icon.png'
-    if not user_header.exists():
-        user_header = await get_projectimg(info.cover_url)
-        with open(path / 'header.png', 'wb') as f:
-            f.write(user_header.getvalue())
+    # if not user_header.exists():
+    #     user_header = await get_projectimg(info.cover_url)
+    #     with open(path / 'header.png', 'wb') as f:
+    #         f.write(user_header.getvalue())
     if not user_icon.exists():
         user_icon = await get_projectimg(info.avatar_url)
-        with open(path / 'icon.png', 'wb') as f:
+        with open(user_path / 'icon.png', 'wb') as f:
             f.write(user_icon.getvalue())
-    map_json = await task2
-    mapinfo = Beatmap(**map_json)
     # 下载地图
-    dirpath = await task3
-    osu = dirpath / f"{score_info.beatmap.id}.osu"
     if not osu.exists():
-        await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
+        await task3
     # pp
     pp_info = cal_pp(score_info, str(osu.absolute()))
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
@@ -76,10 +77,11 @@ async def draw_score(project: str,
     im = Image.new('RGBA', (1500, 720))
     # 获取cover并裁剪，高斯，降低亮度
     cover = re_map(osu)
-    if cover == 'mapbg.png':
-        cover_path = osufile / 'work' / cover
-    else:
-        cover_path = dirpath / cover
+    cover_path = path / cover
+    if not cover_path.exists():
+        bg = await get_map_bg(score_info.beatmap.beatmapset_id, cover)
+        with open(cover_path, 'wb') as f:
+            f.write(bg.getvalue())
     cover_crop = crop_bg('BG', cover_path)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(1))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
@@ -124,27 +126,19 @@ async def draw_score(project: str,
         im.alpha_composite(rank_bg, (75, 163 + 39 * rank_num))
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.mode)
-    # 头图
-    headericon_crop = crop_bg('H', user_header)
-    headericon_gb = headericon_crop.filter(ImageFilter.GaussianBlur(1))
-    headericon_img = ImageEnhance.Brightness(headericon_gb).enhance(2 / 4.0)
-    headericon_d = draw_fillet(headericon_img, 15)
-    im.alpha_composite(headericon_d, (50, 511))
     # 头像
-    icon_bg = Image.open(user_icon).convert('RGBA').resize((90, 90))
+    icon_bg = Image.open(user_icon).convert('RGBA').resize((170, 170))
     icon_img = draw_fillet(icon_bg, 15)
-    im.alpha_composite(icon_img, (90, 526))
+    im.alpha_composite(icon_img, (120, 510))
     # 地区
     country = osufile / 'flags' / f'{score_info.user.country_code}.png'
-    country_bg = Image.open(country).convert('RGBA').resize((58, 39))
-    im.alpha_composite(country_bg, (195, 526))
-    # 在线状态
-    status = osufile / 'work' / ('on-line.png' if score_info.user.is_online else 'off-line.png')
-    status_bg = Image.open(status).convert('RGBA').resize((45, 45))
-    im.alpha_composite(status_bg, (114, 632))
+    country_bg = Image.open(country).convert('RGBA').resize((66, 45))
+    im.alpha_composite(country_bg, (310, 560))
     # supporter
     if score_info.user.is_supporter:
-        im.alpha_composite(SupporterBg.resize((40, 40)), (267, 526))
+        im.alpha_composite(SupporterBg.resize((40, 40)), (310, 615))
+    map_json = await task2
+    mapinfo = Beatmap(**map_json)
     # cs, ar, od, hp, stardiff
     mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.difficulty.stars]
     for num, i in enumerate(mapdiff):
@@ -201,12 +195,15 @@ async def draw_score(project: str,
     w_grank = DataText(583, 410, 24, grank, Torus_SemiBold, anchor='mm')
     im = draw_text(im, w_grank)
     # 左下玩家名
-    w_l_username = DataText(195, 590, 24, score_info.user.username, Torus_SemiBold, anchor='lm')
+    w_l_username = DataText(310, 530, 30, score_info.user.username, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_l_username)
-    # 在线，离线
-    w_line = DataText(195, 652, 30, '在线' if score_info.user.is_online else '离线', Torus_SemiBold,
-                      anchor='lm')
-    im = draw_text(im, w_line)
+    # 国内排名
+    user_rank = DataText(385, 590, 25, f'#{info.statistics.country_rank}', Torus_SemiBold, anchor='lm')
+    im = draw_text(im, user_rank)
+    # # 在线，离线
+    # w_line = DataText(195, 652, 30, '在线' if score_info.user.is_online else '离线', Torus_SemiBold,
+    #                   anchor='lm')
+    # im = draw_text(im, w_line)
     # acc,cb,pp,300,100,50,miss
     if score_info.mode == 'osu':
         w_sspp = DataText(650, 550, 30, ss_pp, Torus_Regular, anchor='mm')

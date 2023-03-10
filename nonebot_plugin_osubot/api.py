@@ -1,10 +1,12 @@
-from httpx import AsyncClient
+from io import BytesIO
+from httpx import AsyncClient, Response
 from typing import Union
 from nonebot.log import logger
 from nonebot import get_driver
 from expiringdict import ExpiringDict
 from .config import Config
 from .network import auto_retry
+from .schema import SayoBeatmap
 
 api = 'https://osu.ppy.sh/api/v2'
 sayoapi = 'https://api.sayobot.cn'
@@ -17,6 +19,14 @@ if plugin_config.osu_key and plugin_config.osu_client:
     client_id = plugin_config.osu_client
 else:
     raise Exception("请设置osu_key和osu_client")
+
+
+@auto_retry
+async def safe_async_get(url, headers=None) -> Response:
+    async with AsyncClient(timeout=100) as client:
+        client: AsyncClient
+        req = await client.get(url, headers=headers, follow_redirects=True)
+    return req
 
 
 async def renew_token():
@@ -66,16 +76,13 @@ async def sayo_api(setid: int) -> dict:
     return await api_info('mapinfo', url)
 
 
-@auto_retry
 async def get_user_info(url: str) -> Union[dict, str]:
     token = cache.get('token')
     if not token:
         await renew_token()
         token = cache.get('token')
     header = {'Authorization': f'Bearer {token}'}
-    async with AsyncClient() as client:
-        client: AsyncClient
-        req = await client.get(url, headers=header)
+    req = await safe_async_get(url, headers=header)
     if req.status_code == 401:
         await token.update_token()
         return await get_user_info(url)
@@ -87,7 +94,6 @@ async def get_user_info(url: str) -> Union[dict, str]:
         return 'API请求失败，请联系管理员'
 
 
-@auto_retry
 async def api_info(project: str, url: str) -> Union[dict, str]:
     if project == 'mapinfo' or project == 'PPCalc':
         headers = {
@@ -98,9 +104,7 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             await renew_token()
             token = cache.get('token')
         headers = {'Authorization': f'Bearer {token}'}
-    async with AsyncClient(timeout=100) as client:
-        client: AsyncClient
-        req = await client.get(url, headers=headers)
+    req = await safe_async_get(url, headers=headers)
     if req.status_code == 404:
         if project == 'info' or project == 'bind':
             return '未找到该玩家，请确认玩家ID'
@@ -117,9 +121,16 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
     return req.json()
 
 
-@auto_retry
 async def get_random_bg() -> bytes:
-    async with AsyncClient() as client:
-        client: AsyncClient
-        res = await client.get('https://api.gmit.vip/Api/DmImg?format=image', follow_redirects=True)
+    res = await safe_async_get('https://api.gmit.vip/Api/DmImg?format=image')
     return res.content
+
+
+async def get_sayo_map_info(sid) -> SayoBeatmap:
+    res = await safe_async_get(f'https://api.sayobot.cn/v2/beatmapinfo?K={sid}')
+    return SayoBeatmap(**res.json())
+
+
+async def get_map_bg(sid, bg_name):
+    res = await safe_async_get(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}')
+    return BytesIO(res.content)

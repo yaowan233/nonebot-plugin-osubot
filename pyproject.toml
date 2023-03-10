@@ -18,6 +18,7 @@ dependencies = [
     "reamber>=0.1.7",
     "nonebot-plugin-guild-patch>=0.2.2",
     "httpx>=0.23.3",
+    "typing-extensions>=4.5.0",
 ]
 requires-python = ">=3.8"
 readme = "README.md"

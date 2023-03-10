@@ -423,7 +423,7 @@ dependencies = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.3.0"
+version = "4.5.0"
 requires_python = ">=3.7"
 summary = "Backported and Experimental Type Hints for Python 3.7+"
 
@@ -468,7 +468,7 @@ dependencies = [
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:308e5ca3c7b980e87ca209c5002a08c5a812268945c738c3d6f11f15bd4c5716"
+content_hash = "sha256:0cae7e5066b5d995eeaf32e9515880e73123ee70d51290763c54627e5d425e9a"
 
 [metadata.files]
 "aiomysql 0.1.1" = [
@@ -1085,9 +1085,9 @@ content_hash = "sha256:308e5ca3c7b980e87ca209c5002a08c5a812268945c738c3d6f11f15b
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/8a/f5/a933b1ca84684d3b5a2b36ff765803879e956335737c72b96fea5a111dde/tortoise_orm-0.19.2-py3-none-any.whl", hash = "sha256:a99b8c9f42d5cd49493c70471b5c9a5df8ecf49cc624f2f41b9dc75bba993ac5"},
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/ef/fa/18ca86cafc210358b99ab227980647d6c7c12aaef70d9126b83958012a97/tortoise-orm-0.19.2.tar.gz", hash = "sha256:bff4d79abfca7fb805972bb2438e8e0cd2e6590bc2cfd7593a803518a027bbf0"},
 ]
-"typing-extensions 4.3.0" = [
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/9e/1d/d128169ff58c501059330f1ad96ed62b79114a2eb30b8238af63a2e27f70/typing_extensions-4.3.0.tar.gz", hash = "sha256:e6d2677a32f47fc7eb2795db1dd15c1f34eff616bcaf2cfb5e997f854fa1c4a6"},
-    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/ed/d6/2afc375a8d55b8be879d6b4986d4f69f01115e795e36827fd3a40166028b/typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
+"typing-extensions 4.5.0" = [
+    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/31/25/5abcd82372d3d4a3932e1fa8c3dbf9efac10cc7c0d16e78467460571b404/typing_extensions-4.5.0-py3-none-any.whl", hash = "sha256:fb33085c39dd998ac16d1431ebc293a8b3eedd00fd4a32de0ff79002c19511b4"},
+    {url = "https://pypi.tuna.tsinghua.edu.cn/packages/d3/20/06270dac7316220643c32ae61694e451c98f8caf4c8eab3aa80a2bedf0df/typing_extensions-4.5.0.tar.gz", hash = "sha256:5cb5f4a79139d699607b3ef622a1dedafa84e115ab0024e0d9c044a9479ca7cb"},
 ]
 "tzdata 2022.1" = [
     {url = "https://pypi.tuna.tsinghua.edu.cn/packages/89/2d/49329ebec33b14dae61ecc8c85abe596341832fa36c4bcd3d99fddda018b/tzdata-2022.1-py2.py3-none-any.whl", hash = "sha256:238e70234214138ed7b4e8a0fab0e5e13872edab3be586ab8198c407620e2ab9"},
