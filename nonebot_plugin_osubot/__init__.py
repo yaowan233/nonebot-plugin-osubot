@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Union
 
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
+from nonebot.adapters.onebot.v11.helpers import ImageURLs
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
@@ -15,7 +16,7 @@ from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command, on_regex
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
-from .file import download_map, map_downloaded, download_osu, download_tmp_osu
+from .file import download_map, map_downloaded, download_osu, download_tmp_osu, user_cache_path, save_info_pic
 from .utils import GM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
@@ -475,6 +476,27 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Comman
     pic = await generate_preview_pic(osu)
     await generate_preview.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(pic))
 
+update_pic = on_command('更新背景', aliases={'更改背景'}, priority=11, block=True)
+
+
+@update_pic.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent], pic_ls: list = ImageURLs('请在指令后附上图片')):
+    user = state['user']
+    pic_url = pic_ls[0]
+    await save_info_pic(str(user), pic_url)
+    await update_pic.finish('更新个人资料背景图片成功！')
+
+
+update = on_command('update', aliases={'更新'}, priority=11, block=True)
+
+
+@update.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
+    user = state['user']
+    path = user_cache_path / user / 'icon.png'
+    if path.exists():
+        os.remove(path)
+    await update.finish('个人信息更新成功')
 osu_help = on_command('osuhelp', priority=11, block=True)
 
 

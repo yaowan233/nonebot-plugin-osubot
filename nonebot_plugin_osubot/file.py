@@ -18,7 +18,6 @@ from .network import auto_retry
 
 plugin_config = Config.parse_obj(get_driver().config.dict())
 
-
 osufile = Path(__file__).parent / 'osufile'
 map_path = Path() / 'data' / 'osu' / 'map'
 user_cache_path = Path() / 'data' / 'osu' / 'user'
@@ -187,3 +186,14 @@ async def make_badge_cache_file(badge: Badge):
     badge_icon = await get_projectimg(badge.image_url)
     with open(path, 'wb') as f:
         f.write(badge_icon.getvalue())
+
+
+# 保存个人信息界面背景
+@auto_retry
+async def save_info_pic(user: str, url):
+    path = user_cache_path / user
+    async with AsyncClient() as client:
+        client: AsyncClient
+        req = await client.get(url)
+    with open(path / 'info.png', 'wb') as f:
+        f.write(BytesIO(req.content).getvalue())
