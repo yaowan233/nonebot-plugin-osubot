@@ -83,7 +83,7 @@ async def draw_score(project: str,
         with open(cover_path, 'wb') as f:
             f.write(bg.getvalue())
     cover_crop = crop_bg('BG', cover_path)
-    cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(1))
+    cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 获取成绩背景做底图
@@ -129,14 +129,14 @@ async def draw_score(project: str,
     # 头像
     icon_bg = Image.open(user_icon).convert('RGBA').resize((170, 170))
     icon_img = draw_fillet(icon_bg, 15)
-    im.alpha_composite(icon_img, (120, 510))
+    im.alpha_composite(icon_img, (60, 510))
     # 地区
     country = osufile / 'flags' / f'{score_info.user.country_code}.png'
     country_bg = Image.open(country).convert('RGBA').resize((66, 45))
-    im.alpha_composite(country_bg, (310, 560))
+    im.alpha_composite(country_bg, (250, 577))
     # supporter
     if score_info.user.is_supporter:
-        im.alpha_composite(SupporterBg.resize((40, 40)), (310, 615))
+        im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     map_json = await task2
     mapinfo = Beatmap(**map_json)
     # cs, ar, od, hp, stardiff
@@ -159,7 +159,7 @@ async def draw_score(project: str,
     w_status = DataText(1400, 184, 20, mapinfo.status.capitalize(), Torus_SemiBold, anchor='mm')
     im = draw_text(im, w_status)
     # mapid
-    w_mapid = DataText(1425, 89, 27, f'Setid: {score_info.beatmap.beatmapset_id}  |  Mapid: {score_info.beatmap.id}',
+    w_mapid = DataText(1425, 89, 27, f'Mapid: {score_info.beatmap.id}',
                        Torus_SemiBold, anchor='rm')
     im = draw_text(im, w_mapid)
     # 曲名
@@ -180,10 +180,10 @@ async def draw_score(project: str,
     w_score = DataText(498, 251, 75, f'{score_info.score:,}', Torus_Regular, anchor='lm')
     im = draw_text(im, w_score)
     # 玩家
-    w_played = DataText(498, 316, 18, '玩家:', Torus_SemiBold, anchor='lm')
-    im = draw_text(im, w_played)
-    w_username = DataText(630, 316, 18, score_info.user.username, Torus_SemiBold, anchor='lm')
-    im = draw_text(im, w_username)
+    #w_played = DataText(498, 316, 18, '玩家:', Torus_SemiBold, anchor='lm')
+    #im = draw_text(im, w_played)
+    #w_username = DataText(630, 316, 18, score_info.user.username, Torus_SemiBold, anchor='lm')
+    #im = draw_text(im, w_username)
     # 时间
     w_date = DataText(498, 341, 18, '达成时间:', Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_date)
@@ -195,10 +195,10 @@ async def draw_score(project: str,
     w_grank = DataText(583, 410, 24, grank, Torus_SemiBold, anchor='mm')
     im = draw_text(im, w_grank)
     # 左下玩家名
-    w_l_username = DataText(310, 530, 30, score_info.user.username, Torus_SemiBold, anchor='lm')
+    w_l_username = DataText(250, 530, 30, score_info.user.username, Torus_SemiBold, anchor='lm')
     im = draw_text(im, w_l_username)
     # 国内排名
-    user_rank = DataText(385, 590, 25, f'#{info.statistics.country_rank}', Torus_SemiBold, anchor='lm')
+    user_rank = DataText(325, 610, 25, f'#{info.statistics.country_rank}', Torus_SemiBold, anchor='lm')
     im = draw_text(im, user_rank)
     # # 在线，离线
     # w_line = DataText(195, 652, 30, '在线' if score_info.user.is_online else '离线', Torus_SemiBold,
@@ -206,55 +206,55 @@ async def draw_score(project: str,
     # im = draw_text(im, w_line)
     # acc,cb,pp,300,100,50,miss
     if score_info.mode == 'osu':
-        w_sspp = DataText(650, 550, 30, ss_pp, Torus_Regular, anchor='mm')
+        w_sspp = DataText(720, 550, 30, ss_pp, Torus_Regular, anchor='mm')
         im = draw_text(im, w_sspp)
-        w_ifpp = DataText(770, 550, 30, if_pp, Torus_Regular, anchor='mm')
+        w_ifpp = DataText(840, 550, 30, if_pp, Torus_Regular, anchor='mm')
         im = draw_text(im, w_ifpp)
-        w_pp = DataText(890, 550, 30, int(round(pp_info.pp, 0)), Torus_Regular, anchor='mm')
-        w_aimpp = DataText(650, 645, 30, int(round(pp_info.pp_aim, 0)), Torus_Regular, anchor='mm')
+        w_pp = DataText(960, 550, 30, int(round(pp_info.pp, 0)), Torus_Regular, anchor='mm')
+        w_aimpp = DataText(720, 645, 30, int(round(pp_info.pp_aim, 0)), Torus_Regular, anchor='mm')
         im = draw_text(im, w_aimpp)
-        w_spdpp = DataText(770, 645, 30, int(round(pp_info.pp_speed, 0)), Torus_Regular, anchor='mm')
+        w_spdpp = DataText(840, 645, 30, int(round(pp_info.pp_speed, 0)), Torus_Regular, anchor='mm')
         im = draw_text(im, w_spdpp)
-        w_accpp = DataText(890, 645, 30, int(round(pp_info.pp_acc, 0)), Torus_Regular, anchor='mm')
+        w_accpp = DataText(960, 645, 30, int(round(pp_info.pp_acc, 0)), Torus_Regular, anchor='mm')
         im = draw_text(im, w_accpp)
-        w_acc = DataText(1087, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
-        w_maxcb = DataText(1315, 550, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}', Torus_Regular, anchor='mm')
-        w_300 = DataText(1030, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
-        w_100 = DataText(1144, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
-        w_50 = DataText(1258, 645, 30, score_info.statistics.count_50, Torus_Regular, anchor='mm')
+        w_acc = DataText(1157, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
+        w_maxcb = DataText(1385, 550, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}', Torus_Regular, anchor='mm')
+        w_300 = DataText(1100, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
+        w_100 = DataText(1214, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
+        w_50 = DataText(1328, 645, 30, score_info.statistics.count_50, Torus_Regular, anchor='mm')
         im = draw_text(im, w_50)
-        w_miss = DataText(1372, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
+        w_miss = DataText(1442, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
     elif score_info.mode == 'taiko':
-        w_acc = DataText(1050, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
-        w_maxcb = DataText(1202, 550, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
+        w_acc = DataText(1118, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
+        w_maxcb = DataText(1270, 550, 30, f'{score_info.max_combo:,}',
                            Torus_Regular, anchor='mm')
-        w_pp = DataText(1352, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
-        w_300 = DataText(1050, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
-        w_100 = DataText(1202, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
-        w_miss = DataText(1352, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
+        w_pp = DataText(1420, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
+        w_300 = DataText(1118, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
+        w_100 = DataText(1270, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
+        w_miss = DataText(1420, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
     elif score_info.mode == 'fruits':
-        w_acc = DataText(1016, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
-        w_maxcb = DataText(1180, 550, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
+        w_acc = DataText(1083, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
+        w_maxcb = DataText(1247, 550, 30, f'{score_info.max_combo:,}/{mapinfo.max_combo:,}',
                            Torus_Regular, anchor='mm')
-        w_pp = DataText(1344, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
-        w_300 = DataText(995, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
-        w_100 = DataText(1118, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
-        w_katu = DataText(1242, 645, 30, score_info.statistics.count_katu, Torus_Regular, anchor='mm')
+        w_pp = DataText(1411, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
+        w_300 = DataText(1062, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
+        w_100 = DataText(1185, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
+        w_katu = DataText(1309, 645, 30, score_info.statistics.count_katu, Torus_Regular, anchor='mm')
         im = draw_text(im, w_katu)
-        w_miss = DataText(1365, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
+        w_miss = DataText(1432, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
     else:
-        w_acc = DataText(935, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
-        w_maxcb = DataText(1130, 550, 30, f'{score_info.max_combo:,}', Torus_Regular, anchor='mm')
-        w_pp = DataText(1328, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
-        w_geki = DataText(886, 645, 30, score_info.statistics.count_geki, Torus_Regular, anchor='mm')
+        w_acc = DataText(1002, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
+        w_maxcb = DataText(1197, 550, 30, f'{score_info.max_combo:,}', Torus_Regular, anchor='mm')
+        w_pp = DataText(1395, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
+        w_geki = DataText(953, 645, 30, score_info.statistics.count_geki, Torus_Regular, anchor='mm')
         im = draw_text(im, w_geki)
-        w_300 = DataText(984, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
-        w_katu = DataText(1083, 645, 30, score_info.statistics.count_katu, Torus_Regular, anchor='mm')
+        w_300 = DataText(1051, 645, 30, score_info.statistics.count_300, Torus_Regular, anchor='mm')
+        w_katu = DataText(1150, 645, 30, score_info.statistics.count_katu, Torus_Regular, anchor='mm')
         im = draw_text(im, w_katu)
-        w_100 = DataText(1182, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
-        w_50 = DataText(1280, 645, 30, score_info.statistics.count_50, Torus_Regular, anchor='mm')
+        w_100 = DataText(1249, 645, 30, score_info.statistics.count_100, Torus_Regular, anchor='mm')
+        w_50 = DataText(1347, 645, 30, score_info.statistics.count_50, Torus_Regular, anchor='mm')
         im = draw_text(im, w_50)
-        w_miss = DataText(1378, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
+        w_miss = DataText(1445, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
     im = draw_text(im, w_acc)
     im = draw_text(im, w_maxcb)
     im = draw_text(im, w_pp)
