@@ -186,9 +186,13 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
                                                        statistics.play_count, statistics.total_hits
     # 新建
     im = Image.new('RGBA', (1000, 1322))
-    # 粘贴随机背景
-    bg = await get_random_bg()
-    bg = Image.open(BytesIO(bg))
+    # 获取背景
+    bg_path = user_cache_path / str(uid) / 'info.png'
+    if bg_path.exists():
+        bg = Image.open(bg_path)
+    else:
+        bg = await get_random_bg()
+        bg = Image.open(BytesIO(bg))
     bg = bg.convert("RGBA")
     width, height = bg.size
     bg_ratio = height / width

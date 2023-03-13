@@ -481,10 +481,12 @@ update_pic = on_command('更新背景', aliases={'更改背景'}, priority=11, b
 
 @update_pic.handle(parameterless=[split_msg()])
 async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent], pic_ls: list = ImageURLs('请在指令后附上图片')):
+    if 'error' in state:
+        await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     pic_url = pic_ls[0]
     await save_info_pic(str(user), pic_url)
-    await update_pic.finish('更新个人资料背景图片成功！')
+    await update_pic.finish(MessageSegment.reply(event.message_id) + '更新个人资料背景图片成功！')
 
 
 update = on_command('update', aliases={'更新'}, priority=11, block=True)
@@ -492,11 +494,13 @@ update = on_command('update', aliases={'更新'}, priority=11, block=True)
 
 @update.handle(parameterless=[split_msg()])
 async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
+    if 'error' in state:
+        await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
-    path = user_cache_path / user / 'icon.png'
+    path = user_cache_path / str(user) / 'icon.png'
     if path.exists():
         os.remove(path)
-    await update.finish('个人信息更新成功')
+    await update.finish(MessageSegment.reply(event.message_id) + '个人信息更新成功')
 osu_help = on_command('osuhelp', priority=11, block=True)
 
 
@@ -536,6 +540,3 @@ async def delete_cached_map():
     map_path = Path('data/osu/map')
     shutil.rmtree(map_path)
     map_path.mkdir(parents=True, exist_ok=True)
-    user_path = Path('data/osu/user')
-    shutil.rmtree(user_path)
-    user_path.mkdir(parents=True, exist_ok=True)

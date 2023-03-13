@@ -192,6 +192,8 @@ async def make_badge_cache_file(badge: Badge):
 @auto_retry
 async def save_info_pic(user: str, url):
     path = user_cache_path / user
+    if not path.exists():
+        path.mkdir()
     async with AsyncClient() as client:
         client: AsyncClient
         req = await client.get(url)
