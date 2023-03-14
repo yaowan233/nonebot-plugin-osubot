@@ -1,11 +1,13 @@
 import os
 import shutil
 import urllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Union
 
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
 from nonebot.adapters.onebot.v11.helpers import ImageURLs
+from nonebot.permission import SUPERUSER
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.exception import ParserExit
 from nonebot.internal.params import Depends
@@ -13,7 +15,7 @@ from nonebot.params import T_State, ShellCommandArgv, CommandArg, RegexGroup
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
-from nonebot import on_command, require, on_shell_command, on_regex
+from nonebot import on_command, require, on_shell_command, on_regex, get_driver
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu, download_tmp_osu, user_cache_path, save_info_pic
@@ -28,6 +30,18 @@ from .config import Config
 require('nonebot_plugin_apscheduler')
 from nonebot_plugin_apscheduler import scheduler
 
+
+@dataclass
+class ReviewData:
+    msg_id: int
+    pic_url: str
+    group: int
+    user: str
+    id: int
+
+
+review_pic_ls: List[ReviewData] = []
+counter = 0
 usage = "发送/osuhelp 查看帮助"
 detail_usage = """以下<>内是必填内容，()内是选填内容，user可以是用户名也可以@他人，mode为0-3的一个数字
 /info (user)(:mode)
@@ -480,13 +494,18 @@ update_pic = on_command('更新背景', aliases={'更改背景'}, priority=11, b
 
 
 @update_pic.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent], pic_ls: list = ImageURLs('请在指令后附上图片')):
+async def _(bot: Bot, state: T_State, event: GroupMessageEvent, pic_ls: list = ImageURLs('请在指令后附上图片')):
+    global counter
     if 'error' in state:
-        await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await update_pic.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     pic_url = pic_ls[0]
-    await save_info_pic(str(user), pic_url)
-    await update_pic.finish(MessageSegment.reply(event.message_id) + '更新个人资料背景图片成功！')
+    review_pic_ls.append(ReviewData(event.message_id, pic_url, event.group_id, str(user), counter))
+    msg = f'收到id为{counter}来自群{event.group_id}的更新背景申请' + MessageSegment.image(pic_url)
+    for superuser in get_driver().config.superusers:
+        await bot.send_private_msg(user_id=int(superuser), message=msg)
+    counter += 1
+    await update_pic.finish(MessageSegment.reply(event.message_id) + '已收到图片，请等待审核捏~')
 
 
 update = on_command('update', aliases={'更新'}, priority=11, block=True)
@@ -495,13 +514,38 @@ update = on_command('update', aliases={'更新'}, priority=11, block=True)
 @update.handle(parameterless=[split_msg()])
 async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await update.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     path = user_cache_path / str(user) / 'icon.png'
     if path.exists():
         os.remove(path)
     await update.finish(MessageSegment.reply(event.message_id) + '个人信息更新成功')
 osu_help = on_command('osuhelp', priority=11, block=True)
+
+
+accept = on_command('同意全部', priority=11, block=True, permission=SUPERUSER)
+
+
+@accept.handle()
+async def _():
+    for i in review_pic_ls:
+        await save_info_pic(i.user, i.pic_url)
+    await accept.finish('全部审核通过')
+
+
+reject = on_command('拒绝', aliases={'否决'}, priority=11, block=True, permission=SUPERUSER)
+
+
+@reject.handle()
+async def _(bot: Bot, msg: Message = CommandArg()):
+    arg = msg.extract_plain_text().strip()
+    for num, i in enumerate(review_pic_ls):
+        if i.id == int(arg):
+            msg = MessageSegment.reply(i.msg_id) + '你的提交的图片被拒绝，请重新上传'
+            await bot.send_group_msg(group_id=i.group, message=msg)
+            del review_pic_ls[num]
+            break
+    await reject.finish(f'拒绝id{arg}成功')
 
 
 @osu_help.handle()

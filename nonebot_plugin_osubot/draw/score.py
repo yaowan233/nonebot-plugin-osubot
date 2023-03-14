@@ -57,12 +57,7 @@ async def draw_score(project: str,
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir()
-    # user_header = user_cache_path / str(info.id) / 'header.png'
     user_icon = user_cache_path / str(info.id) / 'icon.png'
-    # if not user_header.exists():
-    #     user_header = await get_projectimg(info.cover_url)
-    #     with open(path / 'header.png', 'wb') as f:
-    #         f.write(user_header.getvalue())
     if not user_icon.exists():
         user_icon = await get_projectimg(info.avatar_url)
         with open(user_path / 'icon.png', 'wb') as f:
