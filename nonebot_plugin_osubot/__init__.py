@@ -520,8 +520,6 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if path.exists():
         os.remove(path)
     await update.finish(MessageSegment.reply(event.message_id) + '个人信息更新成功')
-osu_help = on_command('osuhelp', priority=11, block=True)
-
 
 accept = on_command('同意全部', priority=11, block=True, permission=SUPERUSER)
 
@@ -546,6 +544,8 @@ async def _(bot: Bot, msg: Message = CommandArg()):
             del review_pic_ls[num]
             break
     await reject.finish(f'拒绝id{arg}成功')
+
+osu_help = on_command('osuhelp', priority=11, block=True)
 
 
 @osu_help.handle()
