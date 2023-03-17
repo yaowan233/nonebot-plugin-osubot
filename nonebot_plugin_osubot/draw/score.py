@@ -47,7 +47,7 @@ async def draw_score(project: str,
     # 从官网获取信息
     path = map_path / str(score_info.beatmap.beatmapset_id)
     if not path.exists():
-        path.mkdir()
+        path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score_info.beatmap.id}.osu"
     task2 = asyncio.create_task(osu_api('map', map_id=score_info.beatmap.id))
     if not osu.exists():
@@ -56,7 +56,7 @@ async def draw_score(project: str,
     info = User(**info_json)
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
-        user_path.mkdir()
+        user_path.mkdir(parents=True, exist_ok=True)
     user_icon = user_cache_path / str(info.id) / 'icon.png'
     if not user_icon.exists():
         user_icon = await get_projectimg(info.avatar_url)

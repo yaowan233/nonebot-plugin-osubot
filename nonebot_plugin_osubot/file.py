@@ -75,6 +75,8 @@ async def download_map(setid: int) -> Optional[Path]:
 
 @auto_retry
 async def download_tmp_osu(map_id):
+    if not map_path.exists():
+        map_path.mkdir(parents=True, exist_ok=True)
     url = f'https://osu.ppy.sh/osu/{map_id}'
     logger.info(f'开始下载谱面: <{map_id}>')
     async with AsyncClient(timeout=100) as client:
