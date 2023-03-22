@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageFont, ImageDraw
@@ -199,12 +200,15 @@ def stars_diff(mode: Union[str, int], stars: float):
     sm = Image.new('RGBA', im.size, (r, g, b))
     sm.paste(im, (0, 0, xx, yy), im)
     # 把白色变透明
-    for i in range(xx):
-        for z in range(yy):
-            data = sm.getpixel((i, z))
-            if data.count(255) == 4:
-                sm.putpixel((i, z), (255, 255, 255, 0))
-    return sm
+    arr = np.array(sm)
+    # 创建mask，将白色替换为True，其他颜色替换为False
+    mask = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 255)
+    # 将mask中为True的像素点的alpha通道设置为0
+    arr[:, :, 3][mask] = 0
+    # 将numpy数组转换回PIL图片
+    img = Image.fromarray(arr)
+    # 把白色变透明
+    return img
 
 
 def get_modeimage(mode: int) -> Path:
