@@ -22,10 +22,10 @@ else:
 
 
 @auto_retry
-async def safe_async_get(url, headers=None) -> Response:
+async def safe_async_get(url, headers=None, params=None) -> Response:
     async with AsyncClient(timeout=100) as client:
         client: AsyncClient
-        req = await client.get(url, headers=headers, follow_redirects=True)
+        req = await client.get(url, headers=headers, follow_redirects=True, params=params)
     return req
 
 
