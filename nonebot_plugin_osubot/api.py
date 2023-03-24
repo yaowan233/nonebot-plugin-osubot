@@ -6,7 +6,7 @@ from nonebot import get_driver
 from expiringdict import ExpiringDict
 from .config import Config
 from .network import auto_retry
-from .schema import SayoBeatmap
+from .schema import SayoBeatmap, RecommendData
 
 api = 'https://osu.ppy.sh/api/v2'
 sayoapi = 'https://api.sayobot.cn'
@@ -126,11 +126,26 @@ async def get_random_bg() -> bytes:
     return res.content
 
 
-async def get_sayo_map_info(sid) -> SayoBeatmap:
-    res = await safe_async_get(f'https://api.sayobot.cn/v2/beatmapinfo?K={sid}')
+async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
+    res = await safe_async_get(f'https://api.sayobot.cn/v2/beatmapinfo?K={sid}&T={t}')
     return SayoBeatmap(**res.json())
 
 
 async def get_map_bg(sid, bg_name):
     res = await safe_async_get(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}')
     return BytesIO(res.content)
+
+
+async def get_recommend(uid, mode):
+    headers = {'uid': str(uid)}
+    params = {'newRecordPercent': '0,1',
+              'passPercent': '0.4,1',
+              'difficulty': '0,15',
+              'keyCount': '4,7',
+              'gameMode': mode,
+              'rule': '4',
+              'current': '1',
+              'pageSize': '20'}
+    res = await safe_async_get('https://alphaosu.keytoix.vip/api/v1/self/maps/recommend', headers=headers,
+                               params=params)
+    return RecommendData(**res.json())

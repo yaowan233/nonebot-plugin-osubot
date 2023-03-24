@@ -1,8 +1,10 @@
 import os
+import re
 import shutil
 import urllib
 from dataclasses import dataclass
 from pathlib import Path
+from random import shuffle
 from typing import List, Union
 
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
@@ -22,7 +24,7 @@ from .file import download_map, map_downloaded, download_osu, download_tmp_osu, 
 from .utils import GM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
-from .api import osu_api
+from .api import osu_api, get_sayo_map_info, get_recommend
 from .info import get_map_bg, bind_user_info, update_user_info
 from .config import Config
 
@@ -64,7 +66,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "1.5.2",
+        "version": "1.6.0",
     },
 )
 
@@ -545,6 +547,34 @@ async def _(bot: Bot, msg: Message = CommandArg()):
             break
     await reject.finish(f'拒绝id{arg}成功')
 
+
+recommend = on_command('recommend', aliases={'推荐', '推荐铺面'}, priority=11, block=True)
+
+
+@recommend.handle(parameterless=[split_msg()])
+async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
+    if 'error' in state:
+        await score.finish(MessageSegment.reply(event.message_id) + state['error'])
+    user = state['user']
+    mode = state['mode']
+    mods = state['mods']
+    if mode == 1 or mode == 2:
+        await recommend.finish('很抱歉，该模式暂不支持推荐')
+    recommend_data = await get_recommend(user, mode)
+    shuffle(recommend_data.data.list)
+    recommend_map = recommend_data.data.list[0]
+    bid = int(re.findall('https://osu.ppy.sh/beatmaps/(.*)', recommend_map.mapLink)[0])
+    map_info = await get_sayo_map_info(bid, 1)
+    sid = map_info.data.sid
+    for i in map_info.data.bid_data:
+        if i.bid == bid:
+            bg = i.bg
+            break
+    s = f'推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{"".join(recommend_map.mod)}\n' \
+        f'预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent*100, 2)}%\n' \
+        f'{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\nhttps://txy1.sayobot.cn/beatmaps/download/novideo/{sid}'
+    await recommend.finish(MessageSegment.image(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}') + s)
+
 osu_help = on_command('osuhelp', priority=11, block=True)
 
 
@@ -562,7 +592,7 @@ url_match = on_regex("https://osu.ppy.sh/beatmapsets/(.*)#")
 
 
 @url_match.handle()
-async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: str = RegexGroup()):
+async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: tuple = RegexGroup()):
     url_1 = "https://kitsu.moe/api/d/"
     url_2 = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
     url_total = f"kitsu镜像站：{url_1}{bid[0]}\n小夜镜像站：{url_2}{bid[0]}"

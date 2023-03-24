@@ -2,3 +2,4 @@ from .score import Score, BeatmapUserScore
 from .user import User, Badge
 from .beatmap import Beatmap, Beatmapset
 from .sayo_beatmap import SayoBeatmap
+from .alphaosu import RecommendData

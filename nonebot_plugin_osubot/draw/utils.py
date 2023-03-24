@@ -207,7 +207,6 @@ def stars_diff(mode: Union[str, int], stars: float):
     arr[:, :, 3][mask] = 0
     # 将numpy数组转换回PIL图片
     img = Image.fromarray(arr)
-    # 把白色变透明
     return img
 
 
