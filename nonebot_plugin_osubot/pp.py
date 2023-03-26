@@ -26,11 +26,10 @@ def get_if_pp_ss_pp(score: Score, path: str) -> tuple:
         mods -= 1 << 9
         mods += 1 << 6
     c = Calculator(acc=score.accuracy * 100, n_katu=score.statistics.count_katu,
-                   n_geki=score.statistics.count_geki, combo=score.max_combo,
-                   n_misses=0,
+                   n_geki=score.statistics.count_geki,
                    n50=score.statistics.count_50,
                    n100=score.statistics.count_100,
-                   n300=score.statistics.count_300,
+                   n300=score.statistics.count_300 + score.statistics.count_miss,
                    mods=mods, mode=score.mode_int)
     if_pp = c.performance(beatmap).pp
     c = Calculator(acc=100,
