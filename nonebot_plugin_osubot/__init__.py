@@ -554,7 +554,7 @@ recommend = on_command('recommend', aliases={'推荐', '推荐铺面', '推荐�
 @recommend.handle(parameterless=[split_msg()])
 async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
     if 'error' in state:
-        await score.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await recommend.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
