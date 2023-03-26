@@ -66,7 +66,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "1.6.1",
+        "version": "1.6.2",
     },
 )
 
@@ -548,7 +548,7 @@ async def _(bot: Bot, msg: Message = CommandArg()):
     await reject.finish(f'拒绝id{arg}成功')
 
 
-recommend = on_command('recommend', aliases={'推荐', '推荐铺面'}, priority=11, block=True)
+recommend = on_command('recommend', aliases={'推荐', '推荐铺面', '推荐谱面'}, priority=11, block=True)
 
 
 @recommend.handle(parameterless=[split_msg()])
@@ -570,10 +570,14 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
         if i.bid == bid:
             bg = i.bg
             break
+    else:
+        bg = ''
+        logger.debug(f'如果看到这句话请联系作者 有问题的是{bid}, {sid}')
     s = f'推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{"".join(recommend_map.mod)}\n' \
         f'预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent*100, 2)}%\n' \
         f'{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\nhttps://txy1.sayobot.cn/beatmaps/download/novideo/{sid}'
-    await recommend.finish(MessageSegment.image(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}') + s)
+    await recommend.finish(MessageSegment.reply(event.message_id) +
+                           MessageSegment.image(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}') + s)
 
 osu_help = on_command('osuhelp', priority=11, block=True)
 
