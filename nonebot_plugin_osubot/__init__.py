@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from random import shuffle
 from typing import List, Union
+from expiringdict import ExpiringDict
 
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageEvent, MessageSegment, ActionFailed
 from nonebot.adapters.onebot.v11.helpers import ImageURLs
@@ -44,6 +45,7 @@ class ReviewData:
 
 review_pic_ls: List[ReviewData] = []
 counter = 0
+recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
 usage = "发送/osuhelp 查看帮助"
 detail_usage = """以下<>内是必填内容，()内是选填内容，user可以是用户名也可以@他人，mode为0-3的一个数字
 /info (user)(:mode)
@@ -66,7 +68,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "1.6.3",
+        "version": "1.6.4",
     },
 )
 
@@ -562,7 +564,18 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
         await recommend.finish('很抱歉，该模式暂不支持推荐')
     recommend_data = await get_recommend(user, mode)
     shuffle(recommend_data.data.list)
-    recommend_map = recommend_data.data.list[0]
+    if not recommend_data.data.list:
+        await recommend.finish('没有可以推荐的图哦，自己多打打喜欢玩的图吧')
+    if not recommend_cache.get(user):
+        recommend_cache[user] = set()
+    for i in recommend_data.data.list:
+        if i.id not in recommend_cache[user]:
+            recommend_cache[user].add(i.id)
+            recommend_map = i
+            break
+    else:
+        await recommend.finish('今天已经没有可以推荐的图啦，明天再来吧')
+        return
     bid = int(re.findall('https://osu.ppy.sh/beatmaps/(.*)', recommend_map.mapLink)[0])
     map_info = await get_sayo_map_info(bid, 1)
     sid = map_info.data.sid
