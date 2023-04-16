@@ -612,7 +612,7 @@ url_match = on_regex("https://osu.ppy.sh/beatmapsets/(.*)#")
 async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: tuple = RegexGroup()):
     url_1 = "https://kitsu.moe/api/d/"
     url_2 = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
-    url_total = f"kitsu镜像站：{url_1}{bid[0]}\n小夜镜像站：{url_2}{bid[0]}"
+    url_total = f"小夜镜像站：{url_2}{bid[0]}"
     await url_match.finish(MessageSegment.reply(event.message_id) + url_total)
 
 
