@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 from time import strptime, mktime
 from typing import List, Union, Optional
@@ -45,11 +46,11 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
         score_ls = [score_ls[i] for i in ls]
         if not score_ls:
             return f'今天在 {GMN[mode]} 没有新增的BP成绩'
-    msg = draw_pfm(project, user, score_ls, mode, low_bound, high_bound)
+    msg = await draw_pfm(project, user, score_ls, mode, low_bound, high_bound)
     return msg
 
 
-def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0) -> \
+async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0) -> \
         Union[str, MessageSegment]:
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
@@ -104,6 +105,7 @@ def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_boun
         # 分割线
         div = Image.new('RGBA', (1450, 2), (46, 53, 56, 255)).convert('RGBA')
         im.alpha_composite(div, (25, 180 + h_num))
+        await asyncio.sleep(0)
 
     base = image2bytesio(im)
     msg = MessageSegment.image(base)
