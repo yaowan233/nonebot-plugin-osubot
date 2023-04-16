@@ -1,6 +1,7 @@
+import random
 from io import BytesIO
 from httpx import AsyncClient, Response
-from typing import Union
+from typing import Union, Optional
 from nonebot.log import logger
 from nonebot import get_driver
 from expiringdict import ExpiringDict
@@ -19,6 +20,11 @@ if plugin_config.osu_key and plugin_config.osu_client:
     client_id = plugin_config.osu_client
 else:
     raise Exception("请设置osu_key和osu_client")
+
+if not plugin_config.info_bg:
+    bg_url = ['https://api.ghser.com/random/pe.php']
+else:
+    bg_url = plugin_config.info_bg
 
 
 @auto_retry
@@ -121,8 +127,10 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
     return req.json()
 
 
-async def get_random_bg() -> bytes:
-    res = await safe_async_get('https://api.gmit.vip/Api/DmImg?format=image')
+async def get_random_bg() -> Optional[bytes]:
+    res = await safe_async_get(random.choice(bg_url))
+    if res.status_code != 200:
+        return
     return res.content
 
 

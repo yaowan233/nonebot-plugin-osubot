@@ -39,21 +39,22 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
         bg = Image.open(bg_path)
     else:
         bg = await get_random_bg()
-        bg = Image.open(BytesIO(bg))
-    bg = bg.convert("RGBA")
-    width, height = bg.size
-    bg_ratio = height / width
-    ratio = 1322 / 1000
-    if bg_ratio > ratio:
-        height = ratio * width
-    else:
-        width = height / ratio
-    x, y = bg.size
-    x, y = (x - width) // 2, (y - height) // 2
-    bg = bg.crop((x, y, x + width, y + height)).resize((1000, 1322))
-    bg = bg.filter(ImageFilter.GaussianBlur(5))
-    # bg.paste(i := Image.new("RGBA", (1000, 1322), (0, 0, 0, 30)), mask=i)
-    im.alpha_composite(bg, (0, 0))
+        if bg:
+            bg = Image.open(BytesIO(bg))
+    if bg:
+        bg = bg.convert("RGBA")
+        width, height = bg.size
+        bg_ratio = height / width
+        ratio = 1322 / 1000
+        if bg_ratio > ratio:
+            height = ratio * width
+        else:
+            width = height / ratio
+        x, y = bg.size
+        x, y = (x - width) // 2, (y - height) // 2
+        bg = bg.crop((x, y, x + width, y + height)).resize((1000, 1322))
+        bg = bg.filter(ImageFilter.GaussianBlur(5))
+        im.alpha_composite(bg, (0, 0))
     # 获取头图，头像，地区，状态，supporter
     path = user_cache_path / str(info.id)
     if not path.exists():
