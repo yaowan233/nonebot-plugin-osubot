@@ -1,8 +1,10 @@
 import math
+import os
+
 import numpy as np
 from io import BytesIO
 from typing import Optional, Union
-from PIL import ImageFont, ImageDraw
+from PIL import ImageFont, ImageDraw, UnidentifiedImageError
 
 from .static import *
 
@@ -101,8 +103,12 @@ def draw_acc(img: Image, acc: float, mode: str):
     return img
 
 
-def crop_bg(size: str, path: Union[str, BytesIO, Path]):
-    bg = Image.open(path).convert('RGBA')
+def crop_bg(size: str, path: Union[str, Path]):
+    try:
+        bg = Image.open(path).convert('RGBA')
+    except UnidentifiedImageError:
+        os.remove(path)
+        return Image.new(mode='RGBA', size=(1, 1))
     bg_w, bg_h = bg.size[0], bg.size[1]
     if size == 'BG':
         fix_w = 1500

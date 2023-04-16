@@ -1,8 +1,9 @@
+import os
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
 
-from PIL import ImageFilter
+from PIL import ImageFilter, UnidentifiedImageError
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .static import *
@@ -68,9 +69,12 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     # 底图
     im.alpha_composite(NewInfoImg)
     # 头像
-    icon_bg = Image.open(user_icon).convert('RGBA').resize((300, 300))
-    icon_img = draw_fillet(icon_bg, 25)
-    im.alpha_composite(icon_img, (50, 148))
+    try:
+        icon_bg = Image.open(user_icon).convert('RGBA').resize((300, 300))
+        icon_img = draw_fillet(icon_bg, 25)
+        im.alpha_composite(icon_img, (50, 148))
+    except UnidentifiedImageError:
+        os.remove(user_icon)
     # 奖牌
     if info.badges:
         badges_num = len(info.badges)

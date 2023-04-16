@@ -1,7 +1,8 @@
 import asyncio
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Union
-from PIL import ImageFilter, ImageEnhance
+from PIL import ImageFilter, ImageEnhance, UnidentifiedImageError
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, get_map_bg
@@ -122,9 +123,12 @@ async def draw_score(project: str,
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.mode)
     # 头像
-    icon_bg = Image.open(user_icon).convert('RGBA').resize((170, 170))
-    icon_img = draw_fillet(icon_bg, 15)
-    im.alpha_composite(icon_img, (60, 510))
+    try:
+        icon_bg = Image.open(user_icon).convert('RGBA').resize((170, 170))
+        icon_img = draw_fillet(icon_bg, 15)
+        im.alpha_composite(icon_img, (60, 510))
+    except UnidentifiedImageError:
+        os.remove(user_icon)
     # 地区
     country = osufile / 'flags' / f'{score_info.user.country_code}.png'
     country_bg = Image.open(country).convert('RGBA').resize((66, 45))
