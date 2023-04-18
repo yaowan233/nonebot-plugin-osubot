@@ -146,8 +146,8 @@ async def get_map_bg(sid, bg_name):
 
 async def get_recommend(uid, mode):
     headers = {'uid': str(uid)}
-    params = {'newRecordPercent': '0,1',
-              'passPercent': '0.4,1',
+    params = {'newRecordPercent': '0.2,1',
+              'passPercent': '0.2,1',
               'difficulty': '0,15',
               'keyCount': '4,7',
               'gameMode': mode,
