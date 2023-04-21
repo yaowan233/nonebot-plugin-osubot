@@ -33,4 +33,4 @@ class RecommendData(Base):
     code: int
     message: str
     success: bool
-    data: Data
+    data: Optional[Data]
