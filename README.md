@@ -100,8 +100,7 @@ _✨ NoneBot osubot ✨_
 ## 🎉 使用
 ### 指令
 
-
-![help](https://user-images.githubusercontent.com/30517062/217259521-7cd4b6b1-f16f-48b3-ba3c-8d49c022ab33.png)
+![image](https://github.com/yaowan233/nonebot-plugin-osubot/assets/30517062/41fd8326-7b97-4de9-be83-c38b31453ea1)
 
 
 ## 💡 贡献
