@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import urllib
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from random import shuffle
@@ -68,7 +69,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "1.7.2",
+        "version": "1.7.3",
     },
 )
 
@@ -339,6 +340,7 @@ async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], m
             ...
 
 bind = on_command('bind', priority=11, block=True)
+lock = asyncio.Lock()
 
 
 @bind.handle()
@@ -346,9 +348,10 @@ async def _bind(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Co
     name = msg.extract_plain_text()
     if not name:
         await bind.finish(MessageSegment.reply(event.message_id) + '请输入您的 osuid')
-    if _ := await UserData.get_or_none(user_id=event.get_user_id()):
-        await bind.finish(MessageSegment.reply(event.message_id) + '您已绑定，如需要解绑请输入/unbind')
-    msg = await bind_user_info('bind', name, event.get_user_id())
+    async with lock:
+        if _ := await UserData.get_or_none(user_id=event.get_user_id()):
+            await bind.finish(MessageSegment.reply(event.message_id) + '您已绑定，如需要解绑请输入/unbind')
+        msg = await bind_user_info('bind', name, event.get_user_id())
     await bind.finish(MessageSegment.reply(event.message_id) + msg)
 
 
