@@ -613,9 +613,9 @@ url_match = on_regex("https://osu.ppy.sh/beatmapsets/(.*)#")
 
 @url_match.handle()
 async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: tuple = RegexGroup()):
-    url_1 = "https://kitsu.moe/api/d/"
+    url_1 = "https://osu.direct/api/d/"
     url_2 = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
-    url_total = f"小夜镜像站：{url_2}{bid[0]}"
+    url_total = f"osu.direct镜像站：{url_1}{bid[0]}\n小夜镜像站：{url_2}{bid[0]}"
     await url_match.finish(MessageSegment.reply(event.message_id) + url_total)
 
 
@@ -634,3 +634,7 @@ async def delete_cached_map():
     map_path = Path('data/osu/map')
     shutil.rmtree(map_path)
     map_path.mkdir(parents=True, exist_ok=True)
+    user_path = Path('data/osu/user')
+    for file_path in user_path.glob('**/*'):
+        if file_path.is_file() and file_path.name == 'icon.png':
+            file_path.unlink()

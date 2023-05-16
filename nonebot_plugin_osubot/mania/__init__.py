@@ -84,7 +84,7 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
 
                 new_audio_path = path / osu_new.audio_file_name
                 proc = await asyncio.create_subprocess_shell(
-                    f'ffmpeg -i "{audio_path.absolute()}" -filter_complex [0:a]atempo={rate}[s0] -map [s0] '
+                    f'ffmpeg -i "{audio_path.absolute()}" -filter:a "atempo={rate}" -b:a 128k -vn -y'
                     f'"{new_audio_path.absolute()}" -loglevel quiet'
                 )
                 await proc.wait()
