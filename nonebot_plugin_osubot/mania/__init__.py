@@ -9,6 +9,7 @@ from reamber.algorithms.playField.parts import *
 from pathlib import Path
 from zipfile import ZipFile
 from ..file import download_map
+from ..schema import SayoBeatmap
 import os
 import shutil
 import asyncio
@@ -25,6 +26,8 @@ class Options:
     end_rate: Optional[float]
     od: Optional[float]
     set: Optional[int]
+    map: Optional[int] = None
+    sayo_info: Optional[SayoBeatmap] = None
     nsv: bool = False
     nln: bool = False
     fln: bool = False
@@ -55,39 +58,44 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
     with ZipFile(osz_file.absolute()) as my_zip:
         my_zip.extractall(path)
     os.remove(osz_file)
-    processed = list()
+    for i in options.sayo_info.data.bid_data:
+        if i.bid == options.map:
+            audio_file_name = i.audio
+            audio_name = audio_file_name[:-4]
+            audio_type = audio_file_name[-4:]
+            break
+    else:
+        raise Exception('小夜api有问题啊')
+    if options.rate:
+        if options.rate > 10:
+            options.rate = 10
+        end = options.end_rate if options.end_rate else options.rate + 0.01
+        if end > 10:
+            end = 10.1
+        if options.step and abs(options.step) < 0.05:
+            options.step = 0.05 if options.step > 0 else -0.05
+        if not options.step:
+            options.step = 0.05
+        tasks = []
+        for rate in numpy.arange(options.rate, end, options.step):
+            new_audio_path = path / (audio_name + f'x{rate:.2f}' + audio_type)
+            tasks.append(asyncio.create_subprocess_shell(
+                f'ffmpeg -i "{(path / audio_file_name).absolute()}" -filter:a "atempo={rate}" -b:a 128k -vn -y '
+                f'"{new_audio_path.absolute()}" -loglevel quiet'
+            ))
+        await asyncio.gather(*tasks)
     osu_ls = list()
     for file in path.rglob('*.osu'):
         osu = OsuMap.read_file(str(file.absolute()))
         if options.rate:
-            if options.rate > 10:
-                options.rate = 10
-            end = options.end_rate if options.end_rate else options.rate + 0.01
-            if end > 10:
-                end = 10.1
-            if options.step and abs(options.step) < 0.05:
-                options.step = 0.05 if options.step > 0 else -0.05
-            if not options.step:
-                options.step = 0.05
+            if osu.audio_file_name != audio_file_name:
+                continue
             for rate in numpy.arange(options.rate, end, options.step):
                 rate = round(rate, 2)
                 osu_new = osu.rate(rate)
                 osu_new.version += f' x{rate}'
-                audio = Path(path / osu.audio_file_name)
-                osu_new.audio_file_name = audio.stem + f'x{rate}{audio.suffix}'
-                audio_path = path / osu.audio_file_name
+                osu_new.audio_file_name = audio_name + f'x{rate:.2f}' + audio_type
                 osu_ls.append([file.stem + f'x{rate}', osu_new])
-                if osu_new.audio_file_name in processed:
-                    continue
-                else:
-                    processed.append(osu_new.audio_file_name)
-
-                new_audio_path = path / osu_new.audio_file_name
-                proc = await asyncio.create_subprocess_shell(
-                    f'ffmpeg -i "{audio_path.absolute()}" -filter:a "atempo={rate}" -b:a 128k -vn -y'
-                    f'"{new_audio_path.absolute()}" -loglevel quiet'
-                )
-                await proc.wait()
         else:
             osu_new = osu.rate(1)
             osu_ls.append([file.stem, osu_new])

@@ -1,4 +1,3 @@
-import os
 import re
 import shutil
 import urllib
@@ -128,7 +127,8 @@ def split_msg():
 
 
 parser = ArgumentParser('convert', description='变换mania谱面')
-parser.add_argument('set', type=int, help='要转换的谱面的setid')
+parser.add_argument('--set', type=int, help='要转换的谱面的setid')
+parser.add_argument('--map', type=int, help='要转换的谱面的mapid')
 parser.add_argument('--fln', action='store_true', help='将谱面转换为反键')
 parser.add_argument('--rate', type=float, help='谱面倍速速率')
 parser.add_argument('--end_rate', type=float, help='谱面倍速速率的最大值')
@@ -157,6 +157,10 @@ async def _(
         await convert.finish(MessageSegment.reply(event.message_id) + str(e))
         return
     options = Options(**vars(args))
+    if options.map:
+        sayo_map_info = await get_sayo_map_info(options.map, 1)
+        options.set = sayo_map_info.data.sid
+        options.sayo_info = sayo_map_info
     if not options.set:
         await convert.finish(MessageSegment.reply(event.message_id) + '请提供需要转换的谱面setid')
     if options.nln and options.fln:
@@ -172,7 +176,7 @@ async def _(
         await convert.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(osz_file)
+            osz_file.unlink()
         except PermissionError:
             ...
 
@@ -335,7 +339,7 @@ async def _osudl(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], m
         await osudl.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(osz_path)
+            osz_path.unlink()
         except PermissionError:
             ...
 
@@ -402,7 +406,7 @@ async def _get_bg(event: Union[MessageEvent, GuildMessageEvent], msg: Message = 
         msg = await get_map_bg(bg_id)
     await getbg.finish(MessageSegment.reply(event.message_id) + msg)
 
-change = on_command('倍速', priority=11, block=True)
+change = on_command('倍速', aliases={'变速'}, priority=11, block=True)
 
 
 @change.handle()
@@ -410,12 +414,12 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
     if isinstance(event, GuildMessageEvent):
         await convert.finish(MessageSegment.reply(event.message_id) + '很抱歉，频道暂不支持上传文件')
     args = msg.extract_plain_text().strip().split()
-    argv = []
+    argv = ['--map']
     if not args:
-        await change.finish(MessageSegment.reply(event.message_id) + '请输入需要倍速的地图setID')
+        await change.finish(MessageSegment.reply(event.message_id) + '请输入需要倍速的地图mapID')
     set_id = args[0]
     if not set_id.isdigit():
-        await change.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
+        await change.finish(MessageSegment.reply(event.message_id) + '请输入正确的mapID')
     argv.append(set_id)
     if len(args) >= 2:
         argv.append('--rate')
@@ -428,6 +432,10 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
         await change.finish(MessageSegment.reply(event.message_id) + '请输入倍速速率')
     args = parser.parse_args(argv)
     options = Options(**vars(args))
+    if options.map:
+        sayo_map_info = await get_sayo_map_info(options.map, 1)
+        options.set = sayo_map_info.data.sid
+        options.sayo_info = sayo_map_info
     osz_path = await convert_mania_map(options)
     if not osz_path:
         await change.finish(MessageSegment.reply(event.message_id) + '未找到该地图，请检查是否搞混了mapID与setID')
@@ -439,7 +447,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
         await change.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(osz_path)
+            osz_path.unlink()
         except PermissionError:
             ...
 
@@ -456,7 +464,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
     set_id = args[0]
     if not set_id.isdigit():
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '请输入正确的setID')
-    argv = [set_id, '--fln']
+    argv = ['--set', set_id, '--fln']
     if len(args) >= 2:
         argv.append('--gap')
         argv.append(args[1])
@@ -476,7 +484,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent], msg: M
         await generate_full_ln.finish(MessageSegment.reply(event.message_id) + '上传文件失败，可能是群空间满或没有权限导致的')
     finally:
         try:
-            os.remove(osz_path)
+            osz_path.unlink()
         except PermissionError:
             ...
 
@@ -525,7 +533,7 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     user = state['user']
     path = user_cache_path / str(user) / 'icon.png'
     if path.exists():
-        os.remove(path)
+        path.unlink()
     await update.finish(MessageSegment.reply(event.message_id) + '个人信息更新成功')
 
 accept = on_command('同意全部', priority=11, block=True, permission=SUPERUSER)
@@ -591,7 +599,7 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
         logger.debug(f'如果看到这句话请联系作者 有问题的是{bid}, {sid}')
     s = f'推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{"".join(recommend_map.mod)}\n' \
         f'预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent*100, 2)}%\n' \
-        f'{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\nhttps://txy1.sayobot.cn/beatmaps/download/novideo/{sid}'
+        f'{recommend_map.mapLink}\nhttps://osu.direct/api/d/{sid}\nhttps://txy1.sayobot.cn/beatmaps/download/novideo/{sid}'
     await recommend.finish(MessageSegment.reply(event.message_id) +
                            MessageSegment.image(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}') + s)
 
