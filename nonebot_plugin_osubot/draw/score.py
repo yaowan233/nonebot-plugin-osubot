@@ -242,6 +242,8 @@ async def draw_score(project: str,
         im = draw_text(im, w_katu)
         w_miss = DataText(1432, 645, 30, score_info.statistics.count_miss, Torus_Regular, anchor='mm')
     else:
+        perfect_acc = DataText(1002, 580, 20, f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1', Torus_Regular, anchor='mm')
+        im = draw_text(im, perfect_acc)
         w_acc = DataText(1002, 550, 30, f'{score_info.accuracy * 100:.2f}%', Torus_Regular, anchor='mm')
         w_maxcb = DataText(1197, 550, 30, f'{score_info.max_combo:,}', Torus_Regular, anchor='mm')
         w_pp = DataText(1395, 550, 30, f'{int(round(pp_info.pp, 0))}/{ss_pp}', Torus_Regular, anchor='mm')
