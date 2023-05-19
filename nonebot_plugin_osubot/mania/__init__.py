@@ -79,14 +79,15 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
     with ZipFile(osz_file.absolute()) as my_zip:
         my_zip.extractall(path)
     os.remove(osz_file)
-    for i in options.sayo_info.data.bid_data:
-        if i.bid == options.map:
-            audio_file_name = i.audio
-            audio_name = audio_file_name[:-4]
-            audio_type = audio_file_name[-4:]
-            break
-    else:
-        raise Exception('小夜api有问题啊')
+    if options.sayo_info:
+        for i in options.sayo_info.data.bid_data:
+            if i.bid == options.map:
+                audio_file_name = i.audio
+                audio_name = audio_file_name[:-4]
+                audio_type = audio_file_name[-4:]
+                break
+        else:
+            raise Exception('小夜api有问题啊')
     if options.rate:
         if options.rate > 10:
             options.rate = 10
