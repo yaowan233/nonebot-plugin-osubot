@@ -9,13 +9,21 @@ def cal_pp(score: Score, path: str) -> PerformanceAttributes:
     if mods & (1 << 9):
         mods -= 1 << 9
         mods += 1 << 6
-    c = Calculator(acc=score.accuracy * 100, n_katu=score.statistics.count_katu,
-                   n_geki=score.statistics.count_geki, combo=score.max_combo,
-                   n_misses=score.statistics.count_miss,
-                   n50=score.statistics.count_50,
-                   n100=score.statistics.count_100,
-                   n300=score.statistics.count_300,
-                   mods=mods, mode=score.mode_int)
+    if score.mode_int == 2:
+        c = Calculator(acc=score.accuracy * 100, n_katu=score.statistics.count_katu,
+                       combo=score.max_combo,
+                       n_misses=score.statistics.count_miss,
+                       n100=score.statistics.count_100,
+                       n300=score.statistics.count_300,
+                       mods=mods, mode=score.mode_int)
+    else:
+        c = Calculator(acc=score.accuracy * 100, n_katu=score.statistics.count_katu,
+                       n_geki=score.statistics.count_geki, combo=score.max_combo,
+                       n_misses=score.statistics.count_miss,
+                       n50=score.statistics.count_50,
+                       n100=score.statistics.count_100,
+                       n300=score.statistics.count_300,
+                       mods=mods, mode=score.mode_int)
     return c.performance(beatmap)
 
 
