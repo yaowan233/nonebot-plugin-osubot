@@ -22,7 +22,7 @@ from nonebot import on_command, require, on_shell_command, on_regex, get_driver
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
 from .file import download_map, map_downloaded, download_osu, download_tmp_osu, user_cache_path, save_info_pic
-from .utils import GM, GMN, mods2list
+from .utils import NGM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api, get_sayo_map_info, get_recommend
@@ -68,7 +68,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "1.7.5",
+        "version": "1.8.0",
     },
 )
 
@@ -82,47 +82,42 @@ def split_msg():
             if msg_seg.type == "at":
                 qq = str(msg_seg.data.get("qq", ""))
         user_data = await UserData.get_or_none(user_id=qq)
-        if not user_data:
-            state['error'] = '该账号尚未绑定，请输入 /bind 用户名 绑定账号'
-            return
-        user = user_data.osu_id
-        mode = str(user_data.osu_mode)
-        mods = []
+        state['user'] = user_data.osu_id if user_data else 0
+        state['mode'] = str(user_data.osu_mode) if user_data else '0'
+        state['mods'] = []
+        state['day'] = 0
+        symbol_ls = [':', '+', '：', '#']
+        symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day'}
+        dic = {}
         arg = msg.extract_plain_text().strip()
-        mode_index = max(arg.find(':'), arg.find('：'))
-        mods_index = arg.find('+')
-        # 没有:与+时
-        if max(mode_index, mods_index) < 0:
-            para = arg
-            state['full_para'] = para.strip()
+        if max([arg.find(i) for i in symbol_ls]) >= 0:
+            for i in symbol_ls:
+                dic[i] = arg.find(i)
+            sorted_dict = sorted(dic.items(), key=lambda x: x[1])
+            for i in range(len(sorted_dict) - 1):
+                if sorted_dict[i][1] >= 0:
+                    state[symbol_dic[sorted_dict[i][0]]] = arg[sorted_dict[i][1] + 1:sorted_dict[i + 1][1]].strip()
+            if sorted_dict[-1][1] >= 0:
+                state[symbol_dic[sorted_dict[-1][0]]] = arg[sorted_dict[-1][1] + 1:].strip()
+            if isinstance(state['mods'], str):
+                state['mods'] = mods2list(state['mods'].strip())
+            index = min([arg.find(i) for i in symbol_ls if arg.find(i) >= 0])
+            state['para'] = arg[:index].strip()
         else:
-            # 只有+时
-            if mode_index < 0:
-                index = mods_index
-                mods = mods2list(arg[index + 1:].strip())
-            # 只有:时
-            elif mods_index < 0:
-                index = mode_index
-                mode = arg[index + 1:]
-            # 都有时
-            else:
-                index = min(mode_index, mods_index)
-                mode = arg[mode_index + 1: mods_index]
-                mods = mods2list(arg[mods_index + 1:].strip())
-            para = arg[:index].strip()
-            state['full_para'] = para.strip()
+            state['para'] = arg.strip()
         # 分出user和参数
-        if para.find(' ') > 0 and state['_prefix']['command'][0] not in ('pr', 're', 'info', 'tbp', 'recent'):
-            user = para[:para.rfind(' ')]
-            para = para[para.rfind(' ') + 1:]
-        elif para.find(' ') > 0 and state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent'):
-            user = para
-        if not mode.isdigit() and (int(mode) < 0 or int(mode) > 3):
-            state['err'] = '模式应为0-3的数字！'
-        state['para'] = para.strip()
-        state['user'] = user
-        state['mode'] = int(mode)
-        state['mods'] = mods
+        if state['para'].find(' ') > 0 and state['_prefix']['command'][0] not in ('pr', 're', 'info', 'tbp', 'recent'):
+            state['user'] = state['para'][:state['para'].rfind(' ')].strip()
+            state['para'] = state['para'][state['para'].rfind(' ') + 1:].strip()
+        elif state['para'].find(' ') > 0 and state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent'):
+            state['user'] = state['para']
+        if not state['mode'].isdigit() and (int(state['mode']) < 0 or int(state['mode']) > 3):
+            state['error'] = '模式应为0-3的数字！'
+        if isinstance(state['day'], str) and not state['day'].isdigit() and (int(state['day']) < 0):
+            state['error'] = '查询的日期应是一个正数'
+        if state['user'] == 0 and not state['para']:
+            state['error'] = '该账号尚未绑定，请输入 /bind 用户名 绑定账号'
+        state['day'] = int(state['day'])
     return Depends(dependency)
 
 
@@ -189,7 +184,7 @@ async def _info(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_info(user, GM[mode])
+    data = await draw_info(user, NGM[mode])
     await info.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -200,9 +195,9 @@ recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=Tru
 async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await recent.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['full_para'] if state['full_para'] else state['user']
+    user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('recent', user, GM[mode], [])
+    data = await draw_score('recent', user, NGM[mode], [])
     await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
@@ -212,9 +207,9 @@ pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
 async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await pr.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['full_para'] if state['full_para'] else state['user']
+    user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('pr', user, GM[mode], [])
+    data = await draw_score('pr', user, NGM[mode], [])
     await pr.finish(MessageSegment.reply(event.message_id) + data)
 
 score = on_command('score', priority=11, block=True)
@@ -228,7 +223,7 @@ async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     mode = state['mode']
     mods = state['mods']
     map_id = state['para']
-    data = await draw_score('score', user, GM[mode], mapid=map_id, mods=mods)
+    data = await draw_score('score', user, NGM[mode], mapid=map_id, mods=mods)
     await score.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -248,7 +243,7 @@ async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     best = int(best)
     if best <= 0 or best > 100:
         await bp.finish(MessageSegment.reply(event.message_id) + '只允许查询bp 1-100 的成绩')
-    data = await draw_score('bp', user, GM[mode], best=best, mods=mods)
+    data = await draw_score('bp', user, NGM[mode], best=best, mods=mods)
     await bp.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -271,7 +266,7 @@ async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     low, high = int(low), int(high)
     if not 0 < low < high <= 100:
         await pfm.finish(MessageSegment.reply(event.message_id) + '仅支持查询bp1-100')
-    data = await draw_bp('bp', user, GM[mode], mods, low, high)
+    data = await draw_bp('bp', user, NGM[mode], mods, low, high)
     await pfm.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -282,9 +277,10 @@ tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['full_para'] if state['full_para'] else state['user']
+    user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_bp('tbp', user, GM[mode], [])
+    day = state['day']
+    data = await draw_bp('tbp', user, NGM[mode], [], day=day)
     await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -388,7 +384,7 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Comman
     mode = int(args)
     if 0 <= mode < 4:
         await UserData.filter(user_id=event.get_user_id()).update(osu_mode=mode)
-        msg = f'已将默认模式更改为 {GM[mode]}'
+        msg = f'已将默认模式更改为 {NGM[str(mode)]}'
     else:
         msg = '请输入正确的模式 0-3'
     await update.finish(MessageSegment.reply(event.message_id) + msg)
@@ -406,7 +402,7 @@ async def _get_bg(event: Union[MessageEvent, GuildMessageEvent], msg: Message = 
         msg = await get_map_bg(bg_id)
     await getbg.finish(MessageSegment.reply(event.message_id) + msg)
 
-change = on_command('倍速', aliases={'变速'}, priority=11, block=True)
+change = on_command('倍速', priority=11, block=True)
 
 
 @change.handle()
@@ -574,9 +570,10 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
     if mode == 1 or mode == 2:
         await recommend.finish('很抱歉，该模式暂不支持推荐')
     recommend_data = await get_recommend(user, mode)
+    print([i.mapName for i in recommend_data.data.list])
+    shuffle(recommend_data.data.list)
     if not recommend_data.data.list:
         await recommend.finish('没有可以推荐的图哦，自己多打打喜欢玩的图吧')
-    shuffle(recommend_data.data.list)
     if not recommend_cache.get(user):
         recommend_cache[user] = set()
     for i in recommend_data.data.list:
@@ -599,7 +596,7 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
         logger.debug(f'如果看到这句话请联系作者 有问题的是{bid}, {sid}')
     s = f'推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{"".join(recommend_map.mod)}\n' \
         f'预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent*100, 2)}%\n' \
-        f'{recommend_map.mapLink}\nhttps://osu.direct/api/d/{sid}\nhttps://txy1.sayobot.cn/beatmaps/download/novideo/{sid}'
+        f'{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\nhttps://txy1.sayobot.cn/beatmaps/download/novideo/{sid}'
     await recommend.finish(MessageSegment.reply(event.message_id) +
                            MessageSegment.image(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}') + s)
 
@@ -623,7 +620,7 @@ url_match = on_regex("https://osu.ppy.sh/beatmapsets/(.*)#")
 async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: tuple = RegexGroup()):
     url_1 = "https://osu.direct/api/d/"
     url_2 = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
-    url_total = f"osu.direct镜像站：{url_1}{bid[0]}\n小夜镜像站：{url_2}{bid[0]}"
+    url_total = f"kitsu镜像站：{url_1}{bid[0]}\n小夜镜像站：{url_2}{bid[0]}"
     await url_match.finish(MessageSegment.reply(event.message_id) + url_total)
 
 

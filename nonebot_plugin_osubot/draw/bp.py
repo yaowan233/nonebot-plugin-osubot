@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from time import strptime, mktime
 from typing import List, Union, Optional
 from nonebot.adapters.onebot.v11 import MessageSegment
@@ -14,7 +14,7 @@ from .static import *
 
 
 async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
-                  low_bound: int = 0, high_bound: int = 0) -> Union[str, MessageSegment]:
+                  low_bound: int = 0, high_bound: int = 0, day: int = 0) -> Union[str, MessageSegment]:
     bp_info = await osu_api('bp', uid, mode)
     if isinstance(bp_info, str):
         return bp_info
@@ -35,7 +35,7 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
     elif project == 'tbp':
         ls = []
         for i, score in enumerate(score_ls):
-            today = datetime.now().date()
+            today = date.today() - timedelta(days=day)
             today_stamp = mktime(strptime(str(today), '%Y-%m-%d'))
             playtime = datetime.strptime(score.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S') + timedelta(
                 hours=8)
@@ -45,7 +45,7 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
                 ls.append(i)
         score_ls = [score_ls[i] for i in ls]
         if not score_ls:
-            return f'今天在 {GMN[mode]} 没有新增的BP成绩'
+            return f'{day}日内在 {GMN[mode]} 没有新增的BP成绩'
     msg = await draw_pfm(project, user, score_ls, mode, low_bound, high_bound)
     return msg
 
