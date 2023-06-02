@@ -45,13 +45,13 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
                 ls.append(i)
         score_ls = [score_ls[i] for i in ls]
         if not score_ls:
-            return f'{day}日内在 {GMN[mode]} 没有新增的BP成绩'
-    msg = await draw_pfm(project, user, score_ls, mode, low_bound, high_bound)
+            return f'近{day + 1}日内在 {GMN[mode]} 没有新增的BP成绩'
+    msg = await draw_pfm(project, user, score_ls, mode, low_bound, high_bound, day)
     return msg
 
 
-async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0) -> \
-        Union[str, MessageSegment]:
+async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0,
+                   day: int = 0) -> Union[str, MessageSegment]:
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
     im.alpha_composite(BgImg)
@@ -60,7 +60,7 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
     if project == 'bp':
         uinfo = f"{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     else:
-        uinfo = f"{user} | {mode.capitalize()} 模式 | 今日新增 BP"
+        uinfo = f"{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
     w_user = DataText(1450, 50, 25, uinfo, Torus_SemiBold, anchor='rm')
     im = draw_text(im, w_user)
     for num, bp in enumerate(score_ls):
