@@ -65,6 +65,10 @@ __plugin_meta__ = PluginMetadata(
     name="OSUBot",
     description="OSU查分插件",
     usage=usage,
+    type='application',
+    homepage='https://github.com/yaowan233/nonebot-plugin-osubot',
+    config=Config,
+    supported_adapters={"~onebot.v11", "~qqguild"},
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
@@ -86,8 +90,8 @@ def split_msg():
         state['mode'] = str(user_data.osu_mode) if user_data else '0'
         state['mods'] = []
         state['day'] = 0
-        symbol_ls = [':', '+', '：', '#']
-        symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day'}
+        symbol_ls = [':', '+', '：', '#', '＃']
+        symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day', '＃': 'day'}
         dic = {}
         arg = msg.extract_plain_text().strip()
         if max([arg.find(i) for i in symbol_ls]) >= 0:
