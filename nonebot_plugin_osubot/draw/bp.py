@@ -2,6 +2,8 @@ import asyncio
 from datetime import datetime, timedelta, date
 from time import strptime, mktime
 from typing import List, Union, Optional
+
+from PIL import ImageDraw
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..schema import Score
@@ -9,7 +11,7 @@ from ..api import osu_api
 from ..utils import GMN
 from ..mods import get_mods_list
 
-from .utils import DataText, draw_text, image2bytesio
+from .utils import image2bytesio
 from .static import *
 
 
@@ -55,14 +57,14 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
     im.alpha_composite(BgImg)
+    draw = ImageDraw.Draw(im)
     f_div = Image.new('RGBA', (1500, 2), (255, 255, 255, 255)).convert('RGBA')
     im.alpha_composite(f_div, (0, 100))
     if project == 'bp':
         uinfo = f"{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     else:
         uinfo = f"{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
-    w_user = DataText(1450, 50, 25, uinfo, Torus_SemiBold, anchor='rm')
-    im = draw_text(im, w_user)
+    draw.text((1450, 50), uinfo, font=Torus_SemiBold_25, anchor='rm')
     for num, bp in enumerate(score_ls):
         h_num = 82 * num
         # mods
@@ -74,39 +76,28 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
             if (bp.rank == 'X' or bp.rank == 'S') and ('HD' in bp.mods or 'FL' in bp.mods):
                 bp.rank += 'H'
         # BP排名
-        rank_bp = DataText(15, 144 + h_num, 20, num + 1, Torus_Regular, anchor='lm')
-        im = draw_text(im, rank_bp)
+        draw.text((15, 144 + h_num), str(num + 1), font=Torus_Regular_20, anchor='lm')
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
         rank_bg = Image.open(rank_img).convert('RGBA').resize((64, 32))
         im.alpha_composite(rank_bg, (45, 128 + h_num))
         # 曲名&作曲
-        w_title_artist = DataText(125, 130 + h_num, 20, f'{bp.beatmapset.title}'
-                                                        f' | by {bp.beatmapset.artist}', Torus_Regular,
-                                  anchor='lm')
-        im = draw_text(im, w_title_artist)
+        draw.text((125, 130 + h_num), f'{bp.beatmapset.title} | by {bp.beatmapset.artist}', font=Torus_Regular_20, anchor='lm')
         # 地图版本&时间
         old_time = datetime.strptime(bp.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
         new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
-        w_version_time = DataText(125, 158 + h_num, 18, f'{bp.beatmap.version} | {new_time}', Torus_Regular,
-                                  anchor='lm')
-        im = draw_text(im, w_version_time, color=(238, 171, 0, 255))
+        draw.text((125, 158 + h_num), f'{bp.beatmap.version} | {new_time}', font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
         # acc
-        w_acc = DataText(1250, 130 + h_num, 22, f'{bp.accuracy * 100:.2f}%', Torus_SemiBold, anchor='lm')
-        im = draw_text(im, w_acc, color=(238, 171, 0, 255))
+        draw.text((1250, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20, anchor='lm', fill=(238, 171, 0, 255))
         # mapid
-        w_mapid = DataText(1250, 158 + h_num, 18, f'ID: {bp.beatmap.id}', Torus_Regular, anchor='lm')
-        im = draw_text(im, w_mapid)
+        draw.text((1250, 158 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='lm')
         # pp
-        w_pp = DataText(1420, 140 + h_num, 25, int(bp.pp), Torus_SemiBold, anchor='rm')
-        im = draw_text(im, w_pp, (255, 102, 171, 255))
-        w_n_pp = DataText(1450, 140 + h_num, 25, 'pp', Torus_SemiBold, anchor='rm')
-        im = draw_text(im, w_n_pp, (209, 148, 176, 255))
+        draw.text((1420, 140 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25, anchor='rm', fill=(255, 102, 171, 255))
+        draw.text((1450, 140 + h_num), 'pp', font=Torus_SemiBold_25, anchor='rm', fill=(209, 148, 176, 255))
         # 分割线
         div = Image.new('RGBA', (1450, 2), (46, 53, 56, 255)).convert('RGBA')
         im.alpha_composite(div, (25, 180 + h_num))
         await asyncio.sleep(0)
-
     base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg

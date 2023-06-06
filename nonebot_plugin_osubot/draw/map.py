@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Union
 
-from PIL import ImageEnhance
+from PIL import ImageEnhance, ImageDraw
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api
@@ -10,7 +10,7 @@ from ..mods import calc_mods
 from ..file import re_map, get_projectimg, map_downloaded, download_osu
 from ..utils import FGM
 from ..pp import get_ss_pp
-from .utils import calc_songlen, DataText, draw_text, draw_fillet, stars_diff, crop_bg, image2bytesio
+from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio
 from .static import *
 
 
@@ -36,6 +36,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
         new_time = '谱面状态可能非ranked'
     # BG做地图
     im = Image.new('RGBA', (1200, 600))
+    draw = ImageDraw.Draw(im)
     cover = re_map(osu)
     cover_crop = crop_bg('MB', dirpath / cover)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
@@ -55,8 +56,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
         difflen = int(250 * i / 10) if i <= 10 else 250
         diff_len = Image.new('RGBA', (difflen, 8), color)
         im.alpha_composite(diff_len, (890, 426 + 35 * num))
-        w_diff = DataText(1170, 426 + 35 * num, 20, "%.1f" % i, Torus_SemiBold, anchor='mm')
-        im = draw_text(im, w_diff)
+        draw.text((1170, 426 + 35 * num), "%.1f" % i, font=Torus_SemiBold_20, anchor='mm')
     # mapper
     icon_url = f'https://a.ppy.sh/{mapinfo.user_id}'
     user_icon = await get_projectimg(icon_url)
@@ -64,43 +64,30 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     icon_img = draw_fillet(icon, 10)
     im.alpha_composite(icon_img, (50, 400))
     # mapid
-    w_mapid = DataText(800, 40, 22, f'Setid: {mapinfo.beatmapset_id}  |  Mapid: {mapid}', Torus_Regular, anchor='lm')
-    im = draw_text(im, w_mapid)
+    draw.text((800, 40), f'Setid: {mapinfo.beatmapset_id}  |  Mapid: {mapid}', font=Torus_Regular_20, anchor='lm')
     # 版本
-    w_version = DataText(120, 125, 25, mapinfo.version, Torus_SemiBold, anchor='lm')
-    im = draw_text(im, w_version)
+    draw.text((120, 125), mapinfo.version, font=Torus_SemiBold_25, anchor='lm')
     # 曲名
-    w_title = DataText(50, 170, 30, mapinfo.beatmapset.title, Torus_SemiBold)
-    im = draw_text(im, w_title)
+    draw.text((50, 170), mapinfo.beatmapset.title, font=Torus_SemiBold_30, anchor='lt')
     # 曲师
-    w_artist = DataText(50, 210, 25, f'by {mapinfo.beatmapset.artist_unicode}', Torus_SemiBold)
-    im = draw_text(im, w_artist)
+    draw.text((50, 210), f'by {mapinfo.beatmapset.artist_unicode}', font=Torus_SemiBold_25, anchor='lt')
     # 来源
-    w_source = DataText(50, 260, 25, f'Source:{mapinfo.beatmapset.source}', Torus_SemiBold)
-    im = draw_text(im, w_source)
+    draw.text((50, 260), f'Source:{mapinfo.beatmapset.source}', font=Torus_SemiBold_25, anchor='lt')
     # mapper
-    w_mapper_by = DataText(160, 400, 20, '谱师:', Torus_SemiBold)
-    im = draw_text(im, w_mapper_by)
-    w_mapper = DataText(160, 425, 20, mapinfo.beatmapset.creator, Torus_SemiBold)
-    im = draw_text(im, w_mapper)
+    draw.text((160, 400), '谱师:', font=Torus_SemiBold_20, anchor='lt')
+    draw.text((160, 425), mapinfo.beatmapset.creator, font=Torus_SemiBold_20, anchor='lt')
     # ranked时间
-    w_time_by = DataText(160, 460, 20, '上架时间:', Torus_SemiBold)
-    im = draw_text(im, w_time_by)
-    w_time = DataText(160, 485, 20, new_time, Torus_SemiBold)
-    im = draw_text(im, w_time)
+    draw.text((160, 460), '上架时间:', font=Torus_SemiBold_20, anchor='lt')
+    draw.text((160, 485), new_time, font=Torus_SemiBold_20, anchor='lt')
     # 状态
-    w_status = DataText(1100, 304, 20, mapinfo.status.capitalize(), Torus_SemiBold, anchor='mm')
-    im = draw_text(im, w_status)
+    draw.text((1100, 304), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor='mm')
     # 时长 - 滑条
     for num, i in enumerate(diffinfo):
-        w_info = DataText(770 + 120 * num, 365, 20, i, Torus_Regular, anchor='lm')
-        im = draw_text(im, w_info, (255, 204, 34, 255))
+        draw.text((770 + 120 * num, 365), f'{i}', font=Torus_Regular_20, anchor='lm', fill=(255, 204, 34, 255))
     # maxcb
-    w_mapcb = DataText(50, 570, 20, f'最大连击: {mapinfo.max_combo}', Torus_SemiBold, anchor='lm')
-    im = draw_text(im, w_mapcb)
+    draw.text((50, 570), f'最大连击: {mapinfo.max_combo}', font=Torus_SemiBold_20, anchor='lm')
     # pp
-    w_pp = DataText(320, 570, 20, f'SS PP: {int(round(ss_pp_info.pp, 0))}', Torus_SemiBold, anchor='lm')
-    im = draw_text(im, w_pp)
+    draw.text((320, 570), f'SS PP: {int(round(ss_pp_info.pp, 0))}', font=Torus_SemiBold_20, anchor='lm')
     # 输出
     base = image2bytesio(im)
     msg = MessageSegment.image(base)

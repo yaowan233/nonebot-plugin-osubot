@@ -4,41 +4,15 @@ import os
 import numpy as np
 from io import BytesIO
 from typing import Optional, Union
-from PIL import ImageFont, ImageDraw, UnidentifiedImageError
+from PIL import ImageDraw, UnidentifiedImageError
 
 from .static import *
-
-
-class DataText:
-    # L=X轴，T=Y轴，size=字体大小，fontpath=字体文件，
-    def __init__(self, length, height, size, text, path: Path, anchor='lt'):
-        self.length = length
-        self.height = height
-        self.text = str(text)
-        self.path = path
-        self.font = ImageFont.truetype(str(self.path), size)
-        self.anchor = anchor
 
 
 def image2bytesio(pic: Image):
     byt = BytesIO()
     pic.save(byt, "png")
     return byt
-
-
-def write_text(image, font, text='text', pos=(0, 0), color=(255, 255, 255, 255), anchor='lt'):
-    rgba_image = image.convert('RGBA')
-    text_overlay = Image.new('RGBA', rgba_image.size, (255, 255, 255, 0))
-    image_draw = ImageDraw.Draw(text_overlay)
-    image_draw.text(pos, text, font=font, fill=color, anchor=anchor)
-    return Image.alpha_composite(rgba_image, text_overlay)
-
-
-def draw_text(image, class_text: DataText, color=(255, 255, 255, 255)):
-    font = class_text.font
-    text = class_text.text
-    anchor = class_text.anchor
-    return write_text(image, font, text, (class_text.length, class_text.height), color, anchor)
 
 
 def draw_fillet(img, radii):

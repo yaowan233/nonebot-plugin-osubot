@@ -3,11 +3,11 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
 
-from PIL import ImageFilter, UnidentifiedImageError
+from PIL import ImageFilter, UnidentifiedImageError, ImageDraw
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .static import *
-from .utils import draw_text, draw_fillet, DataText, info_calc, image2bytesio
+from .utils import draw_fillet, info_calc, image2bytesio
 
 from ..api import osu_api, get_random_bg
 from ..schema import User
@@ -34,6 +34,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
                                                        statistics.play_count, statistics.total_hits
     # 新建
     im = Image.new('RGBA', (1000, 1322))
+    draw = ImageDraw.Draw(im)
     # 获取背景
     bg_path = user_cache_path / str(info.id) / 'info.png'
     if bg_path.exists():
@@ -110,11 +111,9 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
         im.alpha_composite(ExpCenterBg.resize((exp_width, 10)), (54, 646))
         im.alpha_composite(ExpRightBg, (int(54 + exp_width), 646))
     # 模式
-    w_mode = DataText(935, 50, 45, GMN[mode], Torus_Regular, anchor='rm')
-    im = draw_text(im, w_mode)
+    draw.text((935, 50), GMN[mode], font=Torus_Regular_45, anchor='rm')
     # 玩家名
-    w_name = DataText(400, 205, 50, info.username, Torus_Regular, anchor='lm')
-    im = draw_text(im, w_name)
+    draw.text((400, 205), info.username, font=Torus_Regular_50, anchor='lm')
     # 地区排名
     op, value = info_calc(statistics.country_rank, n_crank, rank=True)
     if not statistics.country_rank:
@@ -122,64 +121,50 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     else:
         t_crank = f"#{statistics.country_rank:,}({op}{value:,})" \
             if value != 0 else f"#{statistics.country_rank:,}"
-    w_crank = DataText(495, 448, 30, t_crank, Torus_Regular, anchor='lb')
-    im = draw_text(im, w_crank)
+    draw.text((495, 448), t_crank, font=Torus_Regular_30, anchor='lb')
     # 等级
-    w_current = DataText(900, 650, 25, statistics.level.current, Torus_Regular, anchor='mm')
-    im = draw_text(im, w_current)
+    draw.text((900, 650), str(statistics.level.current), font=Torus_Regular_25, anchor='mm')
     # 经验百分比
-    w_progress = DataText(750, 660, 20, f'{statistics.level.progress}%', Torus_Regular, anchor='rt')
-    im = draw_text(im, w_progress)
+    draw.text((750, 660), f'{statistics.level.progress}%', font=Torus_Regular_20, anchor='rt')
     # 全球排名
     if not statistics.global_rank:
-        w_grank = DataText(55, 785, 35, "#0", Torus_Regular)
+        draw.text((55, 785), "#0", font=Torus_Regular_35, anchor='lt')
     else:
-        w_grank = DataText(55, 785, 35, f"#{statistics.global_rank:,}", Torus_Regular)
-    im = draw_text(im, w_grank)
+        draw.text((55, 785), f"#{statistics.global_rank:,}", font=Torus_Regular_35, anchor='lt')
     op, value = info_calc(statistics.global_rank, n_grank, rank=True)
     if value != 0:
-        w_n_grank = DataText(65, 820, 20, f'{op}{value:,}', Torus_Regular)
-        im = draw_text(im, w_n_grank)
+        draw.text((65, 820), f'{op}{value:,}', font=Torus_Regular_20, anchor='lt')
     # pp
-    w_pp = DataText(295, 785, 35, f'{statistics.pp:,}', Torus_Regular)
-    im = draw_text(im, w_pp)
+    draw.text((295, 785), f'{statistics.pp:,}', font=Torus_Regular_35, anchor='lt')
     op, value = info_calc(statistics.pp, n_pp, pp=True)
     if value != 0:
-        w_n_pc = DataText(305, 820, 20, f'{op}{int(value)}', Torus_Regular)
-        im = draw_text(im, w_n_pc)
+        draw.text((305, 820), f'{op}{int(value)}', font=Torus_Regular_20)
     # SS - A
     # gc_x = 493
     for gc_num, (_, num) in enumerate(statistics.grade_counts):
-        w_ss_a = DataText(493 + 100 * gc_num, 788, 30, num, Torus_Regular, anchor='mt')
-        im = draw_text(im, w_ss_a)
+        draw.text((493 + 100 * gc_num, 788), f'{num}', font=Torus_Regular_30, anchor='mt')
         # gc_x+=100
     # rank分
-    w_r_score = DataText(935, 895, 40, f'{statistics.ranked_score:,}', Torus_Regular, anchor='rt')
-    im = draw_text(im, w_r_score)
+    draw.text((935, 895), f'{statistics.ranked_score:,}', font=Torus_Regular_40, anchor='rt')
     # acc
     op, value = info_calc(statistics.hit_accuracy, n_acc)
     t_acc = f'{statistics.hit_accuracy:.2f}%({op}{value:.2f}%)' if value != 0 else f'{statistics.hit_accuracy:.2f}%'
-    w_acc = DataText(935, 965, 40, t_acc, Torus_Regular, anchor='rt')
-    im = draw_text(im, w_acc)
+    draw.text((935, 965), t_acc, font=Torus_Regular_40, anchor='rt')
     # 游玩次数
     op, value = info_calc(statistics.play_count, n_pc)
     t_pc = f'{statistics.play_count:,}({op}{value:,})' if value != 0 else f'{statistics.play_count:,}'
-    w_pc = DataText(935, 1035, 40, t_pc, Torus_Regular, anchor='rt')
-    im = draw_text(im, w_pc)
+    draw.text((935, 1035), t_pc, font=Torus_Regular_40, anchor='rt')
     # 总分
-    w_t_score = DataText(935, 1105, 40, f'{statistics.total_score:,}', Torus_Regular, anchor='rt')
-    im = draw_text(im, w_t_score)
+    draw.text((935, 1105), f'{statistics.total_score:,}', font=Torus_Regular_40, anchor='rt')
     # 总命中
     op, value = info_calc(statistics.total_hits, n_count)
     t_count = f'{statistics.total_hits:,}({op}{value:,})' if value != 0 else f'{statistics.total_hits:,}'
-    w_conut = DataText(935, 1175, 40, t_count, Torus_Regular, anchor='rt')
-    im = draw_text(im, w_conut)
+    draw.text((935, 1175), t_count, font=Torus_Regular_40, anchor='rt')
     # 游玩时间
     sec = timedelta(seconds=statistics.play_time)
     d_time = datetime(1, 1, 1) + sec
     t_time = "%dd %dh %dm %ds" % (sec.days, d_time.hour, d_time.minute, d_time.second)
-    w_name = DataText(935, 1245, 40, t_time, Torus_Regular, anchor='rt')
-    im = draw_text(im, w_name)
+    draw.text((935, 1245), t_time, font=Torus_Regular_40, anchor='rt')
     # 输出
     base = image2bytesio(im)
     msg = MessageSegment.image(base)

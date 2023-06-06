@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 from typing import Union
 
-from PIL import ImageFilter, ImageEnhance
+from PIL import ImageFilter, ImageEnhance, ImageDraw
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, sayo_api
 from ..schema import SayoBeatmap
 from ..file import get_projectimg
 from .static import *
-from .utils import crop_bg, DataText, draw_text, calc_songlen, stars_diff, image2bytesio
+from .utils import crop_bg, calc_songlen, stars_diff, image2bytesio
 
 
 async def draw_bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
@@ -35,41 +35,34 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
     else:
         im_h = 400 + 102 * (len(data.bid_data) - 1)
     im = Image.new('RGBA', (1200, im_h), (31, 41, 46, 255))
+    draw = ImageDraw.Draw(im)
     # 背景
     cover_crop = crop_bg('MP', cover)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(1))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 曲名
-    w_title = DataText(25, 40, 38, data.title, Torus_SemiBold)
-    im = draw_text(im, w_title)
+    draw.text((25, 40), data.title, font=Torus_SemiBold_40, anchor='lt')
     # 曲师
-    w_artist = DataText(25, 75, 20, f'by {data.artist}', Torus_SemiBold)
-    im = draw_text(im, w_artist)
+    draw.text((25, 75), f'by {data.artist}', font=Torus_SemiBold_20, anchor='lt')
     # mapper
-    w_mapper = DataText(25, 110, 20, f'谱面作者: {data.creator}', Torus_SemiBold)
-    im = draw_text(im, w_mapper)
+    draw.text((25, 110), f'谱面作者: {data.creator}', font=Torus_SemiBold_20, anchor='lt')
     # rank时间
     if data.approved_date == -1:
         approved_date = '谱面状态可能非ranked'
     else:
         datearray = datetime.utcfromtimestamp(data.approved_date)
         approved_date = (datearray + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
-    w_apptime = DataText(25, 145, 20, f'上架时间: {approved_date}', Torus_SemiBold)
-    im = draw_text(im, w_apptime)
+    draw.text((25, 145), f'上架时间: {approved_date}', font=Torus_SemiBold_20, anchor='lt')
     # 来源
-    w_source = DataText(25, 180, 20, f'Source: {data.source}', Torus_SemiBold)
-    im = draw_text(im, w_source)
+    draw.text((25, 180), f'Source: {data.source}', font=Torus_SemiBold_20, anchor='lt')
     # bpm
-    w_bpm = DataText(1150, 110, 20, f'BPM: {data.bpm}', Torus_SemiBold, anchor='rt')
-    im = draw_text(im, w_bpm)
+    draw.text((1150, 110), f'BPM: {data.bpm}', font=Torus_SemiBold_20, anchor='rt')
     # 曲长
     music_len = calc_songlen(data.bid_data[0].length)
-    w_music_len = DataText(1150, 145, 20, f'lenght: {music_len}', Torus_SemiBold, anchor='rt')
-    im = draw_text(im, w_music_len)
+    draw.text((1150, 145), f'lenght: {music_len}', font=Torus_SemiBold_20, anchor='rt')
     # Setid
-    w_setid = DataText(1150, 20, 20, f'Setid: {mapid}', Torus_SemiBold, anchor='rt')
-    im = draw_text(im, w_setid)
+    draw.text((1150, 20), f'Setid: {mapid}', font=Torus_SemiBold_20, anchor='rt')
     gmap = sorted(data.bid_data, key=lambda k: k.star, reverse=False)
     for num, cmap in enumerate(gmap):
         if num < 20:
@@ -89,33 +82,24 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
                 diff_len = int(200 * i / 10) if i <= 10 else 200
                 diff_bg = Image.new('RGBA', (diff_len, 12), (255, 255, 255, 255))
                 im.alpha_composite(diff_bg, (50 + 300 * index, 365 + h_num))
-                w_d_name = DataText(20 + 300 * index, 369 + h_num, 20, gc[index], Torus_SemiBold, anchor='lm')
-                im = draw_text(im, w_d_name)
-                w_diff = DataText(265 + 300 * index, 369 + h_num, 20, i, Torus_SemiBold, anchor='lm')
-                im = draw_text(im, w_diff, (255, 204, 34, 255))
+                draw.text((20 + 300 * index, 369 + h_num), gc[index], font=Torus_SemiBold_20, anchor='lm')
+                draw.text((265 + 300 * index, 369 + h_num), f'{i}', font=Torus_SemiBold_20, anchor='lm', fill=(255, 204, 34, 255))
                 if index != 3:
-                    w_d = DataText(300 + 300 * index, 369 + h_num, 20, '|', Torus_SemiBold, anchor='lm')
-                    im = draw_text(im, w_d)
+                    draw.text((300 + 300 * index, 369 + h_num), '|', font=Torus_SemiBold_20, anchor='lm')
             # 难度
-            w_star = DataText(80, 328 + h_num, 20, f'{cmap.star:.1f}', Torus_SemiBold, anchor='lm')
-            im = draw_text(im, w_star)
+            draw.text((80, 328 + h_num),  f'{cmap.star:.1f}', font=Torus_SemiBold_20, anchor='lm')
             # version
-            w_version = DataText(125, 328 + h_num, 20, f' |  {cmap.version}', Torus_SemiBold, anchor='lm')
-            im = draw_text(im, w_version)
+            draw.text((125, 328 + h_num), f' |  {cmap.version}', font=Torus_SemiBold_20, anchor='lm')
             # mapid
-            w_mapid = DataText(1150, 328 + h_num, 20, f'Mapid: {cmap.bid}', Torus_SemiBold, anchor='rm')
-            im = draw_text(im, w_mapid)
+            draw.text((1150, 328 + h_num), f'Mapid: {cmap.bid}', font=Torus_SemiBold_20, anchor='rm')
             # maxcb
-            w_maxcb = DataText(700, 328 + h_num, 20, f'Max Combo: {cmap.maxcombo}', Torus_SemiBold, anchor='lm')
-            im = draw_text(im, w_maxcb)
+            draw.text((700, 328 + h_num), f'Max Combo: {cmap.maxcombo}', font=Torus_SemiBold_20, anchor='lm')
             # 分割线
             div = Image.new('RGBA', (1150, 2), (46, 53, 56, 255)).convert('RGBA')
             im.alpha_composite(div, (25, 400 + h_num))
         else:
             plusnum = f'+ {num - 19}'
-            w_plusnum = DataText(600, 350 + 102 * 20, 50, plusnum, Torus_SemiBold, anchor='mm')
-            im = draw_text(im, w_plusnum)
-
+            draw.text((600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor='mm')
     base = image2bytesio(im)
     msg = MessageSegment.image(base)
     return msg
