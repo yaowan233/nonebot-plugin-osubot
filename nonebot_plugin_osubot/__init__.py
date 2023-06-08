@@ -505,6 +505,24 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Comman
     pic = await generate_preview_pic(osu)
     await generate_preview.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(pic))
 
+
+generate_preview = on_command('完整预览', priority=11, block=True)
+
+
+@generate_preview.handle()
+async def _(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
+    osu_id = msg.extract_plain_text().strip()
+    if not osu_id or not osu_id.isdigit():
+        await osudl.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图mapID')
+    data = await osu_api('map', map_id=int(osu_id))
+    if not data:
+        await generate_preview.finish(MessageSegment.reply(event.message_id) + '未查询到该地图')
+    if isinstance(data, str):
+        await generate_preview.finish(MessageSegment.reply(event.message_id) + data)
+    osu = await download_tmp_osu(osu_id)
+    pic = await generate_preview_pic(osu, full=True)
+    await generate_preview.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(pic))
+
 update_pic = on_command('更新背景', aliases={'更改背景'}, priority=11, block=True)
 
 

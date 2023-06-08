@@ -38,7 +38,7 @@ class Options:
     thres: float = 100
 
 
-async def generate_preview_pic(file: Path):
+async def generate_preview_pic(file: Path, full=False):
     m = OsuMap.read_file(str(file.absolute()))
     keys = m.stack().column.max() + 1
     ptn = Pattern.from_note_lists([m.hits, m.holds], include_tails=False)
@@ -51,22 +51,22 @@ async def generate_preview_pic(file: Path):
             + PFDrawSv()
             + PFDrawNotes()
             + PFDrawOffsets(interval=2000, decimal_places=0)
-            +
-            PFDrawLines.from_combo(
+    )
+    if full:
+        pf += PFDrawLines.from_combo(
                 **PFDrawLines.Colors.RED,
                 keys=keys,
                 combo=np.concatenate(PtnCombo(grp).template_chord_stream(
                     primary=3, secondary=2,
                     keys=keys, and_lower=True
                 ), axis=0)
-            ) +
-            PFDrawLines.from_combo(
+            )
+        pf += PFDrawLines.from_combo(
                 **PFDrawLines.Colors.PURPLE,
                 keys=keys,
                 combo=np.concatenate(PtnCombo(grp).template_jacks(
                     minimum_length=2, keys=keys), axis=0)
             )
-    )
     pf.export_fold(max_height=3000).save("data/osu/preview.png")
     return Path("data/osu/preview.png")
 
