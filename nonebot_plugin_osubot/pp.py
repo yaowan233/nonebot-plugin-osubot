@@ -43,7 +43,7 @@ def get_if_pp_ss_pp(score: Score, path: str) -> tuple:
     c = Calculator(acc=100,
                    mods=mods, mode=score.mode_int)
     ss_pp = c.performance(beatmap).pp
-    return int(round(if_pp, 0)), int(round(ss_pp, 0))
+    return str(int(round(if_pp, 0))), str(int(round(ss_pp, 0)))
 
 
 def get_ss_pp(path: str, mods: int) -> PerformanceAttributes:
