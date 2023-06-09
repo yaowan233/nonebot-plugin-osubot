@@ -41,7 +41,7 @@ async def draw_score(project: str,
         grank = '--'
     elif project == 'score':
         score_info = Score(**score_json['score'])
-        grank = score_json['position']
+        grank = str(score_json['position'])
     else:
         raise 'Project Error'
     # 从官网获取信息
