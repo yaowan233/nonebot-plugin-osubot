@@ -589,7 +589,7 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
     user = state['user']
     mode = state['mode']
     mods = state['mods']
-    if mode == 1 or mode == 2:
+    if mode == '1' or mode == '2':
         await recommend.finish('很抱歉，该模式暂不支持推荐')
     recommend_data = await get_recommend(user, mode)
     print([i.mapName for i in recommend_data.data.list])
