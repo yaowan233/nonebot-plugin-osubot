@@ -165,6 +165,19 @@ async def get_map_bg(sid, bg_name):
     return BytesIO(res.content)
 
 
+async def get_seasonal_bg() -> Optional[dict]:
+    url = f'{api}/seasonal-backgrounds'
+    token = cache.get('token')
+    if not token:
+        await renew_token()
+        token = cache.get('token')
+    headers = {'Authorization': f'Bearer {token}'}
+    req = await safe_async_get(url, headers=headers)
+    if req.status_code != 200:
+        return
+    return req.json()
+
+
 async def get_recommend(uid, mode):
     headers = {'uid': str(uid)}
     params = {'newRecordPercent': '0.2,1',

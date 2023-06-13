@@ -38,7 +38,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     im = Image.new('RGBA', (1200, 600))
     draw = ImageDraw.Draw(im)
     cover = re_map(osu)
-    cover_crop = crop_bg('MB', dirpath / cover)
+    cover_crop = await crop_bg('MB', dirpath / cover)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info

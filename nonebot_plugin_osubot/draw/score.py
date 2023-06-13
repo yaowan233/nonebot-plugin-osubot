@@ -79,7 +79,7 @@ async def draw_score(project: str,
         bg = await get_map_bg(score_info.beatmap.beatmapset_id, cover)
         with open(cover_path, 'wb') as f:
             f.write(bg.getvalue())
-    cover_crop = crop_bg('BG', cover_path)
+    cover_crop = await crop_bg('BG', cover_path)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))

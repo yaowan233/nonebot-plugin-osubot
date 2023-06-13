@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 
 from .basemodel import Base
 from .user import User
@@ -83,3 +83,13 @@ class Beatmap(BeatmapCompact):
 class BeatmapDifficultyAttributes(Base):
     max_combo: int
     star_rating: float
+
+
+class BackgroundsAttributes(Base):
+    url: str
+    user: dict
+
+
+class SeasonalBackgrounds(Base):
+    ends_at: str
+    backgrounds: List[BackgroundsAttributes]

@@ -1,10 +1,13 @@
 import math
 import os
+import random
 
 import numpy as np
 from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageDraw, UnidentifiedImageError
+from ..schema import SeasonalBackgrounds
+from ..api import get_seasonal_bg, safe_async_get
 
 from .static import *
 
@@ -77,12 +80,16 @@ def draw_acc(img: Image, acc: float, mode: str):
     return img
 
 
-def crop_bg(size: str, path: Union[str, Path]):
+async def crop_bg(size: str, path: Union[str, Path]):
     try:
         bg = Image.open(path).convert('RGBA')
     except UnidentifiedImageError:
         os.remove(path)
-        return Image.new(mode='RGBA', size=(1, 1))
+        data = await get_seasonal_bg()
+        pic = SeasonalBackgrounds(**data)
+        url = random.choice(pic.backgrounds).url
+        res = await safe_async_get(url)
+        bg = Image.open(BytesIO(res.content)).convert('RGBA')
     bg_w, bg_h = bg.size[0], bg.size[1]
     if size == 'BG':
         fix_w = 1500
