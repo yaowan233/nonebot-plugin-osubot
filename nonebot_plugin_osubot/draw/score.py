@@ -5,8 +5,8 @@ from typing import Optional, List, Union
 from PIL import ImageFilter, ImageEnhance, UnidentifiedImageError, ImageDraw
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-from ..api import osu_api, get_map_bg
-from ..schema import Score, Beatmap, User
+from ..api import osu_api, get_map_bg, get_beatmap_attribute
+from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
 from ..mods import get_mods_list
 from ..file import re_map, get_projectimg, download_osu, user_cache_path, map_path
 from ..utils import GMN, FGM
@@ -49,6 +49,7 @@ async def draw_score(project: str,
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score_info.beatmap.id}.osu"
+    task = asyncio.create_task(get_beatmap_attribute(score_info.beatmap.id, mode))
     task2 = asyncio.create_task(osu_api('map', map_id=score_info.beatmap.id))
     if not osu.exists():
         task3 = asyncio.create_task(download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id))
@@ -138,6 +139,8 @@ async def draw_score(project: str,
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     map_json = await task2
     mapinfo = Beatmap(**map_json)
+    map_attribute_json = await task
+    map_attribute = BeatmapDifficultyAttributes(**map_attribute_json['attributes'])
     # cs, ar, od, hp, stardiff
     mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.difficulty.stars]
     for num, i in enumerate(mapdiff):
@@ -186,7 +189,7 @@ async def draw_score(project: str,
         draw.text((840, 645), f'{pp_info.pp_speed:.0f}', font=Torus_Regular_30, anchor='mm')
         draw.text((960, 645), f'{pp_info.pp_acc:.0f}', font=Torus_Regular_30, anchor='mm')
         draw.text((1157, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
-        draw.text((1385, 550), f'{score_info.max_combo:,}/{mapinfo.max_combo:,}', font=Torus_Regular_30, anchor='mm')
+        draw.text((1385, 550), f'{score_info.max_combo:,}/{map_attribute.max_combo:,}', font=Torus_Regular_30, anchor='mm')
         draw.text((1100, 645), f'{score_info.statistics.count_300}', font=Torus_Regular_30, anchor='mm')
         draw.text((1214, 645), f'{score_info.statistics.count_100}', font=Torus_Regular_30, anchor='mm')
         draw.text((1328, 645), f'{score_info.statistics.count_50}', font=Torus_Regular_30, anchor='mm')
@@ -200,7 +203,7 @@ async def draw_score(project: str,
         draw.text((1420, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     elif score_info.mode == 'fruits':
         draw.text((1083, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
-        draw.text((1247, 550), f'{score_info.max_combo}/{mapinfo.max_combo}', font=Torus_Regular_30, anchor='mm')
+        draw.text((1247, 550), f'{score_info.max_combo}/{map_attribute.max_combo}', font=Torus_Regular_30, anchor='mm')
         draw.text((1411, 550), f'{pp_info.pp:.0f}/{ss_pp}', font=Torus_Regular_30, anchor='mm')
         draw.text((1062, 645), f'{score_info.statistics.count_300}', font=Torus_Regular_30, anchor='mm')
         draw.text((1185, 645), f'{score_info.statistics.count_100}', font=Torus_Regular_30, anchor='mm')

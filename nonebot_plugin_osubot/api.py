@@ -35,6 +35,14 @@ async def safe_async_get(url, headers=None, params=None) -> Response:
     return req
 
 
+@auto_retry
+async def safe_async_post(url, headers=None, data=None) -> Response:
+    async with AsyncClient(timeout=100) as client:
+        client: AsyncClient
+        req = await client.post(url, headers=headers, data=data)
+    return req
+
+
 async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
     async with AsyncClient() as client:
@@ -124,6 +132,19 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             return '未找到该地图，请检查是否搞混了mapID与setID'
         else:
             return 'API请求失败，请联系管理员或稍后再尝试'
+    return req.json()
+
+
+async def get_beatmap_attribute(map_id, mode):
+    url = f'{api}/beatmaps/{map_id}/attributes'
+    token = cache.get('token')
+    if not token:
+        await renew_token()
+        token = cache.get('token')
+    headers = {'Authorization': f'Bearer {token}'}
+    req = await safe_async_post(url, headers, {'ruleset': mode})
+    if req.status_code == 404:
+        raise '内部错误'
     return req.json()
 
 

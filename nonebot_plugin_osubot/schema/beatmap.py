@@ -78,3 +78,8 @@ class Beatmap(BeatmapCompact):
     playcount: int
     ranked: int
     url: str
+
+
+class BeatmapDifficultyAttributes(Base):
+    max_combo: int
+    star_rating: float
