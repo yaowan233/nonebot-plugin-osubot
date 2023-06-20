@@ -26,7 +26,7 @@ from .utils import NGM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api, get_sayo_map_info, get_recommend
-from .info import get_map_bg, bind_user_info, update_user_info
+from .info import get_bg, bind_user_info, update_user_info
 from .config import Config
 
 
@@ -403,7 +403,7 @@ async def _get_bg(event: Union[MessageEvent, GuildMessageEvent], msg: Message = 
     if not bg_id:
         msg = '请输入需要提取BG的地图ID'
     else:
-        msg = await get_map_bg(bg_id)
+        msg = await get_bg(bg_id)
     await getbg.finish(MessageSegment.reply(event.message_id) + msg)
 
 change = on_command('倍速', priority=11, block=True)
@@ -623,15 +623,19 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
                            MessageSegment.image(f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}') + s)
 
 osu_help = on_command('osuhelp', priority=11, block=True)
+with open(Path(__file__).parent / 'osufile' / 'help.png', 'rb') as f:
+    img1 = f.read()
+with open(Path(__file__).parent / 'osufile' / 'detail.png', 'rb') as f:
+    img2 = f.read()
 
 
 @osu_help.handle()
 async def _help(event: Union[MessageEvent, GuildMessageEvent], msg: Message = CommandArg()):
     arg = msg.extract_plain_text().strip()
     if not arg:
-        await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(Path(__file__).parent / 'osufile' / 'help.png'))
+        await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(img1))
     if arg == 'detail':
-        await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(Path(__file__).parent / 'osufile' / 'detail.png'))
+        await osu_help.finish(MessageSegment.reply(event.message_id) + MessageSegment.image(img2))
     else:
         await osu_help.finish(MessageSegment.reply(event.message_id) + '呜呜，detail都打不对吗(ノ｀Д)ノ')
 

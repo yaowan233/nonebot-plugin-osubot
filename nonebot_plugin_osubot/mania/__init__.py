@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Optional
 
 from reamber.algorithms.generate import full_ln
@@ -38,7 +39,7 @@ class Options:
     thres: float = 100
 
 
-async def generate_preview_pic(file: Path, full=False):
+async def generate_preview_pic(file: Path, full=False) -> BytesIO:
     m = OsuMap.read_file(str(file.absolute()))
     keys = m.stack().column.max() + 1
     ptn = Pattern.from_note_lists([m.hits, m.holds], include_tails=False)
@@ -67,8 +68,9 @@ async def generate_preview_pic(file: Path, full=False):
                 combo=np.concatenate(PtnCombo(grp).template_jacks(
                     minimum_length=2, keys=keys), axis=0)
             )
-    pf.export_fold(max_height=3000).save("data/osu/preview.png")
-    return Path("data/osu/preview.png")
+    byt = BytesIO()
+    pf.export_fold(max_height=3000).save(byt, "png")
+    return byt
 
 
 async def convert_mania_map(options: Options) -> Optional[Path]:
