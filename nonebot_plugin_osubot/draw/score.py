@@ -210,7 +210,7 @@ async def draw_score(project: str,
         draw.text((1309, 645), f'{score_info.statistics.count_katu}', font=Torus_Regular_30, anchor='mm')
         draw.text((1432, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     else:
-        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1', font=Torus_Regular_20, anchor='mm')
+        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1' if score_info.statistics.count_300 else '∞:1', font=Torus_Regular_20, anchor='mm')
         draw.text((1002, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
         draw.text((1197, 550), f'{score_info.max_combo}', font=Torus_Regular_30, anchor='mm')
         draw.text((1395, 550), f'{pp_info.pp:.0f}/{ss_pp}', font=Torus_Regular_30, anchor='mm')
