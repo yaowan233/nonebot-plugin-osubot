@@ -55,6 +55,8 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
 
 async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0,
                    day: int = 0) -> Union[str, MessageSegment]:
+    tasks = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/card.jpg') for i in score_ls]
+    bg_ls = await asyncio.gather(*tasks)
     bplist_len = len(score_ls)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
     im.alpha_composite(BgImg)
@@ -79,10 +81,8 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         # BP排名
         draw.text((15, 144 + h_num), str(num + 1), font=Torus_Regular_20, anchor='lm')
         # 获取谱面banner
-        bg_url = f'https://assets.ppy.sh/beatmaps/{bp.beatmapset.id}/covers/card.jpg'
-        bg_img = await get_projectimg(bg_url)
-        bg = Image.open(bg_img).convert('RGBA').resize((157, 55))
-        bg_imag = draw_fillet(bg, 5)
+        bg = Image.open(bg_ls[num]).convert('RGBA').resize((157, 55))
+        bg_imag = draw_fillet(bg, 10)
         im.alpha_composite(bg_imag, (45, 114 + h_num))
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
@@ -91,8 +91,8 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         # 曲名&作曲
         metadata = f'{bp.beatmapset.title} | by {bp.beatmapset.artist}'
         # 如果曲名&作曲的长度超过75，就截断它
-        if len (metadata) > 75:
-            metadata = metadata [:72] + '...'
+        if len(metadata) > 75:
+            metadata = metadata[:72] + '...'
         # 写入曲名&作曲
         draw.text((215, 125 + h_num), metadata, font=Torus_Regular_20, anchor='lm')
         # 地图版本&时间
@@ -100,8 +100,8 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
         # 如果难度名的长度超过50，就截断它
         difficulty = bp.beatmap.version
-        if len (difficulty) > 50:
-            difficulty = difficulty [:47] + '...'
+        if len(difficulty) > 50:
+            difficulty = difficulty[:47] + '...'
         # 写入难度名
         difficulty = f'{difficulty} | {new_time}'
         draw.text((215, 158 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
