@@ -188,7 +188,8 @@ async def get_recommend(uid, mode):
               'rule': '4',
               'current': '1',
               'pageSize': '20',
-              'from': 'nonebot_plugin_osubot'}
+              'from': 'nonebot_plugin_osubot',
+              'hidePlayed': '1'}
     res = await safe_async_get('https://alphaosu.keytoix.vip/api/v1/self/maps/recommend', headers=headers,
                                params=params)
     return RecommendData(**res.json())
