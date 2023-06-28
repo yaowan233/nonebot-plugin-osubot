@@ -14,6 +14,9 @@ async def get_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
     elif isinstance(info, str):
         return info
     setid: int = info['beatmapset_id']
+    set_path = map_path / str(setid)
+    if not set_path.exists():
+        set_path.mkdir(parents=True, exist_ok=True)
     osu = map_path / str(setid) / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(setid, mapid)
