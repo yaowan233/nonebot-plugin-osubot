@@ -72,7 +72,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "2.0.3",
+        "version": "2.0.4",
     },
 )
 
@@ -595,7 +595,6 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
         recommend_cache[user] = set()
         await update_recommend(user)
     recommend_data = await get_recommend(user, mode)
-    print([i.mapName for i in recommend_data.data.list])
     shuffle(recommend_data.data.list)
     if not recommend_data.data.list:
         await recommend.finish('没有可以推荐的图哦，自己多打打喜欢玩的图吧')
