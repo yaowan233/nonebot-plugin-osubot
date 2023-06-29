@@ -25,7 +25,7 @@ from .file import download_map, map_downloaded, download_osu, download_tmp_osu, 
 from .utils import NGM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
-from .api import osu_api, get_sayo_map_info, get_recommend
+from .api import osu_api, get_sayo_map_info, get_recommend, update_recommend
 from .info import get_bg, bind_user_info, update_user_info
 from .config import Config
 
@@ -591,13 +591,14 @@ async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
     mods = state['mods']
     if mode == '1' or mode == '2':
         await recommend.finish('很抱歉，该模式暂不支持推荐')
+    if not recommend_cache.get(user):
+        recommend_cache[user] = set()
+        await update_recommend(user)
     recommend_data = await get_recommend(user, mode)
     print([i.mapName for i in recommend_data.data.list])
     shuffle(recommend_data.data.list)
     if not recommend_data.data.list:
         await recommend.finish('没有可以推荐的图哦，自己多打打喜欢玩的图吧')
-    if not recommend_cache.get(user):
-        recommend_cache[user] = set()
     for i in recommend_data.data.list:
         if i.id not in recommend_cache[user]:
             recommend_cache[user].add(i.id)
