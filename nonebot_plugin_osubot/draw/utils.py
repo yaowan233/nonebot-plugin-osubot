@@ -75,7 +75,7 @@ def draw_acc(img: Image, acc: float, mode: str):
     insizecolor = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
     fig = Figure()
     ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
-    patches = ax.pie(size, radius=1.1, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.27))
+    patches = ax.pie(size, radius=1, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.20), colors=['#66cbfd'])
     ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.05))
     patches[0][1].set_alpha(0)
     acc_img = BytesIO()
@@ -85,17 +85,8 @@ def draw_acc(img: Image, acc: float, mode: str):
     fig.clf()
     fig.clear()
     score_acc_img = Image.open(acc_img).convert('RGBA').resize((576, 432))
-    img.alpha_composite(score_acc_img, (15, 153))
+    img.alpha_composite(score_acc_img, (25, 83))
     return img
-    # draw = ImageDraw.Draw(img)
-    # start = -90
-    # color = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
-    # for s, c in zip(size, color):
-    #     end = start + s / 100 * 360
-    #     draw.arc((195, 183, 435, 423), start, end, fill=c, width=5)
-    #     start = end
-    # draw.arc((165, 153, 465, 453), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
-    # return img
 
 
 async def crop_bg(size: str, path: Union[str, Path]):
