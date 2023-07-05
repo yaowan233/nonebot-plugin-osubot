@@ -1,7 +1,6 @@
 from functools import wraps
 from typing import TypeVar, Callable
 from typing_extensions import ParamSpec
-from httpx import HTTPError
 from nonebot import logger
 
 
