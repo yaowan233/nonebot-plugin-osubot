@@ -6,6 +6,7 @@ import numpy as np
 from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageDraw, UnidentifiedImageError
+from matplotlib.figure import Figure
 from ..schema import SeasonalBackgrounds
 from ..api import get_seasonal_bg, safe_async_get
 
@@ -61,23 +62,40 @@ def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: 
 
 
 def draw_acc(img: Image, acc: float, mode: str):
-    draw = ImageDraw.Draw(img)
+    acc *= 100
+    size = [acc, 100 - acc]
     if mode == 'osu':
-        size = [60, 20, 7, 7, 5, 1]
+        insize = [60, 20, 7, 7, 5, 1]
     elif mode == 'taiko':
-        size = [60, 20, 5, 5, 4, 1]
+        insize = [60, 20, 5, 5, 4, 1]
     elif mode == 'fruits':
-        size = [85, 5, 4, 4, 1, 1]
+        insize = [85, 5, 4, 4, 1, 1]
     else:
-        size = [70, 10, 10, 5, 4, 1]
-    start = -90
-    color = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
-    for s, c in zip(size, color):
-        end = start + s / 100 * 360
-        draw.arc((195, 183, 435, 423), start, end, fill=c, width=5)
-        start = end
-    draw.arc((165, 153, 465, 453), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
+        insize = [70, 10, 10, 5, 4, 1]
+    insizecolor = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
+    fig = Figure()
+    ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
+    patches = ax.pie(size, radius=1.1, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.27))
+    ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.05))
+    patches[0][1].set_alpha(0)
+    acc_img = BytesIO()
+    fig.savefig(acc_img, transparent=True)
+    ax.cla()
+    ax.clear()
+    fig.clf()
+    fig.clear()
+    score_acc_img = Image.open(acc_img).convert('RGBA').resize((576, 432))
+    img.alpha_composite(score_acc_img, (15, 153))
     return img
+    # draw = ImageDraw.Draw(img)
+    # start = -90
+    # color = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
+    # for s, c in zip(size, color):
+    #     end = start + s / 100 * 360
+    #     draw.arc((195, 183, 435, 423), start, end, fill=c, width=5)
+    #     start = end
+    # draw.arc((165, 153, 465, 453), -90, -90 + 360 * acc, fill='#66cbfd', width=27)
+    # return img
 
 
 async def crop_bg(size: str, path: Union[str, Path]):
