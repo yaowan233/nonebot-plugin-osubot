@@ -103,7 +103,7 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         if len(difficulty) > 50:
             difficulty = difficulty[:47] + '...'
         # 写入难度名
-        difficulty = f'{difficulty} | {new_time}'
+        difficulty = f'{bp.beatmap.difficulty_rating}★ | {difficulty} | {new_time}'
         draw.text((215, 158 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
         # acc
         draw.text((1280, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20, anchor='lm', fill=(238, 171, 0, 255))
