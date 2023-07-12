@@ -7,7 +7,9 @@ from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageDraw, UnidentifiedImageError
 from matplotlib.figure import Figure
-from ..schema import SeasonalBackgrounds
+
+from ..file import get_projectimg, user_cache_path
+from ..schema import SeasonalBackgrounds, User
 from ..api import get_seasonal_bg, safe_async_get
 
 from .static import *
@@ -223,3 +225,20 @@ def calc_songlen(length: int) -> str:
     map_len[1] = map_len[1] if map_len[1] >= 10 else f'0{map_len[1]}'
     music_len = f'{map_len[0]}:{map_len[1]}'
     return music_len
+
+
+async def open_user_icon(info: User) -> Image:
+    path = user_cache_path / str(info.id)
+    png_user_icon = user_cache_path / str(info.id) / 'icon.png'
+    gif_user_icon = user_cache_path / str(info.id) / 'icon.gif'
+    # 判断文件是否存在，并读取图片
+    if png_user_icon.exists():
+        image = Image.open(png_user_icon)
+    elif gif_user_icon.exists():
+        image = Image.open(gif_user_icon)
+    else:
+        user_icon = await get_projectimg(info.avatar_url)
+        with open(path / f'icon.{info.avatar_url[-3:]}', 'wb') as f:
+            f.write(user_icon.getvalue())
+        image = Image.open(user_icon)
+    return image

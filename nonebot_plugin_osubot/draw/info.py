@@ -5,11 +5,11 @@ from PIL import ImageFilter, ImageDraw, ImageSequence
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .static import *
-from .utils import draw_fillet, info_calc
+from .utils import draw_fillet, info_calc, open_user_icon
 
 from ..api import osu_api, get_random_bg
 from ..schema import User
-from ..file import make_badge_cache_file, user_cache_path, badge_cache_path, get_projectimg
+from ..file import make_badge_cache_file, user_cache_path, badge_cache_path
 from ..database.models import InfoData
 from ..utils import GMN, FGM
 
@@ -158,6 +158,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
         im.save(byt, "png")
         msg = MessageSegment.image(byt)
         im.close()
+        user_icon.close()
         return msg
     for gif_frame in ImageSequence.Iterator(user_icon):
         # 将 GIF 图片中的每一帧转换为 RGBA 模式
@@ -174,22 +175,6 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     gif_frames[0].save(gif_bytes, format='gif', save_all=True, append_images=gif_frames[1:])
     # 输出
     gif_frames[0].close()
+    user_icon.close()
     msg = MessageSegment.image(gif_bytes)
     return msg
-
-
-async def open_user_icon(info: User) -> Image:
-    path = user_cache_path / str(info.id)
-    png_user_icon = user_cache_path / str(info.id) / 'icon.png'
-    gif_user_icon = user_cache_path / str(info.id) / 'icon.gif'
-    # 判断文件是否存在，并读取图片
-    if png_user_icon.exists():
-        image = Image.open(png_user_icon)
-    elif gif_user_icon.exists():
-        image = Image.open(gif_user_icon)
-    else:
-        user_icon = await get_projectimg(info.avatar_url)
-        with open(path / f'icon.{info.avatar_url[-3:]}', 'wb') as f:
-            f.write(user_icon.getvalue())
-        image = Image.open(user_icon)
-    return image

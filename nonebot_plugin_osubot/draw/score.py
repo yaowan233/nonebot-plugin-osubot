@@ -1,19 +1,19 @@
 import asyncio
-import os
 from datetime import datetime, timedelta
+from io import BytesIO
 from typing import Optional, List, Union
-from PIL import ImageFilter, ImageEnhance, UnidentifiedImageError, ImageDraw
+from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute
 from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
 from ..mods import get_mods_list
-from ..file import re_map, get_projectimg, download_osu, user_cache_path, map_path
+from ..file import re_map, download_osu, user_cache_path, map_path
 from ..utils import GMN, FGM
 from ..pp import cal_pp, get_if_pp_ss_pp
 
 from .static import *
-from .utils import draw_acc, draw_fillet, crop_bg, calc_songlen, stars_diff, image2bytesio, get_modeimage
+from .utils import draw_acc, draw_fillet, crop_bg, calc_songlen, stars_diff, get_modeimage, open_user_icon
 
 
 async def draw_score(project: str,
@@ -41,7 +41,7 @@ async def draw_score(project: str,
         grank = '--'
     elif project == 'score':
         score_info = Score(**score_json['score'])
-        grank = str(score_json['position'])
+        grank = score_json['position']
     else:
         raise 'Project Error'
     # 从官网获取信息
@@ -58,11 +58,6 @@ async def draw_score(project: str,
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
-    user_icon = user_cache_path / str(info.id) / 'icon.png'
-    if not user_icon.exists():
-        user_icon = await get_projectimg(info.avatar_url)
-        with open(user_path / 'icon.png', 'wb') as f:
-            f.write(user_icon.getvalue())
     # 下载地图
     if not osu.exists():
         await task3
@@ -123,13 +118,6 @@ async def draw_score(project: str,
         im.alpha_composite(rank_bg, (75, 163 + 39 * rank_num))
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.mode)
-    # 头像
-    try:
-        icon_bg = Image.open(user_icon).convert('RGBA').resize((170, 170))
-        icon_img = draw_fillet(icon_bg, 15)
-        im.alpha_composite(icon_img, (60, 510))
-    except UnidentifiedImageError:
-        os.remove(user_icon)
     # 地区
     country = osufile / 'flags' / f'{score_info.user.country_code}.png'
     country_bg = Image.open(country).convert('RGBA').resize((66, 45))
@@ -210,7 +198,7 @@ async def draw_score(project: str,
         draw.text((1309, 645), f'{score_info.statistics.count_katu}', font=Torus_Regular_30, anchor='mm')
         draw.text((1432, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     else:
-        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1' if score_info.statistics.count_300 else '∞:1', font=Torus_Regular_20, anchor='mm')
+        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1', font=Torus_Regular_20, anchor='mm')
         draw.text((1002, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
         draw.text((1197, 550), f'{score_info.max_combo}', font=Torus_Regular_30, anchor='mm')
         draw.text((1395, 550), f'{pp_info.pp:.0f}/{ss_pp}', font=Torus_Regular_30, anchor='mm')
@@ -220,7 +208,33 @@ async def draw_score(project: str,
         draw.text((1249, 645), f'{score_info.statistics.count_100}', font=Torus_Regular_30, anchor='mm')
         draw.text((1347, 645), f'{score_info.statistics.count_50}', font=Torus_Regular_30, anchor='mm')
         draw.text((1445, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
-    base = image2bytesio(im)
-    im.close()
-    msg = MessageSegment.image(base)
+    user_icon = await open_user_icon(info)
+    gif_frames = []
+    if not getattr(user_icon, "is_animated", False):
+        icon_bg = user_icon.convert('RGBA').resize((170, 170))
+        icon_img = draw_fillet(icon_bg, 15)
+        im.alpha_composite(icon_img, (60, 510))
+        byt = BytesIO()
+        im.save(byt, "png")
+        msg = MessageSegment.image(byt)
+        im.close()
+        user_icon.close()
+        return msg
+    for gif_frame in ImageSequence.Iterator(user_icon):
+        # 将 GIF 图片中的每一帧转换为 RGBA 模式
+        gif_frame = gif_frame.convert('RGBA').resize((170, 170))
+        gif_frame = draw_fillet(gif_frame, 15)
+        # 创建一个新的 RGBA 图片，将 PNG 图片作为背景，将当前帧添加到背景上
+        rgba_frame = Image.new('RGBA', im.size, (0, 0, 0, 0))
+        rgba_frame.paste(im, (0, 0), im)
+        rgba_frame.paste(gif_frame, (60, 510), gif_frame)
+        # 将 RGBA 图片转换为 RGB 模式，并添加到 GIF 图片中
+        gif_frames.append(rgba_frame)
+    gif_bytes = BytesIO()
+    # 保存 GIF 图片
+    gif_frames[0].save(gif_bytes, format='gif', save_all=True, append_images=gif_frames[1:])
+    # 输出
+    gif_frames[0].close()
+    user_icon.close()
+    msg = MessageSegment.image(gif_bytes)
     return msg
