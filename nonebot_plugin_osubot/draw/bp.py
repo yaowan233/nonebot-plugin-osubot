@@ -117,5 +117,6 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         im.alpha_composite(div, (25, 180 + h_num))
         await asyncio.sleep(0)
     base = image2bytesio(im)
+    im.close()
     msg = MessageSegment.image(base)
     return msg

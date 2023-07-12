@@ -221,5 +221,6 @@ async def draw_score(project: str,
         draw.text((1347, 645), f'{score_info.statistics.count_50}', font=Torus_Regular_30, anchor='mm')
         draw.text((1445, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     base = image2bytesio(im)
+    im.close()
     msg = MessageSegment.image(base)
     return msg

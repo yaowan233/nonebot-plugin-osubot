@@ -90,5 +90,6 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     draw.text((320, 570), f'SS PP: {int(round(ss_pp_info.pp, 0))}', font=Torus_SemiBold_20, anchor='lm')
     # 输出
     base = image2bytesio(im)
+    im.close()
     msg = MessageSegment.image(base)
     return msg

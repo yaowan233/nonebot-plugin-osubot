@@ -101,5 +101,6 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
             plusnum = f'+ {num - 19}'
             draw.text((600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor='mm')
     base = image2bytesio(im)
+    im.close()
     msg = MessageSegment.image(base)
     return msg
