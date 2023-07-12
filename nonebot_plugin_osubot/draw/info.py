@@ -1,13 +1,11 @@
-import os
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
-
-from PIL import ImageFilter, UnidentifiedImageError, ImageDraw
+from PIL import ImageFilter, ImageDraw, ImageSequence
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .static import *
-from .utils import draw_fillet, info_calc, image2bytesio
+from .utils import draw_fillet, info_calc
 
 from ..api import osu_api, get_random_bg
 from ..schema import User
@@ -61,21 +59,9 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     path = user_cache_path / str(info.id)
     if not path.exists():
         path.mkdir()
-    user_icon = user_cache_path / str(info.id) / 'icon.png'
-    if not user_icon.exists():
-        user_icon = await get_projectimg(info.avatar_url)
-        with open(path / 'icon.png', 'wb') as f:
-            f.write(user_icon.getvalue())
     country = osufile / 'flags' / f'{info.country_code}.png'
     # 底图
     im.alpha_composite(NewInfoImg)
-    # 头像
-    try:
-        icon_bg = Image.open(user_icon).convert('RGBA').resize((300, 300))
-        icon_img = draw_fillet(icon_bg, 25)
-        im.alpha_composite(icon_img, (50, 148))
-    except UnidentifiedImageError:
-        os.remove(user_icon)
     # 奖牌
     if info.badges:
         badges_num = len(info.badges)
@@ -94,10 +80,6 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
                 await make_badge_cache_file(badge)
             badges_img = Image.open(badges_path).convert('RGBA').resize((86, 40))
             im.alpha_composite(badges_img, (length, height))
-    else:
-        # w_badges = DataText(500, 545, 35, "你还没有 badges", Torus_Regular, anchor='mm')
-        # im = draw_text(im, w_badges)
-        ...
     # 地区
     country_bg = Image.open(country).convert('RGBA').resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
@@ -165,7 +147,49 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     d_time = datetime(1, 1, 1) + sec
     t_time = "%dd %dh %dm %ds" % (sec.days, d_time.hour, d_time.minute, d_time.second)
     draw.text((935, 1245), t_time, font=Torus_Regular_40, anchor='rt')
+    # 头像
+    gif_frames = []
+    user_icon = await open_user_icon(info)
+    if not getattr(user_icon, "is_animated", False):
+        icon_bg = user_icon.convert('RGBA').resize((300, 300))
+        icon_img = draw_fillet(icon_bg, 25)
+        im.alpha_composite(icon_img, (50, 148))
+        byt = BytesIO()
+        im.save(byt, "png")
+        msg = MessageSegment.image(byt)
+        im.close()
+        return msg
+    for gif_frame in ImageSequence.Iterator(user_icon):
+        # 将 GIF 图片中的每一帧转换为 RGBA 模式
+        gif_frame = gif_frame.convert('RGBA').resize((300, 300))
+        gif_frame = draw_fillet(gif_frame, 25)
+        # 创建一个新的 RGBA 图片，将 PNG 图片作为背景，将当前帧添加到背景上
+        rgba_frame = Image.new('RGBA', im.size, (0, 0, 0, 0))
+        rgba_frame.paste(im, (0, 0), im)
+        rgba_frame.paste(gif_frame, (50, 148), gif_frame)
+        # 将 RGBA 图片转换为 RGB 模式，并添加到 GIF 图片中
+        gif_frames.append(rgba_frame)
+    gif_bytes = BytesIO()
+    # 保存 GIF 图片
+    gif_frames[0].save(gif_bytes, format='gif', save_all=True, append_images=gif_frames[1:])
     # 输出
-    base = image2bytesio(im)
-    msg = MessageSegment.image(base)
+    gif_frames[0].close()
+    msg = MessageSegment.image(gif_bytes)
     return msg
+
+
+async def open_user_icon(info: User) -> Image:
+    path = user_cache_path / str(info.id)
+    png_user_icon = user_cache_path / str(info.id) / 'icon.png'
+    gif_user_icon = user_cache_path / str(info.id) / 'icon.gif'
+    # 判断文件是否存在，并读取图片
+    if png_user_icon.exists():
+        image = Image.open(png_user_icon)
+    elif gif_user_icon.exists():
+        image = Image.open(gif_user_icon)
+    else:
+        user_icon = await get_projectimg(info.avatar_url)
+        with open(path / f'icon.{info.avatar_url[-3:]}', 'wb') as f:
+            f.write(user_icon.getvalue())
+        image = Image.open(user_icon)
+    return image
