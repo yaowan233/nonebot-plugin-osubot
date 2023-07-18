@@ -184,7 +184,7 @@ async def make_user_cache_file(info: User):
 
 
 async def make_badge_cache_file(badge: Badge):
-    path = badge_cache_path / f'{badge.description}.png'
+    path = badge_cache_path / f'{hash(badge.description)}.png'
     badge_icon = await get_projectimg(badge.image_url)
     with open(path, 'wb') as f:
         f.write(badge_icon.getvalue())

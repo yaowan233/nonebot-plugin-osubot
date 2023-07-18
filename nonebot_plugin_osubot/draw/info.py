@@ -75,7 +75,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
             else:
                 length = 50 + 100 * (num - 9)
                 height = 534
-            badges_path = badge_cache_path / f'{badge.description}.png'
+            badges_path = badge_cache_path / f'{hash(badge.description)}.png'
             if not badges_path.exists():
                 await make_badge_cache_file(badge)
             badges_img = Image.open(badges_path).convert('RGBA').resize((86, 40))
