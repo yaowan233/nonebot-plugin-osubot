@@ -241,10 +241,13 @@ async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     user = state['user']
     mode = state['mode']
     mods = state['mods']
-    best = state['para']
-    if not best.isdigit():
+    para = state['para']
+    if '-' in para:
+        await _pfm(state, event)
+        return
+    if not para.isdigit():
         await bp.finish(MessageSegment.reply(event.message_id) + '只能接受纯数字的bp参数')
-    best = int(best)
+    best = int(para)
     if best <= 0 or best > 100:
         await bp.finish(MessageSegment.reply(event.message_id) + '只允许查询bp 1-100 的成绩')
     data = await draw_score('bp', user, NGM[mode], best=best, mods=mods)
