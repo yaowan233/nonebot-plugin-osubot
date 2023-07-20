@@ -233,6 +233,7 @@ async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
 
 bp = on_command('bp', priority=11, block=True)
 
+
 @bp.handle(parameterless=[split_msg()])
 async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
@@ -252,7 +253,9 @@ async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     data = await draw_score('bp', user, NGM[mode], best=best, mods=mods)
     await bp.finish(MessageSegment.reply(event.message_id) + data)
 
+
 pfm = on_command('pfm', priority=11, block=True)
+
 
 @pfm.handle(parameterless=[split_msg()])
 async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
