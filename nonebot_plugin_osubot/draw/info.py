@@ -23,7 +23,7 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     if statistics.play_count == 0:
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
-    user = await InfoData.get_or_none(osu_id=info.id, osu_mode=FGM[mode])
+    user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by('-date').first()
     if user:
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
     else:
