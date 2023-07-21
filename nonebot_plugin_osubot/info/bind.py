@@ -1,4 +1,4 @@
-import asyncio
+from datetime import date
 from nonebot.log import logger
 from ..utils import GM
 from ..database.models import UserData, InfoData
@@ -21,37 +21,29 @@ async def bind_user_info(project: str, uid, qid) -> str:
 
 
 async def update_user_info(uid: int):
-    async def update_user_mode_info(mode: int):
+    for mode in range(4):
         userinfo_dic = await osu_api('update', uid, GM[mode])
-        if isinstance(userinfo_dic, str):
-            return
         userinfo = User(**userinfo_dic)
-        if info := await InfoData.filter(osu_id=uid, osu_mode=mode).first():
-            info.c_rank = userinfo.statistics.country_rank
-            info.g_rank = userinfo.statistics.global_rank
-            info.pp = userinfo.statistics.pp
-            info.acc = round(userinfo.statistics.hit_accuracy, 2)
-            info.pc = userinfo.statistics.play_count
-            info.count = userinfo.statistics.total_hits
+        if await InfoData.filter(osu_id=uid, osu_mode=mode, date=date.today()).first():
+            continue
         elif userinfo.statistics.play_count:
-            info = InfoData(osu_id=uid,
-                            c_rank=userinfo.statistics.country_rank,
-                            g_rank=userinfo.statistics.global_rank,
-                            pp=userinfo.statistics.pp,
-                            acc=round(userinfo.statistics.hit_accuracy, 2),
-                            pc=userinfo.statistics.play_count,
-                            count=userinfo.statistics.total_hits,
-                            osu_mode=mode)
+            await InfoData.create(osu_id=uid,
+                                  c_rank=userinfo.statistics.country_rank,
+                                  g_rank=userinfo.statistics.global_rank,
+                                  pp=userinfo.statistics.pp,
+                                  acc=round(userinfo.statistics.hit_accuracy, 2),
+                                  pc=userinfo.statistics.play_count,
+                                  count=userinfo.statistics.total_hits,
+                                  osu_mode=mode,
+                                  date=date.today())
         else:
-            info = InfoData(osu_id=uid,
-                            c_rank=0,
-                            g_rank=0,
-                            pp=0,
-                            acc=0,
-                            pc=0,
-                            count=0,
-                            osu_mode=mode)
-        await info.save()
-    tasks = [update_user_mode_info(i) for i in range(4)]
-    await asyncio.gather(*tasks)
+            await InfoData.create(osu_id=uid,
+                                  c_rank=0,
+                                  g_rank=0,
+                                  pp=0,
+                                  acc=0,
+                                  pc=0,
+                                  count=0,
+                                  osu_mode=mode,
+                                  date=date.today())
     logger.info(f'玩家:[{uid}] 个人信息更新完毕')

@@ -13,6 +13,7 @@ class UserData(Model):
     """osu 用户名"""
     osu_mode: int = fields.IntField()
     """osu 模式"""
+
     class Meta:
         table = 'User'
         indexes = ('user_id',)
@@ -37,6 +38,8 @@ class InfoData(Model):
     """打击note数"""
     osu_mode: int = fields.IntField()
     """osu 模式"""
+    update_date = fields.DateField(null=True)
+
     class Meta:
         table = 'Info'
         indexes = ('id',)
