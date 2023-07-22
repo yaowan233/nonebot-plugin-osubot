@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, List, Union
-from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
+from PIL import ImageEnhance, ImageDraw, ImageSequence
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute
@@ -75,8 +75,7 @@ async def draw_score(project: str,
         with open(cover_path, 'wb') as f:
             f.write(bg.getvalue())
     cover_crop = await crop_bg('BG', cover_path)
-    cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
-    cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
+    cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 获取成绩背景做底图
     bg = get_modeimage(FGM[score_info.mode])
