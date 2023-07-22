@@ -53,7 +53,6 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
         x, y = bg.size
         x, y = (x - width) // 2, (y - height) // 2
         bg = bg.crop((x, y, x + width, y + height)).resize((1000, 1322))
-        bg = bg.filter(ImageFilter.GaussianBlur(5))
         im.alpha_composite(bg, (0, 0))
     # 获取头图，头像，地区，状态，supporter
     path = user_cache_path / str(info.id)
