@@ -23,6 +23,9 @@ async def bind_user_info(project: str, uid, qid) -> str:
 async def update_user_info(uid: int):
     for mode in range(4):
         userinfo_dic = await osu_api('update', uid, GM[mode])
+        if isinstance(userinfo_dic, str):
+            logger.error(f'获取uid{uid} 更新信息出错\n {userinfo_dic}')
+            continue
         userinfo = User(**userinfo_dic)
         if await InfoData.filter(osu_id=uid, osu_mode=mode, date=date.today()).first():
             continue
