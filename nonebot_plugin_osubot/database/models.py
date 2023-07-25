@@ -38,7 +38,7 @@ class InfoData(Model):
     """打击note数"""
     osu_mode: int = fields.IntField()
     """osu 模式"""
-    date = fields.DateField(null=True)
+    date = fields.DateField()
 
     class Meta:
         table = 'Info'
