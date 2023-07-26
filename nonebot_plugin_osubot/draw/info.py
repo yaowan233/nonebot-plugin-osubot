@@ -24,12 +24,14 @@ async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, Mes
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
     user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by('-date').first()
-    if user:
-        if day != 0:
-            today_date = date.today()
-            query_date = today_date - timedelta(days=day)
-            user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date).order_by('date').first()
-        n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
+    if user and day != 0:
+        today_date = date.today()
+        query_date = today_date - timedelta(days=day)
+        if user := await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date).order_by('date').first():
+            n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
+        else:
+            n_crank, n_grank, n_pp, n_acc, n_pc, n_count = statistics.country_rank, statistics.global_rank, \
+                statistics.pp, statistics.hit_accuracy, statistics.play_count, statistics.total_hits
     else:
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = statistics.country_rank, statistics.global_rank, \
                                                        statistics.pp, statistics.hit_accuracy, \
@@ -151,9 +153,9 @@ async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, Mes
     t_time = "%dd %dh %dm %ds" % (sec.days, d_time.hour, d_time.minute, d_time.second)
     draw.text((935, 1245), t_time, font=Torus_Regular_40, anchor='rt')
     # 底部时间对比
-    today = date.today() - user.date
-    time = today.days
-    if time >= 2:
+    if day != 0 and user:
+        day_delta = date.today() - user.date
+        time = day_delta.days
         current_time = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
         draw.text((260, 1305), current_time, font=Torus_Regular_25, anchor='la')
         text = f'| 数据对比于 {time} 天前'

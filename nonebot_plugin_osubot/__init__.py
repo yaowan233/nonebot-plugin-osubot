@@ -89,7 +89,7 @@ def split_msg():
         state['user'] = user_data.osu_id if user_data else 0
         state['mode'] = str(user_data.osu_mode) if user_data else '0'
         state['mods'] = []
-        state['day'] = 0
+        state['day'] = 1
         symbol_ls = [':', '+', '：', '#', '＃']
         symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day', '＃': 'day'}
         dic = {}
