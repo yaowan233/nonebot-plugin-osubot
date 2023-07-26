@@ -51,14 +51,14 @@ async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, Mes
         bg = bg.convert("RGBA")
         width, height = bg.size
         bg_ratio = height / width
-        ratio = 1322 / 1000
+        ratio = 1350 / 1000
         if bg_ratio > ratio:
             height = ratio * width
         else:
             width = height / ratio
         x, y = bg.size
         x, y = (x - width) // 2, (y - height) // 2
-        bg = bg.crop((x, y, x + width, y + height)).resize((1000, 1322))
+        bg = bg.crop((x, y, x + width, y + height)).resize((1000, 1350))
         im.alpha_composite(bg, (0, 0))
     # 获取头图，头像，地区，状态，supporter
     path = user_cache_path / str(info.id)
