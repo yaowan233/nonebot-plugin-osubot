@@ -150,6 +150,15 @@ async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, Mes
     d_time = datetime(1, 1, 1) + sec
     t_time = "%dd %dh %dm %ds" % (sec.days, d_time.hour, d_time.minute, d_time.second)
     draw.text((935, 1245), t_time, font=Torus_Regular_40, anchor='rt')
+    # 底部时间对比
+    if day >= 2:
+        current_time = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+        draw.text((260, 1305), current_time, font=Torus_Regular_25, anchor='la')
+        text = f'| 数据对比于 {day} 天前'
+        draw.text((515, 1305), text, font=Torus_Regular_25, anchor='la')
+    else:
+        current_time = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+        draw.text((380, 1305), current_time, font=Torus_Regular_25, anchor='la')
     # 头像
     gif_frames = []
     user_icon = await open_user_icon(info)
