@@ -14,6 +14,7 @@ sayoapi = 'https://api.sayobot.cn'
 pp_calc_api = 'https://api.yuzuai.xyz/osu/ppcalc'
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 plugin_config = Config.parse_obj(get_driver().config.dict())
+proxy = plugin_config.osu_proxy
 
 if plugin_config.osu_key and plugin_config.osu_client:
     key = plugin_config.osu_key
@@ -28,16 +29,16 @@ else:
 
 
 @auto_retry
-async def safe_async_get(url, headers=None, params=None) -> Response:
-    async with AsyncClient(timeout=100) as client:
+async def safe_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
+    async with AsyncClient(timeout=100, proxies=proxy, follow_redirects=True) as client:
         client: AsyncClient
-        req = await client.get(url, headers=headers, follow_redirects=True, params=params)
+        req = await client.get(url, headers=headers, params=params)
     return req
 
 
 @auto_retry
 async def safe_async_post(url, headers=None, data=None) -> Response:
-    async with AsyncClient(timeout=100) as client:
+    async with AsyncClient(timeout=100, proxies=proxy) as client:
         client: AsyncClient
         req = await client.post(url, headers=headers, data=data)
     return req
@@ -45,7 +46,7 @@ async def safe_async_post(url, headers=None, data=None) -> Response:
 
 async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=100, proxies=proxy) as client:
         client: AsyncClient
         req = await client.post(url, json={'client_id': f'{client_id}', 'client_secret': f'{key}',
                                            'grant_type': 'client_credentials', 'scope': 'public'})
@@ -193,8 +194,3 @@ async def get_recommend(uid, mode):
     res = await safe_async_get('https://alphaosu.keytoix.vip/api/v1/self/maps/recommend', headers=headers,
                                params=params)
     return RecommendData(**res.json())
-
-
-async def update_recommend(uid):
-    headers = {'uid': str(uid)}
-    await safe_async_post('https://alphaosu.keytoix.vip/api/v1/self/users/synchronize', headers=headers)
