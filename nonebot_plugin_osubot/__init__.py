@@ -288,7 +288,7 @@ async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
     day = state['day']
-    data = await draw_bp('tbp', user, NGM[mode], [], day=day)
+    data = await draw_bp('tbp', user, NGM[mode], [], day=day-1)
     await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 
