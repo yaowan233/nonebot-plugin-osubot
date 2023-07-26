@@ -194,3 +194,8 @@ async def get_recommend(uid, mode):
     res = await safe_async_get('https://alphaosu.keytoix.vip/api/v1/self/maps/recommend', headers=headers,
                                params=params)
     return RecommendData(**res.json())
+
+
+async def update_recommend(uid):
+    headers = {'uid': str(uid)}
+    await safe_async_post('https://alphaosu.keytoix.vip/api/v1/self/users/synchronize', headers=headers)
