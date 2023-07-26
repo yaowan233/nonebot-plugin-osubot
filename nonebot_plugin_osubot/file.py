@@ -6,17 +6,16 @@ import re
 import shutil
 import zipfile
 from pathlib import Path
-from httpx import AsyncClient
 
 from nonebot import get_driver
 from nonebot.log import logger
 
 from .config import Config
-from .api import sayo_api
+from .api import sayo_api, safe_async_get
 from .schema import SayoBeatmap, User, Badge
-from .network import auto_retry
 
 plugin_config = Config.parse_obj(get_driver().config.dict())
+
 
 osufile = Path(__file__).parent / 'osufile'
 map_path = Path() / 'data' / 'osu' / 'map'
@@ -58,13 +57,10 @@ async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
     return path
 
 
-@auto_retry
 async def download_map(setid: int) -> Optional[Path]:
     url = download_api + str(setid)
     logger.info(f'开始下载地图: <{setid}>')
-    async with AsyncClient(timeout=100) as client:
-        client: AsyncClient
-        req = await client.get(url, follow_redirects=True)
+    req = await safe_async_get(url)
     filename = f'{setid}.osz'
     filepath = map_path.parent / filename
     with open(filepath, 'wb') as f:
@@ -73,15 +69,10 @@ async def download_map(setid: int) -> Optional[Path]:
     return filepath
 
 
-@auto_retry
 async def download_tmp_osu(map_id):
-    if not map_path.exists():
-        map_path.mkdir(parents=True, exist_ok=True)
     url = f'https://osu.ppy.sh/osu/{map_id}'
     logger.info(f'开始下载谱面: <{map_id}>')
-    async with AsyncClient(timeout=100) as client:
-        client: AsyncClient
-        req = await client.get(url, follow_redirects=True)
+    req = await safe_async_get(url)
     filename = f'{map_id}.osu'
     filepath = map_path / filename
     chunk = req.read()
@@ -90,13 +81,10 @@ async def download_tmp_osu(map_id):
     return filepath
 
 
-@auto_retry
 async def download_osu(set_id, map_id):
     url = f'https://osu.ppy.sh/osu/{map_id}'
     logger.info(f'开始下载谱面: <{map_id}>')
-    async with AsyncClient(timeout=100) as client:
-        client: AsyncClient
-        req = await client.get(url, follow_redirects=True)
+    req = await safe_async_get(url)
     filename = f'{map_id}.osu'
     filepath = map_path / str(set_id) / filename
     chunk = req.read()
@@ -105,13 +93,10 @@ async def download_osu(set_id, map_id):
     return filepath
 
 
-@auto_retry
 async def get_projectimg(url: str):
     if 'avatar-guest.png' in url:
         url = 'https://osu.ppy.sh/images/layout/avatar-guest.png'
-    async with AsyncClient() as client:
-        client: AsyncClient
-        req = await client.get(url)
+    req = await safe_async_get(url)
     if req.status_code == 403:
         return osufile / 'work' / 'mapbg.png'
     data = req.read()
@@ -191,13 +176,10 @@ async def make_badge_cache_file(badge: Badge):
 
 
 # 保存个人信息界面背景
-@auto_retry
 async def save_info_pic(user: str, url):
     path = user_cache_path / user
     if not path.exists():
         path.mkdir()
-    async with AsyncClient() as client:
-        client: AsyncClient
-        req = await client.get(url)
+    req = safe_async_get(url)
     with open(path / 'info.png', 'wb') as f:
         f.write(BytesIO(req.content).getvalue())
