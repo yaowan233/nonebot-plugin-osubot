@@ -37,7 +37,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, Mes
                                                        statistics.pp, statistics.hit_accuracy, \
                                                        statistics.play_count, statistics.total_hits
     # 新建
-    im = Image.new('RGBA', (1000, 1322))
+    im = Image.new('RGBA', (1000, 1350))
     draw = ImageDraw.Draw(im)
     # 获取背景
     bg_path = user_cache_path / str(info.id) / 'info.png'
