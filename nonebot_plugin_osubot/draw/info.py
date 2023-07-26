@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from io import BytesIO
 from typing import Union
-from PIL import ImageFilter, ImageDraw, ImageSequence
+from PIL import ImageDraw, ImageSequence
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .static import *
@@ -14,7 +14,7 @@ from ..database.models import InfoData
 from ..utils import GMN, FGM
 
 
-async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegment]:
+async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, MessageSegment]:
     info_json = await osu_api('info', uid, mode)
     if isinstance(info_json, str):
         return info_json
@@ -23,8 +23,12 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
     if statistics.play_count == 0:
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
-    user = await InfoData.get_or_none(osu_id=info.id, osu_mode=FGM[mode])
+    user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by('-date').first()
     if user:
+        if day != 0:
+            today_date = date.today()
+            query_date = today_date - timedelta(days=day)
+            user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date).order_by('date').first()
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = user.c_rank, user.g_rank, user.pp, user.acc, user.pc, user.count
     else:
         n_crank, n_grank, n_pp, n_acc, n_pc, n_count = statistics.country_rank, statistics.global_rank, \
@@ -53,7 +57,6 @@ async def draw_info(uid: Union[int, str], mode: str) -> Union[str, MessageSegmen
         x, y = bg.size
         x, y = (x - width) // 2, (y - height) // 2
         bg = bg.crop((x, y, x + width, y + height)).resize((1000, 1322))
-        bg = bg.filter(ImageFilter.GaussianBlur(5))
         im.alpha_composite(bg, (0, 0))
     # 获取头图，头像，地区，状态，supporter
     path = user_cache_path / str(info.id)

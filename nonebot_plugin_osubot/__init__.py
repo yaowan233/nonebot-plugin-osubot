@@ -72,7 +72,7 @@ __plugin_meta__ = PluginMetadata(
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
-        "version": "2.0.7",
+        "version": "3.0.0",
     },
 )
 
@@ -188,7 +188,8 @@ async def _info(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_info(user, NGM[mode])
+    day = state['day']
+    data = await draw_info(user, NGM[mode], day)
     await info.finish(MessageSegment.reply(event.message_id) + data)
 
 

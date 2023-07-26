@@ -5,7 +5,7 @@ from tortoise import fields, Model
 class UserData(Model):
     id: int = fields.IntField(pk=True, generated=True, auto_increment=True)
     """自增主键"""
-    user_id: int = fields.IntField()
+    user_id: int = fields.BigIntField()
     """用户id"""
     osu_id: int = fields.IntField()
     """osu id"""
@@ -13,6 +13,7 @@ class UserData(Model):
     """osu 用户名"""
     osu_mode: int = fields.IntField()
     """osu 模式"""
+
     class Meta:
         table = 'User'
         indexes = ('user_id',)
@@ -37,6 +38,8 @@ class InfoData(Model):
     """打击note数"""
     osu_mode: int = fields.IntField()
     """osu 模式"""
+    date = fields.DateField()
+
     class Meta:
         table = 'Info'
         indexes = ('id',)

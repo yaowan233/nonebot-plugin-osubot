@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, date
 from time import strptime, mktime
 from typing import List, Union, Optional
 
-from PIL import ImageDraw
+from PIL import ImageDraw, UnidentifiedImageError
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..schema import Score
@@ -81,9 +81,12 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         # BP排名
         draw.text((15, 144 + h_num), str(num + 1), font=Torus_Regular_20, anchor='lm')
         # 获取谱面banner
-        bg = Image.open(bg_ls[num]).convert('RGBA').resize((157, 55))
-        bg_imag = draw_fillet(bg, 10)
-        im.alpha_composite(bg_imag, (45, 114 + h_num))
+        try:
+            bg = Image.open(bg_ls[num]).convert('RGBA').resize((157, 55))
+            bg_imag = draw_fillet(bg, 10)
+            im.alpha_composite(bg_imag, (45, 114 + h_num))
+        except UnidentifiedImageError:
+            ...
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
         rank_bg = Image.open(rank_img).convert('RGBA').resize((32, 16))
