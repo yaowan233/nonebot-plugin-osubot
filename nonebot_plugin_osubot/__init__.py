@@ -20,7 +20,7 @@ from nonebot.rule import ArgumentParser
 from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command, on_regex, get_driver
 from nonebot_plugin_tortoise_orm import add_model
-from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio
+from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio, get_score_data
 from .file import download_map, map_downloaded, download_osu, download_tmp_osu, user_cache_path, save_info_pic
 from .utils import NGM, GMN, mods2list
 from .database.models import UserData
@@ -228,7 +228,7 @@ async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     mode = state['mode']
     mods = state['mods']
     map_id = state['para']
-    data = await draw_score('score', user, NGM[mode], mapid=map_id, mods=mods)
+    data = await get_score_data(user, NGM[mode], mapid=map_id, mods=mods)
     await score.finish(MessageSegment.reply(event.message_id) + data)
 
 

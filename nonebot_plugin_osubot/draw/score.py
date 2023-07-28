@@ -2,10 +2,10 @@ import asyncio
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, List, Union
-from PIL import ImageEnhance, ImageDraw, ImageSequence
+from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-from ..api import osu_api, get_map_bg, get_beatmap_attribute
+from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
 from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
 from ..mods import get_mods_list
 from ..file import re_map, download_osu, user_cache_path, map_path
@@ -39,9 +39,6 @@ async def draw_score(project: str,
             return f'未找到开启 {"|".join(mods)} Mods的第{best}个成绩'
         score_info = Score(**score_json[mods_ls[best - 1]])
         grank = '--'
-    elif project == 'score':
-        score_info = Score(**score_json['score'])
-        grank = str(score_json['position'])
     else:
         raise 'Project Error'
     # 从官网获取信息
@@ -52,16 +49,65 @@ async def draw_score(project: str,
     task = asyncio.create_task(get_beatmap_attribute(score_info.beatmap.id, mode))
     task2 = asyncio.create_task(osu_api('map', map_id=score_info.beatmap.id))
     if not osu.exists():
-        task3 = asyncio.create_task(download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id))
+        await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
     info_json = await task1
     info = User(**info_json)
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
-    # 下载地图
+    map_json = await task2
+    map_attribute_json = await task
+    return await draw_score_pic(score_info, info, map_json, map_attribute_json,
+                                score_info.beatmap.id, score_info.beatmap.beatmapset_id)
+
+
+async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: int = 0):
+    task = asyncio.create_task(get_beatmap_attribute(mapid, mode))
+    task0 = asyncio.create_task(osu_api('score', uid, mode, mapid))
+    task1 = asyncio.create_task(osu_api('info', uid, mode))
+    task2 = asyncio.create_task(osu_api('map', map_id=mapid))
+    task3 = asyncio.create_task(get_sayo_map_info(mapid, 1))
+    score_json = await task0
+    if not score_json:
+        return f'未查询到在 {GMN[mode]} 的游玩记录'
+    elif isinstance(score_json, str):
+        return score_json
+    if 'score' not in score_json:
+        score_ls = [Score(**i) for i in score_json['scores']]
+        if mods:
+            for score in score_ls:
+                if score.mods == mods:
+                    score_info = score
+                    break
+            else:
+                return f'未找到开启 {"|".join(mods)} Mods的成绩'
+        else:
+            score_info = score_ls[0]
+    else:
+        score_info = Score(**score_json['score'])
+    sayo_map_info = await task3
+    path = map_path / str(sayo_map_info.data.sid)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+    osu = path / f"{mapid}.osu"
     if not osu.exists():
-        await task3
+        await download_osu(sayo_map_info.data.sid, mapid)
+    info_json = await task1
+    info = User(**info_json)
+    user_path = user_cache_path / str(info.id)
+    if not user_path.exists():
+        user_path.mkdir(parents=True, exist_ok=True)
+    map_json = await task2
+    map_attribute_json = await task
+    return await draw_score_pic(score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid)
+
+
+async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, sid):
+    path = map_path / str(sid)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
     # pp
+    osu = path / f"{bid}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()))
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
     # 新建图片
@@ -71,11 +117,12 @@ async def draw_score(project: str,
     cover = re_map(osu)
     cover_path = path / cover
     if not cover_path.exists():
-        bg = await get_map_bg(score_info.beatmap.beatmapset_id, cover)
+        bg = await get_map_bg(sid, cover)
         with open(cover_path, 'wb') as f:
             f.write(bg.getvalue())
     cover_crop = await crop_bg('BG', cover_path)
-    cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
+    cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
+    cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 获取成绩背景做底图
     bg = get_modeimage(FGM[score_info.mode])
@@ -118,15 +165,13 @@ async def draw_score(project: str,
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.mode)
     # 地区
-    country = osufile / 'flags' / f'{score_info.user.country_code}.png'
+    country = osufile / 'flags' / f'{info.country_code}.png'
     country_bg = Image.open(country).convert('RGBA').resize((66, 45))
     im.alpha_composite(country_bg, (250, 577))
     # supporter
-    if score_info.user.is_supporter:
+    if info.is_supporter:
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
-    map_json = await task2
     mapinfo = Beatmap(**map_json)
-    map_attribute_json = await task
     map_attribute = BeatmapDifficultyAttributes(**map_attribute_json['attributes'])
     # cs, ar, od, hp, stardiff
     mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar, pp_info.difficulty.stars]
@@ -145,7 +190,7 @@ async def draw_score(project: str,
     # 状态
     draw.text((1400, 184), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor='mm')
     # mapid
-    draw.text((1425, 89), f'Mapid: {score_info.beatmap.id}', font=Torus_SemiBold_25, anchor='rm')
+    draw.text((1425, 89), f'Mapid: {bid}', font=Torus_SemiBold_25, anchor='rm')
     # 曲名
     draw.text((75, 38), f'{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}', font=Torus_SemiBold_30,
               anchor='lm')
@@ -163,9 +208,9 @@ async def draw_score(project: str,
     new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
     draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor='lm')
     # 全球排名
-    draw.text((583, 410), grank, font=Torus_SemiBold_25, anchor='mm')
+    # draw.text((583, 410), grank, font=Torus_SemiBold_25, anchor='mm')
     # 左下玩家名
-    draw.text((250, 530), score_info.user.username, font=Torus_SemiBold_30, anchor='lm')
+    draw.text((250, 530), info.username, font=Torus_SemiBold_30, anchor='lm')
     # 国内排名
     draw.text((325, 610), f'#{info.statistics.country_rank}', font=Torus_SemiBold_25, anchor='lm')
     if score_info.mode == 'osu':
@@ -176,7 +221,8 @@ async def draw_score(project: str,
         draw.text((840, 645), f'{pp_info.pp_speed:.0f}', font=Torus_Regular_30, anchor='mm')
         draw.text((960, 645), f'{pp_info.pp_acc:.0f}', font=Torus_Regular_30, anchor='mm')
         draw.text((1157, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
-        draw.text((1385, 550), f'{score_info.max_combo:,}/{map_attribute.max_combo:,}', font=Torus_Regular_30, anchor='mm')
+        draw.text((1385, 550), f'{score_info.max_combo:,}/{map_attribute.max_combo:,}', font=Torus_Regular_30,
+                  anchor='mm')
         draw.text((1100, 645), f'{score_info.statistics.count_300}', font=Torus_Regular_30, anchor='mm')
         draw.text((1214, 645), f'{score_info.statistics.count_100}', font=Torus_Regular_30, anchor='mm')
         draw.text((1328, 645), f'{score_info.statistics.count_50}', font=Torus_Regular_30, anchor='mm')
@@ -197,7 +243,8 @@ async def draw_score(project: str,
         draw.text((1309, 645), f'{score_info.statistics.count_katu}', font=Torus_Regular_30, anchor='mm')
         draw.text((1432, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     else:
-        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1', font=Torus_Regular_20, anchor='mm')
+        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1',
+                  font=Torus_Regular_20, anchor='mm')
         draw.text((1002, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
         draw.text((1197, 550), f'{score_info.max_combo}', font=Torus_Regular_30, anchor='mm')
         draw.text((1395, 550), f'{pp_info.pp:.0f}/{ss_pp}', font=Torus_Regular_30, anchor='mm')
