@@ -74,9 +74,9 @@ async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0
         url = f'{api}/users/{uid}/scores/recent?mode={mode}'
     elif project == 'score':
         if mode != 'osu':
-            url = f'{api}/beatmaps/{map_id}/scores/users/{uid}?mode={mode}'
+            url = f'{api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={mode}'
         else:
-            url = f'{api}/beatmaps/{map_id}/scores/users/{uid}'
+            url = f'{api}/beatmaps/{map_id}/scores/users/{uid}/all'
     elif project == 'bp':
         url = f'{api}/users/{uid}/scores/best?mode={mode}&limit=100'
     elif project == 'map':
