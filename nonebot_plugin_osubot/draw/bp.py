@@ -32,32 +32,32 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
                 mods_ls = mods_ls[low_bound - 1:]
             else:
                 mods_ls = mods_ls[low_bound - 1: high_bound]
-            score_ls = [score_ls[i] for i in mods_ls]
+            score_ls_filtered = [score_ls[i] for i in mods_ls]
         else:
-            score_ls = score_ls[low_bound - 1: high_bound]
-    elif project == 'tbp':
+            score_ls_filtered = score_ls[low_bound - 1: high_bound]
+    else:
         ls = []
         for i, score in enumerate(score_ls):
             today = date.today() - timedelta(days=day)
             today_stamp = mktime(strptime(str(today), '%Y-%m-%d'))
-            playtime = datetime.strptime(score.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S') + timedelta(
-                hours=8)
+            playtime = datetime.strptime(score.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S') + timedelta(hours=8)
             play_stamp = mktime(strptime(str(playtime), '%Y-%m-%d %H:%M:%S'))
-
             if play_stamp > today_stamp:
                 ls.append(i)
-        score_ls = [score_ls[i] for i in ls]
-        if not score_ls:
+        score_ls_filtered = [score_ls[i] for i in ls]
+        if not score_ls_filtered:
             return f'近{day + 1}日内在 {GMN[mode]} 没有新增的BP成绩'
-    msg = await draw_pfm(project, user, score_ls, mode, low_bound, high_bound, day)
+    msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day)
     return msg
 
 
-async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, low_bound: int = 0, high_bound: int = 0,
+async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filtered: List[Score],
+                   mode: str, low_bound: int = 0, high_bound: int = 0,
                    day: int = 0) -> Union[str, MessageSegment]:
-    tasks = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/card.jpg') for i in score_ls]
+    tasks = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/card.jpg')
+             for i in score_ls_filtered]
     bg_ls = await asyncio.gather(*tasks)
-    bplist_len = len(score_ls)
+    bplist_len = len(score_ls_filtered)
     im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
     im.alpha_composite(BgImg)
     draw = ImageDraw.Draw(im)
@@ -68,7 +68,7 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
     else:
         uinfo = f"{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
     draw.text((1480, 50), uinfo, font=Torus_SemiBold_25, anchor='rm')
-    for num, bp in enumerate(score_ls):
+    for num, bp in enumerate(score_ls_filtered):
         h_num = 82 * num
         # mods
         if bp.mods:
@@ -79,7 +79,8 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
             if (bp.rank == 'X' or bp.rank == 'S') and ('HD' in bp.mods or 'FL' in bp.mods):
                 bp.rank += 'H'
         # BP排名
-        draw.text((15, 144 + h_num), str(num + 1), font=Torus_Regular_20, anchor='lm')
+        index = score_ls.index(bp)
+        draw.text((15, 144 + h_num), str(index + 1), font=Torus_Regular_20, anchor='lm')
         # 获取谱面banner
         try:
             bg = Image.open(bg_ls[num]).convert('RGBA').resize((157, 55))
@@ -109,7 +110,8 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], mode: str, lo
         difficulty = f'{bp.beatmap.difficulty_rating}★ | {difficulty} | {new_time}'
         draw.text((215, 158 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
         # acc
-        draw.text((1280, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20, anchor='lm', fill=(238, 171, 0, 255))
+        draw.text((1280, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
+                  anchor='lm', fill=(238, 171, 0, 255))
         # mapid
         draw.text((1280, 158 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='lm')
         # pp
