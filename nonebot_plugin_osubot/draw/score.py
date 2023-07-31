@@ -74,6 +74,8 @@ async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: 
         return score_json
     if 'score' not in score_json:
         score_ls = [Score(**i) for i in score_json['scores']]
+        if not score_ls:
+            return f'未查询到在 {GMN[mode]} 的游玩记录'
         if mods:
             for score in score_ls:
                 if score.mods == mods:
@@ -243,8 +245,8 @@ async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, si
         draw.text((1309, 645), f'{score_info.statistics.count_katu}', font=Torus_Regular_30, anchor='mm')
         draw.text((1432, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     else:
-        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1',
-                  font=Torus_Regular_20, anchor='mm')
+        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1'
+        if score_info.statistics.count_300 != 0 else '∞:1', font=Torus_Regular_20, anchor='mm')
         draw.text((1002, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
         draw.text((1197, 550), f'{score_info.max_combo}', font=Torus_Regular_30, anchor='mm')
         draw.text((1395, 550), f'{pp_info.pp:.0f}/{ss_pp}', font=Torus_Regular_30, anchor='mm')

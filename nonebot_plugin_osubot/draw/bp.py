@@ -22,6 +22,8 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [Score(**i) for i in bp_info]
+    if not bp_info:
+        return f'未查询到在 {GMN[mode]} 的游玩记录'
     user = bp_info[0]['user']['username']
     if project == 'bp':
         if mods:

@@ -120,7 +120,7 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             token = cache.get('token')
         headers = {'Authorization': f'Bearer {token}'}
     req = await safe_async_get(url, headers=headers)
-    if req.status_code == 404:
+    if req.status_code >= 400:
         if project == 'info' or project == 'bind':
             return '未找到该玩家，请确认玩家ID'
         elif project == 'recent':

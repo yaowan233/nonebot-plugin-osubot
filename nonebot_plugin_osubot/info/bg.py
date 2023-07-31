@@ -1,6 +1,6 @@
 from io import BytesIO
 from typing import Union
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, get_map_bg
@@ -26,7 +26,11 @@ async def get_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
         bg = await get_map_bg(setid, cover)
         with open(cover_path, 'wb') as f:
             f.write(bg.getvalue())
-    img = Image.open(cover_path)
+    try:
+        img = Image.open(cover_path)
+    except UnidentifiedImageError:
+        cover_path.unlink()
+        return MessageSegment.text('暂时无法下载背景图片＞︿＜')
     byt = BytesIO()
     img.save(byt, 'png')
     msg = MessageSegment.image(byt)

@@ -101,6 +101,12 @@ async def crop_bg(size: str, path: Union[str, Path]):
         url = random.choice(pic.backgrounds).url
         res = await safe_async_get(url)
         bg = Image.open(BytesIO(res.content)).convert('RGBA')
+    except FileNotFoundError:
+        data = await get_seasonal_bg()
+        pic = SeasonalBackgrounds(**data)
+        url = random.choice(pic.backgrounds).url
+        res = await safe_async_get(url)
+        bg = Image.open(BytesIO(res.content)).convert('RGBA')
     bg_w, bg_h = bg.size[0], bg.size[1]
     if size == 'BG':
         fix_w = 1500
