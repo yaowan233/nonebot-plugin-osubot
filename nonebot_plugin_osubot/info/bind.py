@@ -16,7 +16,7 @@ async def bind_user_info(project: str, uid, qid) -> str:
     name = info['username']
     await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=0)
     await update_user_info(uid)
-    msg = f'用户 {name} 已成功绑定QQ {qid}'
+    msg = f'用户 {name} 已成功绑定QQ {qid}\n默认模式为std，若更改模式至mania请输入/更新模式 3'
     return msg
 
 
