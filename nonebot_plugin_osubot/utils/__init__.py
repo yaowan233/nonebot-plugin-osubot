@@ -5,11 +5,6 @@ FGM = {'osu': 0, 'taiko': 1, 'fruits': 2, 'mania': 3}
 
 
 def mods2list(args: str) -> list:
-    if '，' in args:
-        sep = '，'
-    elif ',' in args:
-        sep = ','
-    else:
-        sep = ' '
+    args = args.replace(' ', '').replace(',', '').replace('，', '')
     args = args.upper()
-    return args.split(sep)
+    return [args[i:i + 2] for i in range(0, len(args), 2)]
