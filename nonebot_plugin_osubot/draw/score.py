@@ -82,7 +82,12 @@ async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: 
                     score_info = score
                     break
             else:
-                return f'未找到开启 {"|".join(mods)} Mods的成绩'
+                for score in score_ls:
+                    if set(mods).issubset(set(score.mods)):
+                        score_info = score
+                        break
+                else:
+                    return f'未找到开启 {"|".join(mods)} Mods的成绩'
         else:
             score_info = score_ls[0]
     else:
