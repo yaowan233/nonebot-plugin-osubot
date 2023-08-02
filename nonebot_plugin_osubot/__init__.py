@@ -89,7 +89,7 @@ def split_msg():
         state['user'] = user_data.osu_id if user_data else 0
         state['mode'] = str(user_data.osu_mode) if user_data else '0'
         state['mods'] = []
-        state['day'] = 1
+        state['day'] = 0
         symbol_ls = [':', '+', '：', '#', '＃']
         symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day', '＃': 'day'}
         dic = {}
@@ -288,7 +288,7 @@ async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
     day = state['day']
-    data = await draw_bp('tbp', user, NGM[mode], [], day=day-1)
+    data = await draw_bp('tbp', user, NGM[mode], [], day=day)
     await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 

@@ -24,7 +24,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, Mes
         return f'此玩家尚未游玩过{GMN[mode]}模式'
     # 对比
     user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by('-date').first()
-    if user and day != 0:
+    if user:
         today_date = date.today()
         query_date = today_date - timedelta(days=day)
         if user := await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date).order_by('date').first():
