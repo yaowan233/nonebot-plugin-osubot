@@ -181,12 +181,12 @@ async def get_seasonal_bg() -> Optional[dict]:
     return req.json()
 
 
-async def get_recommend(uid, mode):
+async def get_recommend(uid, mode, key_count):
     headers = {'uid': str(uid)}
     params = {'newRecordPercent': '0.2,1',
               'passPercent': '0.2,1',
               'difficulty': '0,15',
-              'keyCount': '4,7',
+              'keyCount': key_count,
               'gameMode': mode,
               'rule': '4',
               'current': '1',
