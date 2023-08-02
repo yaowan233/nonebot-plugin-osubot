@@ -93,7 +93,7 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
         rank_bg = Image.open(rank_img).convert('RGBA').resize((32, 16))
-        im.alpha_composite(rank_bg, (1366, 122 + h_num))
+        im.alpha_composite(rank_bg, (1345, 124 + h_num))
         # 曲名&作曲
         metadata = f'{bp.beatmapset.title} | by {bp.beatmapset.artist}'
         # 如果曲名&作曲的长度超过75，就截断它
@@ -112,10 +112,10 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         difficulty = f'{bp.beatmap.difficulty_rating}★ | {difficulty} | {new_time}'
         draw.text((215, 158 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
         # acc
-        draw.text((1280, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
+        draw.text((1265, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
                   anchor='lm', fill=(238, 171, 0, 255))
         # mapid
-        draw.text((1280, 158 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='lm')
+        draw.text((1265, 158 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='lm')
         # pp
         draw.text((1450, 140 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25, anchor='rm', fill=(255, 102, 171, 255))
         draw.text((1480, 140 + h_num), 'pp', font=Torus_SemiBold_25, anchor='rm', fill=(209, 148, 176, 255))
