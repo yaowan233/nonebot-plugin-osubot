@@ -588,6 +588,12 @@ recommend = on_command('recommend', aliases={'推荐', '推荐铺面', '推荐�
 
 @recommend.handle(parameterless=[split_msg()])
 async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
+    message_text = str(event.get_message())
+    match = re.search(r'\+(\d)[kK]', message_text, flags=re.IGNORECASE)
+    if match:
+        key_count = match.group(1)
+    else:
+        key_count = '4,7'
     if 'error' in state:
         await recommend.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
