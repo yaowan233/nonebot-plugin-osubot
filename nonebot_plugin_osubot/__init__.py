@@ -588,23 +588,23 @@ recommend = on_command('recommend', aliases={'推荐', '推荐铺面', '推荐�
 
 @recommend.handle(parameterless=[split_msg()])
 async def _(event: Union[MessageEvent, GuildMessageEvent], state: T_State):
-    message_text = str(event.get_message())
-    match = re.search(r'\+(\d)[kK]', message_text, flags=re.IGNORECASE)
-    if match:
-        key_count = match.group(1)
-    else:
-        key_count = '4,7'
     if 'error' in state:
         await recommend.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     mode = state['mode']
     mods = state['mods']
+    if mods == ['4K']:
+        key_count = '4'
+    elif mods == ['7K']:
+        key_count = '7'
+    else:
+        key_count = '4,7'
     if mode == '1' or mode == '2':
         await recommend.finish('很抱歉，该模式暂不支持推荐')
     if not recommend_cache.get(user):
         recommend_cache[user] = set()
         await update_recommend(user)
-    recommend_data = await get_recommend(user, mode)
+    recommend_data = await get_recommend(user, mode, key_count)
     shuffle(recommend_data.data.list)
     if not recommend_data.data.list:
         await recommend.finish('没有可以推荐的图哦，自己多打打喜欢玩的图吧')
