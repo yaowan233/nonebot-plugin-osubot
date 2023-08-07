@@ -98,6 +98,8 @@ async def get_user_info(url: str) -> Union[dict, str]:
         token = cache.get('token')
     header = {'Authorization': f'Bearer {token}'}
     req = await safe_async_get(url, headers=header)
+    if not req:
+        return 'api请求失败，请稍后再试'
     if req.status_code == 401:
         await token.update_token()
         return await get_user_info(url)
@@ -120,7 +122,7 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             token = cache.get('token')
         headers = {'Authorization': f'Bearer {token}'}
     req = await safe_async_get(url, headers=headers)
-    if not req or not req.status_code:
+    if not req:
         return 'api请求失败，请稍后再试'
     if req.status_code >= 400:
         if project == 'info' or project == 'bind':
