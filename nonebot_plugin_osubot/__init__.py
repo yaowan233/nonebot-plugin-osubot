@@ -670,6 +670,14 @@ async def update_info():
     logger.info(f'已更新{len(result)}位玩家数据')
 
 
+manual_update = on_command('更新数据', priority=11, block=True)
+
+
+@manual_update.handle()
+async def _():
+    await update_info()
+
+
 @scheduler.scheduled_job('cron', hour='4', day_of_week='0,4')
 async def delete_cached_map():
     map_path = Path('data/osu/map')
