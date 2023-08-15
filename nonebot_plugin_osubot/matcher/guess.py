@@ -53,6 +53,8 @@ async def stop_game(matcher: Matcher, cid: int):
     timers.pop(cid, None)
     if games.get(cid, None):
         game = games.pop(cid)
+        if group_hint.get(cid, None):
+            group_hint[cid] = None
         msg = f"猜歌超时，游戏结束，正确答案是{game.title_unicode}"
         if game.title_unicode != game.title:
             msg += f' [{game.title}]'
@@ -85,6 +87,8 @@ async def _(event: GroupMessageEvent):
     r2 = SequenceMatcher(None, song_name_unicode.lower(), event.get_plaintext().lower()).ratio()
     if r1 >= 0.6 or r2 >= 0.6:
         games.pop(event.group_id)
+        if group_hint.get(event.group_id, None):
+            group_hint[event.group_id] = None
         msg = f"恭喜{event.sender.nickname}猜出正确答案为{song_name_unicode}"
         await word_matcher.finish(MessageSegment.reply(event.message_id) + msg)
 
