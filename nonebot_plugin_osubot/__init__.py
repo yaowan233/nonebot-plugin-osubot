@@ -660,7 +660,7 @@ async def _url(event: Union[MessageEvent, GuildMessageEvent], bid: tuple = Regex
     await url_match.finish(MessageSegment.reply(event.message_id) + url_total)
 
 
-@scheduler.scheduled_job('cron', hour='0')
+@scheduler.scheduled_job('cron', hour='0', misfire_grace_time=60)
 async def update_info():
     result = await UserData.all()
     if not result:
@@ -678,7 +678,7 @@ async def _():
     await update_info()
 
 
-@scheduler.scheduled_job('cron', hour='4', day_of_week='0,4')
+@scheduler.scheduled_job('cron', hour='4', day_of_week='0,4', misfire_grace_time=60)
 async def delete_cached_map():
     map_path = Path('data/osu/map')
     shutil.rmtree(map_path)
