@@ -27,6 +27,7 @@ from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
 from .api import osu_api, get_sayo_map_info, get_recommend, update_recommend
 from .info import get_bg, bind_user_info, update_user_info
+from .matcher import *
 from .config import Config
 
 
