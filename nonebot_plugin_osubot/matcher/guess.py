@@ -41,6 +41,8 @@ async def guess_handler(event: GroupMessageEvent, bot: Bot, mather: Matcher):
     score_ls = [Score(**i) for i in bp_info]
     if games.get(group_id, None):
         await guess_audio.finish('现在还有进行中的猜歌呢，请等待当前猜歌结束')
+    if not score_ls:
+        await guess_audio.finish('选到的人所选模式还没打过成绩，再试试吧')
     selected_score = random.choice(score_ls)
     games[group_id] = selected_score.beatmapset
     set_timeout(mather, group_id)
