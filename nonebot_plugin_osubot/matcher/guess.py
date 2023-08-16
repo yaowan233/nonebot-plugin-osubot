@@ -137,4 +137,4 @@ async def _(event: GroupMessageEvent):
         await hint.finish(f'谱师为：{score.beatmapset.creator}')
     if action == 'mode':
         group_hint[event.group_id]['mode'] = True
-        await hint.finish(f'模式为为：{score.mode}')
+        await hint.finish(f'模式为：{score.mode}')
