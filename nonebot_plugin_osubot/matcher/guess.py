@@ -4,6 +4,7 @@ from asyncio import TimerHandle
 from difflib import SequenceMatcher
 from typing import Dict
 
+from expiringdict import ExpiringDict
 from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule
 from nonebot.matcher import Matcher
@@ -13,13 +14,29 @@ from ..utils import NGM
 from ..api import osu_api
 from ..schema import Score
 from ..database.models import UserData
-from ..schema import Beatmapset
 
-games: Dict[int, Beatmapset] = {}
+games: Dict[int, Score] = {}
 timers: Dict[int, TimerHandle] = {}
-hint_dic = {'pic': False, 'artist': False, 'creator': False}
+hint_dic = {'pic': False, 'artist': False, 'creator': False, 'mode': False}
 group_hint = {}
 guess_audio = on_command('音频猜歌', priority=11, block=True)
+guess_song_cache = ExpiringDict(1000, 60 * 60 * 24)
+
+
+async def get_random_beatmap_set(binded_id, group_id, ttl=10):
+    if ttl == 0:
+        return
+    user = await UserData.filter(user_id=random.choice(binded_id)).first()
+    bp_info = await osu_api('bp', user.osu_id, NGM[str(user.osu_mode)])
+    if isinstance(bp_info, str):
+        await guess_audio.finish('发生了错误，再试试吧')
+    score_ls = [Score(**i) for i in bp_info]
+    selected_score = random.choice(score_ls)
+    if selected_score.beatmapset.id not in guess_song_cache[group_id]:
+        guess_song_cache[group_id].add(selected_score.beatmapset.id)
+    else:
+        return await get_random_beatmap_set(binded_id, group_id, ttl - 1)
+    return selected_score
 
 
 @guess_audio.handle()
@@ -34,17 +51,14 @@ async def guess_handler(event: GroupMessageEvent, bot: Bot, mather: Matcher):
     binded_id = await UserData.filter(user_id__in=user_id_ls).values_list('user_id', flat=True)
     if not binded_id:
         await guess_audio.finish('群里还没有人绑定osu账号呢，绑定了再来试试吧')
-    user = await UserData.filter(user_id=random.choice(binded_id)).first()
-    bp_info = await osu_api('bp', user.osu_id, NGM[str(user.osu_mode)])
-    if isinstance(bp_info, str):
-        await guess_audio.finish('发生了错误，再试试吧')
-    score_ls = [Score(**i) for i in bp_info]
+    if not guess_song_cache.get(group_id):
+        guess_song_cache[group_id] = set()
+    selected_score = await get_random_beatmap_set(binded_id, group_id)
+    if not selected_score:
+        await guess_audio.finish('好像没有可以猜的歌了，今天的猜歌就到此结束吧！')
     if games.get(group_id, None):
         await guess_audio.finish('现在还有进行中的猜歌呢，请等待当前猜歌结束')
-    if not score_ls:
-        await guess_audio.finish('选到的人所选模式还没打过成绩，再试试吧')
-    selected_score = random.choice(score_ls)
-    games[group_id] = selected_score.beatmapset
+    games[group_id] = selected_score
     set_timeout(mather, group_id)
     await guess_audio.send('开始音频猜歌游戏，猜猜下面音频的曲名吧')
     print(selected_score.beatmapset.title)
@@ -57,9 +71,9 @@ async def stop_game(matcher: Matcher, cid: int):
         game = games.pop(cid)
         if group_hint.get(cid, None):
             group_hint[cid] = None
-        msg = f"猜歌超时，游戏结束，正确答案是{game.title_unicode}"
-        if game.title_unicode != game.title:
-            msg += f' [{game.title}]'
+        msg = f"猜歌超时，游戏结束，正确答案是{game.beatmapset.title_unicode}"
+        if game.beatmapset.title_unicode != game.beatmapset.title:
+            msg += f' [{game.beatmapset.title}]'
         await matcher.send(msg)
 
 
@@ -83,8 +97,8 @@ word_matcher = on_message(Rule(game_running), block=True, priority=12)
 
 @word_matcher.handle()
 async def _(event: GroupMessageEvent):
-    song_name = games[event.group_id].title
-    song_name_unicode = games[event.group_id].title_unicode
+    song_name = games[event.group_id].beatmapset.title
+    song_name_unicode = games[event.group_id].beatmapset.title_unicode
     r1 = SequenceMatcher(None, song_name.lower(), event.get_plaintext().lower()).ratio()
     r2 = SequenceMatcher(None, song_name_unicode.lower(), event.get_plaintext().lower()).ratio()
     if r1 >= 0.6 or r2 >= 0.6:
@@ -99,7 +113,7 @@ hint = on_command('音频提示', priority=11, block=True, rule=Rule(game_runnin
 
 @hint.handle()
 async def _(event: GroupMessageEvent):
-    beatmap_set = games[event.group_id]
+    score = games[event.group_id]
     if not group_hint.get(event.group_id, None):
         group_hint[event.group_id] = hint_dic.copy()
     if all(group_hint[event.group_id].values()):
@@ -111,13 +125,16 @@ async def _(event: GroupMessageEvent):
     action = random.choice(true_keys)
     if action == 'pic':
         group_hint[event.group_id]['pic'] = True
-        await hint.finish(MessageSegment.image(beatmap_set.covers.cover))
+        await hint.finish(MessageSegment.image(score.beatmapset.covers.cover))
     if action == 'artist':
         group_hint[event.group_id]['artist'] = True
-        msg = f'曲师为：{beatmap_set.artist_unicode}'
-        if beatmap_set.artist_unicode != beatmap_set.artist:
-            msg += f' [{beatmap_set.artist}]'
+        msg = f'曲师为：{score.beatmapset.artist_unicode}'
+        if score.beatmapset.artist_unicode != score.beatmapset.artist:
+            msg += f' [{score.beatmapset.artist}]'
         await hint.finish(msg)
     if action == 'creator':
         group_hint[event.group_id]['creator'] = True
-        await hint.finish(f'谱师为：{beatmap_set.creator}')
+        await hint.finish(f'谱师为：{score.beatmapset.creator}')
+    if action == 'mode':
+        group_hint[event.group_id]['mode'] = True
+        await hint.finish(f'模式为为：{score.mode}')
