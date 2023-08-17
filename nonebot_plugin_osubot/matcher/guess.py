@@ -17,10 +17,11 @@ from ..database.models import UserData
 
 games: Dict[int, Score] = {}
 timers: Dict[int, TimerHandle] = {}
-hint_dic = {'pic': False, 'artist': False, 'creator': False, 'mode': False}
+hint_dic = {'pic': False, 'artist': False, 'creator': False, 'mode': False, 'user': False}
 group_hint = {}
 guess_audio = on_command('音频猜歌', priority=11, block=True)
 guess_song_cache = ExpiringDict(1000, 60 * 60 * 24)
+guess_user: Dict[int, UserData] = {}
 
 
 async def get_random_beatmap_set(binded_id, group_id, ttl=10):
@@ -28,6 +29,7 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
         return
     user = await UserData.filter(user_id=random.choice(binded_id)).first()
     bp_info = await osu_api('bp', user.osu_id, NGM[str(user.osu_mode)])
+    guess_user[group_id] = user
     if isinstance(bp_info, str):
         await guess_audio.finish('发生了错误，再试试吧')
     score_ls = [Score(**i) for i in bp_info]
@@ -112,7 +114,7 @@ hint = on_command('音频提示', priority=11, block=True, rule=Rule(game_runnin
 
 
 @hint.handle()
-async def _(event: GroupMessageEvent):
+async def _(event: GroupMessageEvent, bot: Bot):
     score = games[event.group_id]
     if not group_hint.get(event.group_id, None):
         group_hint[event.group_id] = hint_dic.copy()
@@ -138,3 +140,8 @@ async def _(event: GroupMessageEvent):
     if action == 'mode':
         group_hint[event.group_id]['mode'] = True
         await hint.finish(f'模式为：{score.mode}')
+    if action == 'user':
+        group_hint[event.group_id]['user'] = True
+        group_member = await bot.get_group_member_info(group_id=event.group_id, user_id=guess_user[event.group_id].user_id)
+        name = group_member.get('card', group_member['nickname'])
+        await hint.finish(f'该曲为{name}的bp')
