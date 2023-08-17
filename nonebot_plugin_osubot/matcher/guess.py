@@ -143,5 +143,5 @@ async def _(event: GroupMessageEvent, bot: Bot):
     if action == 'user':
         group_hint[event.group_id]['user'] = True
         group_member = await bot.get_group_member_info(group_id=event.group_id, user_id=guess_user[event.group_id].user_id)
-        name = group_member.get('card', group_member['nickname'])
+        name = group_member['card'] or group_member.get('nickname', '')
         await hint.finish(f'该曲为{name}的bp')
