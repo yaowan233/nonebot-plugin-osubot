@@ -26,6 +26,11 @@ async def get_bg(mapid: Union[str, int]) -> Union[str, MessageSegment]:
         bg = await get_map_bg(setid, cover)
         with open(cover_path, 'wb') as f:
             f.write(bg.getvalue())
+    else:
+        cover_path.unlink()
+        bg = await get_map_bg(setid, cover)
+        with open(cover_path, 'wb') as f:
+            f.write(bg.getvalue())
     try:
         img = Image.open(cover_path)
     except UnidentifiedImageError:
