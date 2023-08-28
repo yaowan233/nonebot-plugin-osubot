@@ -408,7 +408,10 @@ async def _get_bg(event: Union[MessageEvent, GuildMessageEvent], msg: Message = 
     if not bg_id:
         msg = '请输入需要提取BG的地图ID'
     else:
-        msg = await get_bg(bg_id)
+        byt = await get_bg(bg_id)
+        if isinstance(msg, str):
+            await getbg.finish(MessageSegment.reply(event.message_id) + msg)
+        msg = MessageSegment.image(byt)
     await getbg.finish(MessageSegment.reply(event.message_id) + msg)
 
 change = on_command('倍速', priority=11, block=True)
