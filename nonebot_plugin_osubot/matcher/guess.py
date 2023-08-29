@@ -157,8 +157,8 @@ async def _(event: GroupMessageEvent):
     r2 = SequenceMatcher(None, song_name_unicode.lower(), event.get_plaintext().lower()).ratio()
     if r1 >= 0.5 or r2 >= 0.5:
         pic_games.pop(event.group_id)
-        if group_hint.get(event.group_id, None):
-            group_hint[event.group_id] = None
+        if pic_group_hint.get(event.group_id, None):
+            pic_group_hint[event.group_id] = None
         msg = f"恭喜{event.sender.nickname}猜出正确答案为{song_name_unicode}"
         await pic_word_matcher.finish(MessageSegment.reply(event.message_id) + msg)
 
