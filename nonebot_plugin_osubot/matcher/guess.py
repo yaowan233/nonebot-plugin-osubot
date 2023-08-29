@@ -11,6 +11,8 @@ from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule
 from nonebot.matcher import Matcher
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, MessageSegment
+from nonebot.params import T_State
+from .utils import split_msg
 from ..info import get_bg
 from ..utils import NGM
 from ..api import osu_api
@@ -32,17 +34,14 @@ guess_song_cache = ExpiringDict(1000, 60 * 60 * 24)
 async def get_random_beatmap_set(binded_id, group_id, ttl=10):
     if ttl == 0:
         return
-    selected_users = random.sample(binded_id, min(5, len(binded_id)))
-    if not selected_users:
+    selected_user = random.choice(binded_id)
+    if not selected_user:
         return
-    score_ls = []
-    for selected_user in selected_users:
-        user = await UserData.filter(user_id=selected_user).first()
-        bp_info = await osu_api('bp', user.osu_id, NGM[str(user.osu_mode)])
-        if isinstance(bp_info, str):
-            await guess_audio.finish('发生了错误，再试试吧')
-        score_ls += [Score(**i) for i in bp_info]
-    selected_score = random.choice(score_ls)
+    user = await UserData.filter(user_id=selected_user).first()
+    bp_info = await osu_api('bp', user.osu_id, NGM[str(user.osu_mode)])
+    if isinstance(bp_info, str):
+        await guess_audio.finish('发生了错误，再试试吧')
+    selected_score = random.choice([Score(**i) for i in bp_info])
     if selected_score.beatmapset.id not in guess_song_cache[group_id]:
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
     else:
@@ -50,18 +49,17 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
     return selected_score, user
 
 
-@guess_audio.handle()
-async def _(event: GroupMessageEvent, bot: Bot, mather: Matcher):
-    await guess_handler(event, bot, mather)
-
-
-async def guess_handler(event: GroupMessageEvent, bot: Bot, matcher: Matcher):
+@guess_audio.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: GroupMessageEvent, bot: Bot, matcher: Matcher):
+    if 'error' in state:
+        await guess_audio.finish(MessageSegment.reply(event.message_id) + state['error'])
+    mode = state['mode']
     group_id = event.group_id
     group_member = await bot.get_group_member_list(group_id=group_id)
     user_id_ls = [i['user_id'] for i in group_member]
-    binded_id = await UserData.filter(user_id__in=user_id_ls).values_list('user_id', flat=True)
+    binded_id = await UserData.filter(user_id__in=user_id_ls).filter(osu_mode=mode).values_list('user_id', flat=True)
     if not binded_id:
-        await guess_audio.finish('群里还没有人绑定osu账号呢，绑定了再来试试吧')
+        await guess_audio.finish('群里还没有人绑定该模式osu账号呢，绑定了再来试试吧')
     if not guess_song_cache.get(group_id):
         guess_song_cache[group_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
@@ -232,14 +230,17 @@ async def _(event: GroupMessageEvent):
 guess_pic = on_command('图片猜歌', priority=11, block=True)
 
 
-@guess_pic.handle()
-async def _(event: GroupMessageEvent, bot: Bot, matcher: Matcher):
+@guess_pic.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: GroupMessageEvent, bot: Bot, matcher: Matcher):
+    if 'error' in state:
+        await guess_audio.finish(MessageSegment.reply(event.message_id) + state['error'])
+    mode = state['mode']
     group_id = event.group_id
     group_member = await bot.get_group_member_list(group_id=group_id)
     user_id_ls = [i['user_id'] for i in group_member]
-    binded_id = await UserData.filter(user_id__in=user_id_ls).values_list('user_id', flat=True)
+    binded_id = await UserData.filter(user_id__in=user_id_ls).filter(osu_mode=mode).values_list('user_id', flat=True)
     if not binded_id:
-        await guess_pic.finish('群里还没有人绑定osu账号呢，绑定了再来试试吧')
+        await guess_pic.finish('群里还没有人绑定模式osu账号呢，绑定了再来试试吧')
     if not guess_song_cache.get(group_id):
         guess_song_cache[group_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
