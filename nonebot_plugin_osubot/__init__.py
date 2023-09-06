@@ -148,6 +148,18 @@ async def _info(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     await info.finish(MessageSegment.reply(event.message_id) + data)
 
 
+mu = on_command("mu", aliases={'Mu', 'MU'}, block=True, priority=11)
+
+
+@mu.handle(parameterless=[split_msg()])
+async def _mu(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
+    user_id = state['user']
+    if not user_id:
+        await mu.finish("该账号尚未绑定，请输入 /bind 用户名 绑定账号")
+    data = f"https://osu.ppy.sh/u/{user_id}"
+    await mu.finish(MessageSegment.reply(event.message_id) + data)
+
+
 recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=True)
 
 
