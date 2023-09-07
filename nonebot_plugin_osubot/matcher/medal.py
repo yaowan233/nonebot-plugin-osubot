@@ -87,7 +87,9 @@ async def _(bot: Bot, event: MessageEvent, msg: Message = CommandArg()):
     style_regex = r"<style[^>]*>(.*?)<\/style>"
     words = re.sub(style_regex, "", words)
     words = re.sub(r"<[^>]+>", "", words)
-    await medal.send(MessageSegment.image(medal_data['Link']) + words)
+    if medal_data['PackID']:
+        words += f'\nhttps://osu.ppy.sh/beatmaps/packs/{medal_data["PackID"].rstrip(",,,")}'
+    await medal.send(MessageSegment.reply(event.message_id) + MessageSegment.image(medal_data['Link']) + words)
     if medal_data['beatmaps']:
         msg_ls = []
         for beatmap in medal_data['beatmaps']:
