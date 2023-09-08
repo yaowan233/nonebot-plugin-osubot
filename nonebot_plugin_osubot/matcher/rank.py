@@ -44,9 +44,8 @@ async def _(event: GroupMessageEvent, state: T_State, bot: Bot):
         icon_img = Image.open(icon).convert('RGBA').resize((63, 63))
         icon_img = draw_fillet(icon_img, 10)
         img.alpha_composite(icon_img, (100, 60 + 82 * index))
-        user_data = await UserData.filter(osu_id=info.osu_id).first()
         for user in group_member:
-            if int(user['user_id']) == user_data.user_id:
+            if await UserData.filter(user_id=user['user_id'], osu_id=info.osu_id).first():
                 name = user['card'] or user.get('nickname', '')
                 break
         else:
