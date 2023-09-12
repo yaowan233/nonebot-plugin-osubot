@@ -95,7 +95,7 @@ _✨ NoneBot osubot ✨_
 | OSU_KEY | 是 | 无 | 客户端密钥 |
 | OSZ_MIRROR | 否 | 0 | 0-2分别代表sayo,kitsu,chimu的镜像下载 |
 | DB_URL | 否 | sqlite://db.sqlite3 | 数据库地址 |
-| INFO_BG | 否 | ['https://api.ghser.com/random/pe.php'] | 随机背景api地址 |
+| INFO_BG | 否 | ['https://api.gumengya.com/Api/DmImg?format=image'] | 随机背景api地址 |
 
 ## 🎉 使用
 ### 指令
