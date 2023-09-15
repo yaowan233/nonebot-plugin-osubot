@@ -144,7 +144,7 @@ async def _info(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
     day = state['day']
-    data = await draw_info(user, NGM[mode], day)
+    data = await draw_info(user, NGM[mode], day, state['is_name'])
     await info.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -195,7 +195,7 @@ async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     mode = state['mode']
     mods = state['mods']
     map_id = state['para']
-    data = await get_score_data(user, NGM[mode], mapid=map_id, mods=mods)
+    data = await get_score_data(user, NGM[mode], mapid=map_id, mods=mods, is_name=state['is_name'])
     await score.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -241,7 +241,7 @@ async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     low, high = int(low), int(high)
     if not 0 < low < high <= 100:
         await pfm.finish(MessageSegment.reply(event.message_id) + '仅支持查询bp1-100')
-    data = await draw_bp('bp', user, NGM[mode], mods, low, high)
+    data = await draw_bp('bp', user, NGM[mode], mods, low, high, is_name=state['is_name'])
     await pfm.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -255,7 +255,7 @@ async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
     day = state['day']
-    data = await draw_bp('tbp', user, NGM[mode], [], day=day)
+    data = await draw_bp('tbp', user, NGM[mode], [], day=day-1, is_name=state['is_name'])
     await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -326,7 +326,7 @@ async def _bind(event: Union[MessageEvent, GuildMessageEvent], msg: Message = Co
     async with lock:
         if _ := await UserData.get_or_none(user_id=event.get_user_id()):
             await bind.finish(MessageSegment.reply(event.message_id) + '您已绑定，如需要解绑请输入/unbind')
-        msg = await bind_user_info('bind', name, event.get_user_id())
+        msg = await bind_user_info('bind', name, event.get_user_id(), True)
     await bind.finish(MessageSegment.reply(event.message_id) + msg)
 
 

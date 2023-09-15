@@ -59,9 +59,9 @@ async def renew_token():
         logger.error(f'更新OSU token出错 错误{req.status_code}')
 
 
-async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0) -> Union[str, dict]:
-    if uid:
-        info = await get_user_info(f'{api}/users/{uid}')
+async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0, is_name: bool = False) -> Union[str, dict]:
+    if is_name:
+        info = await get_user_info(f'{api}/users/{uid}?key=username')
         if isinstance(info, str):
             return info
         else:

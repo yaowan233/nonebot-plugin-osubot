@@ -14,8 +14,8 @@ from ..database.models import InfoData
 from ..utils import GMN, FGM
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int) -> Union[str, MessageSegment]:
-    info_json = await osu_api('info', uid, mode)
+async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union[str, MessageSegment]:
+    info_json = await osu_api('info', uid, mode, is_name=is_name)
     if isinstance(info_json, str):
         return info_json
     info = User(**info_json)

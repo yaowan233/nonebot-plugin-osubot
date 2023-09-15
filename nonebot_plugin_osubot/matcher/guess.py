@@ -59,7 +59,7 @@ async def _(state: T_State, event: GroupMessageEvent, bot: Bot, matcher: Matcher
     user_id_ls = [i['user_id'] for i in group_member]
     binded_id = await UserData.filter(user_id__in=user_id_ls).filter(osu_mode=mode).values_list('user_id', flat=True)
     if not binded_id:
-        await guess_audio.finish('群里还没有人绑定该模式osu账号呢，绑定了再来试试吧')
+        await guess_audio.finish('群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧')
     if not guess_song_cache.get(group_id):
         guess_song_cache[group_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
@@ -240,7 +240,7 @@ async def _(state: T_State, event: GroupMessageEvent, bot: Bot, matcher: Matcher
     user_id_ls = [i['user_id'] for i in group_member]
     binded_id = await UserData.filter(user_id__in=user_id_ls).filter(osu_mode=mode).values_list('user_id', flat=True)
     if not binded_id:
-        await guess_pic.finish('群里还没有人绑定模式osu账号呢，绑定了再来试试吧')
+        await guess_pic.finish('群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧')
     if not guess_song_cache.get(group_id):
         guess_song_cache[group_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)

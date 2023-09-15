@@ -18,6 +18,7 @@ def split_msg():
         state['mode'] = str(user_data.osu_mode) if user_data else '0'
         state['mods'] = []
         state['day'] = 0
+        state['is_name'] = False
         symbol_ls = [':', '+', '：', '#', '＃']
         symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day', '＃': 'day'}
         dic = {}
@@ -37,10 +38,13 @@ def split_msg():
             state['para'] = arg[:index].strip()
         else:
             state['para'] = arg.strip()
+        if state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent') and state['para']:
+            state['is_name'] = True
         # 分出user和参数
         if state['para'].find(' ') > 0 and state['_prefix']['command'][0] not in ('pr', 're', 'info', 'tbp', 'recent'):
             state['user'] = state['para'][:state['para'].rfind(' ')].strip()
             state['para'] = state['para'][state['para'].rfind(' ') + 1:].strip()
+            state['is_name'] = True
         elif state['para'].find(' ') > 0 and state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent'):
             state['user'] = state['para']
         if not state['mode'].isdigit() and (int(state['mode']) < 0 or int(state['mode']) > 3):

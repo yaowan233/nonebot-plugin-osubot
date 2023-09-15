@@ -6,8 +6,8 @@ from ..schema import User
 from ..api import osu_api
 
 
-async def bind_user_info(project: str, uid, qid) -> str:
-    info = await osu_api(project, uid, GM[0])
+async def bind_user_info(project: str, uid, qid, is_name) -> str:
+    info = await osu_api(project, uid, GM[0], is_name=is_name)
     if not info:
         return f'未查询到玩家“{uid}”，请检查是否有多于或缺少的空格'
     elif isinstance(info, str):

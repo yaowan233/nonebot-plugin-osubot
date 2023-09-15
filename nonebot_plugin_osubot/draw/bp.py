@@ -16,9 +16,9 @@ from .utils import image2bytesio, draw_fillet
 from .static import *
 
 
-async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List],
-                  low_bound: int = 0, high_bound: int = 0, day: int = 0) -> Union[str, MessageSegment]:
-    bp_info = await osu_api('bp', uid, mode)
+async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List], low_bound: int = 0, high_bound: int = 0,
+                  day: int = 0, is_name: bool = False) -> Union[str, MessageSegment]:
+    bp_info = await osu_api('bp', uid, mode, is_name=is_name)
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [Score(**i) for i in bp_info]

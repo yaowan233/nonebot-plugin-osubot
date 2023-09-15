@@ -21,9 +21,10 @@ async def draw_score(project: str,
                      mode: str,
                      mods: Optional[List[str]],
                      best: int = 0,
-                     mapid: int = 0) -> Union[str, MessageSegment]:
-    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid))
-    task1 = asyncio.create_task(osu_api('info', uid, mode))
+                     mapid: int = 0,
+                     is_name: bool = False) -> Union[str, MessageSegment]:
+    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid, is_name=is_name))
+    task1 = asyncio.create_task(osu_api('info', uid, mode, is_name=is_name))
     score_json = await task0
     if not score_json:
         return f'未查询到在 {GMN[mode]} 的游玩记录'
@@ -61,10 +62,10 @@ async def draw_score(project: str,
                                 score_info.beatmap.id, score_info.beatmap.beatmapset_id)
 
 
-async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: int = 0):
+async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: int = 0, is_name: bool = False):
     task = asyncio.create_task(get_beatmap_attribute(mapid, mode))
-    task0 = asyncio.create_task(osu_api('score', uid, mode, mapid))
-    task1 = asyncio.create_task(osu_api('info', uid, mode))
+    task0 = asyncio.create_task(osu_api('score', uid, mode, mapid, is_name=is_name))
+    task1 = asyncio.create_task(osu_api('info', uid, mode, is_name=is_name))
     task2 = asyncio.create_task(osu_api('map', map_id=mapid))
     task3 = asyncio.create_task(get_sayo_map_info(mapid, 1))
     score_json = await task0
@@ -250,8 +251,8 @@ async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, si
         draw.text((1309, 645), f'{score_info.statistics.count_katu}', font=Torus_Regular_30, anchor='mm')
         draw.text((1432, 645), f'{score_info.statistics.count_miss}', font=Torus_Regular_30, anchor='mm')
     else:
-        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1'
-        if score_info.statistics.count_300 != 0 else '∞:1', font=Torus_Regular_20, anchor='mm')
+        draw.text((1002, 580), f'{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1',
+                  font=Torus_Regular_20, anchor='mm')
         draw.text((1002, 550), f'{score_info.accuracy * 100:.2f}%', font=Torus_Regular_30, anchor='mm')
         draw.text((1197, 550), f'{score_info.max_combo}', font=Torus_Regular_30, anchor='mm')
         draw.text((1395, 550), f'{pp_info.pp:.0f}/{ss_pp}', font=Torus_Regular_30, anchor='mm')
