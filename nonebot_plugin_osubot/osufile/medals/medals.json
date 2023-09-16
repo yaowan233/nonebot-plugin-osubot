@@ -2502,5 +2502,13 @@
     "MedalSolution": "在不使用EZ/NF/HT mods的情况下，通过任何3星图（如果使用增加难度的mods 例如DT，星数按开启mods之后的为准）",
     "PackID": "",
     "BeatmapID": "3800941,1617549,2689496,1836302,250,929914,457372,3062999,3056868,1960198,17909"
+  },
+  {
+    "MedalTitle": "Building Confidence",
+	  "colMods": "",
+    "gamemodeText": "standard",
+	  "MedalSolution": "在不使用EZ/NF/HT mods的情况下，通过任何3星图（如果使用增加难度的mods 例如DT，星数按开启mods之后的为准）",
+	  "PackID": "",
+	  "BeatmapID": "11094,1605551,1069081,3797894,70090,1815796"
   }
 ]
