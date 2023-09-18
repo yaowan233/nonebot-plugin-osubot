@@ -169,7 +169,7 @@ async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent])
         await recent.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('recent', user, NGM[mode], [])
+    data = await draw_score('recent', user, NGM[mode], [], is_name=state['is_name'])
     await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
@@ -181,7 +181,7 @@ async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await pr.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('pr', user, NGM[mode], [])
+    data = await draw_score('pr', user, NGM[mode], [], is_name=state['is_name'])
     await pr.finish(MessageSegment.reply(event.message_id) + data)
 
 score = on_command('score', priority=11, block=True)
@@ -218,7 +218,7 @@ async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     best = int(para)
     if best <= 0 or best > 100:
         await bp.finish(MessageSegment.reply(event.message_id) + '只允许查询bp 1-100 的成绩')
-    data = await draw_score('bp', user, NGM[mode], best=best, mods=mods)
+    data = await draw_score('bp', user, NGM[mode], best=best, mods=mods, is_name=state['is_name'])
     await bp.finish(MessageSegment.reply(event.message_id) + data)
 
 
