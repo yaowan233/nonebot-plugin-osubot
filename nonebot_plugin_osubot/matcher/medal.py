@@ -1,10 +1,17 @@
 import re
+import json
 from typing import List, Tuple
+from pathlib import Path
 
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, MessageEvent, GroupMessageEvent
 from nonebot.params import CommandArg
 from ..api import safe_async_get
+
+
+medal_data_path = Path(__file__).parent.parent / 'osufile' / 'medals' / 'medals.json'
+with open(medal_data_path, 'r') as file:
+    medal_json = json.load(file)
 
 
 async def send_forward_msg(
@@ -59,31 +66,34 @@ async def _(bot: Bot, event: MessageEvent, msg: Message = CommandArg()):
     if medal_data['Restriction'] != 'NULL':
         words += f"限制模式：{medal_data['Restriction']}\n"
     words += '获得方式：\n'
-    words += medal_data['Solution'] if medal_data['Solution'] else medal_data['Instructions']
-    table_regex = r"<table[^>]*>(.*?)<\/table>"
-    table_match = re.search(table_regex, words, re.DOTALL)
-    if table_match:
-        table_text = table_match.group(1)
+    if medal_data['Name'] in medal_json:
+        words += medal_json[medal_data['Name']]['MedalSolution']
+    else:
+        words += medal_data['Solution'] if medal_data['Solution'] else medal_data['Instructions']
+        table_regex = r"<table[^>]*>(.*?)<\/table>"
+        table_match = re.search(table_regex, words, re.DOTALL)
+        if table_match:
+            table_text = table_match.group(1)
 
-        # 使用正则表达式匹配并提取表格行部分
-        row_regex = r"<tr[^>]*>(.*?)<\/tr>"
-        rows = re.findall(row_regex, table_text, re.DOTALL)
+            # 使用正则表达式匹配并提取表格行部分
+            row_regex = r"<tr[^>]*>(.*?)<\/tr>"
+            rows = re.findall(row_regex, table_text, re.DOTALL)
 
-        result = ""
+            result = ""
 
-        # 遍历表格行并提取单元格内容
-        for row in rows:
-            # 使用正则表达式匹配并提取单元格部分
-            cell_regex = r"<t[hd][^>]*>(.*?)<\/t[hd]>"
-            cells = re.findall(cell_regex, row, re.DOTALL)
-            for cell in cells:
-                # 去除单元格内的HTML标签
-                cell_text = re.sub(r"<[^>]*>", "", cell)
-                result += cell_text + " "
-            result += "\n"
+            # 遍历表格行并提取单元格内容
+            for row in rows:
+                # 使用正则表达式匹配并提取单元格部分
+                cell_regex = r"<t[hd][^>]*>(.*?)<\/t[hd]>"
+                cells = re.findall(cell_regex, row, re.DOTALL)
+                for cell in cells:
+                    # 去除单元格内的HTML标签
+                    cell_text = re.sub(r"<[^>]*>", "", cell)
+                    result += cell_text + " "
+                result += "\n"
 
-        # 将提取的表格文字替换回原文中
-        words = re.sub(table_regex, result, words)
+            # 将提取的表格文字替换回原文中
+            words = re.sub(table_regex, result, words)
     style_regex = r"<style[^>]*>(.*?)<\/style>"
     words = re.sub(style_regex, "", words)
     words = re.sub(r"<[^>]+>", "", words)
