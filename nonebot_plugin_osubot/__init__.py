@@ -524,8 +524,11 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await update.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['user']
     path = user_cache_path / str(user) / 'icon.png'
+    gif_path = user_cache_path / str(user) / 'icon.gif'
     if path.exists():
         path.unlink()
+    if gif_path.exists():
+        gif_path.unlink()
     await update.finish(MessageSegment.reply(event.message_id) + '个人信息更新成功')
 
 accept = on_command('同意全部', priority=11, block=True, permission=SUPERUSER)
@@ -655,5 +658,5 @@ async def delete_cached_map():
     map_path.mkdir(parents=True, exist_ok=True)
     user_path = Path('data/osu/user')
     for file_path in user_path.glob('**/*'):
-        if file_path.is_file() and file_path.name == 'icon.png':
+        if file_path.is_file() and file_path.name in ('icon.png', 'icon.gif'):
             file_path.unlink()
