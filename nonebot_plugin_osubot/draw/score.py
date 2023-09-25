@@ -79,6 +79,9 @@ async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: 
             return f'未查询到在 {GMN[mode]} 的游玩记录'
         if mods:
             for score in score_ls:
+                if mods == 'NM' and not score.mods:
+                    score_info = score
+                    break
                 if score.mods == mods:
                     score_info = score
                     break
