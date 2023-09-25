@@ -1,10 +1,7 @@
 from io import BytesIO, TextIOWrapper
 from typing import Union, Optional
 
-import os
 import re
-import shutil
-import zipfile
 from pathlib import Path
 
 from nonebot import get_driver
@@ -33,28 +30,6 @@ if not user_cache_path.exists():
     user_cache_path.mkdir(parents=True, exist_ok=True)
 if not badge_cache_path.exists():
     badge_cache_path.mkdir(parents=True, exist_ok=True)
-
-
-async def map_downloaded(setid: str, retry_time=0) -> Optional[Path]:
-    # 当重试次数大于三时，报错
-    if retry_time > 2:
-        raise TimeoutError('osz文件下载失败，请尝试更换其他镜像')
-    # 判断是否存在该文件
-    path = map_path / setid
-    if setid in os.listdir(map_path) and list(path.glob('*.osu')):
-        return path
-    filepath = await download_map(int(setid))
-    # 解压下载的osz文件
-    try:
-        with zipfile.ZipFile(filepath.absolute()) as file:
-            file.extractall(path)
-    # 当下载图包失败时自动重试
-    except zipfile.BadZipfile:
-        return await map_downloaded(setid, retry_time + 1)
-    # 删除文件
-    await remove_file(path)
-    os.remove(filepath)
-    return path
 
 
 async def download_map(setid: int) -> Optional[Path]:
@@ -102,29 +77,6 @@ async def get_projectimg(url: str):
     data = req.read()
     im = BytesIO(data)
     return im
-
-
-async def remove_file(path: Path) -> bool:
-    bg_list = set()
-    for file in os.listdir(path):
-        if '.osu' in file:
-            bg = re_map(path / file)
-            bg_list.add(bg)
-            bid = await get_map_id(path / file)
-            osu_path = path / f'{bid}.osu'
-            if osu_path.exists():
-                os.remove(osu_path)
-                await download_osu(path.name, bid)
-            else:
-                os.rename(path / file, path / f'{bid}.osu')
-
-    for root, dir, files in os.walk(path, topdown=False):
-        for name in files:
-            if name not in bg_list and '.osu' not in name:
-                os.remove(os.path.join(root, name))
-        for dirname in dir:
-            shutil.rmtree(os.path.join(root, dirname))
-    return True
 
 
 def re_map(file: Union[bytes, Path]) -> str:

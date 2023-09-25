@@ -4,10 +4,10 @@ from typing import Union
 from PIL import ImageEnhance, ImageDraw
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-from ..api import osu_api
+from ..api import osu_api, get_map_bg
 from ..schema import Beatmap
 from ..mods import calc_mods
-from ..file import re_map, get_projectimg, map_downloaded, download_osu
+from ..file import re_map, get_projectimg, download_osu, map_path
 from ..utils import FGM
 from ..pp import get_ss_pp
 from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio
@@ -23,10 +23,12 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     mapinfo = Beatmap(**info)
     diffinfo = calc_songlen(mapinfo.total_length), mapinfo.bpm, mapinfo.count_circles, mapinfo.count_sliders
     # 获取地图
-    dirpath = await map_downloaded(str(mapinfo.beatmapset_id))
-    if not dirpath.exists():
-        await download_osu(mapinfo.beatmapset_id, mapinfo.id)
-    osu = dirpath / f"{mapinfo.id}.osu"
+    path = map_path / str(mapinfo.beatmapset_id)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+    osu = path / f"{mapid}.osu"
+    if not osu.exists():
+        await download_osu(mapinfo.beatmapset_id, mapid)
     ss_pp_info = get_ss_pp(str(osu.absolute()), calc_mods(mods))
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
@@ -38,7 +40,12 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     im = Image.new('RGBA', (1200, 600))
     draw = ImageDraw.Draw(im)
     cover = re_map(osu)
-    cover_crop = await crop_bg('MB', dirpath / cover)
+    cover_path = path / cover
+    if not cover_path.exists():
+        bg = await get_map_bg(mapinfo.beatmapset_id, cover)
+        with open(cover_path, 'wb') as f:
+            f.write(bg.getvalue())
+    cover_crop = await crop_bg('MB', cover_path)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info

@@ -21,7 +21,7 @@ from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command, on_regex, get_driver
 from nonebot_plugin_tortoise_orm import add_model
 from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio, get_score_data
-from .file import download_map, map_downloaded, download_osu, download_tmp_osu, user_cache_path, save_info_pic
+from .file import download_map, download_osu, download_tmp_osu, user_cache_path, save_info_pic
 from .utils import NGM, GMN, mods2list
 from .database.models import UserData
 from .mania import generate_preview_pic, convert_mania_map, Options
