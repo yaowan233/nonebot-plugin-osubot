@@ -1,4 +1,5 @@
 import asyncio
+import io
 from datetime import datetime, timedelta, date
 from time import strptime, mktime
 from typing import List, Union, Optional
@@ -63,7 +64,7 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     bplist_len = len(score_ls_filtered)
-    im = Image.new('RGBA', (1450, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
+    im = Image.new('RGBA', (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
     im.alpha_composite(BgImg)
     draw = ImageDraw.Draw(im)
     f_div = Image.new('RGBA', (1450, 2), (255, 255, 255, 255)).convert('RGBA')
@@ -79,7 +80,7 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
 
         # BP排名
         index = score_ls.index(bp)
-        draw.text((15 + offset, 190 + h_num), str(index + 1), font=Torus_Regular_20, anchor='lm')
+        draw.text((40 + offset, 190 + h_num), str(index + 1), font=Torus_Regular_20, anchor='rm')
 
         # 获取谱面大banner
         try:
@@ -150,6 +151,15 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         await asyncio.sleep(0)
 
     base = image2bytesio(im)
-    im.close()
-    msg = MessageSegment.image(base)
+    image_bytesio = io.BytesIO()
+    im.save(image_bytesio, 'PNG')
+    # 转换为 JPEG 格式
+    image_bytesio.seek(0)
+    image = Image.open(image_bytesio).convert('RGB')
+    image_bytesio = io.BytesIO()
+    image.save(image_bytesio, 'JPEG', quality=85)
+    image.close()
+    msg = MessageSegment.image(image_bytesio.getvalue())
+    image_bytesio.close()
+
     return msg
