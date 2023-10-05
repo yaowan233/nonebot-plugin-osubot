@@ -5,7 +5,7 @@ import random
 import numpy as np
 from io import BytesIO
 from typing import Optional, Union
-from PIL import ImageDraw, UnidentifiedImageError
+from PIL import ImageDraw, UnidentifiedImageError, ImageEnhance, ImageFilter
 from matplotlib.figure import Figure
 
 from ..file import get_projectimg, user_cache_path
@@ -39,6 +39,28 @@ def draw_fillet(img, radii):
     img.putalpha(alpha)
     return img
 
+def draw_fillet2(img, radii):
+    # 画圆（用于分离4个角）
+    circle = Image.new('L', (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
+    draw = ImageDraw.Draw(circle)
+    draw.ellipse((0, 0, radii * 2, radii * 2), fill=255)  # 画白色圆形
+    # 原图
+    img = img.convert("RGBA")
+    w, h = img.size
+    # 创建一个透明度为50%的图像
+    enhancer = ImageEnhance.Brightness(img)
+    img = enhancer.enhance(0.5)
+    # 画4个角（将整圆分离为4个部分）
+    alpha = Image.new('L', img.size, 255)
+    alpha.paste(circle.crop((0, 0, radii, radii)), (0, 0))  # 左上角
+    alpha.paste(circle.crop((radii, 0, radii * 2, radii)), (w - radii, 0))  # 右上角
+    alpha.paste(circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii))  # 右下角
+    alpha.paste(circle.crop((0, radii, radii, radii * 2)), (0, h - radii))  # 左下角
+    # 高斯模糊效果
+    img = img.filter(ImageFilter.GaussianBlur(radius=2))
+    # 白色区域透明可见，黑色区域不可见
+    img.putalpha(alpha)  
+    return img
 
 def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: bool = False):
     if not n1 or not n2:
