@@ -12,7 +12,7 @@ from ..utils import GMN
 from ..mods import get_mods_list
 from ..file import get_projectimg
 
-from .utils import image2bytesio, draw_fillet
+from .utils import image2bytesio, draw_fillet, draw_fillet2
 from .static import *
 
 
@@ -56,73 +56,99 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List], low_b
 async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filtered: List[Score],
                    mode: str, low_bound: int = 0, high_bound: int = 0,
                    day: int = 0) -> Union[str, MessageSegment]:
-    tasks = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/card.jpg')
+    task0 = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg')
              for i in score_ls_filtered]
-    bg_ls = await asyncio.gather(*tasks)
+    task1 = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg')
+             for i in score_ls_filtered]
+    bg_ls = await asyncio.gather(*task0)
+    large_banner_ls = await asyncio.gather(*task1)
     bplist_len = len(score_ls_filtered)
-    im = Image.new('RGBA', (1500, 180 + 82 * (bplist_len - 1)), (31, 41, 46, 255))
+    im = Image.new('RGBA', (1450, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
     im.alpha_composite(BgImg)
     draw = ImageDraw.Draw(im)
-    f_div = Image.new('RGBA', (1500, 2), (255, 255, 255, 255)).convert('RGBA')
+    f_div = Image.new('RGBA', (1450, 2), (255, 255, 255, 255)).convert('RGBA')
     im.alpha_composite(f_div, (0, 100))
     if project == 'bp':
-        uinfo = f"{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
+        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     else:
-        uinfo = f"{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
-    draw.text((1480, 50), uinfo, font=Torus_SemiBold_25, anchor='rm')
+        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
+    draw.text((1388, 50), uinfo, font=Torus_SemiBold_25, anchor='rm')
     for num, bp in enumerate(score_ls_filtered):
-        h_num = 82 * num
+        h_num = 177 * (num // 2)  # 每两个数据换行
+        offset = 695 * (num % 2)  # 数据在右边时的偏移量
+
+        # BP排名
+        index = score_ls.index(bp)
+        draw.text((15 + offset, 190 + h_num), str(index + 1), font=Torus_Regular_20, anchor='lm')
+
+        # 获取谱面大banner
+        try:
+            banner = Image.open(large_banner_ls[num]).convert('RGBA').resize((650, 150))
+            banner_with_fillet = draw_fillet2(banner, 15)
+            im.alpha_composite(banner_with_fillet, (45 + offset, 114 + h_num))
+        except UnidentifiedImageError:
+            ...
+
+        # 获取谱面banner
+        try:
+            bg = Image.open(bg_ls[num]).convert('RGBA').resize((150, 150))
+            bg_imag = draw_fillet(bg, 15)
+            im.alpha_composite(bg_imag, (45 + offset, 114 + h_num))
+        except UnidentifiedImageError:
+            ...
+
         # mods
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
                 mods_bg = osufile / 'mods' / f'{s_mods}.png'
                 mods_img = Image.open(mods_bg).convert('RGBA')
-                im.alpha_composite(mods_img, (1000 + 50 * mods_num, 126 + h_num))
+                im.alpha_composite(mods_img, (210 + offset + 50 * mods_num, 192 + h_num))
             if (bp.rank == 'X' or bp.rank == 'S') and ('HD' in bp.mods or 'FL' in bp.mods):
                 bp.rank += 'H'
-        # BP排名
-        index = score_ls.index(bp)
-        draw.text((15, 144 + h_num), str(index + 1), font=Torus_Regular_20, anchor='lm')
-        # 获取谱面banner
-        try:
-            bg = Image.open(bg_ls[num]).convert('RGBA').resize((157, 55))
-            bg_imag = draw_fillet(bg, 10)
-            im.alpha_composite(bg_imag, (45, 114 + h_num))
-        except UnidentifiedImageError:
-            ...
-        # rank
-        rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
-        rank_bg = Image.open(rank_img).convert('RGBA').resize((32, 16))
-        im.alpha_composite(rank_bg, (1345, 124 + h_num))
+
         # 曲名&作曲
         metadata = f'{bp.beatmapset.title} | by {bp.beatmapset.artist}'
-        # 如果曲名&作曲的长度超过75，就截断它
-        if len(metadata) > 75:
-            metadata = metadata[:72] + '...'
-        # 写入曲名&作曲
-        draw.text((215, 125 + h_num), metadata, font=Torus_Regular_20, anchor='lm')
+        if len(metadata) > 30:
+            metadata = metadata[:27] + '...'
+        draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor='lm')
+
         # 地图版本&时间
         old_time = datetime.strptime(bp.created_at.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
         new_time = (old_time + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
-        # 如果难度名的长度超过50，就截断它
         difficulty = bp.beatmap.version
-        if len(difficulty) > 50:
-            difficulty = difficulty[:47] + '...'
-        # 写入难度名
-        difficulty = f'{bp.beatmap.difficulty_rating}★ | {difficulty} | {new_time}'
-        draw.text((215, 158 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
+        if len(difficulty) > 30:
+            difficulty = difficulty[:27] + '...'
+        difficulty = f'{bp.beatmap.difficulty_rating}★ | {difficulty}'
+        draw.text((210 + offset, 168 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
+
+        # 达成时间
+        time = f'{new_time}'
+        draw.text((210 + offset, 245 + h_num), time, font=Torus_Regular_20, anchor='lm')
+
         # acc
-        draw.text((1265, 130 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
-                  anchor='lm', fill=(238, 171, 0, 255))
+        draw.text((660 + offset, 220 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
+                  anchor='rm', fill=(238, 171, 0, 255))
+
+        # rank
+        rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
+        rank_bg = Image.open(rank_img).convert('RGBA').resize((32, 16))
+        im.alpha_composite(rank_bg, (660 + offset, 213 + h_num))
+
         # mapid
-        draw.text((1265, 158 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='lm')
+        draw.text((690 + offset, 245 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='rm')
+
         # pp
-        draw.text((1450, 140 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25, anchor='rm', fill=(255, 102, 171, 255))
-        draw.text((1480, 140 + h_num), 'pp', font=Torus_SemiBold_25, anchor='rm', fill=(209, 148, 176, 255))
+        draw.text((600 + offset ,180 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
+                  anchor='lm', fill=(255, 102, 171, 255))
+        draw.text((650 + offset, 180 + h_num), 'pp', font=Torus_SemiBold_25,
+                  anchor='lm', fill=(209, 148, 176, 255))
+
         # 分割线
-        div = Image.new('RGBA', (1450, 2), (46, 53, 56, 255)).convert('RGBA')
-        im.alpha_composite(div, (25, 180 + h_num))
+        div = Image.new('RGBA', (1400, 2), (46, 53, 56, 255)).convert('RGBA')
+        im.alpha_composite(div, (25, 275 + h_num))
+
         await asyncio.sleep(0)
+
     base = image2bytesio(im)
     im.close()
     msg = MessageSegment.image(base)
