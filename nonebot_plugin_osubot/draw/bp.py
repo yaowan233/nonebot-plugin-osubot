@@ -126,21 +126,21 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         draw.text((210 + offset, 245 + h_num), f'{new_time}', font=Torus_Regular_20, anchor='lm')
 
         # acc
-        draw.text((658 + offset, 220 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
+        draw.text((680 + offset, 210 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_25,
                   anchor='rm', fill=(238, 171, 0, 255))
 
         # rank
         rank_img = osufile / 'ranking' / f'ranking-{bp.rank}.png'
-        rank_bg = Image.open(rank_img).convert('RGBA').resize((32, 16))
-        im.alpha_composite(rank_bg, (660 + offset, 213 + h_num))
+        rank_bg = Image.open(rank_img).convert('RGBA').resize((60, 30))
+        im.alpha_composite(rank_bg, (621 + offset, 120 + h_num))
 
         # mapid
-        draw.text((690 + offset, 245 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='rm')
+        draw.text((680 + offset, 245 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='rm')
 
         # pp
-        draw.text((647 + offset, 184 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
+        draw.text((645 + offset, 174 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
                   anchor='rm', fill=(255, 102, 171, 255))
-        draw.text((650 + offset, 180 + h_num), 'pp', font=Torus_SemiBold_25,
+        draw.text((648 + offset, 170 + h_num), 'pp', font=Torus_SemiBold_25,
                   anchor='lm', fill=(209, 148, 176, 255))
 
         # 分割线
