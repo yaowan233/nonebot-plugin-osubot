@@ -217,6 +217,8 @@ async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if '-' in para:
         await _pfm(state, event)
         return
+    if not para:
+        para = '1'
     if not para.isdigit():
         await bp.finish(MessageSegment.reply(event.message_id) + '只能接受纯数字的bp参数')
     best = int(para)
