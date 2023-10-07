@@ -169,7 +169,9 @@ async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent])
         await recent.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('recent', user, NGM[mode], [], is_name=state['is_name'])
+    if state['day'] == 0:
+        state['day'] = 1
+    data = await draw_score('recent', user, NGM[mode], [], state['day'] - 1, is_name=state['is_name'])
     await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
@@ -181,7 +183,9 @@ async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         await pr.finish(MessageSegment.reply(event.message_id) + state['error'])
     user = state['para'] if state['para'] else state['user']
     mode = state['mode']
-    data = await draw_score('pr', user, NGM[mode], [], is_name=state['is_name'])
+    if state['day'] == 0:
+        state['day'] = 1
+    data = await draw_score('pr', user, NGM[mode], [], state['day'] - 1, is_name=state['is_name'])
     await pr.finish(MessageSegment.reply(event.message_id) + data)
 
 score = on_command('score', priority=11, block=True)
