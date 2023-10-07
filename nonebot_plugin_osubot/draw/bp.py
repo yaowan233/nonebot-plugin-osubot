@@ -13,7 +13,7 @@ from ..utils import GMN
 from ..mods import get_mods_list
 from ..file import get_projectimg
 
-from .utils import image2bytesio, draw_fillet, draw_fillet2
+from .utils import draw_fillet, draw_fillet2
 from .static import *
 
 
@@ -123,11 +123,10 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         draw.text((210 + offset, 168 + h_num), difficulty, font=Torus_Regular_20, anchor='lm', fill=(238, 171, 0, 255))
 
         # 达成时间
-        time = f'{new_time}'
-        draw.text((210 + offset, 245 + h_num), time, font=Torus_Regular_20, anchor='lm')
+        draw.text((210 + offset, 245 + h_num), f'{new_time}', font=Torus_Regular_20, anchor='lm')
 
         # acc
-        draw.text((660 + offset, 220 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
+        draw.text((658 + offset, 220 + h_num), f'{bp.accuracy * 100:.2f}%', font=Torus_SemiBold_20,
                   anchor='rm', fill=(238, 171, 0, 255))
 
         # rank
@@ -139,8 +138,8 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         draw.text((690 + offset, 245 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='rm')
 
         # pp
-        draw.text((600 + offset ,180 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
-                  anchor='lm', fill=(255, 102, 171, 255))
+        draw.text((647 + offset, 184 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
+                  anchor='rm', fill=(255, 102, 171, 255))
         draw.text((650 + offset, 180 + h_num), 'pp', font=Torus_SemiBold_25,
                   anchor='lm', fill=(209, 148, 176, 255))
 
@@ -150,7 +149,6 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
 
         await asyncio.sleep(0)
 
-    base = image2bytesio(im)
     image_bytesio = io.BytesIO()
     im.save(image_bytesio, 'PNG')
     # 转换为 JPEG 格式
