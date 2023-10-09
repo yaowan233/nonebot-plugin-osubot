@@ -41,7 +41,7 @@ async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent])
         await recent.finish(MessageSegment.reply(event.message_id) + pic)
     if state['day'] == 0:
         state['day'] = 1
-    data = await draw_score('recent', state['user'], mode, [], state['day'] - 1, is_name=state['is_name'])
+    data = await draw_score('recent', state['user'], mode, [], state['day'], is_name=state['is_name'])
     await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -67,5 +67,7 @@ async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
         score_ls = [Score(**score_json) for score_json in data]
         pic = await draw_pfm('prlist', state['user'], score_ls, score_ls, NGM[mode])
         await pr.finish(MessageSegment.reply(event.message_id) + pic)
-    data = await draw_score('pr', state['user'], NGM[mode], [], is_name=state['is_name'])
+    if state['day'] == 0:
+        state['day'] = 1
+    data = await draw_score('pr', state['user'], NGM[mode], [], state['day'], is_name=state['is_name'])
     await pr.finish(MessageSegment.reply(event.message_id) + data)
