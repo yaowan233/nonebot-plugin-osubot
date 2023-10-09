@@ -21,6 +21,7 @@ def split_msg():
         state['is_name'] = False
         symbol_ls = [':', '+', '：', '#', '＃']
         symbol_dic = {':': 'mode', '+': 'mods', '：': 'mode', '#': 'day', '＃': 'day'}
+        double_command = ('bp', 'score')
         dic = {}
         arg = msg.extract_plain_text().strip()
         if max([arg.find(i) for i in symbol_ls]) >= 0:
@@ -35,18 +36,22 @@ def split_msg():
             if isinstance(state['mods'], str):
                 state['mods'] = mods2list(state['mods'].strip())
             index = min([arg.find(i) for i in symbol_ls if arg.find(i) >= 0])
-            state['para'] = arg[:index].strip()
+            state['user'] = state['para'] = arg[:index].strip()
         else:
-            state['para'] = arg.strip()
-        if state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent') and state['para']:
+            state['user'] = state['para'] = arg.strip()
+        if ' ' in state['para']:
+            ls = state['para'].split(' ')
+            if state['_prefix']['command'][0] in double_command:
+                state['para'] = ls[-1]
+                state['user'] = ' '.join(ls[:-1])
+            elif is_num_hyphen_num(ls[-1]):
+                state['para'] = ls[-1]
+                state['user'] = ' '.join(ls[:-1])
+            elif is_num_hyphen_num(ls[0]):
+                state['para'] = ls[0]
+                state['user'] = ' '.join(ls[1:])
             state['is_name'] = True
-        # 分出user和参数
-        if state['para'].find(' ') > 0 and state['_prefix']['command'][0] not in ('pr', 're', 'info', 'tbp', 'recent'):
-            state['user'] = state['para'][:state['para'].rfind(' ')].strip()
-            state['para'] = state['para'][state['para'].rfind(' ') + 1:].strip()
-            state['is_name'] = True
-        elif state['para'].find(' ') > 0 and state['_prefix']['command'][0] in ('pr', 're', 'info', 'tbp', 'recent'):
-            state['user'] = state['para']
+        # 判断参数是否合法
         if not state['mode'].isdigit() and (int(state['mode']) < 0 or int(state['mode']) > 3):
             state['error'] = '模式应为0-3的数字！'
         if isinstance(state['day'], str) and not state['day'].isdigit() and (int(state['day']) < 0):
@@ -55,3 +60,10 @@ def split_msg():
             state['error'] = '该账号尚未绑定，请输入 /bind 用户名 绑定账号'
         state['day'] = int(state['day'])
     return Depends(dependency)
+
+
+def is_num_hyphen_num(s: str):
+    if s.count('-') != 1:
+        return False
+    s = s.split('-')
+    return s[0].isdigit() and s[1].isdigit()

@@ -141,10 +141,7 @@ info = on_command("info", aliases={'Info', 'INFO'}, block=True, priority=11)
 async def _info(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await info.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['para'] if state['para'] else state['user']
-    mode = state['mode']
-    day = state['day']
-    data = await draw_info(user, NGM[mode], day, state['is_name'])
+    data = await draw_info(state['user'], NGM[state['mode']], state['day'], state['is_name'])
     await info.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -167,11 +164,9 @@ recent = on_command("recent", aliases={'re', 'RE', 'Re'}, priority=11, block=Tru
 async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await recent.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['para'] if state['para'] else state['user']
-    mode = state['mode']
     if state['day'] == 0:
         state['day'] = 1
-    data = await draw_score('recent', user, NGM[mode], [], state['day'] - 1, is_name=state['is_name'])
+    data = await draw_score('recent', state['user'], NGM[state['mode']], [], state['day'] - 1, is_name=state['is_name'])
     await recent.finish(MessageSegment.reply(event.message_id) + data)
 
 pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
@@ -181,11 +176,9 @@ pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr'})
 async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await pr.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['para'] if state['para'] else state['user']
-    mode = state['mode']
     if state['day'] == 0:
         state['day'] = 1
-    data = await draw_score('pr', user, NGM[mode], [], state['day'] - 1, is_name=state['is_name'])
+    data = await draw_score('pr', state['user'], NGM[state['mode']], [], state['day'] - 1, is_name=state['is_name'])
     await pr.finish(MessageSegment.reply(event.message_id) + data)
 
 score = on_command('score', priority=11, block=True)
@@ -195,11 +188,7 @@ score = on_command('score', priority=11, block=True)
 async def _score(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await score.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['user']
-    mode = state['mode']
-    mods = state['mods']
-    map_id = state['para']
-    data = await get_score_data(user, NGM[mode], mapid=map_id, mods=mods, is_name=state['is_name'])
+    data = await get_score_data(state['user'], NGM[state['mode']], mapid=state['para'], mods=state['mods'], is_name=state['is_name'])
     await score.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -210,9 +199,6 @@ bp = on_command('bp', priority=11, block=True)
 async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await bp.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['user']
-    mode = state['mode']
-    mods = state['mods']
     para = state['para']
     if '-' in para:
         await _pfm(state, event)
@@ -224,7 +210,7 @@ async def _bp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     best = int(para)
     if best <= 0 or best > 100:
         await bp.finish(MessageSegment.reply(event.message_id) + '只允许查询bp 1-100 的成绩')
-    data = await draw_score('bp', user, NGM[mode], best=best, mods=mods, is_name=state['is_name'])
+    data = await draw_score('bp', state['user'], NGM[state['mode']], best=best, mods=state['mods'], is_name=state['is_name'])
     await bp.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -235,9 +221,6 @@ pfm = on_command('pfm', priority=11, block=True)
 async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await pfm.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['user']
-    mode = state['mode']
-    mods = state['mods']
     para = state['para']
     ls = para.split('-')
     low, high = ls[0], ls[1]
@@ -247,7 +230,7 @@ async def _pfm(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     low, high = int(low), int(high)
     if not 0 < low < high <= 100:
         await pfm.finish(MessageSegment.reply(event.message_id) + '仅支持查询bp1-100')
-    data = await draw_bp('bp', user, NGM[mode], mods, low, high, is_name=state['is_name'])
+    data = await draw_bp('bp', state['user'], NGM[state['mode']], state['mods'], low, high, is_name=state['is_name'])
     await pfm.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -258,10 +241,7 @@ tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 async def _tbp(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await tbp.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['para'] if state['para'] else state['user']
-    mode = state['mode']
-    day = state['day']
-    data = await draw_bp('tbp', user, NGM[mode], [], day=day, is_name=state['is_name'])
+    data = await draw_bp('tbp', state['user'], NGM[state['mode']], [], day=state['day'], is_name=state['is_name'])
     await tbp.finish(MessageSegment.reply(event.message_id) + data)
 
 
@@ -271,12 +251,11 @@ osu_map = on_command('map', priority=11, block=True)
 @osu_map.handle(parameterless=[split_msg()])
 async def _map(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     map_id = state['para']
-    mods = state['mods']
     if not map_id:
         await osu_map.finish(MessageSegment.reply(event.message_id) + '请输入地图ID')
     elif not map_id.isdigit():
         await osu_map.finish(MessageSegment.reply(event.message_id) + '请输入正确的地图ID')
-    m = await draw_map_info(map_id, mods)
+    m = await draw_map_info(map_id, state['mods'])
     await osu_map.finish(MessageSegment.reply(event.message_id) + m)
 
 
