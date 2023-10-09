@@ -75,9 +75,9 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
     if project == 'bp':
         uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     elif project == 'prlist':
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内上传成绩"
+        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内成绩"
     elif project == 'relist':
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内（含死亡）上传成绩"
+        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内（含未通过）成绩"
     else:
         uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
     draw.text((1388, 50), uinfo, font=Torus_SemiBold_25, anchor='rm')
