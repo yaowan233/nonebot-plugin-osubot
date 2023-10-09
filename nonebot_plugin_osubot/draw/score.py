@@ -32,7 +32,7 @@ async def draw_score(project: str,
         return score_json
     if project in ('recent', 'pr'):
         if len(score_json) < best:
-            return f'未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录'
+            return f'未查询到24小时内在 {GMN[mode]} 中第{best}个游玩记录'
         score_info = Score(**score_json[best - 1])
         grank = '--'
     elif project == 'bp':
