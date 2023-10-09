@@ -138,10 +138,11 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
         draw.text((680 + offset, 245 + h_num), f'ID: {bp.beatmap.id}', font=Torus_Regular_20, anchor='rm')
 
         # pp
-        draw.text((645 + offset, 174 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
-                  anchor='rm', fill=(255, 102, 171, 255))
-        draw.text((648 + offset, 170 + h_num), 'pp', font=Torus_SemiBold_25,
-                  anchor='lm', fill=(209, 148, 176, 255))
+        if bp.pp:
+            draw.text((645 + offset, 174 + h_num), f'{bp.pp:.0f}', font=Torus_SemiBold_25,
+                      anchor='rm', fill=(255, 102, 171, 255))
+            draw.text((648 + offset, 170 + h_num), 'pp', font=Torus_SemiBold_25,
+                      anchor='lm', fill=(209, 148, 176, 255))
 
         # 分割线
         div = Image.new('RGBA', (1400, 2), (46, 53, 56, 255)).convert('RGBA')
