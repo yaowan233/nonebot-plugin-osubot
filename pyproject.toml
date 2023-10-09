@@ -31,3 +31,11 @@ Repository = "https://github.com/yaowan233/nonebot-plugin-osubot"
 [build-system]
 requires = ["pdm-pep517>=0.12.0"]
 build-backend = "pdm.pep517.api"
+
+[tool.pdm.dev-dependencies]
+test = [
+    "nonebug>=0.3.5",
+    "pytest-asyncio>=0.21.1",
+    "fastapi>=0.103.1",
+    "uvicorn>=0.23.2",
+]
