@@ -59,7 +59,8 @@ async def renew_token():
         logger.error(f'更新OSU token出错 错误{req.status_code}')
 
 
-async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0, is_name: bool = False) -> Union[str, dict]:
+async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0, is_name: bool = False,
+                  offset: int = 0, limit: int = 5) -> Union[str, dict]:
     if is_name:
         info = await get_user_info(f'{api}/users/{uid}?key=username')
         if isinstance(info, str):
@@ -69,9 +70,9 @@ async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0
     if project == 'info' or project == 'bind' or project == 'update':
         url = f'{api}/users/{uid}/{mode}'
     elif project == 'recent':
-        url = f'{api}/users/{uid}/scores/{project}?mode={mode}&include_fails=1'
+        url = f'{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}'
     elif project == 'pr':
-        url = f'{api}/users/{uid}/scores/recent?mode={mode}'
+        url = f'{api}/users/{uid}/scores/recent?mode={mode}&limit=100'
     elif project == 'score':
         url = f'{api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={mode}'
     elif project == 'bp':
