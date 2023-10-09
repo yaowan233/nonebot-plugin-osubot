@@ -5,6 +5,7 @@ from nonebot.adapters.onebot.v11 import MessageSegment, MessageEvent
 from nonebot.params import T_State
 from nonebot_plugin_guild_patch import GuildMessageEvent
 
+from ..api import get_user_info
 from .utils import split_msg
 from ..draw import draw_score
 from ..schema import Score
@@ -29,6 +30,12 @@ async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent])
             await recent.finish(MessageSegment.reply(event.message_id) + f'未查询到在 {mode} 的游玩记录')
         if isinstance(data, str):
             await recent.finish(MessageSegment.reply(event.message_id) + data)
+        if not state['is_name']:
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
+            if isinstance(info, str):
+                return info
+            else:
+                state['user'] = info['username']
         score_ls = [Score(**score_json) for score_json in data]
         pic = await draw_pfm('relist', state['user'], score_ls, score_ls, mode)
         await recent.finish(MessageSegment.reply(event.message_id) + pic)
@@ -42,18 +49,23 @@ async def _recent(state: T_State, event: Union[MessageEvent, GuildMessageEvent])
 async def _pr(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await pr.finish(MessageSegment.reply(event.message_id) + state['error'])
-    user = state['user']
     mode = state['mode']
-    if state['user'] != state['para']:
+    if '-' in state['para']:
         ls = state['para'].split('-')
         low, high = ls[0], ls[1]
-        data = await osu_api('pr', user, NGM[mode], is_name=state['is_name'], offset=low, limit=high)
+        data = await osu_api('pr', state['user'], NGM[mode], is_name=state['is_name'], offset=low, limit=high)
         if not data:
             await pr.finish(MessageSegment.reply(event.message_id) + f'未查询到在 {NGM[mode]} 的游玩记录')
         if isinstance(data, str):
             await pr.finish(MessageSegment.reply(event.message_id) + data)
+        if not state['is_name']:
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
+            if isinstance(info, str):
+                return info
+            else:
+                state['user'] = info['username']
         score_ls = [Score(**score_json) for score_json in data]
-        pic = await draw_pfm('prlist', user, score_ls, score_ls, NGM[mode])
+        pic = await draw_pfm('prlist', state['user'], score_ls, score_ls, NGM[mode])
         await pr.finish(MessageSegment.reply(event.message_id) + pic)
-    data = await draw_score('pr', user, NGM[mode], [], is_name=state['is_name'])
+    data = await draw_score('pr', state['user'], NGM[mode], [], is_name=state['is_name'])
     await pr.finish(MessageSegment.reply(event.message_id) + data)
