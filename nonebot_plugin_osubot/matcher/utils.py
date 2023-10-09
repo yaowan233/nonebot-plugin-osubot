@@ -36,9 +36,9 @@ def split_msg():
             if isinstance(state['mods'], str):
                 state['mods'] = mods2list(state['mods'].strip())
             index = min([arg.find(i) for i in symbol_ls if arg.find(i) >= 0])
-            state['user'] = state['para'] = arg[:index].strip()
+            state['para'] = arg[:index].strip()
         else:
-            state['user'] = state['para'] = arg.strip()
+            state['para'] = arg.strip()
         if ' ' in state['para']:
             ls = state['para'].split(' ')
             if state['_prefix']['command'][0] in double_command:
@@ -51,6 +51,10 @@ def split_msg():
                 state['para'] = ls[0]
                 state['user'] = ' '.join(ls[1:])
             state['is_name'] = True
+        elif state['para']:
+            if not is_num_hyphen_num(state['para']) and state['_prefix']['command'][0] not in double_command:
+                state['user'] = state['para']
+                state['is_name'] = True
         # 判断参数是否合法
         if not state['mode'].isdigit() and (int(state['mode']) < 0 or int(state['mode']) > 3):
             state['error'] = '模式应为0-3的数字！'
