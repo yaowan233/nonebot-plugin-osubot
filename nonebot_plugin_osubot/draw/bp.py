@@ -65,7 +65,10 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
     large_banner_ls = await asyncio.gather(*task1)
     bplist_len = len(score_ls_filtered)
     im = Image.new('RGBA', (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
-    im.alpha_composite(BgImg)
+    if project in ('prlist', 'relist'):
+        im.alpha_composite(BgImg1)
+    else:
+        im.alpha_composite(BgImg)
     draw = ImageDraw.Draw(im)
     f_div = Image.new('RGBA', (1450, 2), (255, 255, 255, 255)).convert('RGBA')
     im.alpha_composite(f_div, (0, 100))
