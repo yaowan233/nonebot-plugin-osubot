@@ -50,6 +50,8 @@ def split_msg():
             elif is_num_hyphen_num(ls[0]):
                 state['para'] = ls[0]
                 state['user'] = ' '.join(ls[1:])
+            else:
+                state['user'] = state['para']
             state['is_name'] = True
         elif state['para']:
             if not is_num_hyphen_num(state['para']) and state['_prefix']['command'][0] not in double_command:
