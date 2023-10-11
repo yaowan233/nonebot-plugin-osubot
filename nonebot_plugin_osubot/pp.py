@@ -1,3 +1,4 @@
+import math
 from rosu_pp_py import Beatmap, Calculator, PerformanceAttributes
 from .schema import Score
 from .mods import calc_mods
@@ -43,6 +44,8 @@ def get_if_pp_ss_pp(score: Score, path: str) -> tuple:
     c = Calculator(acc=100,
                    mods=mods, mode=score.mode_int)
     ss_pp = c.performance(beatmap).pp
+    if math.isnan(if_pp):
+        return 'nan', 'nan'
     return str(int(round(if_pp, 0))), str(int(round(ss_pp, 0)))
 
 
