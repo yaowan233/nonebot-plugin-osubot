@@ -39,6 +39,7 @@ def draw_fillet(img, radii):
     img.putalpha(alpha)
     return img
 
+
 def draw_fillet2(img, radii):
     # 画圆（用于分离4个角）
     circle = Image.new('L', (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
@@ -59,8 +60,9 @@ def draw_fillet2(img, radii):
     # 高斯模糊效果
     img = img.filter(ImageFilter.GaussianBlur(radius=2))
     # 白色区域透明可见，黑色区域不可见
-    img.putalpha(alpha)  
+    img.putalpha(alpha)
     return img
+
 
 def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: bool = False):
     if not n1 or not n2:
@@ -99,8 +101,10 @@ def draw_acc(img: Image, acc: float, mode: str):
     insizecolor = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
     fig = Figure()
     ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
-    patches = ax.pie(size, radius=1, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.20), colors=['#66cbfd'])
-    ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.05))
+    patches = ax.pie(size, radius=1, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.20),
+                     colors=['#66cbfd'])
+    ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9,
+           wedgeprops=dict(width=0.05))
     patches[0][1].set_alpha(0)
     acc_img = BytesIO()
     fig.savefig(acc_img, transparent=True)

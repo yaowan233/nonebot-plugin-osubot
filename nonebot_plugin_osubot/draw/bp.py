@@ -1,11 +1,10 @@
 import asyncio
-import io
+from io import BytesIO
 from datetime import datetime, timedelta, date
 from time import strptime, mktime
 from typing import List, Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
-from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..schema import Score
 from ..api import osu_api
@@ -18,7 +17,7 @@ from .static import *
 
 
 async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List], low_bound: int = 0, high_bound: int = 0,
-                  day: int = 0, is_name: bool = False) -> Union[str, MessageSegment]:
+                  day: int = 0, is_name: bool = False) -> Union[str, BytesIO]:
     bp_info = await osu_api('bp', uid, mode, is_name=is_name)
     if isinstance(bp_info, str):
         return bp_info
@@ -56,7 +55,7 @@ async def draw_bp(project: str, uid: int, mode: str, mods: Optional[List], low_b
 
 async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filtered: List[Score],
                    mode: str, low_bound: int = 0, high_bound: int = 0,
-                   day: int = 0) -> Union[str, MessageSegment]:
+                   day: int = 0) -> Union[str, BytesIO]:
     task0 = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg')
              for i in score_ls_filtered]
     task1 = [get_projectimg(f'https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg')
@@ -75,9 +74,9 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
     if project == 'bp':
         uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     elif project == 'prlist':
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内成绩"
+        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内上传成绩"
     elif project == 'relist':
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内（含未完成）成绩"
+        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内（含死亡）上传成绩"
     else:
         uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
     draw.text((1388, 50), uinfo, font=Torus_SemiBold_25, anchor='rm')
@@ -157,15 +156,13 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
 
         await asyncio.sleep(0)
 
-    image_bytesio = io.BytesIO()
+    image_bytesio = BytesIO()
     im.save(image_bytesio, 'PNG')
     # 转换为 JPEG 格式
     image_bytesio.seek(0)
     image = Image.open(image_bytesio).convert('RGB')
-    image_bytesio = io.BytesIO()
+    image_bytesio = BytesIO()
     image.save(image_bytesio, 'JPEG', quality=85)
     image.close()
-    msg = MessageSegment.image(image_bytesio.getvalue())
     image_bytesio.close()
-
-    return msg
+    return image_bytesio

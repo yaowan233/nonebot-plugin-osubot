@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
+from io import BytesIO
 from typing import Union
 
 from PIL import ImageFilter, ImageEnhance, ImageDraw
-from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, sayo_api
 from ..schema import SayoBeatmap
@@ -11,7 +11,7 @@ from .static import *
 from .utils import crop_bg, calc_songlen, stars_diff, image2bytesio
 
 
-async def draw_bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
+async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
     if op:
         info = await osu_api('map', map_id=mapid)
         if not info:
@@ -102,5 +102,4 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, MessageSegment]:
             draw.text((600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor='mm')
     base = image2bytesio(im)
     im.close()
-    msg = MessageSegment.image(base)
-    return msg
+    return base

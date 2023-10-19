@@ -20,6 +20,7 @@ dependencies = [
     "httpx>=0.23.3",
     "typing-extensions>=4.5.0",
     "matplotlib>=3.7.1",
+    "nonebot-adapter-red>=0.6.1",
 ]
 requires-python = ">=3.8"
 readme = "README.md"

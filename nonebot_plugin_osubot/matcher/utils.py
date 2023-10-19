@@ -1,6 +1,9 @@
 from typing import Union
+
+from nonebot.internal.adapter import Message
 from nonebot.internal.params import Depends
-from nonebot.adapters.onebot.v11 import Message, MessageEvent
+from nonebot.adapters.onebot.v11 import MessageEvent as v11MessageEvent
+from nonebot.adapters.red import MessageEvent as RedMessageEvent
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.params import T_State, CommandArg
 from ..utils import mods2list
@@ -8,11 +11,18 @@ from ..database.models import UserData
 
 
 def split_msg():
-    async def dependency(event: Union[MessageEvent, GuildMessageEvent], state: T_State, msg: Message = CommandArg()):
-        qq = event.user_id
-        for msg_seg in event.message:
-            if msg_seg.type == "at":
-                qq = str(msg_seg.data.get("qq", ""))
+    async def dependency(event: Union[v11MessageEvent, GuildMessageEvent, RedMessageEvent], state: T_State,
+                         msg: Message = CommandArg()):
+        if isinstance(event, RedMessageEvent):
+            qq = event.senderUin
+            for msg_seg in event.message:
+                if msg_seg.type == "at":
+                    qq = str(msg_seg.data.get("user_id", ""))
+        else:
+            qq = event.user_id
+            for msg_seg in event.message:
+                if msg_seg.type == "at":
+                    qq = str(msg_seg.data.get("qq", ""))
         user_data = await UserData.get_or_none(user_id=qq)
         state['user'] = user_data.osu_id if user_data else 0
         state['mode'] = str(user_data.osu_mode) if user_data else '0'

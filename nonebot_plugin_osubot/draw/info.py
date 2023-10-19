@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, date
 from io import BytesIO
 from typing import Union
 from PIL import ImageDraw, ImageSequence
-from nonebot.adapters.onebot.v11 import MessageSegment
 
 from .static import *
 from .utils import draw_fillet, info_calc, open_user_icon
@@ -14,7 +13,7 @@ from ..database.models import InfoData
 from ..utils import GMN, FGM
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union[str, MessageSegment]:
+async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union[str, BytesIO]:
     info_json = await osu_api('info', uid, mode, is_name=is_name)
     if isinstance(info_json, str):
         return info_json
@@ -172,10 +171,9 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
         im.alpha_composite(icon_img, (50, 148))
         byt = BytesIO()
         im.save(byt, "png")
-        msg = MessageSegment.image(byt)
         im.close()
         user_icon.close()
-        return msg
+        return byt
     for gif_frame in ImageSequence.Iterator(user_icon):
         # 将 GIF 图片中的每一帧转换为 RGBA 模式
         gif_frame = gif_frame.convert('RGBA').resize((300, 300))
@@ -192,5 +190,4 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
     # 输出
     gif_frames[0].close()
     user_icon.close()
-    msg = MessageSegment.image(gif_bytes)
-    return msg
+    return gif_bytes

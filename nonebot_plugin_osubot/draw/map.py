@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
+from io import BytesIO
 from typing import Union
 
 from PIL import ImageEnhance, ImageDraw
-from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, get_map_bg
 from ..schema import Beatmap
@@ -14,7 +14,7 @@ from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio
 from .static import *
 
 
-async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
+async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     info = await osu_api('map', map_id=mapid)
     if not info:
         return '未查询到该地图信息'
@@ -98,5 +98,4 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, MessageSegment]:
     # 输出
     base = image2bytesio(im)
     im.close()
-    msg = MessageSegment.image(base)
-    return msg
+    return base

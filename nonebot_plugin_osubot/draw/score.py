@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, List, Union
 from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
-from nonebot.adapters.onebot.v11 import MessageSegment
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
 from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
@@ -22,7 +21,7 @@ async def draw_score(project: str,
                      mods: Optional[List[str]],
                      best: int = 0,
                      mapid: int = 0,
-                     is_name: bool = False) -> Union[str, MessageSegment]:
+                     is_name: bool = False) -> Union[str, BytesIO]:
     task0 = asyncio.create_task(osu_api(project, uid, mode, mapid, is_name=is_name))
     task1 = asyncio.create_task(osu_api('info', uid, mode, is_name=is_name))
     score_json = await task0
@@ -32,8 +31,8 @@ async def draw_score(project: str,
         return score_json
     if project in ('recent', 'pr'):
         if len(score_json) < best:
-            return f'未查询到24小时内在 {GMN[mode]} 中第{best}个游玩记录'
-        score_info = Score(**score_json[best - 1])
+            return f'未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录'
+        score_info = Score(**score_json[best])
         grank = '--'
     elif project == 'bp':
         score_ls = [Score(**i) for i in score_json]
@@ -115,7 +114,7 @@ async def get_score_data(uid: int, mode: str, mods: Optional[List[str]], mapid: 
     return await draw_score_pic(score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid)
 
 
-async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, sid):
+async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, sid) -> BytesIO:
     path = map_path / str(sid)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -275,10 +274,9 @@ async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, si
         im.alpha_composite(icon_img, (60, 510))
         byt = BytesIO()
         im.save(byt, "png")
-        msg = MessageSegment.image(byt)
         im.close()
         user_icon.close()
-        return msg
+        return byt
     for gif_frame in ImageSequence.Iterator(user_icon):
         # 将 GIF 图片中的每一帧转换为 RGBA 模式
         gif_frame = gif_frame.convert('RGBA').resize((170, 170))
@@ -295,5 +293,4 @@ async def draw_score_pic(score_info, info, map_json, map_attribute_json, bid, si
     # 输出
     gif_frames[0].close()
     user_icon.close()
-    msg = MessageSegment.image(gif_bytes)
-    return msg
+    return gif_bytes
