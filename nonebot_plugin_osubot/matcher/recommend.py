@@ -12,7 +12,7 @@ from nonebot.log import logger
 from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from .utils import split_msg
-from ..api import get_sayo_map_info, get_recommend, update_recommend
+from ..api import get_sayo_map_info, get_recommend, update_recommend, safe_async_get
 
 recommend = on_command('recommend', aliases={'推荐', '推荐铺面', '推荐谱面'}, priority=11, block=True)
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
@@ -76,5 +76,6 @@ async def _(event: RedMessageEvent, state: T_State):
     if 'error' in state:
         await recommend.finish(RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + state['error'])
     pic_url, s = await handle_recommend(state, recommend)
+    pic = await safe_async_get(pic_url)
     await recommend.finish(RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) +
-                           RedMessageSegment.image(pic_url) + s)
+                           RedMessageSegment.image(pic.content) + s)
