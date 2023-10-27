@@ -18,6 +18,8 @@ tbp = on_command('tbp', aliases={'todaybp'}, priority=11, block=True)
 async def _bp(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
     if 'error' in state:
         await bp.finish(v11MessageSegment.reply(event.message_id) + state['error'])
+    if '-' in state['para']:
+        await _pfm(state, event)
     best = state['para']
     if not best:
         best = '1'
@@ -38,6 +40,8 @@ async def _bp(state: T_State, event: RedMessageEvent):
     if 'error' in state:
         await bp.finish(RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + state['error'])
     best = state['para']
+    if '-' in state['para']:
+        await _pfm1(state, event)
     if not best:
         best = '1'
     if not best.isdigit():
@@ -71,7 +75,7 @@ async def _pfm(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent])
 
 
 @pfm.handle(parameterless=[split_msg()])
-async def _pfm(state: T_State, event: RedMessageEvent):
+async def _pfm1(state: T_State, event: RedMessageEvent):
     if 'error' in state:
         await pfm.finish(RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + state['error'])
     ls = state['para'].split('-')

@@ -164,5 +164,4 @@ async def draw_pfm(project: str, user: str, score_ls: List[Score], score_ls_filt
     image_bytesio = BytesIO()
     image.save(image_bytesio, 'JPEG', quality=85)
     image.close()
-    image_bytesio.close()
     return image_bytesio

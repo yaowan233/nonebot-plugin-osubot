@@ -4,6 +4,8 @@ from nonebot import on_command
 from nonebot.adapters.red import MessageSegment as RedMessageSegment, MessageEvent as RedMessageEvent
 from nonebot.adapters.onebot.v11 import MessageEvent as v11MessageEvent,\
     MessageSegment as v11MessageSegment
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
 from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from ..info import get_bg
@@ -12,8 +14,8 @@ getbg = on_command('getbg', priority=11, block=True)
 
 
 @getbg.handle()
-async def _get_bg(event: Union[v11MessageEvent, GuildMessageEvent]):
-    bg_id = event.message.extract_plain_text().strip()
+async def _get_bg(event: Union[v11MessageEvent, GuildMessageEvent], args: Message = CommandArg()):
+    bg_id = args.extract_plain_text().strip()
     if not bg_id:
         msg = '请输入需要提取BG的地图ID'
     else:
@@ -25,8 +27,8 @@ async def _get_bg(event: Union[v11MessageEvent, GuildMessageEvent]):
 
 
 @getbg.handle()
-async def _get_bg(event: RedMessageEvent):
-    bg_id = event.message.extract_plain_text().strip()
+async def _get_bg(event: RedMessageEvent, args: Message = CommandArg()):
+    bg_id = args.extract_plain_text().strip()
     if not bg_id:
         msg = '请输入需要提取BG的地图ID'
     else:

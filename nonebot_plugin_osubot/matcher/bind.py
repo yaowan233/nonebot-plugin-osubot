@@ -4,6 +4,8 @@ from typing import Union
 from nonebot import on_command
 from nonebot.adapters.red import MessageSegment as RedMessageSegment, MessageEvent as RedMessageEvent
 from nonebot.adapters.onebot.v11 import MessageEvent as v11MessageEvent, MessageSegment as v11MessageSegment
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
 from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from ..info import bind_user_info
@@ -15,8 +17,8 @@ lock = asyncio.Lock()
 
 
 @bind.handle()
-async def _bind(event: Union[v11MessageEvent, GuildMessageEvent]):
-    name = event.msg.extract_plain_text()
+async def _bind(event: Union[v11MessageEvent, GuildMessageEvent], args: Message = CommandArg()):
+    name = args.extract_plain_text()
     if not name:
         await bind.finish(v11MessageSegment.reply(event.message_id) + '请输入您的 osuid')
     async with lock:
@@ -27,8 +29,8 @@ async def _bind(event: Union[v11MessageEvent, GuildMessageEvent]):
 
 
 @bind.handle()
-async def _bind(event: RedMessageEvent):
-    name = event.message.extract_plain_text()
+async def _bind(event: RedMessageEvent, args: Message = CommandArg()):
+    name = args.extract_plain_text()
     if not name:
         await bind.finish(RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + '请输入您的 osuid')
     async with lock:
