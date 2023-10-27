@@ -72,7 +72,7 @@ async def osu_api(project: str, uid: int = 0, mode: str = 'osu', map_id: int = 0
     elif project == 'recent':
         url = f'{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}'
     elif project == 'pr':
-        url = f'{api}/users/{uid}/scores/recent?mode={mode}&limit=100'
+        url = f'{api}/users/{uid}/scores/recent?mode={mode}&limit={limit}&offset={offset}'
     elif project == 'score':
         url = f'{api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={mode}'
     elif project == 'bp':
