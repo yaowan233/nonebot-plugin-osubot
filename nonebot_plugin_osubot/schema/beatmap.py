@@ -48,7 +48,7 @@ class BeatmapCompact(Base):
     beatmapset_id: int
     difficulty_rating: float
     id: int
-    mode: Literal['fruits', 'mania', 'osu', 'taiko']
+    mode: Literal["fruits", "mania", "osu", "taiko"]
     status: str
     total_length: int
     user_id: int

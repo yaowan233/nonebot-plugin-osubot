@@ -23,17 +23,19 @@ def image2bytesio(pic: Image):
 
 def draw_fillet(img, radii):
     # 画圆（用于分离4个角）
-    circle = Image.new('L', (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
+    circle = Image.new("L", (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
     draw = ImageDraw.Draw(circle)
     draw.ellipse((0, 0, radii * 2, radii * 2), fill=255)  # 画白色圆形
     # 原图
     img = img.convert("RGBA")
     w, h = img.size
     # 画4个角（将整圆分离为4个部分）
-    alpha = Image.new('L', img.size, 255)
+    alpha = Image.new("L", img.size, 255)
     alpha.paste(circle.crop((0, 0, radii, radii)), (0, 0))  # 左上角
     alpha.paste(circle.crop((radii, 0, radii * 2, radii)), (w - radii, 0))  # 右上角
-    alpha.paste(circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii))  # 右下角
+    alpha.paste(
+        circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii)
+    )  # 右下角
     alpha.paste(circle.crop((0, radii, radii, radii * 2)), (0, h - radii))  # 左下角
     # 白色区域透明可见，黑色区域不可见
     img.putalpha(alpha)
@@ -42,7 +44,7 @@ def draw_fillet(img, radii):
 
 def draw_fillet2(img, radii):
     # 画圆（用于分离4个角）
-    circle = Image.new('L', (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
+    circle = Image.new("L", (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
     draw = ImageDraw.Draw(circle)
     draw.ellipse((0, 0, radii * 2, radii * 2), fill=255)  # 画白色圆形
     # 原图
@@ -52,10 +54,12 @@ def draw_fillet2(img, radii):
     enhancer = ImageEnhance.Brightness(img)
     img = enhancer.enhance(0.5)
     # 画4个角（将整圆分离为4个部分）
-    alpha = Image.new('L', img.size, 255)
+    alpha = Image.new("L", img.size, 255)
     alpha.paste(circle.crop((0, 0, radii, radii)), (0, 0))  # 左上角
     alpha.paste(circle.crop((radii, 0, radii * 2, radii)), (w - radii, 0))  # 右上角
-    alpha.paste(circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii))  # 右下角
+    alpha.paste(
+        circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii)
+    )  # 右下角
     alpha.paste(circle.crop((0, radii, radii, radii * 2)), (0, h - radii))  # 左下角
     # 高斯模糊效果
     img = img.filter(ImageFilter.GaussianBlur(radius=2))
@@ -64,47 +68,63 @@ def draw_fillet2(img, radii):
     return img
 
 
-def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: bool = False):
+def info_calc(
+    n1: Optional[float], n2: Optional[float], rank: bool = False, pp: bool = False
+):
     if not n1 or not n2:
-        return '', 0
+        return "", 0
     num = n1 - n2
     if num < 0:
         if rank:
-            op, value = '↑', num * -1
+            op, value = "↑", num * -1
         elif pp:
-            op, value = '↓', num * -1
+            op, value = "↓", num * -1
         else:
-            op, value = '-', num * -1
+            op, value = "-", num * -1
     elif num > 0:
         if rank:
-            op, value = '↓', num
+            op, value = "↓", num
         elif pp:
-            op, value = '↑', num
+            op, value = "↑", num
         else:
-            op, value = '+', num
+            op, value = "+", num
     else:
-        op, value = '', 0
+        op, value = "", 0
     return [op, value]
 
 
 def draw_acc(img: Image, acc: float, mode: str):
     acc *= 100
     size = [acc, 100 - acc]
-    if mode == 'osu':
+    if mode == "osu":
         insize = [60, 20, 7, 7, 5, 1]
-    elif mode == 'taiko':
+    elif mode == "taiko":
         insize = [60, 20, 5, 5, 4, 1]
-    elif mode == 'fruits':
+    elif mode == "fruits":
         insize = [85, 5, 4, 4, 1, 1]
     else:
         insize = [70, 10, 10, 5, 4, 1]
-    insizecolor = ['#ff5858', '#ea7948', '#d99d03', '#72c904', '#0096a2', '#be0089']
+    insizecolor = ["#ff5858", "#ea7948", "#d99d03", "#72c904", "#0096a2", "#be0089"]
     fig = Figure()
     ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
-    patches = ax.pie(size, radius=1, startangle=90, counterclock=False, pctdistance=0.9, wedgeprops=dict(width=0.20),
-                     colors=['#66cbfd'])
-    ax.pie(insize, radius=0.8, colors=insizecolor, startangle=90, counterclock=False, pctdistance=0.9,
-           wedgeprops=dict(width=0.05))
+    patches = ax.pie(
+        size,
+        radius=1,
+        startangle=90,
+        counterclock=False,
+        pctdistance=0.9,
+        wedgeprops=dict(width=0.20),
+        colors=["#66cbfd"],
+    )
+    ax.pie(
+        insize,
+        radius=0.8,
+        colors=insizecolor,
+        startangle=90,
+        counterclock=False,
+        pctdistance=0.9,
+        wedgeprops=dict(width=0.05),
+    )
     patches[0][1].set_alpha(0)
     acc_img = BytesIO()
     fig.savefig(acc_img, transparent=True)
@@ -112,41 +132,41 @@ def draw_acc(img: Image, acc: float, mode: str):
     ax.clear()
     fig.clf()
     fig.clear()
-    score_acc_img = Image.open(acc_img).convert('RGBA').resize((576, 432))
+    score_acc_img = Image.open(acc_img).convert("RGBA").resize((576, 432))
     img.alpha_composite(score_acc_img, (25, 83))
     return img
 
 
 async def crop_bg(size: str, path: Union[str, Path]):
     try:
-        bg = Image.open(path).convert('RGBA')
+        bg = Image.open(path).convert("RGBA")
     except UnidentifiedImageError:
         os.remove(path)
         data = await get_seasonal_bg()
         pic = SeasonalBackgrounds(**data)
         url = random.choice(pic.backgrounds).url
         res = await safe_async_get(url)
-        bg = Image.open(BytesIO(res.content)).convert('RGBA')
+        bg = Image.open(BytesIO(res.content)).convert("RGBA")
     except FileNotFoundError:
         data = await get_seasonal_bg()
         pic = SeasonalBackgrounds(**data)
         url = random.choice(pic.backgrounds).url
         res = await safe_async_get(url)
-        bg = Image.open(BytesIO(res.content)).convert('RGBA')
+        bg = Image.open(BytesIO(res.content)).convert("RGBA")
     bg_w, bg_h = bg.size[0], bg.size[1]
-    if size == 'BG':
+    if size == "BG":
         fix_w = 1500
         fix_h = 720
-    elif size == 'H':
+    elif size == "H":
         fix_w = 540
         fix_h = 180
-    elif size == 'HI':
+    elif size == "HI":
         fix_w = 1000
         fix_h = 400
-    elif size == 'MP':
+    elif size == "MP":
         fix_w = 1200
         fix_h = 300
-    elif size == 'MB':
+    elif size == "MB":
         fix_w = 1200
         fix_h = 600
     else:
@@ -190,15 +210,15 @@ async def crop_bg(size: str, path: Union[str, Path]):
 
 def stars_diff(mode: Union[str, int], stars: float):
     if mode == 0:
-        mode = 'std'
+        mode = "std"
     elif mode == 1:
-        mode = 'taiko'
+        mode = "taiko"
     elif mode == 2:
-        mode = 'ctb'
+        mode = "ctb"
     elif mode == 3:
-        mode = 'mania'
+        mode = "mania"
     else:
-        mode = 'stars'
+        mode = "stars"
     default = 115
     if stars < 1:
         xp = 0
@@ -219,15 +239,15 @@ def stars_diff(mode: Union[str, int], stars: float):
     elif stars < 8:
         xp = 815
     else:
-        return Image.open(osufile / 'work' / f'{mode}_expertplus.png').convert('RGBA')
+        return Image.open(osufile / "work" / f"{mode}_expertplus.png").convert("RGBA")
     # 取色
     x = (stars - math.floor(stars)) * default + xp
     r, g, b = ColorPic[x, 1]
     # 打开底图
-    im = Image.open(osufile / 'work' / f'{mode}.png').convert('RGBA')
+    im = Image.open(osufile / "work" / f"{mode}.png").convert("RGBA")
     xx, yy = im.size
     # 填充背景
-    sm = Image.new('RGBA', im.size, (r, g, b))
+    sm = Image.new("RGBA", im.size, (r, g, b))
     sm.paste(im, (0, 0, xx, yy), im)
     # 把白色变透明
     arr = np.array(sm)
@@ -242,27 +262,27 @@ def stars_diff(mode: Union[str, int], stars: float):
 
 def get_modeimage(mode: int) -> Path:
     if mode == 0:
-        img = 'pfm_std.png'
+        img = "pfm_std.png"
     elif mode == 1:
-        img = 'pfm_taiko.png'
+        img = "pfm_taiko.png"
     elif mode == 2:
-        img = 'pfm_ctb.png'
+        img = "pfm_ctb.png"
     else:
-        img = 'pfm_mania.png'
+        img = "pfm_mania.png"
     return osufile / img
 
 
 def calc_songlen(length: int) -> str:
     map_len = list(divmod(int(length), 60))
-    map_len[1] = map_len[1] if map_len[1] >= 10 else f'0{map_len[1]}'
-    music_len = f'{map_len[0]}:{map_len[1]}'
+    map_len[1] = map_len[1] if map_len[1] >= 10 else f"0{map_len[1]}"
+    music_len = f"{map_len[0]}:{map_len[1]}"
     return music_len
 
 
 async def open_user_icon(info: User) -> Image:
     path = user_cache_path / str(info.id)
-    png_user_icon = user_cache_path / str(info.id) / 'icon.png'
-    gif_user_icon = user_cache_path / str(info.id) / 'icon.gif'
+    png_user_icon = user_cache_path / str(info.id) / "icon.png"
+    gif_user_icon = user_cache_path / str(info.id) / "icon.gif"
     # 判断文件是否存在，并读取图片
     if png_user_icon.exists():
         image = Image.open(png_user_icon)
@@ -270,7 +290,7 @@ async def open_user_icon(info: User) -> Image:
         image = Image.open(gif_user_icon)
     else:
         user_icon = await get_projectimg(info.avatar_url)
-        with open(path / f'icon.{info.avatar_url[-3:]}', 'wb') as f:
+        with open(path / f"icon.{info.avatar_url[-3:]}", "wb") as f:
             f.write(user_icon.getvalue())
         image = Image.open(user_icon)
     return image

@@ -45,29 +45,32 @@ async def generate_preview_pic(file: Path, full=False) -> BytesIO:
     ptn = Pattern.from_note_lists([m.hits, m.holds], include_tails=False)
     grp = ptn.group()
     pf = (
-            PlayField(m, duration_per_px=5, padding=60)
-            + PFDrawColumnLines()
-            + PFDrawBeatLines()
-            + PFDrawBpm(x_offset=30)
-            + PFDrawSv()
-            + PFDrawNotes()
-            + PFDrawOffsets(interval=2000, decimal_places=0)
+        PlayField(m, duration_per_px=5, padding=60)
+        + PFDrawColumnLines()
+        + PFDrawBeatLines()
+        + PFDrawBpm(x_offset=30)
+        + PFDrawSv()
+        + PFDrawNotes()
+        + PFDrawOffsets(interval=2000, decimal_places=0)
     )
     if full:
         pf += PFDrawLines.from_combo(
-                **PFDrawLines.Colors.RED,
-                keys=keys,
-                combo=np.concatenate(PtnCombo(grp).template_chord_stream(
-                    primary=3, secondary=2,
-                    keys=keys, and_lower=True
-                ), axis=0)
-            )
+            **PFDrawLines.Colors.RED,
+            keys=keys,
+            combo=np.concatenate(
+                PtnCombo(grp).template_chord_stream(
+                    primary=3, secondary=2, keys=keys, and_lower=True
+                ),
+                axis=0,
+            ),
+        )
         pf += PFDrawLines.from_combo(
-                **PFDrawLines.Colors.PURPLE,
-                keys=keys,
-                combo=np.concatenate(PtnCombo(grp).template_jacks(
-                    minimum_length=2, keys=keys), axis=0)
-            )
+            **PFDrawLines.Colors.PURPLE,
+            keys=keys,
+            combo=np.concatenate(
+                PtnCombo(grp).template_jacks(minimum_length=2, keys=keys), axis=0
+            ),
+        )
     byt = BytesIO()
     pf.export_fold(max_height=3000).save(byt, "png")
     return byt
@@ -89,7 +92,7 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
                 audio_type = audio_file_name[-4:]
                 break
         else:
-            raise Exception('小夜api有问题啊')
+            raise Exception("小夜api有问题啊")
     if options.rate:
         if options.rate > 10:
             options.rate = 10
@@ -102,14 +105,16 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
             options.step = 0.05
         tasks = []
         for rate in np.arange(options.rate, end, options.step):
-            new_audio_path = path / (audio_name + f'x{rate:.2f}' + audio_type)
-            tasks.append(asyncio.create_subprocess_shell(
-                f'ffmpeg -i "{(path / audio_file_name).absolute()}" -filter:a "atempo={rate}" -b:a 128k -vn -y '
-                f'"{new_audio_path.absolute()}" -loglevel quiet'
-            ))
+            new_audio_path = path / (audio_name + f"x{rate:.2f}" + audio_type)
+            tasks.append(
+                asyncio.create_subprocess_shell(
+                    f'ffmpeg -i "{(path / audio_file_name).absolute()}" -filter:a "atempo={rate}" -b:a 128k -vn -y '
+                    f'"{new_audio_path.absolute()}" -loglevel quiet'
+                )
+            )
         await asyncio.gather(*tasks)
     osu_ls = list()
-    for file in path.rglob('*.osu'):
+    for file in path.rglob("*.osu"):
         osu = OsuMap.read_file(str(file.absolute()))
         if options.rate:
             if osu.audio_file_name != audio_file_name:
@@ -117,17 +122,17 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
             for rate in np.arange(options.rate, end, options.step):
                 rate = round(rate, 2)
                 osu_new = osu.rate(rate)
-                osu_new.version += f' x{rate}'
-                osu_new.audio_file_name = audio_name + f'x{rate:.2f}' + audio_type
-                osu_ls.append([file.stem + f'x{rate}', osu_new])
+                osu_new.version += f" x{rate}"
+                osu_new.audio_file_name = audio_name + f"x{rate:.2f}" + audio_type
+                osu_ls.append([file.stem + f"x{rate}", osu_new])
         else:
             osu_new = osu.rate(1)
             osu_ls.append([file.stem, osu_new])
     for i in osu_ls:
         if options.fln:
             i[1] = full_ln(i[1], gap=options.gap, ln_as_hit_thres=options.thres)
-            i[1].version += ' (FULL LN)'
-            i[0] += ' (FULL LN)'
+            i[1].version += " (FULL LN)"
+            i[0] += " (FULL LN)"
         if options.nsv:
             i[1].svs = i[1].svs[:0]
             i[1].bpms = i[1].bpms[:1]
@@ -146,8 +151,8 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
     for filename, osu in osu_ls:
         osu.write_file(path / f"{filename}.osu")
 
-    with ZipFile(path.parent / osz_file.name, 'w') as my_zip:
-        for file in path.rglob('*'):
+    with ZipFile(path.parent / osz_file.name, "w") as my_zip:
+        for file in path.rglob("*"):
             my_zip.write(file, os.path.relpath(file, path))
     shutil.rmtree(path)
     return path.parent / osz_file.name

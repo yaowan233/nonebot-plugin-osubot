@@ -14,13 +14,13 @@ from .schema import SayoBeatmap, User, Badge
 plugin_config = Config.parse_obj(get_driver().config.dict())
 
 
-osufile = Path(__file__).parent / 'osufile'
-map_path = Path() / 'data' / 'osu' / 'map'
-user_cache_path = Path() / 'data' / 'osu' / 'user'
-badge_cache_path = Path() / 'data' / 'osu' / 'badge'
-chimu_api = 'https://api.chimu.moe/v1/download/'
-kitsu_api = 'https://kitsu.moe/api/d/'
-sayobot_api = 'https://txy1.sayobot.cn/beatmaps/download/novideo/'
+osufile = Path(__file__).parent / "osufile"
+map_path = Path() / "data" / "osu" / "map"
+user_cache_path = Path() / "data" / "osu" / "user"
+badge_cache_path = Path() / "data" / "osu" / "badge"
+chimu_api = "https://api.chimu.moe/v1/download/"
+kitsu_api = "https://kitsu.moe/api/d/"
+sayobot_api = "https://txy1.sayobot.cn/beatmaps/download/novideo/"
 api_ls = [sayobot_api, kitsu_api, chimu_api]
 download_api = api_ls[plugin_config.osz_mirror]
 
@@ -34,46 +34,46 @@ if not badge_cache_path.exists():
 
 async def download_map(setid: int) -> Optional[Path]:
     url = download_api + str(setid)
-    logger.info(f'开始下载地图: <{setid}>')
+    logger.info(f"开始下载地图: <{setid}>")
     req = await safe_async_get(url)
-    filename = f'{setid}.osz'
+    filename = f"{setid}.osz"
     filepath = map_path.parent / filename
-    with open(filepath, 'wb') as f:
+    with open(filepath, "wb") as f:
         f.write(req.read())
-    logger.info(f'地图: <{setid}> 下载完毕')
+    logger.info(f"地图: <{setid}> 下载完毕")
     return filepath
 
 
 async def download_tmp_osu(map_id):
-    url = f'https://osu.ppy.sh/osu/{map_id}'
-    logger.info(f'开始下载谱面: <{map_id}>')
+    url = f"https://osu.ppy.sh/osu/{map_id}"
+    logger.info(f"开始下载谱面: <{map_id}>")
     req = await safe_async_get(url)
-    filename = f'{map_id}.osu'
+    filename = f"{map_id}.osu"
     filepath = map_path / filename
     chunk = req.read()
-    with open(filepath, 'wb') as f:
+    with open(filepath, "wb") as f:
         f.write(chunk)
     return filepath
 
 
 async def download_osu(set_id, map_id):
-    url = f'https://osu.ppy.sh/osu/{map_id}'
-    logger.info(f'开始下载谱面: <{map_id}>')
+    url = f"https://osu.ppy.sh/osu/{map_id}"
+    logger.info(f"开始下载谱面: <{map_id}>")
     req = await safe_async_get(url)
-    filename = f'{map_id}.osu'
+    filename = f"{map_id}.osu"
     filepath = map_path / str(set_id) / filename
     chunk = req.read()
-    with open(filepath, 'wb') as f:
+    with open(filepath, "wb") as f:
         f.write(chunk)
     return filepath
 
 
 async def get_projectimg(url: str):
-    if 'avatar-guest.png' in url:
-        url = 'https://osu.ppy.sh/images/layout/avatar-guest.png'
+    if "avatar-guest.png" in url:
+        url = "https://osu.ppy.sh/images/layout/avatar-guest.png"
     req = await safe_async_get(url)
     if req.status_code == 403:
-        return osufile / 'work' / 'mapbg.png'
+        return osufile / "work" / "mapbg.png"
     data = req.read()
     im = BytesIO(data)
     return im
@@ -81,28 +81,28 @@ async def get_projectimg(url: str):
 
 def re_map(file: Union[bytes, Path]) -> str:
     if isinstance(file, bytes):
-        text = TextIOWrapper(BytesIO(file), 'utf-8').read()
+        text = TextIOWrapper(BytesIO(file), "utf-8").read()
     else:
-        with open(file, 'r', encoding='utf-8') as f:
+        with open(file, "r", encoding="utf-8") as f:
             text = f.read()
-    res = re.search(r'\d,\d,\"(.+)\"', text)
-    bg = 'mapbg.png' if not res else res.group(1).strip()
+    res = re.search(r"\d,\d,\"(.+)\"", text)
+    bg = "mapbg.png" if not res else res.group(1).strip()
     return bg
 
 
 async def get_map_id(file: Path) -> str:
-    with open(file, 'r', encoding='utf-8') as f:
+    with open(file, "r", encoding="utf-8") as f:
         text = f.read()
-    if res := re.search(r'BeatmapID:(\d*)', text):
+    if res := re.search(r"BeatmapID:(\d*)", text):
         return res.group(1).strip()
-    res = re.search(r'Version:(.*)\n', text)
+    res = re.search(r"Version:(.*)\n", text)
     version = res.group(1).strip()
     data = await sayo_api(int(file.parent.name))
     if isinstance(data, str):
         raise Exception(data)
     sayo_info = SayoBeatmap(**data)
     if sayo_info.status == -1:
-        raise Exception('未能在sayobot查找到地图信息')
+        raise Exception("未能在sayobot查找到地图信息")
     for map_data in sayo_info.data.bid_data:
         if map_data.version == version:
             return str(map_data.bid)
@@ -114,16 +114,16 @@ async def make_user_cache_file(info: User):
     path.mkdir()
     user_header = await get_projectimg(info.cover_url)
     user_icon = await get_projectimg(info.avatar_url)
-    with open(path / 'header.png', 'wb') as f:
+    with open(path / "header.png", "wb") as f:
         f.write(user_header.getvalue())
-    with open(path / 'icon.png', 'wb') as f:
+    with open(path / "icon.png", "wb") as f:
         f.write(user_icon.getvalue())
 
 
 async def make_badge_cache_file(badge: Badge):
-    path = badge_cache_path / f'{hash(badge.description)}.png'
+    path = badge_cache_path / f"{hash(badge.description)}.png"
     badge_icon = await get_projectimg(badge.image_url)
-    with open(path, 'wb') as f:
+    with open(path, "wb") as f:
         f.write(badge_icon.getvalue())
 
 
@@ -133,5 +133,5 @@ async def save_info_pic(user: str, url):
     if not path.exists():
         path.mkdir()
     req = await safe_async_get(url)
-    with open(path / 'info.png', 'wb') as f:
+    with open(path / "info.png", "wb") as f:
         f.write(BytesIO(req.content).getvalue())

@@ -15,8 +15,8 @@ class UserData(Model):
     """osu 模式"""
 
     class Meta:
-        table = 'User'
-        indexes = ('user_id',)
+        table = "User"
+        indexes = ("user_id",)
 
 
 class InfoData(Model):
@@ -41,5 +41,5 @@ class InfoData(Model):
     date = fields.DateField()
 
     class Meta:
-        table = 'Info'
-        indexes = ('id',)
+        table = "Info"
+        indexes = ("id",)

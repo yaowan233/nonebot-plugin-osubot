@@ -27,7 +27,7 @@ class Score(Base):
     pp: Optional[float]
     rank: str
     created_at: str
-    mode: Literal['fruits', 'mania', 'osu', 'taiko']
+    mode: Literal["fruits", "mania", "osu", "taiko"]
     mode_int: int
     beatmap: Optional[Beatmap]
     beatmapset: Optional[Beatmapset]

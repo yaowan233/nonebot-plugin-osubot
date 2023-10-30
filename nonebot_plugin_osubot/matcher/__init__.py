@@ -1,6 +1,14 @@
-from .guess import guess_audio, guess_pic, word_matcher, pic_word_matcher, hint, pic_hint
+from .guess import (
+    guess_audio,
+    guess_pic,
+    word_matcher,
+    pic_word_matcher,
+    hint,
+    pic_hint,
+)
 from .medal import medal
 from .rank import group_pp_rank
+
 # from .bp_analyze import bp_analyze
 from .pr import pr, recent
 from .osu_help import osu_help

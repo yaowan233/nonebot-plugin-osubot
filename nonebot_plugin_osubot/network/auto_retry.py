@@ -4,8 +4,8 @@ from typing_extensions import ParamSpec
 from nonebot import logger
 
 
-T = TypeVar('T')
-P = ParamSpec('P')
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def auto_retry(func: Callable[P, T]) -> Callable[P, T]:
@@ -18,4 +18,5 @@ def auto_retry(func: Callable[P, T]) -> Callable[P, T]:
                 logger.error(f"Retrying... {i + 1}/10")
                 logger.exception(e)
         logger.error(f"多次重试失败，请检查网络连接")
+
     return wrapper

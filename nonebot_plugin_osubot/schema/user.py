@@ -63,7 +63,6 @@ class User(UserCompact):
     join_date: Optional[str]
     location: Optional[str]
     occupation: Optional[str]
-    playmode: Optional[Literal['fruits', 'mania', 'osu', 'taiko']]
+    playmode: Optional[Literal["fruits", "mania", "osu", "taiko"]]
     playstyle: Optional[List[str]]
     badges: Optional[List[Badge]]
-
