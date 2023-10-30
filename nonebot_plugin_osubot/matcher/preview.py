@@ -4,6 +4,8 @@ from nonebot import on_command
 from nonebot.adapters.red import MessageSegment as RedMessageSegment, MessageEvent as RedMessageEvent
 from nonebot.adapters.onebot.v11 import MessageEvent as v11MessageEvent,\
     MessageSegment as v11MessageSegment
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
 from nonebot.typing import T_State
 
 from ..mania import generate_preview_pic
@@ -15,8 +17,8 @@ generate_preview = on_command('预览', aliases={'preview', '完整预览'}, pri
 
 
 @generate_preview.handle()
-async def _(event: Union[v11MessageEvent, GuildMessageEvent], state: T_State):
-    osu_id = event.message.extract_plain_text().strip()
+async def _(event: Union[v11MessageEvent, GuildMessageEvent], state: T_State, args: Message = CommandArg()):
+    osu_id = args.extract_plain_text().strip()
     if not osu_id or not osu_id.isdigit():
         await generate_preview.finish(v11MessageSegment.reply(event.message_id) + '请输入正确的地图mapID')
     data = await osu_api('map', map_id=int(osu_id))
@@ -33,8 +35,8 @@ async def _(event: Union[v11MessageEvent, GuildMessageEvent], state: T_State):
 
 
 @generate_preview.handle()
-async def _(event: RedMessageEvent, state: T_State):
-    osu_id = event.message.extract_plain_text().strip()
+async def _(event: RedMessageEvent, state: T_State, args: Message = CommandArg()):
+    osu_id = args.extract_plain_text().strip()
     if not osu_id or not osu_id.isdigit():
         await generate_preview.finish(RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) +
                                       '请输入正确的地图mapID')
