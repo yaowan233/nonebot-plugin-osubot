@@ -6,7 +6,7 @@ class Config(BaseSettings):
     osu_client: Optional[int] = None
     osu_key: Optional[str] = None
     osz_mirror: Optional[int] = 0
-    info_bg: Optional[List[str]] = ['https://api.gumengya.com/Api/DmImg?format=image']
+    info_bg: Optional[List[str]] = ['https://api.hiosu.com/erciyuan/302.php']
     osu_proxy: Optional[Union[str, dict]] = None
 
     class Config:
