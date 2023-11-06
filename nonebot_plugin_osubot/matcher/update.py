@@ -16,7 +16,7 @@ from nonebot.adapters.onebot.v11 import (
     GroupMessageEvent as v11GroupMessageEvent,
 )
 from nonebot.typing import T_State
-from ..file import user_cache_path, save_info_pic
+from ..file import user_cache_path, save_info_pic, safe_async_get
 from nonebot_plugin_guild_patch import GuildMessageEvent
 
 
@@ -58,7 +58,14 @@ async def _(bot: RedBot, state: T_State, event: RedGroupMessageEvent):
     user = state["user"]
     for i in event.message:
         if i.type == "image":
-            pic = await bot.fetch(i)
+            base_url = "https://gchat.qpic.cn/gchatpic_new/1/"
+            raw_id = i.data["md5"].upper()
+            img_url = (
+                f"{base_url}{event.group_id}-{event.get_user_id()}-{raw_id}/0?term=3"
+            )
+            pic = await safe_async_get(img_url)
+            pic = pic.content
+            # pic = await bot.fetch(i)
             break
     else:
         await update_pic.finish(
