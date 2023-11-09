@@ -128,7 +128,7 @@ async def _(state: T_State, event: RedGroupMessageEvent, bot: RedBot, matcher: M
     #     group_id=event.group_id, user_id=selected_user.user_id
     # )
     # name = group_member["card"] or group_member.get("nickname", "")
-    await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.user_id}的bp")
+    await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
     print(selected_score.beatmapset.title)
     await download_audio(selected_score.beatmapset.id)
     await pic_hint.finish(RedMessageSegment.voice(Path("out.silk")))
@@ -451,7 +451,7 @@ async def _(state: T_State, event: RedGroupMessageEvent, bot: RedBot, matcher: M
         await guess_pic.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
     pic_games[group_id] = selected_score
     pic_set_timeout(matcher, group_id)
-    await guess_pic.send(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.user_id}的bp")
+    await guess_pic.send(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
     byt = await get_bg(selected_score.beatmap.id)
     img = Image.open(byt)
     width, height = img.size
