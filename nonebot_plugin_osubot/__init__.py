@@ -10,7 +10,6 @@ from nonebot.adapters.onebot.v11 import (
     MessageSegment,
     ActionFailed,
 )
-from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.exception import ParserExit
 from nonebot.params import ShellCommandArgv, CommandArg
 from nonebot.plugin import PluginMetadata
@@ -46,7 +45,9 @@ from .matcher.utils import split_msg
 
 
 require("nonebot_plugin_apscheduler")
+require("nonebot_plugin_guild_patch")
 from nonebot_plugin_apscheduler import scheduler
+from nonebot_plugin_guild_patch import GuildMessageEvent
 
 
 usage = "发送/osuhelp 查看帮助"
