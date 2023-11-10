@@ -166,7 +166,7 @@ async def _tbp(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent])
         state["user"],
         NGM[state["mode"]],
         [],
-        day=state["day"] - 1,
+        day=state["day"],
         is_name=state["is_name"],
     )
     if isinstance(data, str):
@@ -188,8 +188,8 @@ async def _tbp(state: T_State, event: RedMessageEvent):
         state["user"],
         NGM[state["mode"]],
         [],
-        day=state["day"] - 1,
-        is_name=state["is_name"],
+        day=state["day"],
+         is_name=state["is_name"],
     )
     if isinstance(data, str):
         await tbp.finish(
