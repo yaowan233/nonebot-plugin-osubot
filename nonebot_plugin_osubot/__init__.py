@@ -71,7 +71,7 @@ __plugin_meta__ = PluginMetadata(
     type="application",
     homepage="https://github.com/yaowan233/nonebot-plugin-osubot",
     config=Config,
-    supported_adapters={"~onebot.v11", "~qqguild"},
+    supported_adapters={"~onebot.v11", "~red"},
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",

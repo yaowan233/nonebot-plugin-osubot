@@ -16,16 +16,10 @@ cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 plugin_config = Config.parse_obj(get_driver().config.dict())
 proxy = plugin_config.osu_proxy
 
-if plugin_config.osu_key and plugin_config.osu_client:
-    key = plugin_config.osu_key
-    client_id = plugin_config.osu_client
-else:
-    raise Exception("请设置osu_key和osu_client")
 
-if not plugin_config.info_bg:
-    bg_url = ["https://api.ghser.com/random/pe.php"]
-else:
-    bg_url = plugin_config.info_bg
+key = plugin_config.osu_key
+client_id = plugin_config.osu_client
+bg_url = plugin_config.info_bg
 
 
 @auto_retry
@@ -48,6 +42,8 @@ async def safe_async_post(url, headers=None, data=None) -> Response:
 
 async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
+    if not key or client_id:
+        raise Exception("请设置osu_key和osu_client")
     async with AsyncClient(timeout=100, proxies=proxy) as client:
         client: AsyncClient
         req = await client.post(
