@@ -1,6 +1,10 @@
 name: Publish
 
-on: push
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
 
 jobs:
   pypi-publish:
@@ -9,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v1
       with:
         python-version: "3.x"
     - name: Install pypa/build
@@ -26,7 +30,7 @@ jobs:
         --wheel
         --outdir dist/
         .
-    - name: Publish distribution 📦 to PyPI
+    - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
