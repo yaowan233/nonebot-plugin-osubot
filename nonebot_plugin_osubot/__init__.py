@@ -16,10 +16,11 @@ from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
-from nonebot_plugin_tortoise_orm import add_model
 
 require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_guild_patch")
+require("nonebot_plugin_tortoise_orm")
+from nonebot_plugin_tortoise_orm import add_model
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from .draw import (
