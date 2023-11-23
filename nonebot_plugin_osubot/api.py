@@ -42,7 +42,7 @@ async def safe_async_post(url, headers=None, data=None) -> Response:
 
 async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
-    if not key or client_id:
+    if not key or not client_id:
         raise Exception("请设置osu_key和osu_client")
     async with AsyncClient(timeout=100, proxies=proxy) as client:
         client: AsyncClient
