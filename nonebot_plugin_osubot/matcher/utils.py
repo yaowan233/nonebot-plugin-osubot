@@ -88,7 +88,7 @@ def split_msg():
             and (int(state["day"]) < 0)
         ):
             state["error"] = "查询的日期应是一个正数"
-        if state["user"] == 0 and not state["para"]:
+        if state["user"] == 0 and not state["user"]:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
         state["day"] = int(state["day"])
 
