@@ -12,12 +12,10 @@ from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule
 from nonebot.matcher import Matcher
 from nonebot.adapters.onebot.v11 import (
-    Bot as v11Bot,
     GroupMessageEvent as v11GroupMessageEvent,
     MessageSegment as v11MessageSegment,
 )
 from nonebot.adapters.red import (
-    Bot as RedBot,
     GroupMessageEvent as RedGroupMessageEvent,
     MessageSegment as RedMessageSegment,
 )
@@ -63,55 +61,13 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
 
 
 @guess_audio.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: v11GroupMessageEvent, bot: v11Bot, matcher: Matcher):
+async def _(state: T_State, event: v11GroupMessageEvent, matcher: Matcher):
     if "error" in state:
         await guess_audio.finish(
             v11MessageSegment.reply(event.message_id) + state["error"]
         )
     mode = state["mode"]
     group_id = event.group_id
-    group_member = await bot.get_group_member_list(group_id=group_id)
-    user_id_ls = [i["user_id"] for i in group_member]
-    binded_id = (
-        await UserData.filter(user_id__in=user_id_ls)
-        .filter(osu_mode=mode)
-        .values_list("user_id", flat=True)
-    )
-    if not binded_id:
-        await guess_audio.finish("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
-    if not guess_song_cache.get(group_id):
-        guess_song_cache[group_id] = set()
-    selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
-    if not selected_score:
-        await guess_audio.finish("好像没有可以猜的歌了，今天的猜歌就到此结束吧！")
-    if games.get(group_id, None):
-        await guess_audio.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
-    games[group_id] = selected_score
-    set_timeout(matcher, group_id)
-    group_member = await bot.get_group_member_info(
-        group_id=event.group_id, user_id=selected_user.user_id
-    )
-    name = group_member["card"] or group_member.get("nickname", "")
-    await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{name}的bp")
-    print(selected_score.beatmapset.title)
-    await guess_audio.finish(
-        v11MessageSegment.record(
-            f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3"
-        )
-    )
-
-
-@guess_audio.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: RedGroupMessageEvent, bot: RedBot, matcher: Matcher):
-    if "error" in state:
-        await guess_audio.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + state["error"]
-        )
-    mode = state["mode"]
-    group_id = int(event.group_id)
-    # group_member = await bot.get_group_member_list(group_id=group_id)
-    # user_id_ls = [i["user_id"] for i in group_member]
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
         await guess_audio.finish("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
@@ -124,10 +80,36 @@ async def _(state: T_State, event: RedGroupMessageEvent, bot: RedBot, matcher: M
         await guess_audio.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
     games[group_id] = selected_score
     set_timeout(matcher, group_id)
-    # group_member = await bot.get_group_member_info(
-    #     group_id=event.group_id, user_id=selected_user.user_id
-    # )
-    # name = group_member["card"] or group_member.get("nickname", "")
+    await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
+    print(selected_score.beatmapset.title)
+    await guess_audio.finish(
+        v11MessageSegment.record(
+            f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3"
+        )
+    )
+
+
+@guess_audio.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: RedGroupMessageEvent, matcher: Matcher):
+    if "error" in state:
+        await guess_audio.finish(
+            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+            + state["error"]
+        )
+    mode = state["mode"]
+    group_id = int(event.group_id)
+    binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
+    if not binded_id:
+        await guess_audio.finish("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
+    if not guess_song_cache.get(group_id):
+        guess_song_cache[group_id] = set()
+    selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
+    if not selected_score:
+        await guess_audio.finish("好像没有可以猜的歌了，今天的猜歌就到此结束吧！")
+    if games.get(group_id, None):
+        await guess_audio.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
+    games[group_id] = selected_score
+    set_timeout(matcher, group_id)
     await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
     print(selected_score.beatmapset.title)
     await download_audio(selected_score.beatmapset.id)
@@ -382,20 +364,14 @@ guess_pic = on_command("图片猜歌", priority=11, block=True)
 
 
 @guess_pic.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: v11GroupMessageEvent, bot: v11Bot, matcher: Matcher):
+async def _(state: T_State, event: v11GroupMessageEvent, matcher: Matcher):
     if "error" in state:
         await guess_audio.finish(
             v11MessageSegment.reply(event.message_id) + state["error"]
         )
     mode = state["mode"]
-    group_id = event.group_id
-    group_member = await bot.get_group_member_list(group_id=group_id)
-    user_id_ls = [i["user_id"] for i in group_member]
-    binded_id = (
-        await UserData.filter(user_id__in=user_id_ls)
-        .filter(osu_mode=mode)
-        .values_list("user_id", flat=True)
-    )
+    group_id = int(event.group_id)
+    binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
         await guess_pic.finish("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
     if not guess_song_cache.get(group_id):
@@ -407,11 +383,7 @@ async def _(state: T_State, event: v11GroupMessageEvent, bot: v11Bot, matcher: M
         await guess_pic.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
     pic_games[group_id] = selected_score
     pic_set_timeout(matcher, group_id)
-    group_member = await bot.get_group_member_info(
-        group_id=event.group_id, user_id=selected_user.user_id
-    )
-    name = group_member["card"] or group_member.get("nickname", "")
-    await guess_pic.send(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{name}的bp")
+    await guess_pic.send(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
     byt = await get_bg(selected_score.beatmap.id)
     img = Image.open(byt)
     width, height = img.size
@@ -429,7 +401,7 @@ async def _(state: T_State, event: v11GroupMessageEvent, bot: v11Bot, matcher: M
 
 
 @guess_pic.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: RedGroupMessageEvent, bot: RedBot, matcher: Matcher):
+async def _(state: T_State, event: RedGroupMessageEvent, matcher: Matcher):
     if "error" in state:
         await guess_audio.finish(
             RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
@@ -437,8 +409,6 @@ async def _(state: T_State, event: RedGroupMessageEvent, bot: RedBot, matcher: M
         )
     mode = state["mode"]
     group_id = int(event.group_id)
-    # group_member = await bot.get_members(group=group_id)
-    # user_id_ls = [i["user_id"] for i in group_member]
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
         await guess_pic.finish("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
