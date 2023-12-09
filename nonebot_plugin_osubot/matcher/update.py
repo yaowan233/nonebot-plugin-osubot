@@ -127,7 +127,9 @@ async def _(state: T_State, event: RedMessageEvent):
 @clear_background.handle(parameterless=[split_msg()])
 async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await clear_background.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await clear_background.finish(
+            v11MessageSegment.reply(event.message_id) + state["error"]
+        )
     user = state['user']
     path = user_cache_path / str(user) / 'info.png'
     if path.exists():
@@ -140,7 +142,9 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
 @clear_background.handle(parameterless=[split_msg()])
 async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if 'error' in state:
-        await clear_background.finish(MessageSegment.reply(event.message_id) + state['error'])
+        await clear_background.finish(event.msgSeq, event.msgId, event.senderUid)
+            + state["error"]
+        )
     user = state['user']
     path = user_cache_path / str(user) / 'info.png'
     if path.exists():
