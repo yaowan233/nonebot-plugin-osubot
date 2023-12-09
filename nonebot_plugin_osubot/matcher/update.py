@@ -140,7 +140,7 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
 
 
 @clear_background.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
+async def _(state: T_State, event: RedMessageEvent):
     if 'error' in state:
         await clear_background.finish(event.msgSeq, event.msgId, event.senderUid)
             + state["error"]
