@@ -132,9 +132,9 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     path = user_cache_path / str(user) / 'info.png'
     if path.exists():
         path.unlink()
-        await clear_background.finish(MessageSegment.reply(event.message_id) + '背景图片清除成功')
+        await clear_background.finish(v11MessageSegment.reply(event.message_id) + '背景图片清除成功')
     else:
-        await clear_background.finish(MessageSegment.reply(event.message_id) + '您还没有设置背景或已成功清除背景')
+        await clear_background.finish(v11MessageSegment.reply(event.message_id) + '您还没有设置背景或已成功清除背景')
 
 
 @clear_background.handle(parameterless=[split_msg()])
@@ -146,7 +146,7 @@ async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
     if path.exists():
         path.unlink()
          await update_info.finish(
-        RedMessageSegment.reply(MessageSegment.reply(event.message_id) + '背景图片清除成功')
+        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + '背景图片清除成功')
     else:
          await update_info.finish(
-        RedMessageSegment.reply(MessageSegment.reply(event.message_id) + '您还没有设置背景或已成功清除背景')
+        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + '您还没有设置背景或已成功清除背景')
