@@ -24,6 +24,7 @@ from .utils import split_msg
 
 update_pic = on_command("更新背景", aliases={"更改背景"}, priority=11, block=True)
 update_info = on_command("update", aliases={"更新"}, priority=11, block=True)
+clear_background = on_command('清空背景', aliases={'清除背景', '重置背景'}, priority=11, block=True)
 
 
 @update_pic.handle(parameterless=[split_msg()])
@@ -121,3 +122,31 @@ async def _(state: T_State, event: RedMessageEvent):
     await update_info.finish(
         RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + "个人信息更新成功"
     )
+
+
+@clear_background.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
+    if 'error' in state:
+        await clear_background.finish(MessageSegment.reply(event.message_id) + state['error'])
+    user = state['user']
+    path = user_cache_path / str(user) / 'info.png'
+    if path.exists():
+        path.unlink()
+        await clear_background.finish(MessageSegment.reply(event.message_id) + '背景图片清除成功')
+    else:
+        await clear_background.finish(MessageSegment.reply(event.message_id) + '您还没有设置背景或已成功清除背景')
+
+
+@clear_background.handle(parameterless=[split_msg()])
+async def _(state: T_State, event: Union[MessageEvent, GuildMessageEvent]):
+    if 'error' in state:
+        await clear_background.finish(MessageSegment.reply(event.message_id) + state['error'])
+    user = state['user']
+    path = user_cache_path / str(user) / 'info.png'
+    if path.exists():
+        path.unlink()
+         await update_info.finish(
+        RedMessageSegment.reply(MessageSegment.reply(event.message_id) + '背景图片清除成功')
+    else:
+         await update_info.finish(
+        RedMessageSegment.reply(MessageSegment.reply(event.message_id) + '您还没有设置背景或已成功清除背景')
