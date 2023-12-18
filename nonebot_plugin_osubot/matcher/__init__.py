@@ -14,7 +14,7 @@ from .pr import pr, recent
 from .osu_help import osu_help
 from .url_match import url_match
 from .recommend import recommend
-from .update import update_info, update_pic
+from .update import update_info, update_pic, clear_background
 from .preview import generate_preview
 from .getbg import getbg
 from .bind import bind, unbind
