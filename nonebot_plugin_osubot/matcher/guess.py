@@ -449,7 +449,7 @@ async def download_audio(set_id):
     with open(audio_path, "wb") as file:
         file.write(data.content)
     process = await asyncio.create_subprocess_shell(
-        f"ffmpeg -y -i {audio_path} -f s16le -acodec pcm_s16le -ar 12500 -ac 2 -loglevel quiet {pcm_path}"
+        f"ffmpeg -y -i {audio_path} -f s16le -acodec pcm_s16le -ar 12000 -ac 2 -loglevel quiet {pcm_path}"
     )
     await process.wait()
     task = await asyncio.create_subprocess_shell(
