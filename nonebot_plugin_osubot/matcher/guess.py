@@ -277,28 +277,29 @@ async def _(event: v11GroupMessageEvent):
 
 @hint.handle()
 async def _(event: RedGroupMessageEvent):
-    score = games[int(event.group_id)]
-    if not group_hint.get(event.group_id, None):
-        group_hint[event.group_id] = hint_dic.copy()
-    if all(group_hint[event.group_id].values()):
+    group_id = int(event.group_id)
+    score = games[group_id]
+    if not group_hint.get(group_id, None):
+        group_hint[group_id] = hint_dic.copy()
+    if all(group_hint[group_id].values()):
         await hint.finish("已无更多提示，加油哦")
     true_keys = []
-    for key, value in group_hint[event.group_id].items():
+    for key, value in group_hint[group_id].items():
         if not value:
             true_keys.append(key)
     action = random.choice(true_keys)
     if action == "pic":
-        group_hint[event.group_id]["pic"] = True
+        group_hint[group_id]["pic"] = True
         data = await safe_async_get(score.beatmapset.covers.cover)
         await hint.finish(RedMessageSegment.image(data.content))
     if action == "artist":
-        group_hint[event.group_id]["artist"] = True
+        group_hint[group_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
         if score.beatmapset.artist_unicode != score.beatmapset.artist:
             msg += f" [{score.beatmapset.artist}]"
         await hint.finish(msg)
     if action == "creator":
-        group_hint[event.group_id]["creator"] = True
+        group_hint[group_id]["creator"] = True
         await hint.finish(f"谱师为：{score.beatmapset.creator}")
 
 
@@ -337,28 +338,29 @@ async def _(event: v11GroupMessageEvent):
 
 @pic_hint.handle()
 async def _(event: RedGroupMessageEvent):
-    score = pic_games[int(event.group_id)]
-    if not pic_group_hint.get(event.group_id, None):
-        pic_group_hint[event.group_id] = pic_hint_dic.copy()
-    if all(pic_group_hint[event.group_id].values()):
+    group_id = int(event.group_id)
+    score = pic_games[group_id]
+    if not pic_group_hint.get(group_id, None):
+        pic_group_hint[group_id] = pic_hint_dic.copy()
+    if all(pic_group_hint[group_id].values()):
         await pic_hint.finish("已无更多提示，加油哦")
     true_keys = []
-    for key, value in pic_group_hint[event.group_id].items():
+    for key, value in pic_group_hint[group_id].items():
         if not value:
             true_keys.append(key)
     action = random.choice(true_keys)
     if action == "audio":
-        pic_group_hint[event.group_id]["audio"] = True
+        pic_group_hint[group_id]["audio"] = True
         await download_audio(score.beatmapset.id)
         await pic_hint.finish(RedMessageSegment.voice(Path("out.silk")))
     if action == "artist":
-        pic_group_hint[event.group_id]["artist"] = True
+        pic_group_hint[group_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
         if score.beatmapset.artist_unicode != score.beatmapset.artist:
             msg += f" [{score.beatmapset.artist}]"
         await pic_hint.finish(msg)
     if action == "creator":
-        pic_group_hint[event.group_id]["creator"] = True
+        pic_group_hint[group_id]["creator"] = True
         await pic_hint.finish(f"谱师为：{score.beatmapset.creator}")
 
 
