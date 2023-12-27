@@ -22,7 +22,7 @@ async def get_bg(mapid: Union[str, int]) -> Union[str, BytesIO]:
     cover = re_map(osu)
     cover_path = map_path / str(setid) / cover
     if not cover_path.exists():
-        bg = await get_map_bg(setid, cover)
+        bg = await get_map_bg(mapid)
         with open(cover_path, "wb") as f:
             f.write(bg.getvalue())
     try:

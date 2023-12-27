@@ -176,8 +176,8 @@ async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
     return SayoBeatmap(**res.json())
 
 
-async def get_map_bg(sid, bg_name) -> BytesIO:
-    res = await safe_async_get(f"https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}")
+async def get_map_bg(mapid) -> BytesIO:
+    res = await safe_async_get(f"https://api.osu.direct/media/background/{mapid}")
     return BytesIO(res.content)
 
 
