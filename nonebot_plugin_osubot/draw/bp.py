@@ -1,6 +1,6 @@
 import asyncio
 from io import BytesIO
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from time import strptime, mktime
 from typing import List, Union, Optional
 
@@ -48,8 +48,8 @@ async def draw_bp(
     else:
         ls = []
         for i, score in enumerate(score_ls):
-            today = date.today() - timedelta(days=day)
-            today_stamp = mktime(strptime(str(today), "%Y-%m-%d"))
+            now = datetime.now() - timedelta(days=day + 1)
+            today_stamp = mktime(strptime(str(now), "%Y-%m-%dT%H:%M:%S"))
             playtime = datetime.strptime(
                 score.created_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
             ) + timedelta(hours=8)
