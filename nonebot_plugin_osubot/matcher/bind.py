@@ -28,7 +28,7 @@ async def _bind(
 ):
     name = args.extract_plain_text()
     if not name:
-        await bind.finish(v11MessageSegment.reply(event.message_id) + "请输入您的 osuid")
+        await bind.finish(v11MessageSegment.reply(event.message_id) + "请在指令后输入您的 osuid")
     async with lock:
         if _ := await UserData.get_or_none(user_id=event.get_user_id()):
             await bind.finish(
@@ -44,7 +44,7 @@ async def _bind(event: RedMessageEvent, args: Message = CommandArg()):
     if not name:
         await bind.finish(
             RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + "请输入您的 osuid"
+            + "请在指令后输入您的 osuid"
         )
     async with lock:
         if _ := await UserData.get_or_none(user_id=event.get_user_id()):
