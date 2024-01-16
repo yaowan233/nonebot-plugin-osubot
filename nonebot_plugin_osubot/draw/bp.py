@@ -49,7 +49,7 @@ async def draw_bp(
         ls = []
         for i, score in enumerate(score_ls):
             now = datetime.now() - timedelta(days=day + 1)
-            today_stamp = mktime(strptime(str(now), "%Y-%m-%dT%H:%M:%S.%f"))
+            today_stamp = mktime(strptime(str(now), "%Y-%m-%d %H:%M:%S.%f"))
             playtime = datetime.strptime(
                 score.created_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
             ) + timedelta(hours=8)
