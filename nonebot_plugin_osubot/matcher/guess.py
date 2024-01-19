@@ -196,16 +196,17 @@ async def _(event: v11GroupMessageEvent):
 
 @word_matcher.handle()
 async def _(event: RedGroupMessageEvent):
-    song_name = games[int(event.group_id)].beatmapset.title
-    song_name_unicode = games[int(event.group_id)].beatmapset.title_unicode
+    group_id = int(event.group_id)
+    song_name = games[group_id].beatmapset.title
+    song_name_unicode = games[group_id].beatmapset.title_unicode
     r1 = SequenceMatcher(None, song_name.lower(), event.get_plaintext().lower()).ratio()
     r2 = SequenceMatcher(
         None, song_name_unicode.lower(), event.get_plaintext().lower()
     ).ratio()
     if r1 >= 0.5 or r2 >= 0.5:
-        games.pop(int(event.group_id))
-        if group_hint.get(event.group_id, None):
-            group_hint[event.group_id] = None
+        games.pop(group_id)
+        if group_hint.get(group_id, None):
+            group_hint[group_id] = None
         msg = f"恭喜{event.senderUin}猜出正确答案为{song_name_unicode}"
         await word_matcher.finish(
             RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + msg
@@ -230,16 +231,17 @@ async def _(event: v11GroupMessageEvent):
 
 @pic_word_matcher.handle()
 async def _(event: RedGroupMessageEvent):
-    song_name = pic_games[int(event.group_id)].beatmapset.title
-    song_name_unicode = pic_games[int(event.group_id)].beatmapset.title_unicode
+    group_id = int(event.group_id)
+    song_name = pic_games[group_id].beatmapset.title
+    song_name_unicode = pic_games[group_id].beatmapset.title_unicode
     r1 = SequenceMatcher(None, song_name.lower(), event.get_plaintext().lower()).ratio()
     r2 = SequenceMatcher(
         None, song_name_unicode.lower(), event.get_plaintext().lower()
     ).ratio()
     if r1 >= 0.5 or r2 >= 0.5:
-        pic_games.pop(int(event.group_id))
-        if pic_group_hint.get(event.group_id, None):
-            pic_group_hint[event.group_id] = None
+        pic_games.pop(group_id)
+        if pic_group_hint.get(group_id, None):
+            pic_group_hint[group_id] = None
         msg = f"恭喜{event.senderUin}猜出正确答案为{song_name_unicode}"
         await pic_word_matcher.finish(
             RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + msg
