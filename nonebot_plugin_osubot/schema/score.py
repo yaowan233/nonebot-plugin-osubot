@@ -5,12 +5,12 @@ from .beatmap import Beatmap, Beatmapset
 
 
 class Statistics(Base):
-    count_50: int
-    count_100: int
-    count_300: int
-    count_geki: int
-    count_katu: int
-    count_miss: int
+    count_50: Optional[int]
+    count_100: Optional[int]
+    count_300: Optional[int]
+    count_geki: Optional[int]
+    count_katu: Optional[int]
+    count_miss: Optional[int]
 
 
 class Score(Base):
