@@ -25,7 +25,7 @@ history = on_command("history", block=True, priority=11)
 async def _info(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
     if "error" in state:
         await history.finish(v11MessageSegment.reply(event.message_id) + state["error"])
-    data = InfoData.filter(osu_id=state["user"], mode=state["mode"])
+    data = InfoData.filter(osu_id=state["user"], osu_mode=state["mode"])
     user = await UserData.filter(osu_id=state["user"]).first()
     if state["day"] > 0:
         data = data.filter(
