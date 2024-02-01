@@ -31,7 +31,7 @@ async def _info(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]
         data = data.filter(
             date__gte=datetime.date.today() - datetime.timedelta(days=state["day"])
         )
-    data = await data.all()
+    data = await data.order_by('date').all()
     pp_ls = [i.pp for i in data]
     date_ls = [i.date for i in data]
     rank_ls = [i.g_rank for i in data]
