@@ -24,3 +24,4 @@ from .map import osu_map, bmap
 from .mu import mu
 from .score import score
 from .update_mode import update_mode
+from .history import history
