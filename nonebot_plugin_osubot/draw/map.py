@@ -42,7 +42,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         )
         new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     else:
-        new_time = "谱面状态可能非ranked"
+        new_time = "谱面状态非上架"
     # BG做地图
     im = Image.new("RGBA", (1200, 600))
     draw = ImageDraw.Draw(im)
@@ -56,11 +56,14 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info
-    im.alpha_composite(MapBg)
+    if FGM[mapinfo.mode] == 3:
+        im.alpha_composite(MapBg1)
+    else:
+        im.alpha_composite(MapBg)
     # 模式
     mode_bg = stars_diff(FGM[mapinfo.mode], ss_pp_info.difficulty.stars)
-    mode_img = mode_bg.resize((50, 50))
-    im.alpha_composite(mode_img, (50, 100))
+    mode_img = mode_bg.resize((25, 25))
+    im.alpha_composite(mode_img, (75, 65))
     # cs - diff
     mapdiff = [
         mapinfo.cs,
@@ -87,29 +90,27 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     im.alpha_composite(icon_img, (50, 400))
     # mapid
     draw.text(
-        (800, 40),
+        (1190, 10),
         f"Setid: {mapinfo.beatmapset_id}  |  Mapid: {mapid}",
         font=Torus_Regular_20,
-        anchor="lm",
+        anchor="rm",
     )
-    # 版本
-    draw.text((120, 125), mapinfo.version, font=Torus_SemiBold_25, anchor="lm")
-    # 曲名
-    draw.text((50, 170), mapinfo.beatmapset.title, font=Torus_SemiBold_30, anchor="lt")
-    # 曲师
-    draw.text(
-        (50, 210),
-        f"by {mapinfo.beatmapset.artist_unicode}",
-        font=Torus_SemiBold_25,
-        anchor="lt",
-    )
+    # 难度名
+    version = mapinfo.version
+    max_version_length = 60
+    if len(version) > max_version_length:
+        version = version[:max_version_length - 3] + '...'
+    text = f'{version}'
+    draw.text((110, 75), text, font=Torus_SemiBold_20, anchor='lm')
+    # 曲名+曲师
+    text = f'{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}'
+    max_length = 80
+    if len(text) > max_length:
+        text = text[:max_length-3] + '...'
+
+    draw.text((75, 38), text, font=Torus_SemiBold_20, anchor='lm')
     # 来源
-    draw.text(
-        (50, 260),
-        f"Source:{mapinfo.beatmapset.source}",
-        font=Torus_SemiBold_25,
-        anchor="lt",
-    )
+    #draw.text((50, 260), f'Source:{mapinfo.beatmapset.source}', font=Torus_SemiBold_25, anchor='rt')
     # mapper
     draw.text((160, 400), "谱师:", font=Torus_SemiBold_20, anchor="lt")
     draw.text(
