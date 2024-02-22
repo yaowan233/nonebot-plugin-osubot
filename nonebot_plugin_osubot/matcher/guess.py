@@ -115,7 +115,7 @@ async def _(state: T_State, event: RedGroupMessageEvent, matcher: Matcher):
     await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
     print(selected_score.beatmapset.title)
     await download_audio(selected_score.beatmapset.id)
-    await pic_hint.finish(RedMessageSegment.voice(Path("out.silk")))
+    await pic_hint.finish(RedMessageSegment.voice(data_path / Path(f"{event.group_id}.silk")))
 
 
 async def stop_game(matcher: Matcher, cid: int):

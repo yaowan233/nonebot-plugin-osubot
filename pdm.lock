@@ -4,8 +4,8 @@
 [metadata]
 groups = ["default", "test"]
 strategy = ["cross_platform"]
-lock_version = "4.4"
-content_hash = "sha256:ca4e695ed23ed118392bc2a9e497f2bf8ac63b9f6ade3553e98f92d9b99e87a6"
+lock_version = "4.4.1"
+content_hash = "sha256:e50f6c613978957f978c7e687b8d86ea0c1797c55658bc02fbfb86eb4c498acf"
 
 [[package]]
 name = "aiosqlite"
@@ -713,30 +713,31 @@ files = [
 
 [[package]]
 name = "nonebot-adapter-red"
-version = "0.7.2"
+version = "0.9.0"
 requires_python = ">=3.8"
 summary = "Red Protocol Adapter for Nonebot2"
 dependencies = [
-    "nonebot2>=2.0.1",
+    "nonebot2>=2.2.0",
     "packaging>=23.1",
 ]
 files = [
-    {file = "nonebot_adapter_red-0.7.2-py3-none-any.whl", hash = "sha256:e45dc64c41d8cb54b5ff8543d11119f5de2a743be354d289db3f6e48771b5213"},
-    {file = "nonebot_adapter_red-0.7.2.tar.gz", hash = "sha256:19d2d2ba2a198764a2f358ced00fb0f0bd7fd71d6c86502fd9c4f504c241f3a1"},
+    {file = "nonebot_adapter_red-0.9.0-py3-none-any.whl", hash = "sha256:8dd5cd0a5d964faa23823b7c37fa8c64fa3ed8f67fa66515fe44a2708ee438ec"},
+    {file = "nonebot_adapter_red-0.9.0.tar.gz", hash = "sha256:a657c5ffb071c91deb4109bb94ac8046dcbea5cbb584437995c30ffb2d184954"},
 ]
 
 [[package]]
 name = "nonebot-plugin-apscheduler"
-version = "0.3.0"
+version = "0.4.0"
 requires_python = ">=3.8,<4.0"
 summary = "APScheduler Support for NoneBot2"
 dependencies = [
     "apscheduler<4.0.0,>=3.7.0",
-    "nonebot2<3.0.0,>=2.0.0",
+    "nonebot2<3.0.0,>=2.2.0",
+    "pydantic!=2.5.0,!=2.5.1,<3.0.0,>=1.10.0",
 ]
 files = [
-    {file = "nonebot_plugin_apscheduler-0.3.0-py3-none-any.whl", hash = "sha256:ec5e0267293fc9803e543c6086d3e109ac87bf6dccea5473d219cad826238aae"},
-    {file = "nonebot_plugin_apscheduler-0.3.0.tar.gz", hash = "sha256:7c41cc1d49ea6af7c4518c72cd15f8c2f549071b8bc8bfc4b21fbdd0a4875cfd"},
+    {file = "nonebot_plugin_apscheduler-0.4.0-py3-none-any.whl", hash = "sha256:f01bb418a5ecf9f04dcadbbc2ff5ba565a48177eb0a758c8c46b13048ac5680c"},
+    {file = "nonebot_plugin_apscheduler-0.4.0.tar.gz", hash = "sha256:ba91e68809a38e6dbe28906366d47f37f754ded360944b938cd5ac62029a0eb6"},
 ]
 
 [[package]]
