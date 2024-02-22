@@ -3,7 +3,7 @@ from io import BytesIO
 from httpx import AsyncClient, Response
 from typing import Union, Optional
 from nonebot.log import logger
-from nonebot import get_driver
+from nonebot import get_plugin_config
 from expiringdict import ExpiringDict
 from .config import Config
 from .network import auto_retry
@@ -13,7 +13,7 @@ api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"
 pp_calc_api = "https://api.yuzuai.xyz/osu/ppcalc"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
-plugin_config = Config.parse_obj(get_driver().config.dict())
+plugin_config = get_plugin_config(Config)
 proxy = plugin_config.osu_proxy
 
 

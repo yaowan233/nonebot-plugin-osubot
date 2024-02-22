@@ -4,14 +4,14 @@ from typing import Union, Optional
 import re
 from pathlib import Path
 
-from nonebot import get_driver
+from nonebot import get_plugin_config
 from nonebot.log import logger
 
 from .config import Config
 from .api import sayo_api, safe_async_get
 from .schema import SayoBeatmap, User, Badge
 
-plugin_config = Config.parse_obj(get_driver().config.dict())
+plugin_config = get_plugin_config(Config)
 
 
 osufile = Path(__file__).parent / "osufile"
