@@ -1,7 +1,7 @@
 import shutil
 import urllib
 from pathlib import Path
-from typing import List, Union
+from typing import List
 
 from nonebot.adapters.onebot.v11 import (
     Bot,
@@ -22,7 +22,6 @@ require("nonebot_plugin_guild_patch")
 require("nonebot_plugin_tortoise_orm")
 from nonebot_plugin_tortoise_orm import add_model
 from nonebot_plugin_apscheduler import scheduler
-from nonebot_plugin_guild_patch import GuildMessageEvent
 from .draw import (
     draw_info,
     draw_score,
@@ -103,13 +102,7 @@ convert = on_shell_command("convert", parser=parser, block=True, priority=13)
 
 
 @convert.handle()
-async def _(
-    bot: Bot,
-    event: Union[GroupMessageEvent, GuildMessageEvent],
-    argv: List[str] = ShellCommandArgv(),
-):
-    if isinstance(event, GuildMessageEvent):
-        await convert.finish(MessageSegment.reply(event.message_id) + "很抱歉，频道暂不支持上传文件")
+async def _(bot: Bot, event: GroupMessageEvent, argv: List[str] = ShellCommandArgv()):
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:
@@ -153,51 +146,11 @@ async def _(
             ...
 
 
-osudl = on_command("osudl", priority=11, block=True)
-
-
-@osudl.handle()
-async def _osudl(
-    bot: Bot,
-    event: Union[GroupMessageEvent, GuildMessageEvent],
-    msg: Message = CommandArg(),
-):
-    if isinstance(event, GuildMessageEvent):
-        await convert.finish(MessageSegment.reply(event.message_id) + "很抱歉，频道暂不支持上传文件")
-    setid = msg.extract_plain_text().strip()
-    if not setid:
-        return
-    if not setid.isdigit():
-        await osudl.finish(MessageSegment.reply(event.message_id) + "请输入正确的地图ID")
-    osz_path = await download_map(int(setid))
-    name = urllib.parse.unquote(osz_path.name)
-    file_path = osz_path.absolute()
-    try:
-        await bot.upload_group_file(
-            group_id=event.group_id, file=str(file_path), name=name
-        )
-    except ActionFailed:
-        await osudl.finish(
-            MessageSegment.reply(event.message_id) + "上传文件失败，可能是群空间满或没有权限导致的"
-        )
-    finally:
-        try:
-            osz_path.unlink()
-        except PermissionError:
-            ...
-
-
 change = on_command("倍速", priority=11, block=True)
 
 
 @change.handle()
-async def _(
-    bot: Bot,
-    event: Union[GroupMessageEvent, GuildMessageEvent],
-    msg: Message = CommandArg(),
-):
-    if isinstance(event, GuildMessageEvent):
-        await convert.finish(MessageSegment.reply(event.message_id) + "很抱歉，频道暂不支持上传文件")
+async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ["--map"]
     if not args:
@@ -247,13 +200,7 @@ generate_full_ln = on_command("反键", priority=11, block=True)
 
 
 @generate_full_ln.handle()
-async def _(
-    bot: Bot,
-    event: Union[GroupMessageEvent, GuildMessageEvent],
-    msg: Message = CommandArg(),
-):
-    if isinstance(event, GuildMessageEvent):
-        await convert.finish(MessageSegment.reply(event.message_id) + "很抱歉，频道暂不支持上传文件")
+async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     if not args:
         await generate_full_ln.finish(

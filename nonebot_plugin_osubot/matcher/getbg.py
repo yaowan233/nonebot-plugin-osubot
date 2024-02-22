@@ -1,5 +1,3 @@
-from typing import Union
-
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -11,7 +9,6 @@ from nonebot.adapters.onebot.v11 import (
 )
 from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from ..info import get_bg
 
@@ -20,7 +17,7 @@ getbg = on_command("getbg", priority=11, block=True)
 
 @getbg.handle()
 async def _get_bg(
-    event: Union[v11MessageEvent, GuildMessageEvent], args: Message = CommandArg()
+    event: v11MessageEvent, args: Message = CommandArg()
 ):
     bg_id = args.extract_plain_text().strip()
     if not bg_id:

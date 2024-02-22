@@ -1,5 +1,3 @@
-from typing import Union
-
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -10,7 +8,6 @@ from nonebot.adapters.onebot.v11 import (
     MessageSegment as v11MessageSegment,
 )
 from nonebot.typing import T_State
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from .utils import split_msg
 from ..draw import draw_map_info, draw_bmap_info
@@ -20,7 +17,7 @@ bmap = on_command("bmap", priority=11, block=True)
 
 
 @osu_map.handle(parameterless=[split_msg()])
-async def _map(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _map(state: T_State, event: v11MessageEvent):
     map_id = state["para"]
     mods = state["mods"]
     if not map_id:
@@ -61,7 +58,7 @@ async def _map(state: T_State, event: RedMessageEvent):
 
 
 @bmap.handle(parameterless=[split_msg()])
-async def _bmap(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _bmap(state: T_State, event: v11MessageEvent):
     set_id = state["para"]
     if not set_id:
         await bmap.finish(v11MessageSegment.reply(event.message_id) + "请输入setID")

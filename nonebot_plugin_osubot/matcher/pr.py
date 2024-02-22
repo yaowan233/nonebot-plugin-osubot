@@ -1,5 +1,3 @@
-from typing import Union
-
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -10,7 +8,6 @@ from nonebot.adapters.onebot.v11 import (
     MessageSegment as v11MessageSegment,
 )
 from nonebot.params import T_State
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from ..api import get_user_info
 from .utils import split_msg
@@ -25,7 +22,7 @@ pr = on_command("pr", priority=11, block=True, aliases={"PR", "Pr"})
 
 
 @recent.handle(parameterless=[split_msg()])
-async def _recent(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _recent(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await recent.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     mode = NGM[state["mode"]]
@@ -72,7 +69,7 @@ async def _recent(state: T_State, event: Union[v11MessageEvent, GuildMessageEven
 
 
 @pr.handle(parameterless=[split_msg()])
-async def _pr(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _pr(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await pr.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     mode = state["mode"]

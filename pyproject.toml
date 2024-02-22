@@ -16,7 +16,6 @@ dependencies = [
     "nonebot-plugin-tortoise-orm>=0.1.1",
     "rosu-pp-py==0.9.1",
     "reamber>=0.1.9",
-    "nonebot-plugin-guild-patch>=0.2.2",
     "httpx>=0.23.3",
     "typing-extensions>=4.5.0",
     "matplotlib>=3.7.1",

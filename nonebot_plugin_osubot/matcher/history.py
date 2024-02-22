@@ -2,8 +2,6 @@ from io import BytesIO
 
 import matplotlib.pyplot as plt
 import datetime
-from typing import Union
-from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -22,7 +20,7 @@ history = on_command("history", block=True, priority=11)
 
 
 @history.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _info(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await history.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     data = InfoData.filter(osu_id=state["user"], osu_mode=state["mode"])

@@ -1,6 +1,6 @@
 import re
 from random import shuffle
-from typing import Union, Type
+from typing import Type
 
 from expiringdict import ExpiringDict
 from nonebot import on_command
@@ -15,7 +15,6 @@ from nonebot.adapters.onebot.v11 import (
 from nonebot.internal.matcher import Matcher
 from nonebot.typing import T_State
 from nonebot.log import logger
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from .utils import split_msg
 from ..api import get_sayo_map_info, get_recommend, update_recommend, safe_async_get
@@ -74,7 +73,7 @@ async def handle_recommend(state: T_State, matcher: Type[Matcher]):
 
 
 @recommend.handle(parameterless=[split_msg()])
-async def _(event: Union[v11MessageEvent, GuildMessageEvent], state: T_State):
+async def _(event: v11MessageEvent, state: T_State):
     if "error" in state:
         await recommend.finish(
             v11MessageSegment.reply(event.message_id) + state["error"]

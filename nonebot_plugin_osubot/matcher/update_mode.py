@@ -1,5 +1,3 @@
-from typing import Union
-
 from nonebot import on_command
 from nonebot.params import CommandArg, Message
 from nonebot.adapters.red import (
@@ -10,8 +8,6 @@ from nonebot.adapters.onebot.v11 import (
     MessageEvent as v11MessageEvent,
     MessageSegment as v11MessageSegment,
 )
-from nonebot_plugin_guild_patch import GuildMessageEvent
-
 
 from ..database import UserData
 from ..utils import NGM
@@ -22,7 +18,7 @@ update_mode = on_command("更新模式", priority=11, aliases={"更改模式"}, 
 
 @update_mode.handle()
 async def _(
-    event: Union[v11MessageEvent, GuildMessageEvent], args: Message = CommandArg()
+    event: v11MessageEvent, args: Message = CommandArg()
 ):
     user = await UserData.get_or_none(user_id=event.get_user_id())
     if not user:

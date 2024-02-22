@@ -17,7 +17,6 @@ from nonebot.adapters.onebot.v11 import (
 )
 from nonebot.typing import T_State
 from ..file import user_cache_path, save_info_pic, safe_async_get
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 
 from .utils import split_msg
@@ -90,7 +89,7 @@ async def _(bot: RedBot, state: T_State, event: RedGroupMessageEvent):
 
 
 @update_info.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await update_info.finish(
             v11MessageSegment.reply(event.message_id) + state["error"]
@@ -125,7 +124,7 @@ async def _(state: T_State, event: RedMessageEvent):
 
 
 @clear_background.handle(parameterless=[split_msg()])
-async def _(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await clear_background.finish(
             v11MessageSegment.reply(event.message_id) + state["error"]

@@ -1,5 +1,3 @@
-from typing import Union
-from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -20,7 +18,7 @@ tbp = on_command("tbp", aliases={"todaybp"}, priority=11, block=True)
 
 
 @bp.handle(parameterless=[split_msg()])
-async def _bp(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _bp(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await bp.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     if "-" in state["para"]:
@@ -90,7 +88,7 @@ async def _bp(state: T_State, event: RedMessageEvent):
 
 
 @pfm.handle(parameterless=[split_msg()])
-async def _pfm(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _pfm(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await pfm.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     ls = state["para"].split("-")
@@ -158,7 +156,7 @@ async def _pfm1(state: T_State, event: RedMessageEvent):
 
 
 @tbp.handle(parameterless=[split_msg()])
-async def _tbp(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _tbp(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await tbp.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     data = await draw_bp(

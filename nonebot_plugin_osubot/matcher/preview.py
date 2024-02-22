@@ -16,7 +16,6 @@ from nonebot.typing import T_State
 from ..mania import generate_preview_pic
 from ..api import osu_api
 from ..file import download_tmp_osu
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 generate_preview = on_command(
     "预览", aliases={"preview", "完整预览"}, priority=11, block=True
@@ -25,7 +24,7 @@ generate_preview = on_command(
 
 @generate_preview.handle()
 async def _(
-    event: Union[v11MessageEvent, GuildMessageEvent],
+    event: v11MessageEvent,
     state: T_State,
     args: Message = CommandArg(),
 ):

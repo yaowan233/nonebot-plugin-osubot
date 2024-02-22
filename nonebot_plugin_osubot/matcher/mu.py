@@ -1,5 +1,3 @@
-from typing import Union
-from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -17,7 +15,7 @@ mu = on_command("mu", aliases={"Mu", "MU"}, block=True, priority=11)
 
 
 @mu.handle(parameterless=[split_msg()])
-async def _mu(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _mu(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await mu.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     await mu.finish(

@@ -1,5 +1,3 @@
-from typing import Union
-from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot import on_command
 from nonebot.adapters.red import (
     MessageSegment as RedMessageSegment,
@@ -18,7 +16,7 @@ info = on_command("info", aliases={"Info", "INFO"}, block=True, priority=11)
 
 
 @info.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _info(state: T_State, event: v11MessageEvent):
     if "error" in state:
         await info.finish(v11MessageSegment.reply(event.message_id) + state["error"])
     data = await draw_info(

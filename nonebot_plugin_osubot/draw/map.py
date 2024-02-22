@@ -63,7 +63,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     # 模式
     mode_bg = stars_diff(FGM[mapinfo.mode], ss_pp_info.difficulty.stars)
     mode_img = mode_bg.resize((25, 25))
-    im.alpha_composite(mode_img, (75, 65))
+    im.alpha_composite(mode_img, (5, 65))
     # cs - diff
     mapdiff = [
         mapinfo.cs,
@@ -90,7 +90,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     im.alpha_composite(icon_img, (50, 400))
     # mapid
     draw.text(
-        (1190, 10),
+        (1190, 40),
         f"Setid: {mapinfo.beatmapset_id}  |  Mapid: {mapid}",
         font=Torus_Regular_20,
         anchor="rm",
@@ -101,14 +101,14 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     if len(version) > max_version_length:
         version = version[:max_version_length - 3] + '...'
     text = f'{version}'
-    draw.text((110, 75), text, font=Torus_SemiBold_20, anchor='lm')
+    draw.text((40, 75), text, font=Torus_SemiBold_20, anchor='lm')
     # 曲名+曲师
     text = f'{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}'
     max_length = 80
     if len(text) > max_length:
         text = text[:max_length-3] + '...'
 
-    draw.text((75, 38), text, font=Torus_SemiBold_20, anchor='lm')
+    draw.text((5, 38), text, font=Torus_SemiBold_20, anchor='lm')
     # 来源
     #draw.text((50, 260), f'Source:{mapinfo.beatmapset.source}', font=Torus_SemiBold_25, anchor='rt')
     # mapper

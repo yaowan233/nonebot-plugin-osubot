@@ -1,5 +1,4 @@
 import asyncio
-from typing import Union
 
 from nonebot import on_command
 from nonebot.adapters.red import (
@@ -12,7 +11,6 @@ from nonebot.adapters.onebot.v11 import (
 )
 from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
-from nonebot_plugin_guild_patch import GuildMessageEvent
 
 from ..info import bind_user_info
 from ..database import UserData
@@ -24,7 +22,7 @@ lock = asyncio.Lock()
 
 @bind.handle()
 async def _bind(
-    event: Union[v11MessageEvent, GuildMessageEvent], args: Message = CommandArg()
+    event: v11MessageEvent, args: Message = CommandArg()
 ):
     name = args.extract_plain_text()
     if not name:
@@ -62,7 +60,7 @@ unbind = on_command("unbind", priority=11, block=True)
 
 
 @unbind.handle()
-async def _unbind(event: Union[v11MessageEvent, GuildMessageEvent]):
+async def _unbind(event: v11MessageEvent):
     if _ := await UserData.get_or_none(user_id=event.get_user_id()):
         await UserData.filter(user_id=event.get_user_id()).delete()
         await unbind.finish(v11MessageSegment.reply(event.message_id) + "解绑成功！")
