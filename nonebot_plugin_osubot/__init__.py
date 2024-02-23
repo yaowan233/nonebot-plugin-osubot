@@ -18,7 +18,6 @@ from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
 
 require("nonebot_plugin_apscheduler")
-require("nonebot_plugin_guild_patch")
 require("nonebot_plugin_tortoise_orm")
 from nonebot_plugin_tortoise_orm import add_model
 from nonebot_plugin_apscheduler import scheduler
