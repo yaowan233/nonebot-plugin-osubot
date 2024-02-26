@@ -1,48 +1,28 @@
-from nonebot import on_command
-from nonebot.adapters.red import (
-    MessageSegment as RedMessageSegment,
-    MessageEvent as RedMessageEvent,
-)
-from nonebot.adapters.onebot.v11 import (
-    MessageEvent as v11MessageEvent,
-    MessageSegment as v11MessageSegment,
-)
-from nonebot.internal.adapter import Message
-from nonebot.params import CommandArg
-
+from arclet.alconna import Alconna, Args, CommandMeta
+from nonebot_plugin_alconna import on_alconna, UniMessage, Match
 from ..info import get_bg
 
-getbg = on_command("getbg", priority=11, block=True)
+getbg = on_alconna(
+    Alconna(
+        "getbg",
+        Args["bg?", str],
+        meta=CommandMeta(example="/getbg 4374648"),
+    ),
+    skip_for_unmatch=False,
+    use_cmd_start=True,
+)
 
 
 @getbg.handle()
 async def _get_bg(
-    event: v11MessageEvent, args: Message = CommandArg()
+    bg: Match[str],
 ):
-    bg_id = args.extract_plain_text().strip()
-    if not bg_id:
-        msg = "请输入需要提取BG的地图ID"
-    else:
-        byt = await get_bg(bg_id)
-        if isinstance(byt, str):
-            await getbg.finish(v11MessageSegment.reply(event.message_id) + byt)
-        msg = v11MessageSegment.image(byt)
-    await getbg.finish(v11MessageSegment.reply(event.message_id) + msg)
-
-
-@getbg.handle()
-async def _get_bg(event: RedMessageEvent, args: Message = CommandArg()):
-    bg_id = args.extract_plain_text().strip()
-    if not bg_id:
-        msg = "请输入需要提取BG的地图ID"
-    else:
-        byt = await get_bg(bg_id)
-        if isinstance(byt, str):
-            await getbg.finish(
-                RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-                + byt
-            )
-        msg = RedMessageSegment.image(byt)
-    await getbg.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + msg
-    )
+    bg = bg.result.strip() if bg.available else ''
+    if not bg:
+        await UniMessage.text("请输入需要提取BG的地图ID").send(reply_to=True)
+        return
+    byt = await get_bg(bg)
+    if isinstance(byt, str):
+        await UniMessage.text(byt).send(reply_to=True)
+        return
+    await UniMessage.image(raw=byt).send(reply_to=True)

@@ -3,24 +3,24 @@ from random import shuffle
 from typing import Type
 
 from expiringdict import ExpiringDict
-from nonebot import on_command
-from nonebot.adapters.red import (
-    MessageEvent as RedMessageEvent,
-    MessageSegment as RedMessageSegment,
-)
-from nonebot.adapters.onebot.v11 import (
-    MessageEvent as v11MessageEvent,
-    MessageSegment as v11MessageSegment,
-)
+from arclet.alconna import Alconna, CommandMeta, Args
+from nonebot_plugin_alconna import on_alconna, UniMessage
 from nonebot.internal.matcher import Matcher
 from nonebot.typing import T_State
 from nonebot.log import logger
 
 from .utils import split_msg
-from ..api import get_sayo_map_info, get_recommend, update_recommend, safe_async_get
+from ..api import get_sayo_map_info, get_recommend, update_recommend
 
-recommend = on_command(
-    "recommend", aliases={"推荐", "推荐铺面", "推荐谱面"}, priority=11, block=True
+recommend = on_alconna(
+    Alconna(
+        "recommend",
+        Args["arg?", str],
+        meta=CommandMeta(example="/re"),
+    ),
+    skip_for_unmatch=False,
+    use_cmd_start=True,
+    aliases={'推荐', '推荐铺面', '推荐谱面'}
 )
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
 
@@ -73,28 +73,8 @@ async def handle_recommend(state: T_State, matcher: Type[Matcher]):
 
 
 @recommend.handle(parameterless=[split_msg()])
-async def _(event: v11MessageEvent, state: T_State):
+async def _(state: T_State):
     if "error" in state:
-        await recommend.finish(
-            v11MessageSegment.reply(event.message_id) + state["error"]
-        )
+        await UniMessage.text(state["error"]).send(reply_to=True)
     pic_url, s = await handle_recommend(state, recommend)
-    await recommend.finish(
-        v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(pic_url) + s
-    )
-
-
-@recommend.handle(parameterless=[split_msg()])
-async def _(event: RedMessageEvent, state: T_State):
-    if "error" in state:
-        await recommend.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + state["error"]
-        )
-    pic_url, s = await handle_recommend(state, recommend)
-    pic = await safe_async_get(pic_url)
-    await recommend.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-        + RedMessageSegment.image(pic.content)
-        + s
-    )
+    await (UniMessage.image(url=pic_url) + s).send(reply_to=True)
