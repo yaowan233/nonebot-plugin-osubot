@@ -1,21 +1,37 @@
-from arclet.alconna import Alconna, CommandMeta
+from nonebot import on_command
+from nonebot.adapters.red import (
+    MessageSegment as RedMessageSegment,
+    MessageEvent as RedMessageEvent,
+)
+from nonebot.adapters.onebot.v11 import (
+    MessageEvent as v11MessageEvent,
+    MessageSegment as v11MessageSegment,
+)
 from nonebot.typing import T_State
-from nonebot_plugin_alconna import on_alconna, UniMessage
 from .utils import split_msg
 
 
-mu = on_alconna(
-    Alconna(
-        "mu",
-        meta=CommandMeta(example="/mu"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+mu = on_command("mu", aliases={"Mu", "MU"}, block=True, priority=11)
 
 
 @mu.handle(parameterless=[split_msg()])
-async def _mu(state: T_State):
+async def _mu(state: T_State, event: v11MessageEvent):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-    await UniMessage.text(f"https://osu.ppy.sh/u/{state['user']}").send(reply_to=True)
+        await mu.finish(v11MessageSegment.reply(event.message_id) + state["error"])
+    await mu.finish(
+        v11MessageSegment.reply(event.message_id)
+        + f"https://osu.ppy.sh/u/{state['user']}"
+    )
+
+
+@mu.handle(parameterless=[split_msg()])
+async def _mu(state: T_State, event: RedMessageEvent):
+    if "error" in state:
+        await mu.finish(
+            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+            + state["error"]
+        )
+    await mu.finish(
+        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+        + f"https://osu.ppy.sh/u/{state['user']}"
+    )

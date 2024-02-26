@@ -1,53 +1,83 @@
 import asyncio
-from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot.internal.adapter import Event
-from nonebot_plugin_alconna import on_alconna, UniMessage, Match
+
+from nonebot import on_command
+from nonebot.adapters.red import (
+    MessageSegment as RedMessageSegment,
+    MessageEvent as RedMessageEvent,
+)
+from nonebot.adapters.onebot.v11 import (
+    MessageEvent as v11MessageEvent,
+    MessageSegment as v11MessageSegment,
+)
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
 
 from ..info import bind_user_info
 from ..database import UserData
 
 
-bind = on_alconna(
-    Alconna(
-        "bind",
-        Args["name?", str],
-        meta=CommandMeta(example="/bind peppy"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
-unbind = on_alconna(
-    Alconna(
-        "unbind",
-        meta=CommandMeta(example="/unbind"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+bind = on_command("bind", priority=11, block=True)
 lock = asyncio.Lock()
 
 
 @bind.handle()
 async def _bind(
-    name: Match[str],
-    event: Event
+    event: v11MessageEvent, args: Message = CommandArg()
 ):
-    name = name.result.strip() if name.available else ''
+    name = args.extract_plain_text()
     if not name:
-        await UniMessage.text("请在指令后输入您的 osuid").send(reply_to=True)
-        return
+        await bind.finish(v11MessageSegment.reply(event.message_id) + "请在指令后输入您的 osuid")
     async with lock:
-        if user := await UserData.get_or_none(user_id=event.get_user_id()):
-            await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/unbind").send(reply_to=True)
-            return
+        if _ := await UserData.get_or_none(user_id=event.get_user_id()):
+            await bind.finish(
+                v11MessageSegment.reply(event.message_id) + "您已绑定，如需要解绑请输入/unbind"
+            )
         msg = await bind_user_info("bind", name, event.get_user_id(), True)
-    await UniMessage.text(msg).send(reply_to=True)
+    await bind.finish(v11MessageSegment.reply(event.message_id) + msg)
+
+
+@bind.handle()
+async def _bind(event: RedMessageEvent, args: Message = CommandArg()):
+    name = args.extract_plain_text()
+    if not name:
+        await bind.finish(
+            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+            + "请在指令后输入您的 osuid"
+        )
+    async with lock:
+        if _ := await UserData.get_or_none(user_id=event.get_user_id()):
+            await bind.finish(
+                RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+                + "您已绑定，如需要解绑请输入/unbind"
+            )
+        msg = await bind_user_info("bind", name, event.get_user_id(), True)
+    await bind.finish(
+        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + msg
+    )
+
+
+unbind = on_command("unbind", priority=11, block=True)
 
 
 @unbind.handle()
-async def _unbind(event: Event):
+async def _unbind(event: v11MessageEvent):
     if _ := await UserData.get_or_none(user_id=event.get_user_id()):
         await UserData.filter(user_id=event.get_user_id()).delete()
-        await UniMessage.text("解绑成功！").send(reply_to=True)
+        await unbind.finish(v11MessageSegment.reply(event.message_id) + "解绑成功！")
     else:
-        await UniMessage.text("尚未绑定，无需解绑").send(reply_to=True)
+        await unbind.finish(v11MessageSegment.reply(event.message_id) + "尚未绑定，无需解绑")
+
+
+@unbind.handle()
+async def _unbind(event: RedMessageEvent):
+    if _ := await UserData.get_or_none(user_id=event.get_user_id()):
+        await UserData.filter(user_id=event.get_user_id()).delete()
+        await unbind.finish(
+            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+            + "解绑成功！"
+        )
+    else:
+        await unbind.finish(
+            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
+            + "尚未绑定，无需解绑"
+        )

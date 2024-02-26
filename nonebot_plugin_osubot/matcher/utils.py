@@ -1,23 +1,31 @@
-from nonebot.internal.adapter import Event
-from nonebot.internal.params import Depends
-from nonebot.params import T_State
-from nonebot_plugin_alconna import UniMsg, At, AlcResult
+from typing import Union
 
+from nonebot.internal.adapter import Message
+from nonebot.internal.params import Depends
+from nonebot.adapters.onebot.v11 import MessageEvent as v11MessageEvent
+from nonebot.adapters.red import MessageEvent as RedMessageEvent
+from nonebot.params import T_State, CommandArg
 from ..utils import mods2list
 from ..database.models import UserData
 
 
 def split_msg():
     async def dependency(
-        event: Event,
+        event: Union[v11MessageEvent, RedMessageEvent],
         state: T_State,
-        msg: UniMsg,
-        result: AlcResult,
+        msg: Message = CommandArg(),
     ):
-        qq = event.get_user_id()
-        if msg.has(At):
-            qq = msg.get(At)[0].target
-        user_data = await UserData.get_or_none(user_id=int(qq))
+        if isinstance(event, RedMessageEvent):
+            qq = event.senderUin
+            for msg_seg in event.message:
+                if msg_seg.type == "at":
+                    qq = str(msg_seg.data.get("user_id", ""))
+        else:
+            qq = event.user_id
+            for msg_seg in event.message:
+                if msg_seg.type == "at":
+                    qq = str(msg_seg.data.get("qq", ""))
+        user_data = await UserData.get_or_none(user_id=qq)
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
         state["mods"] = []
@@ -27,7 +35,7 @@ def split_msg():
         symbol_dic = {":": "mode", "+": "mods", "：": "mode", "#": "day", "＃": "day"}
         double_command = ("bp", "score")
         dic = {}
-        arg = msg.extract_plain_text().lstrip(result.result.header_result).strip()
+        arg = msg.extract_plain_text().strip()
         if max([arg.find(i) for i in symbol_ls]) >= 0:
             for i in symbol_ls:
                 dic[i] = arg.find(i)
@@ -49,7 +57,7 @@ def split_msg():
             state["para"] = arg.strip()
         if " " in state["para"]:
             ls = state["para"].split(" ")
-            if result.source.command in double_command:
+            if state["_prefix"]["command"][0] in double_command:
                 state["para"] = ls[-1]
                 state["user"] = " ".join(ls[:-1])
             elif is_num_hyphen_num(ls[-1]):
@@ -64,7 +72,7 @@ def split_msg():
         elif state["para"]:
             if (
                 not is_num_hyphen_num(state["para"])
-                and result.source.command not in double_command
+                and state["_prefix"]["command"][0] not in double_command
             ):
                 state["user"] = state["para"]
                 state["is_name"] = True

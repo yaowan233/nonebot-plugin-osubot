@@ -3,16 +3,40 @@ import urllib
 from pathlib import Path
 from typing import List
 
-from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, MessageSegment, ActionFailed
+from nonebot.adapters.onebot.v11 import (
+    Bot,
+    GroupMessageEvent,
+    Message,
+    MessageSegment,
+    ActionFailed,
+)
 from nonebot.exception import ParserExit
 from nonebot.params import ShellCommandArgv, CommandArg
-from nonebot.plugin import PluginMetadata, inherit_supported_adapters
+from nonebot.plugin import PluginMetadata
 from nonebot.rule import ArgumentParser
 from nonebot.log import logger
 from nonebot import on_command, require, on_shell_command
+
+require("nonebot_plugin_apscheduler")
+require("nonebot_plugin_tortoise_orm")
 from nonebot_plugin_tortoise_orm import add_model
-from .draw import draw_info, draw_score, draw_map_info, draw_bmap_info, draw_bp, image2bytesio, get_score_data
-from .file import download_map, download_osu, download_tmp_osu, user_cache_path, save_info_pic
+from nonebot_plugin_apscheduler import scheduler
+from .draw import (
+    draw_info,
+    draw_score,
+    draw_map_info,
+    draw_bmap_info,
+    draw_bp,
+    image2bytesio,
+    get_score_data,
+)
+from .file import (
+    download_map,
+    download_osu,
+    download_tmp_osu,
+    user_cache_path,
+    save_info_pic,
+)
 from .schema import Score
 from .utils import NGM, GMN, mods2list
 from .database.models import UserData
@@ -22,9 +46,6 @@ from .info import get_bg, bind_user_info, update_user_info
 from .config import Config
 from .matcher import *
 from .matcher.utils import split_msg
-require('nonebot_plugin_apscheduler')
-require('nonebot_plugin_alconna')
-from nonebot_plugin_apscheduler import scheduler
 
 
 usage = "发送/osuhelp 查看帮助"
@@ -46,10 +67,10 @@ __plugin_meta__ = PluginMetadata(
     name="OSUBot",
     description="OSU查分插件",
     usage=usage,
-    type='application',
-    homepage='https://github.com/yaowan233/nonebot-plugin-osubot',
+    type="application",
+    homepage="https://github.com/yaowan233/nonebot-plugin-osubot",
     config=Config,
-    supported_adapters=inherit_supported_adapters('nonebot_plugin_alconna'),
+    supported_adapters={"~onebot.v11", "~red"},
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",
