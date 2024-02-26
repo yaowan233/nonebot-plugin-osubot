@@ -114,7 +114,7 @@ async def _(state: T_State, event: RedGroupMessageEvent, matcher: Matcher):
     set_timeout(matcher, group_id)
     await guess_audio.send(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp")
     print(selected_score.beatmapset.title)
-    await download_audio(selected_score.beatmapset.id)
+    await download_audio(selected_score.beatmapset.id, event.group_id)
     await pic_hint.finish(RedMessageSegment.voice(data_path / Path(f"{event.group_id}.silk")))
 
 
@@ -353,8 +353,8 @@ async def _(event: RedGroupMessageEvent):
     action = random.choice(true_keys)
     if action == "audio":
         pic_group_hint[group_id]["audio"] = True
-        await download_audio(score.beatmapset.id)
-        await pic_hint.finish(RedMessageSegment.voice(Path("out.silk")))
+        await download_audio(score.beatmapset.id, event.group_id)
+        await pic_hint.finish(RedMessageSegment.voice(data_path / Path(f"{event.group_id}.silk")))
     if action == "artist":
         pic_group_hint[group_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
@@ -444,7 +444,7 @@ async def _(state: T_State, event: RedGroupMessageEvent, matcher: Matcher):
     await guess_pic.finish(RedMessageSegment.image(byt))
 
 
-async def download_audio(set_id):
+async def download_audio(set_id, group_id):
     audio_path = data_path / f"{set_id}.mp3"
     url = f"https://cdn.sayobot.cn:25225/preview/{set_id}.mp3"
     data = await safe_async_get(url)
@@ -455,6 +455,6 @@ async def download_audio(set_id):
     )
     await process.wait()
     task = await asyncio.create_subprocess_shell(
-        f"silk_v3_encoder.exe {pcm_path} out.silk -tencent -quiet"
+        f"silk_v3_encoder.exe {pcm_path} {data_path / Path(f'{group_id}.silk')} -tencent -quiet"
     )
     await task.wait()
