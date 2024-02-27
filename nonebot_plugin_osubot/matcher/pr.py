@@ -117,4 +117,5 @@ async def _pr(state: T_State):
     )
     if isinstance(data, str):
         await UniMessage.text(data).send(reply_to=True)
+        return
     await UniMessage.image(raw=data).send(reply_to=True)
