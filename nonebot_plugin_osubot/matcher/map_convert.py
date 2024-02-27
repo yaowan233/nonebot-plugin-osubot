@@ -54,7 +54,8 @@ async def _(argv: List[str] = ShellCommandArgv()):
         return
     file_path = osz_file.absolute()
     try:
-        await UniMessage.file(path=file_path).send()
+        with open(file_path, 'rb') as f:
+            await UniMessage.file(raw=f.read()).send()
     except ActionFailed:
         await UniMessage.text('上传文件失败，可能是群空间满或没有权限导致的').send(reply_to=True)
     finally:
@@ -101,7 +102,8 @@ async def _(msg: Message = CommandArg()):
         return
     file_path = osz_path.absolute()
     try:
-        await UniMessage.file(path=file_path).send()
+        with open(file_path, 'rb') as f:
+            await UniMessage.file(raw=f.read()).send()
     except ActionFailed:
         await UniMessage.text('上传文件失败，可能是群空间满或没有权限导致的').send(reply_to=True)
     finally:
@@ -139,7 +141,8 @@ async def _(msg: Message = CommandArg()):
         return
     file_path = osz_path.absolute()
     try:
-        await UniMessage.file(path=file_path).send()
+        with open(file_path, 'rb') as f:
+            await UniMessage.file(raw=f.read()).send()
     except ActionFailed:
         await UniMessage.text('上传文件失败，可能是群空间满或没有权限导致的').send(reply_to=True)
     finally:
