@@ -5,7 +5,7 @@
 groups = ["default", "test"]
 strategy = ["cross_platform"]
 lock_version = "4.4.1"
-content_hash = "sha256:fd53300c80efe1be720ceb69edd097b0204d2a37af65646c8142d408b179f396"
+content_hash = "sha256:89efdd47ce0cdb67d05c3aa1c71a0757f82b1422c75fa11c593308783997a545"
 
 [[package]]
 name = "aiosqlite"
@@ -814,6 +814,20 @@ files = [
 ]
 
 [[package]]
+name = "nonebot-plugin-session"
+version = "0.3.1"
+requires_python = ">=3.8,<4.0"
+summary = "Nonebot2 会话信息提取与会话id定义"
+dependencies = [
+    "nonebot2<3.0.0,>=2.0.0",
+    "strenum<0.5.0,>=0.4.8",
+]
+files = [
+    {file = "nonebot_plugin_session-0.3.1-py3-none-any.whl", hash = "sha256:7d21ed11a7d2a3bc9466be11f9653270ff0951585bd8e6fdd8034274e883ffb0"},
+    {file = "nonebot_plugin_session-0.3.1.tar.gz", hash = "sha256:ba93b4b8e86394aa06ae099cd17c191e131f0d123a97e0c040578c08614fe306"},
+]
+
+[[package]]
 name = "nonebot-plugin-tortoise-orm"
 version = "0.1.1"
 requires_python = "<4.0,>=3.8"
@@ -1360,6 +1374,15 @@ dependencies = [
 files = [
     {file = "starlette-0.27.0-py3-none-any.whl", hash = "sha256:918416370e846586541235ccd38a474c08b80443ed31c578a418e2209b3eef91"},
     {file = "starlette-0.27.0.tar.gz", hash = "sha256:6a6b0d042acb8d469a01eba54e9cda6cbd24ac602c4cd016723117d6a7e73b75"},
+]
+
+[[package]]
+name = "strenum"
+version = "0.4.15"
+summary = "An Enum that inherits from str."
+files = [
+    {file = "StrEnum-0.4.15-py3-none-any.whl", hash = "sha256:a30cda4af7cc6b5bf52c8055bc4bf4b2b6b14a93b574626da33df53cf7740659"},
+    {file = "StrEnum-0.4.15.tar.gz", hash = "sha256:878fb5ab705442070e4dd1929bb5e2249511c0bcf2b0eeacf3bcd80875c82eff"},
 ]
 
 [[package]]
