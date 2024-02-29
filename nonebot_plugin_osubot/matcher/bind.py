@@ -28,17 +28,16 @@ lock = asyncio.Lock()
 
 
 @bind.handle()
-async def _bind(
-    name: Match[str],
-    event: Event
-):
-    name = name.result.strip() if name.available else ''
+async def _bind(name: Match[str], event: Event):
+    name = name.result.strip() if name.available else ""
     if not name:
         await UniMessage.text("请在指令后输入您的 osuid").send(reply_to=True)
         return
     async with lock:
         if user := await UserData.get_or_none(user_id=event.get_user_id()):
-            await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/unbind").send(reply_to=True)
+            await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/unbind").send(
+                reply_to=True
+            )
             return
         msg = await bind_user_info("bind", name, event.get_user_id(), True)
     await UniMessage.text(msg).send(reply_to=True)

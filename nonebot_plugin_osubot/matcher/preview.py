@@ -1,29 +1,26 @@
-from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot_plugin_alconna import on_alconna, UniMessage, Match, AlcResult
+from nonebot import on_command
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
+from nonebot.typing import T_State
+from nonebot_plugin_alconna import UniMessage
+
 from ..mania import generate_preview_pic
 from ..api import osu_api
 from ..file import download_tmp_osu
 
-generate_preview = on_alconna(
-    Alconna(
-        "preview",
-        Args["osu_id?", str],
-        meta=CommandMeta(example="/preview 4001513"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases={'预览', '完整预览'}
+generate_preview = on_command(
+    "预览", aliases={"preview", "完整预览"}, priority=11, block=True
 )
 
 
 @generate_preview.handle()
 async def _(
-    osu_id: Match[str],
-    result: AlcResult
+    state: T_State,
+    args: Message = CommandArg(),
 ):
-    osu_id = osu_id.result.strip() if osu_id.available else ''
+    osu_id = args.extract_plain_text().strip()
     if not osu_id or not osu_id.isdigit():
-        await UniMessage("请输入正确的地图mapID").send(reply_to=True)
+        await UniMessage.text("请输入正确的地图mapID").send(reply_to=True)
         return
     data = await osu_api("map", map_id=int(osu_id))
     if not data:
@@ -32,7 +29,7 @@ async def _(
     if isinstance(data, str):
         await UniMessage.text(data).send(reply_to=True)
     osu = await download_tmp_osu(osu_id)
-    if result.source.command == "完整预览":
+    if state["_prefix"]["command"][0] == "完整预览":
         pic = await generate_preview_pic(osu, True)
     else:
         pic = await generate_preview_pic(osu)

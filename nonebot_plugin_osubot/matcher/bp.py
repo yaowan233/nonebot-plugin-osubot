@@ -32,7 +32,7 @@ tbp = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases=('todaybp',)
+    aliases=("todaybp",),
 )
 
 

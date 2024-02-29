@@ -18,7 +18,7 @@ recent = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases={'re', 'RE', 'Re'}
+    aliases={"re", "RE", "Re"},
 )
 pr = on_alconna(
     Alconna(
@@ -28,7 +28,7 @@ pr = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases={'Pr', 'PR'}
+    aliases={"Pr", "PR"},
 )
 
 

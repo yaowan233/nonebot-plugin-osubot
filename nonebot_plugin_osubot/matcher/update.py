@@ -1,5 +1,12 @@
 from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot_plugin_alconna import on_alconna, UniMessage, AlconnaMatch, image_fetch, Match, AlconnaMatcher
+from nonebot_plugin_alconna import (
+    on_alconna,
+    UniMessage,
+    AlconnaMatch,
+    image_fetch,
+    Match,
+    AlconnaMatcher,
+)
 from nonebot_plugin_alconna.uniseg import Image
 from nonebot.typing import T_State
 from ..file import user_cache_path, save_info_pic, safe_async_get
@@ -15,7 +22,7 @@ update_pic = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases=('更改背景',)
+    aliases=("更改背景",),
 )
 update_info = on_alconna(
     Alconna(
@@ -24,7 +31,7 @@ update_info = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases=('更新信息',)
+    aliases=("更新信息",),
 )
 clear_background = on_alconna(
     Alconna(
@@ -33,7 +40,7 @@ clear_background = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases=('清除背景', '重置背景')
+    aliases=("清除背景", "重置背景"),
 )
 
 

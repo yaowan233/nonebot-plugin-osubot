@@ -17,7 +17,7 @@ getbg = on_alconna(
 async def _get_bg(
     bg: Match[str],
 ):
-    bg = bg.result.strip() if bg.available else ''
+    bg = bg.result.strip() if bg.available else ""
     if not bg:
         await UniMessage.text("请输入需要提取BG的地图ID").send(reply_to=True)
         return

@@ -18,7 +18,7 @@ osudl = on_alconna(
 async def _osudl(
     setid: Match[str],
 ):
-    setid = setid.result.strip() if setid.available else ''
+    setid = setid.result.strip() if setid.available else ""
     if not setid or not setid.isdigit():
         await UniMessage.text("请输入正确的地图ID").send(reply_to=True)
     osz_path = await download_map(int(setid))

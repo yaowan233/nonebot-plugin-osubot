@@ -18,10 +18,7 @@ update_mode = on_alconna(
 
 
 @update_mode.handle()
-async def _(
-    mode: Match[int],
-    event: Event
-):
+async def _(mode: Match[int], event: Event):
     mode = mode.result if mode.available else None
     user = await UserData.get_or_none(user_id=event.get_user_id())
     if not user:

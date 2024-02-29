@@ -65,7 +65,9 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
 
 
 @guess_audio.handle(parameterless=[split_msg()])
-async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)):
+async def _(
+    state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)
+):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
         return
@@ -85,9 +87,13 @@ async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(Sessio
         return
     games[group_id] = selected_score
     set_timeout(matcher, group_id)
-    await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(reply_to=True)
+    await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(
+        reply_to=True
+    )
     print(selected_score.beatmapset.title)
-    await UniMessage.audio(url=f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3").send()
+    await UniMessage.audio(
+        url=f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3"
+    ).send()
 
 
 async def stop_game(matcher: Matcher, cid: str):
@@ -231,7 +237,9 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
     action = random.choice(true_keys)
     if action == "audio":
         pic_group_hint[session_id]["audio"] = True
-        await UniMessage.audio(url=f"https://cdn.sayobot.cn:25225/preview/{score.beatmapset.id}.mp3").send()
+        await UniMessage.audio(
+            url=f"https://cdn.sayobot.cn:25225/preview/{score.beatmapset.id}.mp3"
+        ).send()
         return
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
@@ -255,7 +263,9 @@ guess_pic = on_alconna(
 
 
 @guess_pic.handle(parameterless=[split_msg()])
-async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)):
+async def _(
+    state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)
+):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
     mode = state["mode"]
@@ -284,4 +294,7 @@ async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(Sessio
     byt = BytesIO()
     cropped_image.save(byt, "png")
     print(selected_score.beatmapset.title_unicode)
-    await (f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp" + UniMessage.image(raw=byt)).send()
+    await (
+        f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp"
+        + UniMessage.image(raw=byt)
+    ).send()

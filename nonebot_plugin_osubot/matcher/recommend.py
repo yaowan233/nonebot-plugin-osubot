@@ -20,7 +20,7 @@ recommend = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases={'推荐', '推荐铺面', '推荐谱面'}
+    aliases={"推荐", "推荐铺面", "推荐谱面"},
 )
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
 

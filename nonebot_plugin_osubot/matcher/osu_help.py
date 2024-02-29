@@ -20,7 +20,7 @@ with open(Path(__file__).parent.parent / "osufile" / "detail.png", "rb") as f:
 
 @osu_help.handle()
 async def _help(arg: Match[str]):
-    arg = arg.result.strip() if arg.available else ''
+    arg = arg.result.strip() if arg.available else ""
     if arg == "detail":
         await UniMessage.image(raw=img2).send(reply_to=True)
     await UniMessage.image(raw=img1).send(reply_to=True)
