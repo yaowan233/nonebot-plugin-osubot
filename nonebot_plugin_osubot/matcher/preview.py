@@ -1,17 +1,8 @@
-from typing import Union
-
 from nonebot import on_command
-from nonebot.adapters.red import (
-    MessageSegment as RedMessageSegment,
-    MessageEvent as RedMessageEvent,
-)
-from nonebot.adapters.onebot.v11 import (
-    MessageEvent as v11MessageEvent,
-    MessageSegment as v11MessageSegment,
-)
 from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
 from nonebot.typing import T_State
+from nonebot_plugin_alconna import UniMessage
 
 from ..mania import generate_preview_pic
 from ..api import osu_api
@@ -24,56 +15,22 @@ generate_preview = on_command(
 
 @generate_preview.handle()
 async def _(
-    event: v11MessageEvent,
     state: T_State,
     args: Message = CommandArg(),
 ):
     osu_id = args.extract_plain_text().strip()
     if not osu_id or not osu_id.isdigit():
-        await generate_preview.finish(
-            v11MessageSegment.reply(event.message_id) + "请输入正确的地图mapID"
-        )
+        await UniMessage.text("请输入正确的地图mapID").send(reply_to=True)
+        return
     data = await osu_api("map", map_id=int(osu_id))
     if not data:
-        await generate_preview.finish(
-            v11MessageSegment.reply(event.message_id) + "未查询到该地图"
-        )
+        await UniMessage.text("未查询到该地图").send(reply_to=True)
+        return
     if isinstance(data, str):
-        await generate_preview.finish(v11MessageSegment.reply(event.message_id) + data)
+        await UniMessage.text(data).send(reply_to=True)
     osu = await download_tmp_osu(osu_id)
     if state["_prefix"]["command"][0] == "完整预览":
         pic = await generate_preview_pic(osu, True)
     else:
         pic = await generate_preview_pic(osu)
-    await generate_preview.finish(
-        v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(pic)
-    )
-
-
-@generate_preview.handle()
-async def _(event: RedMessageEvent, state: T_State, args: Message = CommandArg()):
-    osu_id = args.extract_plain_text().strip()
-    if not osu_id or not osu_id.isdigit():
-        await generate_preview.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + "请输入正确的地图mapID"
-        )
-    data = await osu_api("map", map_id=int(osu_id))
-    if not data:
-        await generate_preview.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + "未查询到该地图"
-        )
-    if isinstance(data, str):
-        await generate_preview.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + data
-        )
-    osu = await download_tmp_osu(osu_id)
-    if state["_prefix"]["command"][0] == "完整预览":
-        pic = await generate_preview_pic(osu, True)
-    else:
-        pic = await generate_preview_pic(osu)
-    await generate_preview.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-        + RedMessageSegment.image(pic)
-    )
+    await UniMessage.image(raw=pic).send(reply_to=True)

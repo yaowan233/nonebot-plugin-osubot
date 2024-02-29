@@ -2,52 +2,29 @@ from io import BytesIO
 
 import matplotlib.pyplot as plt
 import datetime
-from nonebot import on_command
-from nonebot.adapters.red import (
-    MessageSegment as RedMessageSegment,
-    MessageEvent as RedMessageEvent,
-)
-from nonebot.adapters.onebot.v11 import (
-    MessageEvent as v11MessageEvent,
-    MessageSegment as v11MessageSegment,
-)
+from arclet.alconna import Alconna, Args, CommandMeta
+from nonebot_plugin_alconna import on_alconna, UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
 from ..utils import NGM
 from ..database import InfoData, UserData
 
-history = on_command("history", block=True, priority=11)
+history = on_alconna(
+    Alconna(
+        "history",
+        Args["arg?", str],
+        meta=CommandMeta(example="/history"),
+    ),
+    skip_for_unmatch=False,
+    use_cmd_start=True,
+)
 
 
 @history.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: v11MessageEvent):
+async def _info(state: T_State):
     if "error" in state:
-        await history.finish(v11MessageSegment.reply(event.message_id) + state["error"])
-    data = InfoData.filter(osu_id=state["user"], osu_mode=state["mode"])
-    user = await UserData.filter(osu_id=state["user"]).first()
-    if state["day"] > 0:
-        data = data.filter(
-            date__gte=datetime.date.today() - datetime.timedelta(days=state["day"])
-        )
-    data = await data.order_by('date').all()
-    pp_ls = [i.pp for i in data]
-    date_ls = [i.date for i in data]
-    rank_ls = [i.g_rank for i in data]
-    byt = draw_plot(
-        pp_ls, date_ls, rank_ls, f'{user.osu_name} {NGM[state["mode"]]} pp/rank history'
-    )
-    await history.finish(
-        v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(byt)
-    )
-
-
-@history.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: RedMessageEvent):
-    if "error" in state:
-        await history.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + state["error"]
-        )
+        await UniMessage.text(state["error"]).send(reply_to=True)
+        return
     data = InfoData.filter(osu_id=state["user"], osu_mode=state["mode"])
     user = await UserData.filter(osu_id=state["user"]).first()
     if state["day"] > 0:
@@ -61,10 +38,7 @@ async def _info(state: T_State, event: RedMessageEvent):
     byt = draw_plot(
         pp_ls, date_ls, rank_ls, f'{user.osu_name} {NGM[state["mode"]]} pp/rank history'
     )
-    await history.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-        + RedMessageSegment.image(byt)
-    )
+    await UniMessage.image(raw=byt).send(reply_to=True)
 
 
 def draw_plot(pp_ls, date_ls, rank_ls, title):

@@ -1,12 +1,5 @@
-from nonebot import on_command
-from nonebot.adapters.red import (
-    MessageSegment as RedMessageSegment,
-    MessageEvent as RedMessageEvent,
-)
-from nonebot.adapters.onebot.v11 import (
-    MessageEvent as v11MessageEvent,
-    MessageSegment as v11MessageSegment,
-)
+from arclet.alconna import Alconna, CommandMeta, Args
+from nonebot_plugin_alconna import on_alconna, UniMessage
 from nonebot.params import T_State
 
 from ..api import get_user_info
@@ -17,14 +10,33 @@ from ..api import osu_api
 from ..draw.bp import draw_pfm
 from ..utils import NGM
 
-recent = on_command("recent", aliases={"re", "RE", "Re"}, priority=11, block=True)
-pr = on_command("pr", priority=11, block=True, aliases={"PR", "Pr"})
+recent = on_alconna(
+    Alconna(
+        "recent",
+        Args["arg?", str],
+        meta=CommandMeta(example="/re"),
+    ),
+    skip_for_unmatch=False,
+    use_cmd_start=True,
+    aliases={"re", "RE", "Re"},
+)
+pr = on_alconna(
+    Alconna(
+        "pr",
+        Args["arg?", str],
+        meta=CommandMeta(example="/pr"),
+    ),
+    skip_for_unmatch=False,
+    use_cmd_start=True,
+    aliases={"Pr", "PR"},
+)
 
 
 @recent.handle(parameterless=[split_msg()])
-async def _recent(state: T_State, event: v11MessageEvent):
+async def _recent(state: T_State):
     if "error" in state:
-        await recent.finish(v11MessageSegment.reply(event.message_id) + state["error"])
+        await UniMessage.text(state["error"]).send(reply_to=True)
+        return
     mode = NGM[state["mode"]]
     if "-" in state["para"]:
         ls = state["para"].split("-")
@@ -38,11 +50,10 @@ async def _recent(state: T_State, event: v11MessageEvent):
             limit=high,
         )
         if not data:
-            await recent.finish(
-                v11MessageSegment.reply(event.message_id) + f"未查询到在 {mode} 的游玩记录"
-            )
+            await UniMessage.text(f"未查询到在 {mode} 的游玩记录").send(reply_to=True)
+            return
         if isinstance(data, str):
-            await recent.finish(v11MessageSegment.reply(event.message_id) + data)
+            await UniMessage.text(data).send(reply_to=True)
         if not state["is_name"]:
             info = await get_user_info(
                 f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
@@ -53,25 +64,24 @@ async def _recent(state: T_State, event: v11MessageEvent):
                 state["user"] = info["username"]
         score_ls = [Score(**score_json) for score_json in data]
         pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
-        await recent.finish(
-            v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(pic)
-        )
+        await UniMessage.image(raw=pic).send(reply_to=True)
+        return
     if state["day"] == 0:
         state["day"] = 1
     data = await draw_score(
         "recent", state["user"], mode, [], state["day"] - 1, is_name=state["is_name"]
     )
     if isinstance(data, str):
-        await recent.finish(v11MessageSegment.reply(event.message_id) + data)
-    await recent.finish(
-        v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(data)
-    )
+        await UniMessage.text(data).send(reply_to=True)
+        return
+    await UniMessage.image(raw=data).send(reply_to=True)
 
 
 @pr.handle(parameterless=[split_msg()])
-async def _pr(state: T_State, event: v11MessageEvent):
+async def _pr(state: T_State):
     if "error" in state:
-        await pr.finish(v11MessageSegment.reply(event.message_id) + state["error"])
+        await UniMessage.text(state["error"]).send(reply_to=True)
+        return
     mode = state["mode"]
     if "-" in state["para"]:
         ls = state["para"].split("-")
@@ -85,11 +95,11 @@ async def _pr(state: T_State, event: v11MessageEvent):
             limit=high,
         )
         if not data:
-            await pr.finish(
-                v11MessageSegment.reply(event.message_id) + f"未查询到在 {NGM[mode]} 的游玩记录"
-            )
+            await UniMessage.text(f"未查询到在 {NGM[mode]} 的游玩记录").send(reply_to=True)
+            return
         if isinstance(data, str):
-            await pr.finish(v11MessageSegment.reply(event.message_id) + data)
+            await UniMessage.text(data).send(reply_to=True)
+            return
         if not state["is_name"]:
             info = await get_user_info(
                 f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
@@ -100,128 +110,12 @@ async def _pr(state: T_State, event: v11MessageEvent):
                 state["user"] = info["username"]
         score_ls = [Score(**score_json) for score_json in data]
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
-        await pr.finish(
-            v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(pic)
-        )
+        await UniMessage.image(raw=pic).send(reply_to=True)
+        return
     data = await draw_score(
         "pr", state["user"], NGM[mode], [], is_name=state["is_name"]
     )
     if isinstance(data, str):
-        await pr.finish(v11MessageSegment.reply(event.message_id) + data)
-    await pr.finish(
-        v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(data)
-    )
-
-
-@recent.handle(parameterless=[split_msg()])
-async def _recent(state: T_State, event: RedMessageEvent):
-    if "error" in state:
-        await recent.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + state["error"]
-        )
-    mode = NGM[state["mode"]]
-    if "-" in state["para"]:
-        ls = state["para"].split("-")
-        low, high = ls[0], ls[1]
-        data = await osu_api(
-            "recent",
-            state["user"],
-            mode,
-            is_name=state["is_name"],
-            offset=low,
-            limit=high,
-        )
-        if not data:
-            await recent.finish(
-                RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-                + f"未查询到在 {mode} 的游玩记录"
-            )
-        if isinstance(data, str):
-            await recent.finish(
-                RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-                + data
-            )
-        if not state["is_name"]:
-            info = await get_user_info(
-                f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
-            )
-            if isinstance(info, str):
-                return info
-            else:
-                state["user"] = info["username"]
-        score_ls = [Score(**score_json) for score_json in data]
-        pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
-        await recent.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + RedMessageSegment.image(pic)
-        )
-    if state["day"] == 0:
-        state["day"] = 1
-    data = await draw_score(
-        "recent", state["user"], mode, [], state["day"] - 1, is_name=state["is_name"]
-    )
-    if isinstance(data, str):
-        await recent.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + data
-        )
-    await recent.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-        + RedMessageSegment.image(data)
-    )
-
-
-@pr.handle(parameterless=[split_msg()])
-async def _pr(state: T_State, event: RedMessageEvent):
-    if "error" in state:
-        await pr.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + state["error"]
-        )
-    mode = state["mode"]
-    if "-" in state["para"]:
-        ls = state["para"].split("-")
-        low, high = ls[0], ls[1]
-        data = await osu_api(
-            "pr",
-            state["user"],
-            NGM[mode],
-            is_name=state["is_name"],
-            offset=low,
-            limit=high,
-        )
-        if not data:
-            await pr.finish(
-                RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-                + f"未查询到在 {NGM[mode]} 的游玩记录"
-            )
-        if isinstance(data, str):
-            await pr.finish(
-                RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-                + data
-            )
-        if not state["is_name"]:
-            info = await get_user_info(
-                f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
-            )
-            if isinstance(info, str):
-                return info
-            else:
-                state["user"] = info["username"]
-        score_ls = [Score(**score_json) for score_json in data]
-        pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
-        await pr.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + RedMessageSegment.image(pic)
-        )
-    data = await draw_score(
-        "pr", state["user"], NGM[mode], [], is_name=state["is_name"]
-    )
-    if isinstance(data, str):
-        await pr.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + data
-        )
-    await pr.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-        + RedMessageSegment.image(data)
-    )
+        await UniMessage.text(data).send(reply_to=True)
+        return
+    await UniMessage.image(raw=data).send(reply_to=True)

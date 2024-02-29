@@ -1,49 +1,31 @@
-from nonebot import on_command
-from nonebot.adapters.red import (
-    MessageSegment as RedMessageSegment,
-    MessageEvent as RedMessageEvent,
-)
-from nonebot.adapters.onebot.v11 import (
-    MessageEvent as v11MessageEvent,
-    MessageSegment as v11MessageSegment,
-)
+from arclet.alconna import Alconna, CommandMeta, Args
+from nonebot_plugin_alconna import on_alconna, UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
 from ..draw import draw_info
 from ..utils import NGM
 
-info = on_command("info", aliases={"Info", "INFO"}, block=True, priority=11)
+info = on_alconna(
+    Alconna(
+        "info",
+        Args["arg?", str],
+        meta=CommandMeta(example="/info"),
+    ),
+    skip_for_unmatch=False,
+    use_cmd_start=True,
+    aliases={"Info", "INFO"},
+)
 
 
 @info.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: v11MessageEvent):
+async def _info(state: T_State):
     if "error" in state:
-        await info.finish(v11MessageSegment.reply(event.message_id) + state["error"])
+        await UniMessage.text(state["error"]).send(reply_to=True)
+        return
     data = await draw_info(
         state["user"], NGM[state["mode"]], state["day"], state["is_name"]
     )
     if isinstance(data, str):
-        await info.finish(v11MessageSegment.reply(event.message_id) + data)
-    await info.finish(
-        v11MessageSegment.reply(event.message_id) + v11MessageSegment.image(data)
-    )
-
-
-@info.handle(parameterless=[split_msg()])
-async def _info(state: T_State, event: RedMessageEvent):
-    if "error" in state:
-        await info.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-            + state["error"]
-        )
-    data = await draw_info(
-        state["user"], NGM[state["mode"]], state["day"], state["is_name"]
-    )
-    if isinstance(data, str):
-        await info.finish(
-            RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid) + data
-        )
-    await info.finish(
-        RedMessageSegment.reply(event.msgSeq, event.msgId, event.senderUid)
-        + RedMessageSegment.image(data)
-    )
+        await UniMessage.text(data).send(reply_to=True)
+        return
+    await UniMessage.image(raw=data).send(reply_to=True)
