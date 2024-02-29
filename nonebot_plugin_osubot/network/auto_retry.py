@@ -11,7 +11,7 @@ P = ParamSpec("P")
 def auto_retry(func: Callable[P, T]) -> Callable[P, T]:
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        for i in range(10):
+        for i in range(5):
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
