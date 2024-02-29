@@ -177,8 +177,9 @@ async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
 
 
 async def get_map_bg(mapid) -> BytesIO:
-    res = await safe_async_get(f"https://api.osu.direct/media/background/{mapid}")
-    return BytesIO(res.content)
+    async with AsyncClient(timeout=10, proxies=proxy) as client:
+        res = await client.get(f"https://api.osu.direct/media/background/{mapid}")
+        return BytesIO(res.content)
 
 
 async def get_seasonal_bg() -> Optional[dict]:
