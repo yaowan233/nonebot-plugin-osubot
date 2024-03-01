@@ -1,4 +1,5 @@
 from arclet.alconna import Alconna, CommandMeta, Args
+from nonebot import on_command
 from nonebot_plugin_alconna import on_alconna, UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
@@ -6,15 +7,7 @@ from ..draw import get_score_data
 from ..utils import NGM
 
 
-score = on_alconna(
-    Alconna(
-        "score",
-        Args["arg?", str],
-        meta=CommandMeta(example="/score 图号"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+score = on_command("score", priority=11, block=True)
 
 
 @score.handle(parameterless=[split_msg()])

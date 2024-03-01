@@ -3,8 +3,8 @@ from random import shuffle
 from typing import Type
 
 from expiringdict import ExpiringDict
-from arclet.alconna import Alconna, CommandMeta, Args
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot import on_command
+from nonebot_plugin_alconna import UniMessage
 from nonebot.internal.matcher import Matcher
 from nonebot.typing import T_State
 from nonebot.log import logger
@@ -12,16 +12,7 @@ from nonebot.log import logger
 from .utils import split_msg
 from ..api import get_sayo_map_info, get_recommend, update_recommend
 
-recommend = on_alconna(
-    Alconna(
-        "recommend",
-        Args["arg?", str],
-        meta=CommandMeta(example="/re"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases={"推荐", "推荐铺面", "推荐谱面"},
-)
+recommend = on_command("推荐", priority=11, block=True, aliases={'recommend', '推荐铺面', '推荐谱面'})
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
 
 

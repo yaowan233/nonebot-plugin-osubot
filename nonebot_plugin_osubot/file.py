@@ -128,10 +128,9 @@ async def make_badge_cache_file(badge: Badge):
 
 
 # 保存个人信息界面背景
-async def save_info_pic(user: str, url):
+async def save_info_pic(user: str, byt: bytes):
     path = user_cache_path / user
     if not path.exists():
         path.mkdir()
-    req = await safe_async_get(url)
     with open(path / "info.png", "wb") as f:
-        f.write(BytesIO(req.content).getvalue())
+        f.write(BytesIO(byt).getvalue())

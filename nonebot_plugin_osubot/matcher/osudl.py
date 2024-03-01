@@ -1,28 +1,20 @@
-import urllib
-from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot_plugin_alconna import on_alconna, UniMessage, Match
+from nonebot import on_command
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
+from nonebot_plugin_alconna import UniMessage
 from ..file import download_map
 
-osudl = on_alconna(
-    Alconna(
-        "osudl",
-        Args["setid?", str],
-        meta=CommandMeta(example="/getbg 4374648"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+osudl = on_command("osudl", priority=11, block=True)
 
 
 @osudl.handle()
 async def _osudl(
-    setid: Match[str],
+    setid: Message = CommandArg()
 ):
-    setid = setid.result.strip() if setid.available else ""
+    setid = setid.extract_plain_text().strip()
     if not setid or not setid.isdigit():
         await UniMessage.text("请输入正确的地图ID").send(reply_to=True)
     osz_path = await download_map(int(setid))
-    name = urllib.parse.unquote(osz_path.name)
     file_path = osz_path.absolute()
     try:
         await UniMessage.file(path=file_path).send()

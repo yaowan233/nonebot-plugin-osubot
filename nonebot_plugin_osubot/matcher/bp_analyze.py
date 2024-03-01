@@ -1,18 +1,8 @@
-from typing import List, Tuple
 from collections import defaultdict
-
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import pandas as pd
 from nonebot import on_command
-from nonebot.adapters.onebot.v11 import (
-    Message,
-    MessageSegment,
-    Bot,
-    MessageEvent,
-    GroupMessageEvent,
-)
-from nonebot.params import CommandArg
 from nonebot.typing import T_State
 
 

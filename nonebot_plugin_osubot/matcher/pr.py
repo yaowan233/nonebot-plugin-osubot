@@ -1,5 +1,5 @@
-from arclet.alconna import Alconna, CommandMeta, Args
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot import on_command
+from nonebot_plugin_alconna import UniMessage
 from nonebot.params import T_State
 
 from ..api import get_user_info
@@ -10,26 +10,8 @@ from ..api import osu_api
 from ..draw.bp import draw_pfm
 from ..utils import NGM
 
-recent = on_alconna(
-    Alconna(
-        "recent",
-        Args["arg?", str],
-        meta=CommandMeta(example="/re"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases={"re", "RE", "Re"},
-)
-pr = on_alconna(
-    Alconna(
-        "pr",
-        Args["arg?", str],
-        meta=CommandMeta(example="/pr"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases={"Pr", "PR"},
-)
+recent = on_command("recent", priority=11, block=True, aliases={'re', 'RE', 'Re', 'rE'})
+pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr', 'pR'})
 
 
 @recent.handle(parameterless=[split_msg()])

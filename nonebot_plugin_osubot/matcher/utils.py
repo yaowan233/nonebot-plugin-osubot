@@ -1,7 +1,7 @@
-from nonebot.internal.adapter import Event
+from nonebot.internal.adapter import Event, Message
 from nonebot.internal.params import Depends
-from nonebot.params import T_State
-from nonebot_plugin_alconna import UniMsg, At, AlcResult
+from nonebot.params import T_State, CommandArg
+from nonebot_plugin_alconna import UniMsg, At
 
 from ..utils import mods2list
 from ..database.models import UserData
@@ -12,7 +12,7 @@ def split_msg():
         event: Event,
         state: T_State,
         msg: UniMsg,
-        result: AlcResult,
+        arg: Message = CommandArg()
     ):
         qq = event.get_user_id()
         if msg.has(At):
@@ -27,7 +27,7 @@ def split_msg():
         symbol_dic = {":": "mode", "+": "mods", "：": "mode", "#": "day", "＃": "day"}
         double_command = ("bp", "score")
         dic = {}
-        arg = msg.extract_plain_text().lstrip(result.result.header_result).strip()
+        arg = arg.extract_plain_text().strip()
         if max([arg.find(i) for i in symbol_ls]) >= 0:
             for i in symbol_ls:
                 dic[i] = arg.find(i)
@@ -49,7 +49,7 @@ def split_msg():
             state["para"] = arg.strip()
         if " " in state["para"]:
             ls = state["para"].split(" ")
-            if result.source.command in double_command:
+            if state["_prefix"]["command"][0] in double_command:
                 state["para"] = ls[-1]
                 state["user"] = " ".join(ls[:-1])
             elif is_num_hyphen_num(ls[-1]):
@@ -64,7 +64,7 @@ def split_msg():
         elif state["para"]:
             if (
                 not is_num_hyphen_num(state["para"])
-                and result.source.command not in double_command
+                and state["_prefix"]["command"][0] not in double_command
             ):
                 state["user"] = state["para"]
                 state["is_name"] = True

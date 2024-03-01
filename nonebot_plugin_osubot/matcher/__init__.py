@@ -25,6 +25,4 @@ from .mu import mu
 from .score import score
 from .update_mode import update_mode
 from .history import history
-from .osudl import osudl
-
-# from .map_convert import convert, change, generate_full_ln
+from .map_convert import convert, change, generate_full_ln

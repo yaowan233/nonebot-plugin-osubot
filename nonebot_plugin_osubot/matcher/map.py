@@ -1,28 +1,12 @@
-from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot import on_command
+from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
 
 from .utils import split_msg
 from ..draw import draw_map_info, draw_bmap_info
 
-osu_map = on_alconna(
-    Alconna(
-        "map",
-        Args["arg?", str],
-        meta=CommandMeta(example="/map 图号"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
-bmap = on_alconna(
-    Alconna(
-        "bmap",
-        Args["arg?", str],
-        meta=CommandMeta(example="/bmap 图号"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+osu_map = on_command("map", priority=11, block=True)
+bmap = on_command("bmap", priority=11, block=True)
 
 
 @osu_map.handle(parameterless=[split_msg()])

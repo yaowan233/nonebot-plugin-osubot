@@ -1,17 +1,10 @@
-from arclet.alconna import Alconna, CommandMeta
+from nonebot import on_command
 from nonebot.typing import T_State
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot_plugin_alconna import UniMessage
 from .utils import split_msg
 
 
-mu = on_alconna(
-    Alconna(
-        "mu",
-        meta=CommandMeta(example="/mu"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+mu = on_command("mu", priority=11, block=True)
 
 
 @mu.handle(parameterless=[split_msg()])

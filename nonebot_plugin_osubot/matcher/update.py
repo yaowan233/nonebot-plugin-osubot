@@ -1,15 +1,12 @@
 from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot_plugin_alconna import (
-    on_alconna,
-    UniMessage,
-    AlconnaMatch,
-    image_fetch,
-    Match,
-    AlconnaMatcher,
-)
+from nonebot import on_command
+from nonebot.internal.adapter import Event
+from nonebot_plugin_alconna import on_alconna, UniMessage, AlconnaMatch, image_fetch, Match
 from nonebot_plugin_alconna.uniseg import Image
 from nonebot.typing import T_State
-from ..file import user_cache_path, save_info_pic, safe_async_get
+
+from ..database import UserData
+from ..file import user_cache_path, save_info_pic
 
 
 from .utils import split_msg
@@ -22,39 +19,26 @@ update_pic = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases=("更改背景",),
+    aliases=('更改背景',)
 )
-update_info = on_alconna(
-    Alconna(
-        "update",
-        meta=CommandMeta(example="/update"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases=("更新信息",),
-)
-clear_background = on_alconna(
-    Alconna(
-        "清空背景",
-        meta=CommandMeta(example="/清空背景"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases=("清除背景", "重置背景"),
-)
+update_info = on_command("update", priority=11, block=True, aliases={'更新信息'})
+clear_background = on_command("清空背景", priority=11, block=True, aliases={'清除背景', '重置背景'})
 
 
-@update_pic.handle(parameterless=[split_msg()])
-async def _(state: T_State, img: Match[bytes] = AlconnaMatch("img", image_fetch)):
-    if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
+@update_pic.handle()
+async def _(event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img", image_fetch)):
+    qq = event.get_user_id()
+    user_data = await UserData.get_or_none(user_id=int(qq))
+    state["user"] = user_data.osu_id if user_data else 0
+    if state["user"] == 0:
+        await UniMessage.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号").send(reply_to=True)
         return
     if not img.available:
         await UniMessage.text("请在指令之后附上图片").send(reply_to=True)
         return
     user = state["user"]
     pic_url = img.result
-    await save_info_pic(user, pic_url)
+    await save_info_pic(str(user), pic_url)
     # msg = f"自群{event.group_id}: {event.user_id}的更新背景申请" + UniMessage.image(url=pic_url)
     # for superuser in get_driver().config.superusers:
     #     await bot.send_private_msg(user_id=int(superuser), message=msg)

@@ -1,16 +1,11 @@
 from pathlib import Path
-from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot_plugin_alconna import on_alconna, UniMessage, Match
+from nonebot import on_command
+from nonebot.internal.adapter import Message
+from nonebot.params import CommandArg
+from nonebot_plugin_alconna import UniMessage
 
-osu_help = on_alconna(
-    Alconna(
-        "osuhelp",
-        Args["arg?", str],
-        meta=CommandMeta(example="/osuhelp"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+
+osu_help = on_command("osuhelp", priority=11, block=True)
 
 with open(Path(__file__).parent.parent / "osufile" / "help.png", "rb") as f:
     img1 = f.read()
@@ -19,8 +14,10 @@ with open(Path(__file__).parent.parent / "osufile" / "detail.png", "rb") as f:
 
 
 @osu_help.handle()
-async def _help(arg: Match[str]):
-    arg = arg.result.strip() if arg.available else ""
+async def _help(
+    arg: Message = CommandArg()
+):
+    arg = arg.extract_plain_text().strip()
     if arg == "detail":
         await UniMessage.image(raw=img2).send(reply_to=True)
     await UniMessage.image(raw=img1).send(reply_to=True)

@@ -1,39 +1,14 @@
-from arclet.alconna import Alconna, CommandMeta, Args
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot import on_command
+from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
 from ..draw import draw_score, draw_bp
 from ..utils import NGM
 
-bp = on_alconna(
-    Alconna(
-        "bp",
-        Args["arg?", str],
-        meta=CommandMeta(example="/bp 1"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+bp = on_command("bp", priority=11, block=True)
 
-pfm = on_alconna(
-    Alconna(
-        "pfm",
-        Args["arg?", str],
-        meta=CommandMeta(example="/pfm 1-20"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
-tbp = on_alconna(
-    Alconna(
-        "tbp",
-        Args["arg?", str],
-        meta=CommandMeta(example="/tbp"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases=("todaybp",),
-)
+pfm = on_command("pfm", priority=11, block=True)
+tbp = on_command("tbp", priority=11, block=True, aliases={'todaybp'})
 
 
 @bp.handle(parameterless=[split_msg()])

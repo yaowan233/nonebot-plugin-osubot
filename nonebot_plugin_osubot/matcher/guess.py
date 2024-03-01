@@ -8,8 +8,7 @@ from typing import Dict
 from PIL import Image
 
 from expiringdict import ExpiringDict
-from arclet.alconna import Alconna, CommandMeta
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot_plugin_alconna import UniMessage
 from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule, Event
 from nonebot.matcher import Matcher
@@ -31,14 +30,7 @@ hint_dic = {"pic": False, "artist": False, "creator": False}
 pic_hint_dic = {"artist": False, "creator": False, "audio": False}
 group_hint = {}
 pic_group_hint = {}
-guess_audio = on_alconna(
-    Alconna(
-        "音频猜歌",
-        meta=CommandMeta(example="/音频猜歌"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+guess_audio = on_command("音频猜歌", priority=11, block=True)
 guess_song_cache = ExpiringDict(1000, 60 * 60 * 24)
 data_path = Path() / "data" / "osu"
 pcm_path = data_path / "out.pcm"
@@ -65,9 +57,7 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
 
 
 @guess_audio.handle(parameterless=[split_msg()])
-async def _(
-    state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)
-):
+async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
         return
@@ -87,13 +77,9 @@ async def _(
         return
     games[group_id] = selected_score
     set_timeout(matcher, group_id)
-    await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(
-        reply_to=True
-    )
+    await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(reply_to=True)
     print(selected_score.beatmapset.title)
-    await UniMessage.audio(
-        url=f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3"
-    ).send()
+    await UniMessage.audio(url=f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3").send()
 
 
 async def stop_game(matcher: Matcher, cid: str):
@@ -237,9 +223,7 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
     action = random.choice(true_keys)
     if action == "audio":
         pic_group_hint[session_id]["audio"] = True
-        await UniMessage.audio(
-            url=f"https://cdn.sayobot.cn:25225/preview/{score.beatmapset.id}.mp3"
-        ).send()
+        await UniMessage.audio(url=f"https://cdn.sayobot.cn:25225/preview/{score.beatmapset.id}.mp3").send()
         return
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
@@ -252,20 +236,11 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
         await pic_hint.finish(f"谱师为：{score.beatmapset.creator}")
 
 
-guess_pic = on_alconna(
-    Alconna(
-        "图片猜歌",
-        meta=CommandMeta(example="/图片猜歌"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-)
+guess_pic = on_command("图片猜歌", priority=11, block=True)
 
 
 @guess_pic.handle(parameterless=[split_msg()])
-async def _(
-    state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)
-):
+async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
     mode = state["mode"]
@@ -294,7 +269,4 @@ async def _(
     byt = BytesIO()
     cropped_image.save(byt, "png")
     print(selected_score.beatmapset.title_unicode)
-    await (
-        f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp"
-        + UniMessage.image(raw=byt)
-    ).send()
+    await (f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp" + UniMessage.image(raw=byt)).send()

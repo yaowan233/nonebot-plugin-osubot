@@ -1,20 +1,11 @@
-from arclet.alconna import Alconna, CommandMeta, Args
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot import on_command
+from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
 from ..draw import draw_info
 from ..utils import NGM
 
-info = on_alconna(
-    Alconna(
-        "info",
-        Args["arg?", str],
-        meta=CommandMeta(example="/info"),
-    ),
-    skip_for_unmatch=False,
-    use_cmd_start=True,
-    aliases={"Info", "INFO"},
-)
+info = on_command("info", priority=11, block=True, aliases={'Info', 'INFO'})
 
 
 @info.handle(parameterless=[split_msg()])
