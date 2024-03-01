@@ -7,6 +7,7 @@ from nonebot import get_plugin_config
 from expiringdict import ExpiringDict
 from .config import Config
 from .network import auto_retry
+from .network.first_response import get_first_response
 from .schema import SayoBeatmap, RecommendData
 
 api = "https://osu.ppy.sh/api/v2"
@@ -176,10 +177,11 @@ async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
     return SayoBeatmap(**res.json())
 
 
-async def get_map_bg(mapid) -> BytesIO:
-    async with AsyncClient(timeout=10, proxies=proxy) as client:
-        res = await client.get(f"https://api.osu.direct/media/background/{mapid}")
-        return BytesIO(res.content)
+async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
+    res = await get_first_response([f"https://api.osu.direct/media/background/{mapid}",
+                                    f"https://subapi.nerinyan.moe/bg/{mapid}",
+                                    f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}'])
+    return BytesIO(res)
 
 
 async def get_seasonal_bg() -> Optional[dict]:

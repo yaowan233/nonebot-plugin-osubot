@@ -155,9 +155,9 @@ async def draw_score_pic(
     cover = re_map(osu)
     cover_path = path / cover
     if not cover_path.exists():
-        bg = await get_map_bg(bid)
-        with open(cover_path, "wb") as f:
-            f.write(bg.getvalue())
+        if bg := await get_map_bg(bid, sid, cover):
+            with open(cover_path, "wb") as f:
+                f.write(bg.getvalue())
     cover_crop = await crop_bg("BG", cover_path)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)

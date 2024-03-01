@@ -9,6 +9,7 @@ from nonebot.log import logger
 
 from .config import Config
 from .api import sayo_api, safe_async_get
+from .network.first_response import get_first_response
 from .schema import SayoBeatmap, User, Badge
 
 plugin_config = get_plugin_config(Config)
@@ -57,15 +58,16 @@ async def download_tmp_osu(map_id):
 
 
 async def download_osu(set_id, map_id):
-    url = f"https://osu.ppy.sh/osu/{map_id}"
+    url = [f"https://osu.ppy.sh/osu/{map_id}", f"https://api.osu.direct/osu/{map_id}"]
     logger.info(f"开始下载谱面: <{map_id}>")
-    req = await safe_async_get(url)
-    filename = f"{map_id}.osu"
-    filepath = map_path / str(set_id) / filename
-    chunk = req.read()
-    with open(filepath, "wb") as f:
-        f.write(chunk)
-    return filepath
+    if req := await get_first_response(url):
+        filename = f"{map_id}.osu"
+        filepath = map_path / str(set_id) / filename
+        with open(filepath, "wb") as f:
+            f.write(req)
+        return filepath
+    else:
+        return '下载出错，请稍后再试'
 
 
 async def get_projectimg(url: str):

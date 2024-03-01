@@ -49,9 +49,9 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     cover = re_map(osu)
     cover_path = path / cover
     if not cover_path.exists():
-        bg = await get_map_bg(mapid)
-        with open(cover_path, "wb") as f:
-            f.write(bg.getvalue())
+        if bg := await get_map_bg(mapid, mapinfo.beatmapset_id, cover):
+            with open(cover_path, "wb") as f:
+                f.write(bg.getvalue())
     cover_crop = await crop_bg("MB", cover_path)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
