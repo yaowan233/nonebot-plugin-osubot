@@ -3,16 +3,17 @@ from pathlib import Path
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 from nonebot.log import logger
 from nonebot import require
-from nonebot_plugin_tortoise_orm import add_model
 
 require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_session")
+require("nonebot_plugin_tortoise_orm")
 from .database.models import UserData
 from .info import update_user_info
 from .config import Config
 from .matcher import *
 from nonebot_plugin_apscheduler import scheduler
+from nonebot_plugin_tortoise_orm import add_model
 
 
 usage = "发送/osuhelp 查看帮助"
