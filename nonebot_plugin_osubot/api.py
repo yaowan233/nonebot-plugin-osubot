@@ -27,7 +27,7 @@ bg_url = plugin_config.info_bg
 async def safe_async_get(
     url, headers: Optional[dict] = None, params: Optional[dict] = None
 ) -> Response:
-    async with AsyncClient(timeout=100, proxies=proxy, follow_redirects=True) as client:
+    async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
         client: AsyncClient
         req = await client.get(url, headers=headers, params=params)
     return req
@@ -35,7 +35,7 @@ async def safe_async_get(
 
 @auto_retry
 async def safe_async_post(url, headers=None, data=None) -> Response:
-    async with AsyncClient(timeout=100, proxies=proxy) as client:
+    async with AsyncClient(proxies=proxy) as client:
         client: AsyncClient
         req = await client.post(url, headers=headers, data=data)
     return req
@@ -45,7 +45,7 @@ async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
     if not key or not client_id:
         raise Exception("请设置osu_key和osu_client")
-    async with AsyncClient(timeout=100, proxies=proxy) as client:
+    async with AsyncClient(proxies=proxy) as client:
         client: AsyncClient
         req = await client.post(
             url,

@@ -16,12 +16,12 @@ async def fetch_url(client: AsyncClient, url):
             return response.content
         else:
             return None
-    except NetworkError:
+    except Exception:
         return None
 
 
 async def get_first_response(urls: List[str]):
-    async with AsyncClient(timeout=100, proxies=proxy, follow_redirects=True) as client:
+    async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
         tasks = [fetch_url(client, url) for url in urls]
         done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
