@@ -16,21 +16,8 @@ from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_tortoise_orm import add_model
 
 
+add_model("nonebot_plugin_osubot.database.models")
 usage = "发送/osuhelp 查看帮助"
-detail_usage = """以下<>内是必填内容，()内是选填内容，user可以是用户名也可以@他人，mode为0-3的一个数字
-/info (user)(:mode)
-/re (user)(:mode)
-/score <mapid>(:mode)(+mods)
-/bp (user) <num> (:mode)(+mods)
-/pfm (user) <min>-<max> (:mode)(+mods)
-/tbp (user) (:mode)
-/map <mapid> (+mods)
-/倍速 <setid> (rate)-(rate)
-/反键 <mapid> (gap) (ln_as_hit_thres)
-其中gap为ln的间距默认为150 (ms)
-ln_as_hit_thres为ln转为note的阈值默认为100 (ms)
-rate可为任意小数"""
-
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
     description="OSU查分插件",
@@ -46,8 +33,6 @@ __plugin_meta__ = PluginMetadata(
         "author": "yaowan233 <572473053@qq.com>",
     },
 )
-
-add_model("nonebot_plugin_osubot.database.models")
 
 
 @scheduler.scheduled_job("cron", hour="0", misfire_grace_time=60)
