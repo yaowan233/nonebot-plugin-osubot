@@ -11,7 +11,7 @@ pfm = on_command("pfm", priority=11, block=True)
 tbp = on_command("tbp", priority=11, block=True, aliases={'todaybp'})
 
 
-@bp.handle(parameterless=[split_msg()])
+@bp.handle(parameterless=[split_msg(fix_bppara=True)])
 async def _bp(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
@@ -43,7 +43,7 @@ async def _bp(state: T_State):
     await UniMessage.image(raw=data).send(reply_to=True)
 
 
-@pfm.handle(parameterless=[split_msg()])
+@pfm.handle(parameterless=[split_msg(fix_bppara=True)])
 async def _pfm(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
