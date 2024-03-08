@@ -83,10 +83,17 @@ def split_msg(fix_bppara=False):
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
         state["day"] = int(state["day"])
         if fix_bppara:
-            if state["para"] and "-" not in state["para"] and (not state["para"].isdigit() or not (1 <= int(state["para"]) <= 100)):
-                state["user"] = state["para"]
-                state["is_name"] = True
-                state["para"] = ""
+            if state["para"]:
+                if "-" in state["para"]:
+                    parts = state["para"].split("-")
+                    if not (parts[0].isdigit() and parts[1].isdigit()):
+                        state["user"] = state["para"]
+                        state["is_name"] = True
+                        state["para"] = ""
+                elif not state["para"].isdigit() or not (1 <= int(state["para"]) <= 100):
+                    state["user"] = state["para"]
+                    state["is_name"] = True
+                    state["para"] = ""
 
     return Depends(dependency)
 
