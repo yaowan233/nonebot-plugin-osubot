@@ -43,7 +43,7 @@ async def _bp(state: T_State):
     await UniMessage.image(raw=data).send(reply_to=True)
 
 
-@pfm.handle(parameterless=[split_msg(fix_bppara=True)])
+@pfm.handle(parameterless=[split_msg()])
 async def _pfm(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
