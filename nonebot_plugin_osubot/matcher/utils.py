@@ -7,7 +7,7 @@ from ..utils import mods2list
 from ..database.models import UserData
 
 
-def split_msg():
+def split_msg(fix_bppara=False):
     async def dependency(
         event: Event,
         state: T_State,
@@ -82,6 +82,11 @@ def split_msg():
         if state["user"] == 0 and not state["user"]:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
         state["day"] = int(state["day"])
+        if fix_bppara:
+            if state["para"] and "-" not in state["para"] and (not state["para"].isdigit() or not (1 <= int(state["para"]) <= 100)):
+                state["user"] = state["para"]
+                state["is_name"] = True
+                state["para"] = ""
 
     return Depends(dependency)
 
