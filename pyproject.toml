@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-osubot"
-version = "5.2.1"
+version = "5.2.2"
 description = "OSUbot in NoneBot2"
 authors = [
     {name = "yaowan233", email = "572473053@qq.com"},
@@ -9,7 +9,7 @@ license = {text = "AGPL-3.0"}
 dependencies = [
     "nonebot2~=2.2.0",
     "pydantic~=1.10",
-    "nonebot-plugin-alconna~=0.37",
+    "nonebot-plugin-alconna>=0.40.0rc3",
     "nonebot_plugin_session~=0.3",
     "pillow>=9.2.0",
     "expiringdict>=1.2.2",
