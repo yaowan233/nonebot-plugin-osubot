@@ -80,7 +80,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         diff_len = Image.new("RGBA", (difflen, 8), color)
         im.alpha_composite(diff_len, (890, 426 + 35 * num))
         draw.text(
-            (1170, 426 + 35 * num), "%.1f" % i, font=Torus_SemiBold_20, anchor="mm"
+            (1170, 428 + 35 * num), "%.2f" % i, font=Torus_SemiBold_15, anchor="mm"
         )
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
