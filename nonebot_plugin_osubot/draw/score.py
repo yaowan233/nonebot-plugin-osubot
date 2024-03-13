@@ -227,7 +227,7 @@ async def draw_score_pic(
         diff_len = Image.new("RGBA", (diff_len, 8), color)
         im.alpha_composite(diff_len, (1190, 306 + 35 * num))
         draw.text(
-            (1470, 306 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_20, anchor="mm"
+            (1470, 310 + 35 * num), f"{i:.2f}", font=Torus_SemiBold_15, anchor="mm"
         )
     # 时长 - 滑条
     diff_info = (
@@ -260,8 +260,8 @@ async def draw_score_pic(
     # 星级
     draw.text(
         (162, 89),
-        f"{pp_info.difficulty.stars:.1f}",
-        font=Torus_SemiBold_20,
+        f"{pp_info.difficulty.stars:.2f}",
+        font=Torus_SemiBold_15,
         anchor="lm",
     )
     # 谱面版本，mapper
