@@ -10,6 +10,9 @@ Torus_Regular_40 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf
 Torus_Regular_45 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 45)
 Torus_Regular_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 50)
 Torus_Regular_75 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 75)
+Torus_SemiBold_15 = ImageFont.truetype(
+    str(osufile / "fonts" / "Torus SemiBold.otf"), 15
+)
 Torus_SemiBold_20 = ImageFont.truetype(
     str(osufile / "fonts" / "Torus SemiBold.otf"), 20
 )
