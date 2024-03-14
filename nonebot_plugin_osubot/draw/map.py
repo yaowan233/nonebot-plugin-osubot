@@ -82,11 +82,11 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             (1170, 428 + 35 * num), "%.1f" % i, font=Torus_SemiBold_15, anchor="mm"
         )
     # stardiff
-    i = pp_info.difficulty.stars
+    i = ss_pp_info.difficulty.stars
     color = (255, 204, 34, 255)
-    diff_len = int(250 * i / 10) if i <= 10 else 250
-    diff_len = Image.new('RGBA', (diff_len, 8), color)
-    im.alpha_composite(diff_len, (1190, 446))
+    difflen = int(250 * i / 10) if i <= 10 else 250
+    diff_len = Image.new('RGBA', (difflen, 8), color)
+    im.alpha_composite(diff_len, (890, 566))
     draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_15, anchor='mm')
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
