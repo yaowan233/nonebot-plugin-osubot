@@ -80,11 +80,11 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         im.alpha_composite(diff_len, (890, 426 + 35 * num))
         if i == round(i):
             draw.text(
-                (1170, 428 + 35 * num), "%.0f" % i, font=Torus_SemiBold_15, anchor="mm"
+                (1170, 428 + 35 * num), "%.0f" % i, font=Torus_SemiBold_20, anchor="mm"
             )
         else:
             draw.text(
-                (1170, 428 + 35 * num), "%.1f" % i, font=Torus_SemiBold_15, anchor="mm"
+                (1170, 428 + 35 * num), "%.1f" % i, font=Torus_SemiBold_20, anchor="mm"
             )
     # stardiff
     i = ss_pp_info.difficulty.stars
@@ -92,7 +92,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     difflen = int(250 * i / 10) if i <= 10 else 250
     diff_len = Image.new('RGBA', (difflen, 8), color)
     im.alpha_composite(diff_len, (890, 566))
-    draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_15, anchor='mm')
+    draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_20, anchor='mm')
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
     user_icon = await get_projectimg(icon_url)
