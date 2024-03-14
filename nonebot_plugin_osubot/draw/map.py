@@ -78,9 +78,14 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         difflen = int(250 * i / 10) if i <= 10 else 250
         diff_len = Image.new("RGBA", (difflen, 8), color)
         im.alpha_composite(diff_len, (890, 426 + 35 * num))
-        draw.text(
-            (1170, 428 + 35 * num), "%.1f" % i, font=Torus_SemiBold_15, anchor="mm"
-        )
+        if i == round(i):
+            draw.text(
+                (1170, 428 + 35 * num), "%.0f" % i, font=Torus_SemiBold_15, anchor="mm"
+            )
+        else:
+            draw.text(
+                (1170, 428 + 35 * num), "%.1f" % i, font=Torus_SemiBold_15, anchor="mm"
+            )
     # stardiff
     i = ss_pp_info.difficulty.stars
     color = (255, 204, 34, 255)
