@@ -227,11 +227,11 @@ async def draw_score_pic(
         im.alpha_composite(diff_len, (1190, 306 + 35 * num))
         if i == round(i):
             draw.text(
-                (1470, 310 + 35 * num), f"{i:.0f}", font=Torus_SemiBold_15, anchor="mm"
+                (1470, 310 + 35 * num), f"{i:.0f}", font=Torus_SemiBold_20, anchor="mm"
             )
         else:
             draw.text(
-                (1470, 310 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_15, anchor="mm"
+                (1470, 310 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_20, anchor="mm"
             )
     # stardiff
     i = pp_info.difficulty.stars
@@ -239,7 +239,7 @@ async def draw_score_pic(
     diff_len = int(250 * i / 10) if i <= 10 else 250
     diff_len = Image.new('RGBA', (diff_len, 8), color)
     im.alpha_composite(diff_len, (1190, 446))
-    draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_15, anchor='mm')
+    draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_20, anchor='mm')
     # 时长 - 滑条
     diff_info = (
         calc_songlen(mapinfo.total_length),
@@ -272,7 +272,7 @@ async def draw_score_pic(
     draw.text(
         (162, 89),
         f"{pp_info.difficulty.stars:.2f}",
-        font=Torus_SemiBold_15,
+        font=Torus_SemiBold_20,
         anchor="lm",
     )
     # 谱面版本，mapper
