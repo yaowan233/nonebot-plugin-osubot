@@ -93,6 +93,12 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     diff_len = Image.new('RGBA', (difflen, 8), color)
     im.alpha_composite(diff_len, (890, 566))
     draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_20, anchor='mm')
+    # 绘制mods
+    if mods:
+        for mods_num, s_mods in enumerate(mods):
+            mods_bg = osufile / 'mods' / f'{s_mods}.png'
+            mods_img = Image.open(mods_bg).convert('RGBA')
+            im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
     user_icon = await get_projectimg(icon_url)
