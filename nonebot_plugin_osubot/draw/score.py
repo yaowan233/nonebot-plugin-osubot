@@ -211,13 +211,12 @@ async def draw_score_pic(
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     mapinfo = Beatmap(**map_json)
     map_attribute = BeatmapDifficultyAttributes(**map_attribute_json["attributes"])
-    # cs, ar, od, hp, stardiff
+    # cs, ar, od, hp
     mapdiff = [
         mapinfo.cs,
         mapinfo.drain,
         mapinfo.accuracy,
         mapinfo.ar,
-        pp_info.difficulty.stars,
     ]
     for num, i in enumerate(mapdiff):
         color = (255, 255, 255, 255)
@@ -226,9 +225,21 @@ async def draw_score_pic(
         diff_len = int(250 * i / 10) if i <= 10 else 250
         diff_len = Image.new("RGBA", (diff_len, 8), color)
         im.alpha_composite(diff_len, (1190, 306 + 35 * num))
-        draw.text(
-            (1470, 306 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_20, anchor="mm"
-        )
+        if i == round(i):
+            draw.text(
+                (1470, 310 + 35 * num), f"{i:.0f}", font=Torus_SemiBold_20, anchor="mm"
+            )
+        else:
+            draw.text(
+                (1470, 310 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_20, anchor="mm"
+            )
+    # stardiff
+    i = pp_info.difficulty.stars
+    color = (255, 204, 34, 255)
+    diff_len = int(250 * i / 10) if i <= 10 else 250
+    diff_len = Image.new('RGBA', (diff_len, 8), color)
+    im.alpha_composite(diff_len, (1190, 446))
+    draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_20, anchor='mm')
     # 时长 - 滑条
     diff_info = (
         calc_songlen(mapinfo.total_length),
@@ -260,7 +271,7 @@ async def draw_score_pic(
     # 星级
     draw.text(
         (162, 89),
-        f"{pp_info.difficulty.stars:.1f}",
+        f"{pp_info.difficulty.stars:.2f}",
         font=Torus_SemiBold_20,
         anchor="lm",
     )
