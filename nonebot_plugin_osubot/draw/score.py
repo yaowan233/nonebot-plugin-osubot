@@ -211,6 +211,22 @@ async def draw_score_pic(
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     mapinfo = Beatmap(**map_json)
     map_attribute = BeatmapDifficultyAttributes(**map_attribute_json["attributes"])
+    # 处理mania转谱cs
+    if score_info.mode == 'mania' and mapinfo.mode == 'osu':
+        temp_accuracy = mapinfo.accuracy
+        convert = (mapinfo.count_sliders + mapinfo.count_spinners) / (mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners)
+        convert_od = round(temp_accuracy)
+        if convert < 0.20 or (convert < 0.30 or round(mapinfo.cs) >= 5) and convert_od > 5:
+            mapinfo.cs = 7.0
+        elif (convert < 0.30 or round(mapinfo.cs) >= 5) and convert_od <= 5:
+            mapinfo.cs = 6.0
+        elif convert > 0.60 and convert_od > 4:
+            mapinfo.cs = 5.0
+        elif convert > 0.60 and convert_od <= 4:
+            mapinfo.cs = 4.0
+        else:
+            temp_accuracy += 1
+            mapinfo.cs = max(4.0, min(temp_accuracy, 7.0))
     # cs, ar, od, hp
     mapdiff = [
         mapinfo.cs,
