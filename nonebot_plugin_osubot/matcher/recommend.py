@@ -32,9 +32,9 @@ async def handle_recommend(state: T_State, matcher: Type[Matcher]):
         recommend_cache[user] = set()
         await update_recommend(user)
     recommend_data = await get_recommend(user, mode, key_count)
-    shuffle(recommend_data.data.list)
     if not recommend_data.data.list:
         await matcher.finish("没有可以推荐的图哦，自己多打打喜欢玩的图吧")
+    shuffle(recommend_data.data.list)
     for i in recommend_data.data.list:
         if i.id not in recommend_cache[user]:
             recommend_cache[user].add(i.id)
