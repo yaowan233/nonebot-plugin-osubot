@@ -242,7 +242,7 @@ def stars_diff(mode: Union[str, int], stars: float = None):
         elif stars < 8:
             xp = 815
         else:
-            return Image.open(osufile / 'work' / f'{mode}_expertplus.png').convert('RGBA')
+            return Image.open(osufile / "work" / f"{mode}_expertplus.png").convert("RGBA")
         # 取色
         x = (stars - math.floor(stars)) * default + xp
         r, g, b = ColorPic[x, 1]
