@@ -210,15 +210,15 @@ async def crop_bg(size: str, path: Union[str, Path]):
 
 def stars_diff(mode: Union[str, int], stars: float = None):
     if mode == 0:
-        mode = 'std'
+        mode = "std"
     elif mode == 1:
-        mode = 'taiko'
+        mode = "taiko"
     elif mode == 2:
-        mode = 'ctb'
+        mode = "ctb"
     elif mode == 3:
-        mode = 'mania'
+        mode = "mania"
     else:
-        mode = 'stars'
+        mode = "stars"
     default = 115
     if stars is None:
         r, g, b = 254, 255, 255
@@ -247,10 +247,10 @@ def stars_diff(mode: Union[str, int], stars: float = None):
         x = (stars - math.floor(stars)) * default + xp
         r, g, b = ColorPic[x, 1]
     # 打开底图
-    im = Image.open(osufile / 'work' / f'{mode}.png').convert('RGBA')
+    im = Image.open(osufile / "work" / f"{mode}.png").convert("RGBA")
     xx, yy = im.size
     # 填充背景
-    sm = Image.new('RGBA', im.size, (r, g, b))
+    sm = Image.new("RGBA", im.size, (r, g, b))
     sm.paste(im, (0, 0, xx, yy), im)
     # 把白色变透明
     arr = np.array(sm)
