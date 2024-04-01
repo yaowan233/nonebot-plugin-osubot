@@ -61,9 +61,20 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     else:
         im.alpha_composite(MapBg)
     # 模式
-    mode_bg = stars_diff(FGM[mapinfo.mode], ss_pp_info.difficulty.stars)
+    mode_bg = stars_diff(FGM[mapinfo.mode])
     mode_img = mode_bg.resize((25, 25))
-    im.alpha_composite(mode_img, (5, 65))
+    im.alpha_composite(mode_img, (75, 65))
+    # 难度星星
+    stars_bg = stars_diff("stars", ss_pp_info.difficulty.stars)
+    stars_img = stars_bg.resize((80, 32))
+    im.alpha_composite(stars_img, (106, 62))
+    if ss_pp_info.difficulty.stars < 6.5:
+        color = (0, 0, 0, 255)
+    else:
+        color = (255, 217, 102, 255)
+    draw.text((111, 77), "★", font=Torus_Regular_20, anchor="lm", fill=color)
+    # 星级
+    draw.text((127, 77), f"{ss_pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
     # cs, ar, od, hp
     mapdiff = [
         mapinfo.cs,
@@ -90,14 +101,14 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     i = ss_pp_info.difficulty.stars
     color = (255, 204, 34, 255)
     difflen = int(250 * i / 10) if i <= 10 else 250
-    diff_len = Image.new('RGBA', (difflen, 8), color)
+    diff_len = Image.new("RGBA", (difflen, 8), color)
     im.alpha_composite(diff_len, (890, 566))
-    draw.text((1170, 566), f'{i:.2f}', font=Torus_SemiBold_20, anchor='mm')
+    draw.text((1170, 566), f"{i:.2f}", font=Torus_SemiBold_20, anchor="mm")
     # 绘制mods
     if mods:
         for mods_num, s_mods in enumerate(mods):
-            mods_bg = osufile / 'mods' / f'{s_mods}.png'
-            mods_img = Image.open(mods_bg).convert('RGBA')
+            mods_bg = osufile / "mods" / f"{s_mods}.png"
+            mods_img = Image.open(mods_bg).convert("RGBA")
             im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
@@ -116,18 +127,18 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     version = mapinfo.version
     max_version_length = 60
     if len(version) > max_version_length:
-        version = version[:max_version_length - 3] + '...'
-    text = f'{version}'
-    draw.text((40, 75), text, font=Torus_SemiBold_20, anchor='lm')
+        version = version[:max_version_length - 3] + "..."
+    text = f"{version}"
+    draw.text((190, 75), text, font=Torus_SemiBold_20, anchor="lm")
     # 曲名+曲师
-    text = f'{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}'
+    text = f"{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}"
     max_length = 80
     if len(text) > max_length:
-        text = text[:max_length-3] + '...'
+        text = text[:max_length-3] + "..."
 
-    draw.text((5, 38), text, font=Torus_SemiBold_20, anchor='lm')
+    draw.text((75, 30), text, font=Torus_SemiBold_20, anchor="lm")
     # 来源
-    #draw.text((50, 260), f'Source:{mapinfo.beatmapset.source}', font=Torus_SemiBold_25, anchor='rt')
+    #draw.text((50, 260), f"Source:{mapinfo.beatmapset.source}", font=Torus_SemiBold_25, anchor="rt")
     # mapper
     draw.text((160, 400), "谱师:", font=Torus_SemiBold_20, anchor="lt")
     draw.text(
