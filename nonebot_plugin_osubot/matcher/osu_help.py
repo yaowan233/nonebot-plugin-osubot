@@ -5,7 +5,7 @@ from nonebot.params import CommandArg
 from nonebot_plugin_alconna import UniMessage
 
 
-osu_help = on_command("osuhelp", priority=11, block=True)
+osu_help = on_command("osuhelp", aliases={'OSUBot', 'osubot'}, priority=11, block=True)
 
 with open(Path(__file__).parent.parent / "osufile" / "help.png", "rb") as f:
     img1 = f.read()
