@@ -221,7 +221,7 @@ def stars_diff(mode: Union[str, int], stars: float = None):
         mode = "stars"
     default = 115
     if stars is None:
-        r, g, b = 254, 255, 255
+        r, g, b = 255, 255, 255
     else:
         if stars < 1:
             xp = 0
