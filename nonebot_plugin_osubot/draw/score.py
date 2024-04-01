@@ -177,7 +177,7 @@ async def draw_score_pic(
     if pp_info.difficulty.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
-        color = (255, 204, 34, 255)
+        color = (255, 217, 102, 255)
     draw.text((128, 89), "★", font=Torus_Regular_20, anchor="lm", fill=color)
     # 星级
     draw.text((145, 89), f"{pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
