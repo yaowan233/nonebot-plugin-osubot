@@ -29,7 +29,6 @@ Venera_75 = ImageFont.truetype(str(osufile / "fonts" / "Venera.otf"), 75)
 
 ColorPic = Image.open(osufile / "work" / "color.png").load()
 InfoImg = Image.open(osufile / "info.png").convert("RGBA")
-NewInfoImg = Image.open(osufile / "info_new.png").convert("RGBA")
 SupporterBg = Image.open(osufile / "work" / "suppoter.png").convert("RGBA")
 ExpLeftBg = Image.open(osufile / "work" / "left.png").convert("RGBA")
 ExpCenterBg = Image.open(osufile / "work" / "center.png").convert("RGBA")

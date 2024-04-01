@@ -95,7 +95,7 @@ async def draw_info(
         path.mkdir()
     country = osufile / "flags" / f"{info.country_code}.png"
     # 底图
-    im.alpha_composite(NewInfoImg)
+    im.alpha_composite(InfoImg)
     # 奖牌
     if info.badges:
         badges_num = len(info.badges)
