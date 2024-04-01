@@ -167,13 +167,20 @@ async def draw_score_pic(
     recent_bg = Image.open(bg).convert("RGBA")
     im.alpha_composite(recent_bg)
     # 模式
-    mode_bg = stars_diff(FGM[score_info.mode], pp_info.difficulty.stars)
+    mode_bg = stars_diff(FGM[score_info.mode])
     mode_img = mode_bg.resize((30, 30))
     im.alpha_composite(mode_img, (75, 74))
     # 难度星星
     stars_bg = stars_diff("stars", pp_info.difficulty.stars)
-    stars_img = stars_bg.resize((23, 23))
-    im.alpha_composite(stars_img, (134, 78))
+    stars_img = stars_bg.resize((85, 37))
+    im.alpha_composite(stars_img, (122, 72))
+    if pp_info.difficulty.stars < 6.5:
+        color = (0, 0, 0, 255)
+    else:
+        color = (255, 217, 102, 255)
+    draw.text((128, 89), "★", font=Torus_Regular_20, anchor="lm", fill=color)
+    # 星级
+    draw.text((145, 89), f"{pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
     # mods
     if "HD" in score_info.mods or "FL" in score_info.mods:
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
@@ -282,13 +289,6 @@ async def draw_score_pic(
         (75, 38),
         f"{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}",
         font=Torus_SemiBold_30,
-        anchor="lm",
-    )
-    # 星级
-    draw.text(
-        (162, 89),
-        f"{pp_info.difficulty.stars:.2f}",
-        font=Torus_SemiBold_20,
         anchor="lm",
     )
     # 谱面版本，mapper

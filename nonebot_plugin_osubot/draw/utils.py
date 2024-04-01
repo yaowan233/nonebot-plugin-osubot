@@ -208,7 +208,7 @@ async def crop_bg(size: str, path: Union[str, Path]):
         return sf
 
 
-def stars_diff(mode: Union[str, int], stars: float):
+def stars_diff(mode: Union[str, int], stars: float = None):
     if mode == 0:
         mode = "std"
     elif mode == 1:
@@ -220,29 +220,32 @@ def stars_diff(mode: Union[str, int], stars: float):
     else:
         mode = "stars"
     default = 115
-    if stars < 1:
-        xp = 0
-        default = 120
-    elif stars < 2:
-        xp = 120
-        default = 120
-    elif stars < 3:
-        xp = 240
-    elif stars < 4:
-        xp = 355
-    elif stars < 5:
-        xp = 470
-    elif stars < 6:
-        xp = 585
-    elif stars < 7:
-        xp = 700
-    elif stars < 8:
-        xp = 815
+    if stars is None:
+        r, g, b = 255, 255, 255
     else:
-        return Image.open(osufile / "work" / f"{mode}_expertplus.png").convert("RGBA")
-    # 取色
-    x = (stars - math.floor(stars)) * default + xp
-    r, g, b = ColorPic[x, 1]
+        if stars < 1:
+            xp = 0
+            default = 120
+        elif stars < 2:
+            xp = 120
+            default = 120
+        elif stars < 3:
+            xp = 240
+        elif stars < 4:
+            xp = 355
+        elif stars < 5:
+            xp = 470
+        elif stars < 6:
+            xp = 585
+        elif stars < 7:
+            xp = 700
+        elif stars < 8:
+            xp = 815
+        else:
+            return Image.open(osufile / "work" / f"{mode}_expertplus.png").convert("RGBA")
+        # 取色
+        x = (stars - math.floor(stars)) * default + xp
+        r, g, b = ColorPic[x, 1]
     # 打开底图
     im = Image.open(osufile / "work" / f"{mode}.png").convert("RGBA")
     xx, yy = im.size
