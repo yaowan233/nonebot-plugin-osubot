@@ -167,20 +167,17 @@ async def draw_score_pic(
     recent_bg = Image.open(bg).convert("RGBA")
     im.alpha_composite(recent_bg)
     # 模式
-    mode_bg = stars_diff(FGM[score_info.mode])
-    mode_img = mode_bg.resize((30, 30))
-    im.alpha_composite(mode_img, (75, 74))
+    draw.text((75, 75), IconLs[score_info.mode], font=extra_30, anchor="lt")
     # 难度星星
-    stars_bg = stars_diff("stars", pp_info.difficulty.stars)
+    stars_bg = stars_diff(pp_info.difficulty.stars)
     stars_img = stars_bg.resize((85, 37))
     im.alpha_composite(stars_img, (122, 72))
     if pp_info.difficulty.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
-    draw.text((128, 89), "★", font=Torus_Regular_20, anchor="lm", fill=color)
     # 星级
-    draw.text((145, 89), f"{pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
+    draw.text((128, 90), f"★{pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
     # mods
     if "HD" in score_info.mods or "FL" in score_info.mods:
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
@@ -283,7 +280,7 @@ async def draw_score_pic(
         (1400, 184), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor="mm"
     )
     # mapid
-    draw.text((1425, 89), f"Mapid: {bid}", font=Torus_SemiBold_25, anchor="rm")
+    draw.text((1485, 90), f"Mapid: {bid}", font=Torus_SemiBold_20, anchor="rm")
     # 曲名
     draw.text(
         (75, 38),
@@ -293,7 +290,7 @@ async def draw_score_pic(
     )
     # 谱面版本，mapper
     draw.text(
-        (225, 89),
+        (225, 90),
         f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}",
         font=Torus_SemiBold_20,
         anchor="lm",

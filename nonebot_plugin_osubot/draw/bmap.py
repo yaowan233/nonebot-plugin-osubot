@@ -9,6 +9,7 @@ from ..schema import SayoBeatmap
 from ..file import get_projectimg
 from .static import *
 from .utils import crop_bg, calc_songlen, stars_diff, image2bytesio
+from ..utils import GM
 
 
 async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
@@ -42,39 +43,37 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 曲名
-    draw.text((25, 40), data.title, font=Torus_SemiBold_40, anchor="lt")
+    draw.text((25, 15), data.title, font=Torus_SemiBold_40, anchor="lt")
     # 曲师
-    draw.text((25, 75), f"by {data.artist}", font=Torus_SemiBold_20, anchor="lt")
+    draw.text((25, 70), f"by {data.artist}", font=Torus_SemiBold_20, anchor="lt")
     # mapper
-    draw.text((25, 110), f"谱面作者: {data.creator}", font=Torus_SemiBold_20, anchor="lt")
+    draw.text((25, 105), f"谱面作者: {data.creator}", font=Torus_SemiBold_20, anchor="lt")
     # rank时间
     if data.approved_date == -1:
         approved_date = "谱面状态可能非ranked"
     else:
         datearray = datetime.utcfromtimestamp(data.approved_date)
         approved_date = (datearray + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
-    draw.text((25, 145), f"上架时间: {approved_date}", font=Torus_SemiBold_20, anchor="lt")
+    draw.text((25, 140), f"上架时间: {approved_date}", font=Torus_SemiBold_20, anchor="lt")
     # 来源
-    draw.text((25, 180), f"Source: {data.source}", font=Torus_SemiBold_20, anchor="lt")
+    draw.text((25, 175), f"Source: {data.source}", font=Torus_SemiBold_20, anchor="lt")
     # bpm
-    draw.text((1150, 110), f"BPM: {data.bpm}", font=Torus_SemiBold_20, anchor="rt")
+    draw.text((1150, 105), f"BPM: {data.bpm}", font=Torus_SemiBold_20, anchor="rt")
     # 曲长
     music_len = calc_songlen(data.bid_data[0].length)
-    draw.text((1150, 145), f"lenght: {music_len}", font=Torus_SemiBold_20, anchor="rt")
+    draw.text((1150, 140), f"length: {music_len}", font=Torus_SemiBold_20, anchor="rt")
     # Setid
-    draw.text((1150, 20), f"Setid: {mapid}", font=Torus_SemiBold_20, anchor="rt")
+    draw.text((1150, 35), f"Setid: {mapid}", font=Torus_SemiBold_20, anchor="rt")
     gmap = sorted(data.bid_data, key=lambda k: k.star, reverse=False)
     for num, cmap in enumerate(gmap):
         if num < 20:
             h_num = 102 * num
             # 难度
-            mode_bg = stars_diff(cmap.mode, cmap.star)
-            mode_img = mode_bg.resize((20, 20))
-            im.alpha_composite(mode_img, (20, 320 + h_num))
+            draw.text((20, 320 + h_num), IconLs[GM[cmap.mode]], font=extra_30, anchor="lt")
             # 星星
-            stars_bg = stars_diff("stars", cmap.star)
-            stars_img = stars_bg.resize((20, 20))
-            im.alpha_composite(stars_img, (50, 320 + h_num))
+            stars_bg = stars_diff(cmap.star)
+            stars_img = stars_bg.resize((80, 30))
+            im.alpha_composite(stars_img, (60, 320 + h_num))
             # diff
             im.alpha_composite(BarImg, (10, 365 + h_num))
             gc = ["CS", "HP", "OD", "AR"]
@@ -103,16 +102,21 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
                         anchor="lm",
                     )
             # 难度
+            if cmap.star < 6.5:
+                color = (0, 0, 0, 255)
+            else:
+                color = (255, 217, 102, 255)
             draw.text(
-                (80, 328 + h_num),
-                f"{cmap.star:.1f}",
+                (65, 335 + h_num),
+                f"★{cmap.star:.2f}",
                 font=Torus_SemiBold_20,
                 anchor="lm",
+                fill=color
             )
             # version
             draw.text(
-                (125, 328 + h_num),
-                f" |  {cmap.version}",
+                (150, 335 + h_num),
+                f"{cmap.version}",
                 font=Torus_SemiBold_20,
                 anchor="lm",
             )

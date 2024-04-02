@@ -1,8 +1,6 @@
-import math
 import os
 import random
 
-import numpy as np
 from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageDraw, UnidentifiedImageError, ImageEnhance, ImageFilter
@@ -184,7 +182,7 @@ async def crop_bg(size: str, path: Union[str, Path]):
         height = int(scale_width * bg_h)
         sf = bg.resize((width, height))
         # 计算上下裁切
-        crop_height = (height - fix_h) / 2
+        crop_height = (height - fix_h) // 2
         x1, y1, x2, y2 = 0, crop_height, width, height - crop_height
         # 裁切保存
         crop_img = sf.crop((x1, y1, x2, y2))
@@ -198,7 +196,7 @@ async def crop_bg(size: str, path: Union[str, Path]):
         height = int(scale_height * bg_h)
         sf = bg.resize((width, height))
         # 计算左右裁切
-        crop_width = (width - fix_w) / 2
+        crop_width = (width - fix_w) // 2
         x1, y1, x2, y2 = crop_width, 0, width - crop_width, height
         # 裁切保存
         crop_img = sf.crop((x1, y1, x2, y2))
@@ -208,52 +206,21 @@ async def crop_bg(size: str, path: Union[str, Path]):
         return sf
 
 
-def stars_diff(mode: Union[str, int], stars: float = None):
-    if mode == 0:
-        mode = "std"
-    elif mode == 1:
-        mode = "taiko"
-    elif mode == 2:
-        mode = "ctb"
-    elif mode == 3:
-        mode = "mania"
+def stars_diff(stars: float):
+    if stars < 0.1:
+        r, g, b = 170, 170, 170
+    elif stars >= 9:
+        r, g, b = 0, 0, 0
     else:
-        mode = "stars"
-    default = 115
-    if stars is None:
-        r, g, b = 255, 255, 255
-    else:
-        if stars < 1:
-            xp = 0
-            default = 120
-        elif stars < 2:
-            xp = 120
-            default = 120
-        elif stars < 3:
-            xp = 240
-        elif stars < 4:
-            xp = 355
-        elif stars < 5:
-            xp = 470
-        elif stars < 6:
-            xp = 585
-        elif stars < 7:
-            xp = 700
-        elif stars < 8:
-            xp = 815
-        else:
-            return Image.open(osufile / "work" / f"{mode}_expertplus.png").convert("RGBA")
-        # 取色
-        x = (stars - math.floor(stars)) * default + xp
-        r, g, b = ColorPic[x, 1]
+        # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
+        r, g, b, a = ColorArr[int(stars * 100)]
     # 打开底图
-    im = Image.open(osufile / "work" / f"{mode}.png").convert("RGBA")
-    xx, yy = im.size
+    xx, yy = Stars.size
     # 填充背景
-    sm = Image.new("RGBA", im.size, (r, g, b))
-    sm.paste(im, (0, 0, xx, yy), im)
+    img = Image.new("RGBA", Stars.size, (r, g, b))
+    img.paste(Stars, (0, 0, xx, yy), Stars)
     # 把白色变透明
-    arr = np.array(sm)
+    arr = np.array(img)
     # 创建mask，将白色替换为True，其他颜色替换为False
     mask = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 255)
     # 将mask中为True的像素点的alpha通道设置为0

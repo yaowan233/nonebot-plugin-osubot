@@ -61,20 +61,17 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     else:
         im.alpha_composite(MapBg)
     # 模式
-    mode_bg = stars_diff(FGM[mapinfo.mode])
-    mode_img = mode_bg.resize((25, 25))
-    im.alpha_composite(mode_img, (75, 65))
+    draw.text((50, 65), IconLs[mapinfo.mode], font=extra_30, anchor="lt")
     # 难度星星
-    stars_bg = stars_diff("stars", ss_pp_info.difficulty.stars)
-    stars_img = stars_bg.resize((80, 32))
-    im.alpha_composite(stars_img, (106, 62))
+    stars_bg = stars_diff(ss_pp_info.difficulty.stars)
+    stars_img = stars_bg.resize((80, 30))
+    im.alpha_composite(stars_img, (90, 65))
     if ss_pp_info.difficulty.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
-    draw.text((111, 77), "★", font=Torus_Regular_20, anchor="lm", fill=color)
     # 星级
-    draw.text((127, 77), f"{ss_pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
+    draw.text((100, 78), f"★{ss_pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
     # cs, ar, od, hp
     mapdiff = [
         mapinfo.cs,
@@ -118,8 +115,8 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     im.alpha_composite(icon_img, (50, 400))
     # mapid
     draw.text(
-        (1190, 40),
-        f"Setid: {mapinfo.beatmapset_id}  |  Mapid: {mapid}",
+        (1190, 80),
+        f"Setid: {mapinfo.beatmapset_id} | Mapid: {mapid}",
         font=Torus_Regular_20,
         anchor="rm",
     )
@@ -129,14 +126,14 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     if len(version) > max_version_length:
         version = version[:max_version_length - 3] + "..."
     text = f"{version}"
-    draw.text((190, 75), text, font=Torus_SemiBold_20, anchor="lm")
+    draw.text((180, 78), text, font=Torus_SemiBold_20, anchor="lm")
     # 曲名+曲师
     text = f"{mapinfo.beatmapset.title} | by {mapinfo.beatmapset.artist_unicode}"
     max_length = 80
     if len(text) > max_length:
         text = text[:max_length-3] + "..."
 
-    draw.text((75, 30), text, font=Torus_SemiBold_20, anchor="lm")
+    draw.text((50, 37), text, font=Torus_SemiBold_25, anchor="lm")
     # 来源
     #draw.text((50, 260), f"Source:{mapinfo.beatmapset.source}", font=Torus_SemiBold_25, anchor="rt")
     # mapper
