@@ -23,9 +23,11 @@ async def fetch_url(client: AsyncClient, url):
 async def get_first_response(urls: List[str]):
     async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
         tasks = [fetch_url(client, url) for url in urls]
-        done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            response = task.result()
-            if response is not None:
-                return response
-        return None
+        try:
+            for future in asyncio.as_completed(tasks, timeout=20):
+                response = await future
+                if response is not None:
+                    return response
+        except (asyncio.TimeoutError, Exception):
+            pass
+    return None
