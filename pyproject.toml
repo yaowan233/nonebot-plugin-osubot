@@ -9,8 +9,8 @@ license = {text = "AGPL-3.0"}
 dependencies = [
     "nonebot2~=2.2.0",
     "pydantic~=1.10",
-    "nonebot-plugin-alconna>=0.41.1",
-    "nonebot_plugin_session~=0.3",
+    "nonebot-plugin-alconna>=0.42.3",
+    "nonebot-plugin-session~=0.3",
     "pillow>=9.2.0",
     "expiringdict>=1.2.2",
     "nonebot-plugin-apscheduler~=0.4.0",
@@ -19,7 +19,6 @@ dependencies = [
     "rosu-pp-py==1.0.0",
     "reamber>=0.2.1",
     "httpx>=0.23.3",
-    "typing-extensions>=4.5.0",
     "matplotlib>=3.7.1",
     "nonebot-adapter-onebot>=2.2.4",
 ]
