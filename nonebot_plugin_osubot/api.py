@@ -34,10 +34,10 @@ async def safe_async_get(
 
 
 @auto_retry
-async def safe_async_post(url, headers=None, data=None) -> Response:
+async def safe_async_post(url, headers=None, data=None, json=None) -> Response:
     async with AsyncClient(proxies=proxy) as client:
         client: AsyncClient
-        req = await client.post(url, headers=headers, data=data)
+        req = await client.post(url, headers=headers, data=data, json=json)
     return req
 
 
@@ -45,17 +45,15 @@ async def renew_token():
     url = "https://osu.ppy.sh/oauth/token"
     if not key or not client_id:
         raise Exception("请设置osu_key和osu_client")
-    async with AsyncClient(proxies=proxy) as client:
-        client: AsyncClient
-        req = await client.post(
-            url,
-            json={
-                "client_id": f"{client_id}",
-                "client_secret": f"{key}",
-                "grant_type": "client_credentials",
-                "scope": "public",
-            },
-        )
+    req = await safe_async_post(
+        url,
+        json={
+            "client_id": f"{client_id}",
+            "client_secret": f"{key}",
+            "grant_type": "client_credentials",
+            "scope": "public",
+        }
+    )
     if req.status_code == 200:
         osu_token = req.json()
         cache.update({"token": osu_token["access_token"]})
