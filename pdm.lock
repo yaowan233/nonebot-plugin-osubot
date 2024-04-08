@@ -5,7 +5,7 @@
 groups = ["default", "test"]
 strategy = ["cross_platform"]
 lock_version = "4.4.1"
-content_hash = "sha256:ee8e1112be087e001703c1772cc46274c57a18667be9578846310fee7a14b770"
+content_hash = "sha256:453416d6298e2a472d43c96e058a01316c5d496c31da1aa01e8d65c49006ca50"
 
 [[package]]
 name = "aiosqlite"
@@ -1264,27 +1264,59 @@ files = [
 
 [[package]]
 name = "rosu-pp-py"
-version = "0.9.1"
+version = "1.0.0"
 requires_python = ">=3.7"
-summary = "osu! difficulty and pp calculation for all modes"
+summary = "Difficulty and performance calculation for osu!"
 files = [
-    {file = "rosu_pp_py-0.9.1-cp310-cp310-macosx_10_7_x86_64.whl", hash = "sha256:00a2d88f17a950ccda49500c029ce01d0ba52af19c9a7860098621381327d2a0"},
-    {file = "rosu_pp_py-0.9.1-cp310-cp310-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:715a8629546d8acd3029d67c3e57ff63b536d3b7960c75540ca29636b2253130"},
-    {file = "rosu_pp_py-0.9.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6dabd207392416b73fcc8661e59438b5b5fe5d01dfee85692c4074e29cff7f52"},
-    {file = "rosu_pp_py-0.9.1-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:903df22135d18ac10a125378107f0482a010b6c6642f30fb5805c0c0ebeda752"},
-    {file = "rosu_pp_py-0.9.1-cp310-none-win32.whl", hash = "sha256:1f437b66b0f11db1f2cf89b44284d237f9aabfbc644db00622bc6ba4e9635c92"},
-    {file = "rosu_pp_py-0.9.1-cp310-none-win_amd64.whl", hash = "sha256:f74a6a36f3f20adeefbc9c60f18dd5da48e3f7eca8f9681c47308455d6b96b78"},
-    {file = "rosu_pp_py-0.9.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7c137cfde0741b864428832bfd8e0697db7e914aac7b166e70d020bd194a22b7"},
-    {file = "rosu_pp_py-0.9.1-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:5c80d2a28adc9cfd0aed1fa8952c5607b1a02ff520b513eaab19a7559e01acdf"},
-    {file = "rosu_pp_py-0.9.1-cp39-cp39-macosx_10_7_x86_64.whl", hash = "sha256:78013a7dac2d38ecef8a44de6b13725199120e66661089c5a3d2958eef07afad"},
-    {file = "rosu_pp_py-0.9.1-cp39-cp39-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:b02fa7f257f7fe6c40e9e9a16438ab3a80ce36cde1c65e0682777e7b8e026f28"},
-    {file = "rosu_pp_py-0.9.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:299e5d429a43bfee80ad0f6e60f37dcaa469dd4d91ef4125fb694d471c8dcbf2"},
-    {file = "rosu_pp_py-0.9.1-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:7622028bb41f9281cc9b80d7bb732b017480872d388db3b668aebf69d6344a61"},
-    {file = "rosu_pp_py-0.9.1-cp39-none-win32.whl", hash = "sha256:d93bfdf8d4d63bb55e37fce99f09df0e6e376fabcd023ca5b256068fe1518474"},
-    {file = "rosu_pp_py-0.9.1-cp39-none-win_amd64.whl", hash = "sha256:4b5010c9e62f6653cc5dc835678655d8357d49098cb70b0e89e96c10cb8200e2"},
-    {file = "rosu_pp_py-0.9.1-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bd57fe7f30063301bff25ecbef614d9147013f619d28d83de0c898f365e9c8e4"},
-    {file = "rosu_pp_py-0.9.1-pp37-pypy37_pp73-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:b1c3747661ef57c789326a3f91a0e10012f481eec7c7fc3cae46a9f8522c3322"},
-    {file = "rosu_pp_py-0.9.1.tar.gz", hash = "sha256:d515ba5cc677746990165bc61b7d41cba9224b5b5a6556465efa0f8e6cd26fc9"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:9837a270ec0f42aeeeec4437580690877698cacb662dccef5f7e7a6c582b2172"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:72aea01f508d7fa4f697d4ec04fb93ac43be747aa559d7c379a637c86301b6cb"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7524d2e8c55a2ce421310bbd33067f3e173b3e577a24b400438e5396dc097926"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:1130d531b79e36a0795a46f690c10bf64aa0aebbbf5dfab2a8f463192240bda0"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f1a95bbaa32aee36f3fb5c3145b2dd9c4cabd2e2a1a7bd5e8acbc6fe69a8e2fb"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:da6e885b249f2124c00048cc6e56ce2862c9730a6fe2fc1e665a43322c977d76"},
+    {file = "rosu_pp_py-1.0.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:d420e94e84a3be6feac3e8998ee01f905504dc4f25246d018bf9801f0cbc25d9"},
+    {file = "rosu_pp_py-1.0.0-cp310-none-win_amd64.whl", hash = "sha256:5a181161b849c745a2ecf9df696ac491e9aadc86aeb47e648feb1b77abc1ea8e"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:3a4c91a6aad7116305de93ea5298a2ca1c3fca00af6cf8fd9a02ae45f9c480c9"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:ea0b505efec6ed81f1c76314cfe062345b747cc88dfe1e226ac4c74002d30432"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:be72fd50d570d98ea874c58394deffbe2d6b0d9c768417b1aa1b2ec0109a9cfe"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:8b267245e3bb253179cfa6d22052564da107def8617ece0c06d4c074b7575a0a"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:27c468f59a62ef4f0511706b79d47de1564bf743fae7aaa214a2c54b5a383270"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:67f1b9eb86a4e0305434c379d073fa4b72be89da088a96bdba4220f5b3680ad1"},
+    {file = "rosu_pp_py-1.0.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:245e8e409ac6e33a3b877d847ca428026efc759351838075119fc60bc811c58c"},
+    {file = "rosu_pp_py-1.0.0-cp311-none-win_amd64.whl", hash = "sha256:c6435e99a246176f85a97d1fc405ff0e1fe6b2be1fad34d37101ce792f1b505d"},
+    {file = "rosu_pp_py-1.0.0-cp311-none-win_arm64.whl", hash = "sha256:5bfcfc4a233defc4de9c1d87ef22aaf90f8bfea1662c266447f7b935ebe6cbed"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:d5da206b6906fd9bd111f9b5856d4f00811ea34928e4c47d572fb530a164cc4c"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:76e0ae0fe67354a692a9b137061f454a1d8ca0964a5134343c0582133e46e2d7"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:98257dec230036a5340c3fa468296a4ebf096528955e1525c89170231cf74abc"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:2ecedb704fc9f79bcfec09871984f3655b5aa3b0422183f1aa3428fa6c51823b"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad5d2373244e2794059b0275016f5e9f9d8fe76d4934d8dc44d5351e29c36696"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:e5a80347b6048d1018c5e3e39e90db0f0ff819b0602d4eb0c8366432778bb2c5"},
+    {file = "rosu_pp_py-1.0.0-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:af22498c8ffb7e0248ac8d93cf052bcd42b7e9d44e1c776806fbf6b94f6f53ad"},
+    {file = "rosu_pp_py-1.0.0-cp312-none-win_amd64.whl", hash = "sha256:8a41594f1a5935c4c9df312bcfc1f862a342f186eeb6f461cde0173de6bf9691"},
+    {file = "rosu_pp_py-1.0.0-cp312-none-win_arm64.whl", hash = "sha256:8c4759dcf5bef1b003af663b7495aa980173f6c0feef245764effee303c3a221"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-macosx_10_12_x86_64.whl", hash = "sha256:923241a6332186abd6dc19ad2c8a17e8f6c4195ebcf7e35f636b86991d7eb847"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:db83daca24435c15ee46ad5759ff1031092782274341f4d61daeeb2a1f50236d"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:840ff67e8cb5ef8086467eefa5dc3d0660e0f09dc9ccd8c9b7b336fa82104e54"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:ff6b1f2f8aa79967f97d195b96fcc17d3a795417ef695a56d16ca58a7a00b329"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9fb74d76d185fea56308c5a225e107111c8e7248dab4cb4b5e327f012b92b8f2"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:a6fc5a37536e5c68a2b44aee159da585e6cf296c25c878a7f39bc6468d17fd34"},
+    {file = "rosu_pp_py-1.0.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:d0124e7b276b8f8577a550bc1250b702b901097b4f9e5cb38a15e73d130927b6"},
+    {file = "rosu_pp_py-1.0.0-cp39-none-win_amd64.whl", hash = "sha256:1617b2236e1441108053964ca2626e635d316592ec6c8bd46c4dcd7df23eca33"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-macosx_10_12_x86_64.whl", hash = "sha256:93f22248b279e2e4203dd089bae890f99df6c5929fb734049a85d1111fd716b3"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-macosx_11_0_arm64.whl", hash = "sha256:450ffcf2e393e94256dde2101933e5321357d438ab81723cd594effc04f79185"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3e3b269951f6114ec5df6883cc0b34758f61cf98a573df0cae8584acb921ed13"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:362ed29d14c8b6b1c73f45a245ffdd0196e01a89c10e89f6dae8982e159db32a"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-musllinux_1_1_aarch64.whl", hash = "sha256:2bbf02ae0bacddba401a4c5e6e6a34f3dfe65486f0c38a788bd69c6e7a2b242e"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:022c55a8c496faa1d60590f98e88cc27b1724bb28071cbe8ec5706fff04bea0b"},
+    {file = "rosu_pp_py-1.0.0-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:520ac30090504d10c69bddbcfb79961d9222209bb472cfe5b247f427d9fca6a7"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-macosx_10_12_x86_64.whl", hash = "sha256:0dfc5cf6a553feb8d0def6b81d29584c3c7d26d0009329d1856e3f110c8626de"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-macosx_11_0_arm64.whl", hash = "sha256:3e0520c6a9d88936fa1ace4a3d9564b6c3b4cc0ac2d499c3b373ea5163773fe0"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a2a52f2c3fc1d0f208f52bddeafe1f96ff8704ffb238587f5e6856abba088492"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d2cb1d82b9ee631a6b92eb0055b4e2589367cd22d240e84a27e949b919baf5b5"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-musllinux_1_1_aarch64.whl", hash = "sha256:971a40d5837bb234efad8dfa14d943a5a050273d219e8b831d1a34af7a784fb1"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:72b6434f56add97b172da0042f2d7717445fe304dd1e70d975c3ab9a616aa567"},
+    {file = "rosu_pp_py-1.0.0-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:98e4138ebc1f8e6ffc98ca79e0656b84ae7df7d52102ae2a82bf5a4ea1e461a6"},
+    {file = "rosu_pp_py-1.0.0.tar.gz", hash = "sha256:6bc8f6b52434e0505310fc803ce7a0645e188d91d5ab35587fbc4aedcfb9242a"},
 ]
 
 [[package]]
