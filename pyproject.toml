@@ -17,14 +17,13 @@ dependencies = [
     "tortoise-orm>=0.20.0",
     "nonebot-plugin-tortoise-orm>=0.1.1",
     "rosu-pp-py==0.9.1",
-    "reamber>=0.1.9",
+    "reamber>=0.2.1",
     "httpx>=0.23.3",
     "typing-extensions>=4.5.0",
     "matplotlib>=3.7.1",
     "nonebot-adapter-onebot>=2.2.4",
-    "nonebot-adapter-red~=0.9.0",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9.8,<3.13"
 readme = "README.md"
 
 [project.urls]
