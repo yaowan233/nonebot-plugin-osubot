@@ -1,6 +1,5 @@
-from arclet.alconna import Alconna, CommandMeta, Args
 from nonebot import on_command
-from nonebot_plugin_alconna import on_alconna, UniMessage
+from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
 from ..draw import get_score_data

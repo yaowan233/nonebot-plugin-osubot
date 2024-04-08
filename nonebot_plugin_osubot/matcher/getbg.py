@@ -1,8 +1,7 @@
-from arclet.alconna import Alconna, Args, CommandMeta
 from nonebot import on_command
 from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
-from nonebot_plugin_alconna import on_alconna, UniMessage, Match
+from nonebot_plugin_alconna import UniMessage
 from ..info import get_bg
 
 getbg = on_command("getbg", priority=11, block=True)
