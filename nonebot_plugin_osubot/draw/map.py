@@ -5,6 +5,7 @@ from typing import Union
 from PIL import ImageEnhance, ImageDraw
 
 from ..api import osu_api, get_map_bg
+from ..beatmap_stats_moder import with_mods
 from ..schema import Beatmap
 from ..mods import calc_mods
 from ..file import re_map, get_projectimg, download_osu, map_path
@@ -21,6 +22,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     if isinstance(info, str):
         return info
     mapinfo = Beatmap(**info)
+    mapinfo = with_mods(mapinfo, mods)
     diffinfo = (
         calc_songlen(mapinfo.total_length),
         mapinfo.bpm,

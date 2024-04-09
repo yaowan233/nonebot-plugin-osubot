@@ -50,7 +50,7 @@ class BeatmapCompact(Base):
     id: int
     mode: Literal["fruits", "mania", "osu", "taiko"]
     status: str
-    total_length: int
+    total_length: float
     user_id: int
     version: str
     beatmapset: Optional[Beatmapset]

@@ -5,6 +5,7 @@ from typing import Optional, List, Union
 from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
+from ..beatmap_stats_moder import with_mods
 from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
 from ..mods import get_mods_list
 from ..file import re_map, download_osu, user_cache_path, map_path
@@ -141,6 +142,8 @@ async def get_score_data(
 async def draw_score_pic(
     score_info, info, map_json, map_attribute_json, bid, sid
 ) -> BytesIO:
+    mapinfo = Beatmap(**map_json)
+    mapinfo = with_mods(mapinfo, score_info.mods)
     path = map_path / str(sid)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -213,7 +216,6 @@ async def draw_score_pic(
     # supporter
     if info.is_supporter:
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
-    mapinfo = Beatmap(**map_json)
     map_attribute = BeatmapDifficultyAttributes(**map_attribute_json["attributes"])
     # 处理mania转谱cs
     if score_info.mode == 'mania' and mapinfo.mode == 'osu':
@@ -328,7 +330,7 @@ async def draw_score_pic(
             (840, 645), f"{pp_info.pp_speed:.0f}", font=Torus_Regular_30, anchor="mm"
         )
         draw.text(
-            (960, 645), f"{pp_info.pp_acc:.0f}", font=Torus_Regular_30, anchor="mm"
+            (960, 645), f"{pp_info.pp_accuracy:.0f}", font=Torus_Regular_30, anchor="mm"
         )
         draw.text(
             (1157, 550),
