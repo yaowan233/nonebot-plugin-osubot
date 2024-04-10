@@ -330,7 +330,7 @@ async def draw_score_pic(
             (840, 645), f"{pp_info.pp_speed:.0f}", font=Torus_Regular_30, anchor="mm"
         )
         draw.text(
-            (960, 645), f"{pp_info.pp_accuracy:.0f}", font=Torus_Regular_30, anchor="mm"
+            (960, 645), f"{pp_info.pp_acc:.0f}", font=Torus_Regular_30, anchor="mm"
         )
         draw.text(
             (1157, 550),
