@@ -85,7 +85,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         color = (255, 255, 255, 255)
         if num == 4:
             color = (255, 204, 34, 255)
-        difflen = int(250 * max(0, i) / 10) if i <= 10 else 250
+        diff_len = max(int(250 * i / 10) if i <= 10 else 250, 0)
         diff_len = Image.new("RGBA", (difflen, 8), color)
         im.alpha_composite(diff_len, (890, 426 + 35 * num))
         if i == round(i):
