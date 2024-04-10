@@ -46,28 +46,31 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Score, mods: list):
     speed_mul = 1
     od_ar_hp_multiplier = 1
     mode = scoreinfo.mode if scoreinfo else mapinfo.mode
-    if 'DT' in mods or 'NC' in mods:
-        speed_mul = 1.5
-        mapinfo.bpm *= 1.5
-        mapinfo.total_length /= 1.5
-    if 'HT' in mods:
-        speed_mul *= 0.75
-        mapinfo.bpm *= 0.75
-        mapinfo.total_length /= 0.75
+    if mode in ["mania", "fruits"]:
+        if 'DT' in mods or 'NC' in mods or 'HT' in mods:
+            speed_mul = 1
+    else:
+        if 'DT' in mods or 'NC' in mods:
+            speed_mul = 1.5
+            mapinfo.bpm *= 1.5
+            mapinfo.total_length /= 1.5
+        if 'HT' in mods:
+            speed_mul *= 0.75
+            mapinfo.bpm *= 0.75
+            mapinfo.total_length /= 0.75
     if 'HR' in mods:
         od_ar_hp_multiplier = 1.4
     if 'EZ' in mods:
         od_ar_hp_multiplier *= 0.5
-    if mode != "mania" or ('DT' not in mods and 'NC' not in mods and 'HT' not in mods):
+    if mode != "taiko":
         mapinfo.ar = modify_ar(mapinfo.ar, speed_mul, od_ar_hp_multiplier)
-        mapinfo.accuracy = modify_od(mapinfo.accuracy, speed_mul, od_ar_hp_multiplier)
-    if mode != "mania":
-        if 'HR' in mods:
-            mapinfo.cs *= 1.3
-        if 'EZ' in mods:
-            mapinfo.cs *= 0.5
-    mapinfo.cs = min(10.0, mapinfo.cs)
-    if mode != "mania" or ('DT' not in mods and 'NC' not in mods and 'HT' not in mods):
-        mapinfo.drain *= od_ar_hp_multiplier
+        if mode != "mania":
+            if 'HR' in mods:
+                mapinfo.cs *= 1.3
+            if 'EZ' in mods:
+                mapinfo.cs *= 0.5
+        mapinfo.cs = min(10.0, mapinfo.cs)
+    mapinfo.accuracy = modify_od(mapinfo.accuracy, speed_mul, od_ar_hp_multiplier)
+    mapinfo.drain *= od_ar_hp_multiplier
     mapinfo.drain = min(10.0, mapinfo.drain)
     return mapinfo
