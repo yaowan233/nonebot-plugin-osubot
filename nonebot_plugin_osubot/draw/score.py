@@ -143,7 +143,7 @@ async def draw_score_pic(
     score_info, info, map_json, map_attribute_json, bid, sid
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
-    mapinfo = with_mods(mapinfo, score_info.mods)
+    mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(sid)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -244,7 +244,7 @@ async def draw_score_pic(
         color = (255, 255, 255, 255)
         if num == 4:
             color = (255, 204, 34, 255)
-        diff_len = int(250 * i / 10) if i <= 10 else 250
+        diff_len = int(250 * max(0, i) / 10) if i <= 10 else 250
         diff_len = Image.new("RGBA", (diff_len, 8), color)
         im.alpha_composite(diff_len, (1190, 306 + 35 * num))
         if i == round(i):
