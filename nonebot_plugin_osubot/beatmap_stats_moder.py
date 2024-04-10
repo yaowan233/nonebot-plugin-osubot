@@ -72,7 +72,7 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[Score], mods: list):
             mapinfo.cs *= 1.3
         if 'EZ' in mods:
             mapinfo.cs *= 0.5
-    mapinfo.cs = min(10.0, mapinfo.cs)
+        mapinfo.cs = min(10.0, mapinfo.cs)
     mapinfo.drain *= od_ar_hp_multiplier
     mapinfo.drain = min(10.0, mapinfo.drain)
     return mapinfo
