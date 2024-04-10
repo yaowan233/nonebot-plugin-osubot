@@ -1,4 +1,6 @@
-from .schema import Beatmap
+from typing import Optional
+
+from .schema import Beatmap, Score
 
 OD0_MS = 80
 OD10_MS = 20
@@ -42,9 +44,10 @@ def modify_od(base_od, speed_mul, multiplier):
     return od
 
 
-def with_mods(mapinfo: Beatmap, mods: list):
+def with_mods(mapinfo: Beatmap, scoreinfo: Optional[Score], mods: list):
     speed_mul = 1
     od_ar_hp_multiplier = 1
+    mode = scoreinfo.mode if scoreinfo else mapinfo.mode
     if 'DT' in mods or 'NC' in mods:
         speed_mul = 1.5
         mapinfo.bpm *= 1.5
@@ -57,9 +60,14 @@ def with_mods(mapinfo: Beatmap, mods: list):
         od_ar_hp_multiplier = 1.4
     if 'EZ' in mods:
         od_ar_hp_multiplier *= 0.5
-    mapinfo.ar = modify_ar(mapinfo.ar, speed_mul, od_ar_hp_multiplier)
+    if mode == "mania":
+        speed_mul = 1
+    if mode not in ("mania", "taiko"):
+        mapinfo.ar = modify_ar(mapinfo.ar, speed_mul, od_ar_hp_multiplier)
+    if mode == "fruits":
+        speed_mul = 1
     mapinfo.accuracy = modify_od(mapinfo.accuracy, speed_mul, od_ar_hp_multiplier)
-    if mapinfo.mode != "mania":
+    if mode not in ("mania", "taiko"):
         if 'HR' in mods:
             mapinfo.cs *= 1.3
         if 'EZ' in mods:

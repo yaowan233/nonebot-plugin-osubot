@@ -143,7 +143,7 @@ async def draw_score_pic(
     score_info, info, map_json, map_attribute_json, bid, sid
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
-    mapinfo = with_mods(mapinfo, score_info.mods)
+    mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(sid)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
