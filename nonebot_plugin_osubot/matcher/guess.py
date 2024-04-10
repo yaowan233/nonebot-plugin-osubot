@@ -79,7 +79,7 @@ async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(Sessio
     set_timeout(matcher, group_id)
     await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(reply_to=True)
     print(selected_score.beatmapset.title)
-    await UniMessage.audio(url=f"https://cdn.sayobot.cn:25225/preview/{selected_score.beatmapset.id}.mp3").send()
+    await UniMessage.audio(url=f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3").send()
 
 
 async def stop_game(matcher: Matcher, cid: str):
@@ -223,7 +223,7 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
     action = random.choice(true_keys)
     if action == "audio":
         pic_group_hint[session_id]["audio"] = True
-        await UniMessage.audio(url=f"https://cdn.sayobot.cn:25225/preview/{score.beatmapset.id}.mp3").send()
+        await UniMessage.audio(url=f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3").send()
         return
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
