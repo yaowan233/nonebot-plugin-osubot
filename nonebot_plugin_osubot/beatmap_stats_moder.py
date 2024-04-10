@@ -47,8 +47,7 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Score, mods: list):
     od_ar_hp_multiplier = 1
     mode = scoreinfo.mode if scoreinfo else mapinfo.mode
     if mode in ["mania", "fruits"]:
-        if 'DT' in mods or 'NC' in mods or 'HT' in mods:
-            speed_mul = 1
+        speed_mul = 1
     else:
         if 'DT' in mods or 'NC' in mods:
             speed_mul = 1.5
