@@ -15,6 +15,6 @@ def auto_retry(func: Callable[P, T]) -> Callable[P, T]:
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
-                logger.error(f"{e} | Retrying... {i + 1}/5")
+                logger.warning(f"{e} | Retrying... {i + 1}/5")
         logger.error(f"多次重试失败，请检查网络连接")
     return wrapper
