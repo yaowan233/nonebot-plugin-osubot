@@ -8,6 +8,7 @@ from typing import Dict
 from PIL import Image
 
 from expiringdict import ExpiringDict
+from graiax import silkcoder
 from nonebot_plugin_alconna import UniMessage
 from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule, Event
@@ -16,9 +17,10 @@ from nonebot_plugin_session import SessionId, SessionIdType
 
 from nonebot.params import T_State
 from .utils import split_msg
+from ..file import map_path
 from ..info import get_bg
 from ..utils import NGM
-from ..api import osu_api
+from ..api import osu_api, safe_async_get
 from ..schema import Score
 from ..database.models import UserData
 
@@ -79,7 +81,16 @@ async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(Sessio
     set_timeout(matcher, group_id)
     await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(reply_to=True)
     print(selected_score.beatmapset.title)
-    await UniMessage.audio(url=f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3").send()
+    path = map_path / f"{selected_score.beatmapset.id}"
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+    audio_path = path / "audio.silk"
+    if not audio_path.exists():
+        audio = await safe_async_get(f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3")
+        await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+    with open(audio_path, "rb") as f:
+        silk_byte = f.read()
+    await UniMessage.audio(raw=silk_byte, name='audio.silk', mimetype='silk').send()
 
 
 async def stop_game(matcher: Matcher, cid: str):
@@ -223,7 +234,16 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
     action = random.choice(true_keys)
     if action == "audio":
         pic_group_hint[session_id]["audio"] = True
-        await UniMessage.audio(url=f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3").send()
+        path = map_path / f"{score.beatmapset.id}"
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+        audio_path = map_path / f"{score.beatmapset.id}" / "audio.silk"
+        if not audio_path.exists():
+            audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
+            await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+        with open(audio_path, "rb") as f:
+            silk_byte = f.read()
+        await UniMessage.audio(raw=silk_byte, name='audio.silk', mimetype='silk').send()
         return
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
