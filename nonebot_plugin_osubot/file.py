@@ -2,15 +2,12 @@ import re
 from io import BytesIO, TextIOWrapper
 from typing import Union, Optional
 from pathlib import Path
-from nonebot import get_plugin_config
 from nonebot.log import logger
-from .config import Config
 from .api import safe_async_get
 from .network import auto_retry
 from .network.first_response import get_first_response
 from .schema import Badge
 
-plugin_config = get_plugin_config(Config)
 osufile = Path(__file__).parent / "osufile"
 map_path = Path() / "data" / "osu" / "map"
 user_cache_path = Path() / "data" / "osu" / "user"
