@@ -1,4 +1,4 @@
-from typing import Optional, Literal, List
+from typing import Optional, Literal
 
 from .basemodel import Base
 from .user import User
@@ -92,4 +92,4 @@ class BackgroundsAttributes(Base):
 
 class SeasonalBackgrounds(Base):
     ends_at: str
-    backgrounds: List[BackgroundsAttributes]
+    backgrounds: list[BackgroundsAttributes]

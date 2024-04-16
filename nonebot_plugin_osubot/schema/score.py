@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 
 from .basemodel import Base
 from .beatmap import Beatmap, Beatmapset
@@ -18,7 +18,7 @@ class Score(Base):
     best_id: Optional[int]
     user_id: int
     accuracy: float
-    mods: List[str]
+    mods: list[str]
     score: int
     max_combo: int
     perfect: int

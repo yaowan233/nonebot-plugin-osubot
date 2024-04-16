@@ -4,7 +4,6 @@ from asyncio import TimerHandle
 from difflib import SequenceMatcher
 from io import BytesIO
 from pathlib import Path
-from typing import Dict
 from PIL import Image
 
 from expiringdict import ExpiringDict
@@ -24,10 +23,10 @@ from ..api import osu_api, safe_async_get
 from ..schema import Score
 from ..database.models import UserData
 
-games: Dict[str, Score] = {}
-pic_games: Dict[str, Score] = {}
-timers: Dict[str, TimerHandle] = {}
-pic_timers: Dict[str, TimerHandle] = {}
+games: dict[str, Score] = {}
+pic_games: dict[str, Score] = {}
+timers: dict[str, TimerHandle] = {}
+pic_timers: dict[str, TimerHandle] = {}
 hint_dic = {"pic": False, "artist": False, "creator": False}
 pic_hint_dic = {"artist": False, "creator": False, "audio": False}
 group_hint = {}

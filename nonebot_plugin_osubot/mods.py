@@ -1,4 +1,3 @@
-from typing import List
 from .schema import Score
 
 mods_dic = {
@@ -37,7 +36,7 @@ mods_dic = {
 }
 
 
-def get_mods_list(score_ls: List[Score], mods: List[str]) -> List[int]:
+def get_mods_list(score_ls: list[Score], mods: list[str]) -> list[int]:
     if not mods:
         return list(range(len(score_ls)))
     mods_index_ls = []
@@ -47,7 +46,7 @@ def get_mods_list(score_ls: List[Score], mods: List[str]) -> List[int]:
     return mods_index_ls
 
 
-def calc_mods(mods: List[str]) -> int:
+def calc_mods(mods: list[str]) -> int:
     num = 0
     for mod in mods:
         num ^= mods_dic[mod.upper()]

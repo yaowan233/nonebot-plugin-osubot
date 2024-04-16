@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import Optional
 
 from .basemodel import Base
 
 
 class ListData(Base):
     accurate: bool
-    currentMod: Optional[List[str]]
+    currentMod: Optional[list[str]]
     currentPP: Optional[int]
     currentScore: Optional[int]
     currentScoreLink: Optional[str]
@@ -14,7 +14,7 @@ class ListData(Base):
     mapCoverUrl: str
     mapLink: str
     mapName: str
-    mod: List[str]
+    mod: list[str]
     newRecordPercent: float
     passPercent: float
     ppIncrement: float
@@ -26,7 +26,7 @@ class Data(Base):
     next: int
     prev: int
     total: int
-    list: List[ListData]
+    list: list[ListData]
 
 
 class RecommendData(Base):

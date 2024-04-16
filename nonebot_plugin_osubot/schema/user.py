@@ -1,4 +1,4 @@
-from typing import Literal, List, Optional
+from typing import Literal, Optional
 
 from .basemodel import Base
 
@@ -38,7 +38,7 @@ class UserStatistics(Base):
     total_score: int
     global_rank: Optional[int]
     country_rank: Optional[int]
-    badges: Optional[List[Badge]]
+    badges: Optional[list[Badge]]
 
 
 class UserCompact(Base):
@@ -64,5 +64,5 @@ class User(UserCompact):
     location: Optional[str]
     occupation: Optional[str]
     playmode: Optional[Literal["fruits", "mania", "osu", "taiko"]]
-    playstyle: Optional[List[str]]
-    badges: Optional[List[Badge]]
+    playstyle: Optional[list[str]]
+    badges: Optional[list[Badge]]

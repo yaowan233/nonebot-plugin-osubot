@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from .basemodel import Base
 
@@ -51,7 +51,7 @@ class MapInfo(Base):
     tags: str
     language: int
     genre: str
-    bid_data: List[BidData]
+    bid_data: list[BidData]
 
 
 class SayoBeatmap(Base):

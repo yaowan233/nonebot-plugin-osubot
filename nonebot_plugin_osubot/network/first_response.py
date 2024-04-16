@@ -1,5 +1,4 @@
 import asyncio
-from typing import List
 
 from httpx import AsyncClient
 from nonebot import get_plugin_config
@@ -17,7 +16,7 @@ async def fetch_url(client: AsyncClient, url):
         return None
 
 
-async def get_first_response(urls: List[str]):
+async def get_first_response(urls: list[str]):
     async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
         tasks = [asyncio.create_task(fetch_url(client, url)) for url in urls]
         while tasks:

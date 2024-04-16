@@ -2,7 +2,7 @@ import asyncio
 from io import BytesIO
 from datetime import datetime, timedelta
 from time import strptime, mktime
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
 
@@ -20,7 +20,7 @@ async def draw_bp(
     project: str,
     uid: int,
     mode: str,
-    mods: Optional[List],
+    mods: Optional[list],
     low_bound: int = 0,
     high_bound: int = 0,
     day: int = 0,
@@ -68,8 +68,8 @@ async def draw_bp(
 async def draw_pfm(
     project: str,
     user: str,
-    score_ls: List[Score],
-    score_ls_filtered: List[Score],
+    score_ls: list[Score],
+    score_ls_filtered: list[Score],
     mode: str,
     low_bound: int = 0,
     high_bound: int = 0,

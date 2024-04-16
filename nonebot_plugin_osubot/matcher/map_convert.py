@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 
 from nonebot.exception import ParserExit, ActionFailed
 from nonebot.internal.adapter import Message
@@ -28,7 +27,7 @@ convert = on_shell_command("convert", parser=parser, block=True, priority=13)
 
 
 @convert.handle()
-async def _(argv: List[str] = ShellCommandArgv()):
+async def _(argv: list[str] = ShellCommandArgv()):
     try:
         args = parser.parse_args(argv)
     except ParserExit as e:

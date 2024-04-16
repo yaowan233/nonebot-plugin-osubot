@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from io import BytesIO
-from typing import Optional, List, Union
+from typing import Optional, Union
 from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
@@ -28,7 +28,7 @@ async def draw_score(
     project: str,
     uid: int,
     mode: str,
-    mods: Optional[List[str]],
+    mods: Optional[list[str]],
     best: int = 0,
     mapid: int = 0,
     is_name: bool = False,
@@ -83,7 +83,7 @@ async def draw_score(
 async def get_score_data(
     uid: int,
     mode: str,
-    mods: Optional[List[str]],
+    mods: Optional[list[str]],
     mapid: int = 0,
     is_name: bool = False,
 ):

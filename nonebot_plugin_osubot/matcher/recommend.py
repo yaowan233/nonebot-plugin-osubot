@@ -1,6 +1,5 @@
 import re
 from random import shuffle
-from typing import Type
 
 from expiringdict import ExpiringDict
 from nonebot import on_command
@@ -16,7 +15,7 @@ recommend = on_command("推荐", priority=11, block=True, aliases={'recommend', 
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
 
 
-async def handle_recommend(state: T_State, matcher: Type[Matcher]):
+async def handle_recommend(state: T_State, matcher: type[Matcher]):
     user = state["user"]
     mode = state["mode"]
     mods = state["mods"]
