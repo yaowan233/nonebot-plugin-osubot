@@ -1,7 +1,7 @@
 from arclet.alconna import Alconna, Args, CommandMeta
-from nonebot import on_command
+from nonebot import on_command, get_driver
 from nonebot.internal.adapter import Event
-from nonebot_plugin_alconna import on_alconna, UniMessage, AlconnaMatch, image_fetch, Match
+from nonebot_plugin_alconna import on_alconna, UniMessage, AlconnaMatch, image_fetch, Match, Target, SupportScope
 from nonebot_plugin_alconna.uniseg import Image
 from nonebot.typing import T_State
 
@@ -39,9 +39,9 @@ async def _(event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img"
     user = state["user"]
     pic_url = img.result
     await save_info_pic(str(user), pic_url)
-    # msg = f"自群{event.group_id}: {event.user_id}的更新背景申请" + UniMessage.image(url=pic_url)
-    # for superuser in get_driver().config.superusers:
-    #     await bot.send_private_msg(user_id=int(superuser), message=msg)
+    msg = f"收到自{qq}的更新背景申请" + UniMessage.image(raw=pic_url)
+    for superuser in get_driver().config.superusers:
+        await Target.user(superuser, SupportScope.qq_client).send(msg)
     await UniMessage.text("更新背景成功").send(reply_to=True)
 
 
