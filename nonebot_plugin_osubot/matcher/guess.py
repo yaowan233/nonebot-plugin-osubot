@@ -13,12 +13,13 @@ from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule, Event
 from nonebot.matcher import Matcher
 from nonebot_plugin_session import SessionId, SessionIdType
+from nonebot.log import logger
 
 from nonebot.params import T_State
 from .utils import split_msg
 from ..file import map_path
 from ..info import get_bg
-from ..utils import NGM
+from ..utils import NGM, GM
 from ..api import osu_api, safe_async_get
 from ..schema import Score
 from ..database.models import UserData
@@ -60,13 +61,15 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
 @guess_audio.handle(parameterless=[split_msg()])
 async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-        return
-    mode = state["mode"]
+        mode = random.randint(0, 3)
+        await UniMessage.text(f"由于未绑定OSU账号，本次随机选择 {GM[mode]} 模式进行猜歌\n" + state["error"]).send(reply_to=True)
+    else:
+        mode = state["mode"]
     group_id = session_id
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
-        await UniMessage.text("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧").send(reply_to=True)
+        await UniMessage.text("还没有人绑定该模式的osu账号呢，绑定了再来试试吧").send(reply_to=True)
+        return
     if not guess_song_cache.get(group_id):
         guess_song_cache[group_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
@@ -79,7 +82,7 @@ async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(Sessio
     games[group_id] = selected_score
     set_timeout(matcher, group_id)
     await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name}的bp").send(reply_to=True)
-    print(selected_score.beatmapset.title)
+    logger.info(f'本次猜歌名为: {selected_score.beatmapset.title}')
     path = map_path / f"{selected_score.beatmapset.id}"
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -261,11 +264,14 @@ guess_pic = on_command("图片猜歌", priority=11, block=True)
 @guess_pic.handle(parameterless=[split_msg()])
 async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(SessionIdType.GROUP)):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-    mode = state["mode"]
+        mode = random.randint(0, 3)
+        await UniMessage.text(f"由于未绑定OSU账号，本次随机选择 {GM[mode]} 模式进行猜歌\n" + state["error"]).send(reply_to=True)
+    else:
+        mode = state["mode"]
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
-        await guess_pic.finish("群里还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
+        await guess_pic.finish("还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
+        return
     if not guess_song_cache.get(session_id):
         guess_song_cache[session_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
@@ -287,5 +293,5 @@ async def _(state: T_State, matcher: Matcher, session_id: str = SessionId(Sessio
     cropped_image = img.crop((left, top, right, bottom))
     byt = BytesIO()
     cropped_image.save(byt, "png")
-    print(selected_score.beatmapset.title_unicode)
-    await (f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp" + UniMessage.image(raw=byt)).send()
+    logger.info(f'本次猜歌名为: {selected_score.beatmapset.title_unicode}')
+    await (UniMessage.text(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name}的bp") + UniMessage.image(raw=byt)).send()
