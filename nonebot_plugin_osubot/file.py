@@ -12,9 +12,11 @@ osufile = Path(__file__).parent / "osufile"
 map_path = Path() / "data" / "osu" / "map"
 user_cache_path = Path() / "data" / "osu" / "user"
 badge_cache_path = Path() / "data" / "osu" / "badge"
-api_ls = ["https://api.chimu.moe/v1/download/",
-          "https://api.osu.direct/d/",
-          "https://txy1.sayobot.cn/beatmaps/download/novideo/"]
+api_ls = [
+    "https://api.chimu.moe/v1/download/",
+    "https://api.osu.direct/d/",
+    "https://txy1.sayobot.cn/beatmaps/download/novideo/",
+]
 
 if not map_path.exists():
     map_path.mkdir(parents=True, exist_ok=True)
@@ -59,7 +61,7 @@ async def download_osu(set_id, map_id):
             f.write(req)
         return filepath
     else:
-        raise Exception('下载出错，请稍后再试')
+        raise Exception("下载出错，请稍后再试")
 
 
 async def get_projectimg(url: str):

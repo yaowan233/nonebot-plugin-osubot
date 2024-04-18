@@ -11,10 +11,7 @@ update_mode = on_command("更新模式", priority=11, block=True)
 
 
 @update_mode.handle()
-async def _(
-    event: Event,
-    mode: Message = CommandArg()
-):
+async def _(event: Event, mode: Message = CommandArg()):
     mode = mode.extract_plain_text().strip()
     user = await UserData.get_or_none(user_id=event.get_user_id())
     if not user:

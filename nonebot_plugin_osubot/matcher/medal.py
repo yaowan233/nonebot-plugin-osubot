@@ -75,7 +75,7 @@ async def _(msg: Message = CommandArg()):
         if len(medal_data["beatmaps"]) > 5:
             medal_data["beatmaps"] = medal_data["beatmaps"][:5]
         for beatmap in medal_data["beatmaps"]:
-            msg.append(
+            msg += (
                 f'{beatmap["SongTitle"]} [{beatmap["DifficultyName"]}]\n{beatmap["Difficulty"]}⭐\n'
                 + f'https://osu.ppy.sh/b/{beatmap["BeatmapID"]}'
             )

@@ -8,9 +8,7 @@ getbg = on_command("getbg", priority=11, block=True)
 
 
 @getbg.handle()
-async def _get_bg(
-        bg: Message = CommandArg()
-):
+async def _get_bg(bg: Message = CommandArg()):
     bg = bg.extract_plain_text().strip()
     if not bg:
         await UniMessage.text("请输入需要提取BG的地图ID").send(reply_to=True)

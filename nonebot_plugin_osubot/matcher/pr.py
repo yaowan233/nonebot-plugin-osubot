@@ -10,8 +10,8 @@ from ..api import osu_api
 from ..draw.bp import draw_pfm
 from ..utils import NGM
 
-recent = on_command("recent", priority=11, block=True, aliases={'re', 'RE', 'Re', 'rE'})
-pr = on_command("pr", priority=11, block=True, aliases={'PR', 'Pr', 'pR'})
+recent = on_command("recent", priority=11, block=True, aliases={"re", "RE", "Re", "rE"})
+pr = on_command("pr", priority=11, block=True, aliases={"PR", "Pr", "pR"})
 
 
 @recent.handle(parameterless=[split_msg()])

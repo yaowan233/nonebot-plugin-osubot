@@ -1,7 +1,15 @@
 from arclet.alconna import Alconna, Args, CommandMeta
 from nonebot import on_command, get_driver
 from nonebot.internal.adapter import Event
-from nonebot_plugin_alconna import on_alconna, UniMessage, AlconnaMatch, image_fetch, Match, Target, SupportScope
+from nonebot_plugin_alconna import (
+    on_alconna,
+    UniMessage,
+    AlconnaMatch,
+    image_fetch,
+    Match,
+    Target,
+    SupportScope,
+)
 from nonebot_plugin_alconna.uniseg import Image
 from nonebot.typing import T_State
 
@@ -19,14 +27,16 @@ update_pic = on_alconna(
     ),
     skip_for_unmatch=False,
     use_cmd_start=True,
-    aliases=('更改背景',)
+    aliases=("更改背景",),
 )
-update_info = on_command("update", priority=11, block=True, aliases={'更新信息'})
-clear_background = on_command("清空背景", priority=11, block=True, aliases={'清除背景', '重置背景'})
+update_info = on_command("update", priority=11, block=True, aliases={"更新信息"})
+clear_background = on_command("清空背景", priority=11, block=True, aliases={"清除背景", "重置背景"})
 
 
 @update_pic.handle()
-async def _(event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img", image_fetch)):
+async def _(
+    event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img", image_fetch)
+):
     qq = event.get_user_id()
     user_data = await UserData.get_or_none(user_id=int(qq))
     state["user"] = user_data.osu_id if user_data else 0

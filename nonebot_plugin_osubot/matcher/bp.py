@@ -8,7 +8,7 @@ from ..utils import NGM
 bp = on_command("bp", priority=11, block=True)
 
 pfm = on_command("pfm", priority=11, block=True)
-tbp = on_command("tbp", priority=11, block=True, aliases={'todaybp'})
+tbp = on_command("tbp", priority=11, block=True, aliases={"todaybp"})
 
 
 @bp.handle(parameterless=[split_msg()])

@@ -5,7 +5,7 @@ from nonebot.params import CommandArg
 from nonebot_plugin_alconna import UniMessage
 
 
-osu_help = on_command("osuhelp", aliases={'OSUBot', 'osubot'}, priority=11, block=True)
+osu_help = on_command("osuhelp", aliases={"OSUBot", "osubot"}, priority=11, block=True)
 
 with open(Path(__file__).parent.parent / "osufile" / "help.png", "rb") as f:
     img1 = f.read()
@@ -14,9 +14,7 @@ with open(Path(__file__).parent.parent / "osufile" / "detail.png", "rb") as f:
 
 
 @osu_help.handle()
-async def _help(
-    arg: Message = CommandArg()
-):
+async def _help(arg: Message = CommandArg()):
     arg = arg.extract_plain_text().strip()
     if arg == "detail":
         await UniMessage.image(raw=img2).send(reply_to=True)

@@ -8,9 +8,7 @@ osudl = on_command("osudl", priority=11, block=True)
 
 
 @osudl.handle()
-async def _osudl(
-    setid: Message = CommandArg()
-):
+async def _osudl(setid: Message = CommandArg()):
     setid = setid.extract_plain_text().strip()
     if not setid or not setid.isdigit():
         await UniMessage.text("请输入正确的地图ID").send(reply_to=True)

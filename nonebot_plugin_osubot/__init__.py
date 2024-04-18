@@ -25,9 +25,7 @@ __plugin_meta__ = PluginMetadata(
     type="application",
     homepage="https://github.com/yaowan233/nonebot-plugin-osubot",
     config=Config,
-    supported_adapters=inherit_supported_adapters(
-        "nonebot_plugin_session"
-    ),
+    supported_adapters=inherit_supported_adapters("nonebot_plugin_session"),
     extra={
         "unique_name": "osubot",
         "author": "yaowan233 <572473053@qq.com>",

@@ -5,7 +5,7 @@ from .utils import split_msg
 from ..draw import draw_info
 from ..utils import NGM
 
-info = on_command("info", priority=11, block=True, aliases={'Info', 'INFO'})
+info = on_command("info", priority=11, block=True, aliases={"Info", "INFO"})
 
 
 @info.handle(parameterless=[split_msg()])
