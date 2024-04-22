@@ -7,7 +7,7 @@ from .guess import (
     pic_hint,
 )
 from .medal import medal
-from .rank import group_pp_rank
+# from .rank import group_pp_rank
 
 # from .bp_analyze import bp_analyze
 from .pr import pr, recent
