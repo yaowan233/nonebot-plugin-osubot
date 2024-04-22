@@ -173,7 +173,7 @@ async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
         None, song_name_unicode.lower(), event.get_plaintext().lower()
     ).ratio()
     r3 = SequenceMatcher(
-        None, re.sub(r"\(.*\)", "", song_name.lower()), event.get_plaintext().lower()
+        None, re.sub(r"[\(\[].*[\)\]]", "", song_name.lower()), event.get_plaintext().lower()
     ).ratio()
     if r1 >= 0.5 or r2 >= 0.5 or r3 >= 0.5:
         games.pop(session_id)
@@ -192,7 +192,7 @@ async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
         None, song_name_unicode.lower(), event.get_plaintext().lower()
     ).ratio()
     r3 = SequenceMatcher(
-        None, re.sub(r"\(.*\)", "", song_name.lower()), event.get_plaintext().lower()
+        None, re.sub(r"[(\[].*[)\]]", "", song_name.lower()), event.get_plaintext().lower()
     ).ratio()
     if r1 >= 0.5 or r2 >= 0.5 or r3 >= 0.5:
         pic_games.pop(session_id)
