@@ -25,7 +25,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     mapinfo = with_mods(mapinfo, None, mods)
     diffinfo = (
         calc_songlen(mapinfo.total_length),
-        mapinfo.bpm,
+        f'{mapinfo.bpm:.1f}',
         mapinfo.count_circles,
         mapinfo.count_sliders,
     )

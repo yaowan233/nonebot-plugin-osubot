@@ -265,7 +265,7 @@ async def draw_score_pic(
     # 时长 - 滑条
     diff_info = (
         calc_songlen(mapinfo.total_length),
-        mapinfo.bpm,
+        f'{mapinfo.bpm:.1f}',
         mapinfo.count_circles,
         mapinfo.count_sliders,
     )
