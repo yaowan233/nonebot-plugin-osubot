@@ -9,10 +9,7 @@ from ..database.models import UserData
 
 def split_msg():
     async def dependency(
-        event: Event,
-        state: T_State,
-        msg: UniMsg,
-        arg: Message = CommandArg()
+        event: Event, state: T_State, msg: UniMsg, arg: Message = CommandArg()
     ):
         qq = event.get_user_id()
         if msg.has(At):
@@ -69,7 +66,7 @@ def split_msg():
                 state["user"] = state["para"]
                 state["is_name"] = True
         # 判断参数是否合法
-        if not state["mode"].isdigit() and (
+        if not state["mode"].isdigit() or (
             int(state["mode"]) < 0 or int(state["mode"]) > 3
         ):
             state["error"] = "模式应为0-3的数字！"
