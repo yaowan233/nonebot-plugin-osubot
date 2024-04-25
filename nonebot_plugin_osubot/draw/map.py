@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
-from copy import deepcopy
-
 from PIL import ImageEnhance, ImageDraw
 
 from ..api import osu_api, get_map_bg
@@ -23,7 +21,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     if isinstance(info, str):
         return info
     mapinfo = Beatmap(**info)
-    original_mapinfo = deepcopy(mapinfo)
+    original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, None, mods)
     diffinfo = (
         calc_songlen(mapinfo.total_length),
@@ -39,6 +37,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     if not osu.exists():
         await download_osu(mapinfo.beatmapset_id, mapid)
     ss_pp_info = get_ss_pp(str(osu.absolute()), calc_mods(mods))
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0)
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
         old_time = datetime.strptime(
@@ -80,20 +79,20 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar]
     original_mapdiff = [original_mapinfo.cs, original_mapinfo.drain, original_mapinfo.accuracy, original_mapinfo.ar]
 
-    for num, (orig, new) in enumerate(zip(original_mapdiff, mapdiff)):
-        if new > orig:
-            color = (185, 70, 70, 255)
-            orig_color = (255, 192, 203, 255)
+    for num, (original, new) in enumerate(zip(original_mapdiff, mapdiff)):
+        if new > original:
+            color = (198, 92, 102, 255)
+            orig_color = (246, 136, 144, 255)
             new_difflen = int(250 * max(0, new) / 10) if new <= 10 else 250
             new_diff_len = Image.new('RGBA', (new_difflen, 8), color)
             im.alpha_composite(new_diff_len, (890, 426 + 35 * num))
-            orig_difflen = int(250 * max(0, orig) / 10) if orig <= 10 else 250
+            orig_difflen = int(250 * max(0, original) / 10) if original <= 10 else 250
             orig_diff_len = Image.new('RGBA', (orig_difflen, 8), orig_color)
             im.alpha_composite(orig_diff_len, (890, 426 + 35 * num))
-        elif new < orig:
-            color = (173, 216, 230, 255)
+        elif new < original:
+            color = (161, 212, 238, 255)
             orig_color = (255, 255, 255, 255)
-            orig_difflen = int(250 * max(0, orig) / 10) if orig <= 10 else 250
+            orig_difflen = int(250 * max(0, original) / 10) if original <= 10 else 250
             orig_diff_len = Image.new('RGBA', (orig_difflen, 8), orig_color)
             im.alpha_composite(orig_diff_len, (890, 426 + 35 * num))
             new_difflen = int(250 * max(0, new) / 10) if new <= 10 else 250
@@ -101,17 +100,37 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             im.alpha_composite(new_diff_len, (890, 426 + 35 * num))
         else:
             color = (255, 255, 255, 255)
-            orig_difflen = int(250 * max(0, orig) / 10) if orig <= 10 else 250
+            orig_difflen = int(250 * max(0, original) / 10) if original <= 10 else 250
             orig_diff_len = Image.new('RGBA', (orig_difflen, 8), color)
             im.alpha_composite(orig_diff_len, (890, 426 + 35 * num))
         draw.text((1170, 428 + 35 * num), str(float('%.2f' % new)).rstrip('0').rstrip('.'), font=Torus_SemiBold_20, anchor='mm')
     # stardiff
-    i = ss_pp_info.difficulty.stars
-    color = (255, 204, 34, 255)
-    difflen = int(250 * i / 10) if i <= 10 else 250
-    diff_len = Image.new("RGBA", (difflen, 8), color)
-    im.alpha_composite(diff_len, (890, 566))
-    draw.text((1170, 566), f"{i:.2f}", font=Torus_SemiBold_20, anchor="mm")
+    stars = ss_pp_info.difficulty.stars
+    original_stars = original_ss_pp_info.difficulty.stars
+    if stars > original_stars:
+        color = (198, 92, 102, 255)
+        orig_color = (246, 111, 34, 255)
+        new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
+        new_diff_len = Image.new('RGBA', (new_difflen, 8), color)
+        im.alpha_composite(new_diff_len, (890, 566))
+        orig_difflen = int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
+        orig_diff_len = Image.new('RGBA', (orig_difflen, 8), orig_color)
+        im.alpha_composite(orig_diff_len, (890, 566))
+    elif stars < original_stars:
+        color = (161, 187, 127, 255)
+        orig_color = (255, 204, 34, 255)
+        orig_difflen = int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
+        orig_diff_len = Image.new('RGBA', (orig_difflen, 8), orig_color)
+        im.alpha_composite(orig_diff_len, (890, 566))
+        new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
+        new_diff_len = Image.new('RGBA', (new_difflen, 8), color)
+        im.alpha_composite(new_diff_len, (890, 566))
+    else:
+        color = (255, 204, 34, 255)
+        difflen = int(250 * stars / 10) if stars <= 10 else 250
+        diff_len = Image.new("RGBA", (difflen, 8), color)
+        im.alpha_composite(diff_len, (890, 566))
+    draw.text((1170, 566), f"{stars:.2f}", font=Torus_SemiBold_20, anchor="mm")
     # 绘制mods
     if mods:
         for mods_num, s_mods in enumerate(mods):
