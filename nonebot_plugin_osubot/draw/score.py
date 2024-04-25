@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
+from copy import deepcopy
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
 from ..beatmap_stats_moder import with_mods
@@ -143,6 +144,7 @@ async def draw_score_pic(
     score_info, info, map_json, map_attribute_json, bid, sid
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
+    original_mapinfo = deepcopy(mapinfo)
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(sid)
     if not path.exists():
@@ -234,27 +236,34 @@ async def draw_score_pic(
             temp_accuracy += 1
             mapinfo.cs = max(4.0, min(temp_accuracy, 7.0))
     # cs, ar, od, hp
-    mapdiff = [
-        mapinfo.cs,
-        mapinfo.drain,
-        mapinfo.accuracy,
-        mapinfo.ar,
-    ]
-    for num, i in enumerate(mapdiff):
-        color = (255, 255, 255, 255)
-        if num == 4:
-            color = (255, 204, 34, 255)
-        diff_len = max(int(250 * i / 10) if i <= 10 else 250, 0)
-        diff_len = Image.new("RGBA", (diff_len, 8), color)
-        im.alpha_composite(diff_len, (1190, 306 + 35 * num))
-        if i == round(i):
-            draw.text(
-                (1470, 310 + 35 * num), f"{i:.0f}", font=Torus_SemiBold_20, anchor="mm"
-            )
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar]
+    original_mapdiff = [original_mapinfo.cs, original_mapinfo.drain, original_mapinfo.accuracy, original_mapinfo.ar]
+
+    for num, (orig, new) in enumerate(zip(original_mapdiff, mapdiff)):
+        orig_difflen = int(250 * max(0, orig) / 10) if orig <= 10 else 250
+        new_difflen = int(250 * max(0, new) / 10) if new <= 10 else 250
+        if new > orig and not (score_info.mode == 'mania' and mapinfo.mode == 'osu'):
+            color = (185, 70, 70, 255)
+            orig_color = (255, 192, 203, 255)
+            new_diff_len = Image.new('RGBA', (new_difflen, 8), color)
+            im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
+            orig_diff_len = Image.new('RGBA', (orig_difflen, 8), orig_color)
+            im.alpha_composite(orig_diff_len, (1190, 306 + 35 * num))
+        elif new < orig and not (score_info.mode == 'mania' and mapinfo.mode == 'osu'):
+            color = (173, 216, 230, 255)
+            orig_color = (255, 255, 255, 255)
+            orig_diff_len = Image.new('RGBA', (orig_difflen, 8), orig_color)
+            im.alpha_composite(orig_diff_len, (1190, 306 + 35 * num))
+            new_diff_len = Image.new('RGBA', (new_difflen, 8), color)
+            im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
         else:
-            draw.text(
-                (1470, 310 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_20, anchor="mm"
-            )
+            color = (255, 255, 255, 255)
+            diff_len = Image.new('RGBA', (orig_difflen, 8), color)
+            im.alpha_composite(diff_len, (1190, 306 + 35 * num))
+        if new == round(new):
+            draw.text((1470, 310 + 35 * num), "%.0f" % new, font=Torus_SemiBold_20, anchor='mm')
+        else:
+            draw.text((1470, 310 + 35 * num), "%.2f" % new if new != round(new, 1) else "%.1f" % new, font=Torus_SemiBold_20, anchor='mm')
     # stardiff
     i = pp_info.difficulty.stars
     color = (255, 204, 34, 255)
