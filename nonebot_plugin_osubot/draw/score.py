@@ -10,7 +10,7 @@ from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
 from ..mods import get_mods_list
 from ..file import re_map, download_osu, user_cache_path, map_path
 from ..utils import GMN, FGM
-from ..pp import cal_pp, get_if_pp_ss_pp
+from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 
 from .static import *
 from .utils import (
@@ -143,6 +143,7 @@ async def draw_score_pic(
     score_info, info, map_json, map_attribute_json, bid, sid
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
+    original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(sid)
     if not path.exists():
@@ -150,6 +151,7 @@ async def draw_score_pic(
     # pp
     osu = path / f"{bid}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()))
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0)
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
     # 新建图片
     im = Image.new("RGBA", (1500, 720))
@@ -180,7 +182,13 @@ async def draw_score_pic(
     else:
         color = (255, 217, 102, 255)
     # 星级
-    draw.text((128, 90), f"★{pp_info.difficulty.stars:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
+    draw.text(
+        (128, 90),
+        f"★{pp_info.difficulty.stars:.2f}",
+        font=Torus_SemiBold_20,
+        anchor="lm",
+        fill=color,
+    )
     # mods
     if "HD" in score_info.mods or "FL" in score_info.mods:
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
@@ -218,11 +226,17 @@ async def draw_score_pic(
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     map_attribute = BeatmapDifficultyAttributes(**map_attribute_json["attributes"])
     # 处理mania转谱cs
-    if score_info.mode == 'mania' and mapinfo.mode == 'osu':
+    if score_info.mode == "mania" and mapinfo.mode == "osu":
         temp_accuracy = mapinfo.accuracy
-        convert = (mapinfo.count_sliders + mapinfo.count_spinners) / (mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners)
+        convert = (mapinfo.count_sliders + mapinfo.count_spinners) / (
+            mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners
+        )
         convert_od = round(temp_accuracy)
-        if convert < 0.20 or (convert < 0.30 or round(mapinfo.cs) >= 5) and convert_od > 5:
+        if (
+            convert < 0.20
+            or (convert < 0.30 or round(mapinfo.cs) >= 5)
+            and convert_od > 5
+        ):
             mapinfo.cs = 7.0
         elif (convert < 0.30 or round(mapinfo.cs) >= 5) and convert_od <= 5:
             mapinfo.cs = 6.0
@@ -234,38 +248,84 @@ async def draw_score_pic(
             temp_accuracy += 1
             mapinfo.cs = max(4.0, min(temp_accuracy, 7.0))
     # cs, ar, od, hp
-    mapdiff = [
-        mapinfo.cs,
-        mapinfo.drain,
-        mapinfo.accuracy,
-        mapinfo.ar,
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar]
+    original_mapdiff = [
+        original_mapinfo.cs,
+        original_mapinfo.drain,
+        original_mapinfo.accuracy,
+        original_mapinfo.ar,
     ]
-    for num, i in enumerate(mapdiff):
-        color = (255, 255, 255, 255)
-        if num == 4:
-            color = (255, 204, 34, 255)
-        diff_len = max(int(250 * i / 10) if i <= 10 else 250, 0)
-        diff_len = Image.new("RGBA", (diff_len, 8), color)
-        im.alpha_composite(diff_len, (1190, 306 + 35 * num))
-        if i == round(i):
+
+    for num, (orig, new) in enumerate(zip(original_mapdiff, mapdiff)):
+        orig_difflen = int(250 * max(0, orig) / 10) if orig <= 10 else 250
+        new_difflen = int(250 * max(0, new) / 10) if new <= 10 else 250
+        if new > orig and not (score_info.mode == "mania" and mapinfo.mode == "osu"):
+            color = (198, 92, 102, 255)
+            orig_color = (246, 136, 144, 255)
+            new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
+            im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
+            orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
+            im.alpha_composite(orig_diff_len, (1190, 306 + 35 * num))
+        elif new < orig and not (score_info.mode == "mania" and mapinfo.mode == "osu"):
+            color = (161, 212, 238, 255)
+            orig_color = (255, 255, 255, 255)
+            orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
+            im.alpha_composite(orig_diff_len, (1190, 306 + 35 * num))
+            new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
+            im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
+        else:
+            color = (255, 255, 255, 255)
+            diff_len = Image.new("RGBA", (orig_difflen, 8), color)
+            im.alpha_composite(diff_len, (1190, 306 + 35 * num))
+        if new == round(new):
             draw.text(
-                (1470, 310 + 35 * num), f"{i:.0f}", font=Torus_SemiBold_20, anchor="mm"
+                (1470, 310 + 35 * num),
+                "%.0f" % new,
+                font=Torus_SemiBold_20,
+                anchor="mm",
             )
         else:
             draw.text(
-                (1470, 310 + 35 * num), f"{i:.1f}", font=Torus_SemiBold_20, anchor="mm"
+                (1470, 310 + 35 * num),
+                "%.2f" % new if new != round(new, 1) else "%.1f" % new,
+                font=Torus_SemiBold_20,
+                anchor="mm",
             )
     # stardiff
-    i = pp_info.difficulty.stars
-    color = (255, 204, 34, 255)
-    diff_len = int(250 * i / 10) if i <= 10 else 250
-    diff_len = Image.new('RGBA', (diff_len, 8), color)
-    im.alpha_composite(diff_len, (1190, 446))
-    draw.text((1470, 450), f'{i:.2f}', font=Torus_SemiBold_20, anchor='mm')
+    stars = pp_info.difficulty.stars
+    original_stars = original_ss_pp_info.difficulty.stars
+    if stars > original_stars:
+        color = (198, 92, 102, 255)
+        orig_color = (246, 111, 34, 255)
+        new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
+        new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
+        im.alpha_composite(new_diff_len, (1190, 446))
+        orig_difflen = (
+            int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
+        )
+        orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
+        im.alpha_composite(orig_diff_len, (1190, 446))
+    elif stars < original_stars:
+        color = (161, 187, 127, 255)
+        orig_color = (255, 204, 34, 255)
+        orig_difflen = (
+            int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
+        )
+        orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
+        im.alpha_composite(orig_diff_len, (1190, 446))
+        new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
+        new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
+        im.alpha_composite(new_diff_len, (1190, 446))
+    else:
+        color = (255, 204, 34, 255)
+        difflen = int(250 * stars / 10) if stars <= 10 else 250
+        diff_len = Image.new("RGBA", (difflen, 8), color)
+        im.alpha_composite(diff_len, (1190, 446))
+    draw.text((1470, 450), f"{stars:.2f}", font=Torus_SemiBold_20, anchor="mm")
     # 时长 - 滑条
     diff_info = (
         calc_songlen(mapinfo.total_length),
-        f'{mapinfo.bpm:.1f}',
+        f"{mapinfo.bpm:.1f}",
         mapinfo.count_circles,
         mapinfo.count_sliders,
     )
