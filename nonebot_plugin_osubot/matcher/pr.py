@@ -94,8 +94,10 @@ async def _pr(state: T_State):
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
         await UniMessage.image(raw=pic).send(reply_to=True)
         return
+    if state["day"] == 0:
+        state["day"] = 1
     data = await draw_score(
-        "pr", state["user"], NGM[mode], [], is_name=state["is_name"]
+        "pr", state["user"], NGM[mode], [], state["day"] - 1, is_name=state["is_name"]
     )
     if isinstance(data, str):
         await UniMessage.text(data).send(reply_to=True)
