@@ -10,7 +10,7 @@ from ..mods import calc_mods
 from ..file import re_map, get_projectimg, download_osu, map_path
 from ..utils import FGM
 from ..pp import get_ss_pp
-from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio
+from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio, is_close
 from .static import *
 
 
@@ -91,7 +91,12 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     ]
 
     for num, (original, new) in enumerate(zip(original_mapdiff, mapdiff)):
-        if new > original:
+        if is_close(new, original):
+            color = (255, 255, 255, 255)
+            orig_difflen = int(250 * max(0, original) / 10) if original <= 10 else 250
+            orig_diff_len = Image.new("RGBA", (orig_difflen, 8), color)
+            im.alpha_composite(orig_diff_len, (890, 426 + 35 * num))
+        elif new > original:
             color = (198, 92, 102, 255)
             orig_color = (246, 136, 144, 255)
             new_difflen = int(250 * max(0, new) / 10) if new <= 10 else 250
@@ -110,10 +115,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
             im.alpha_composite(new_diff_len, (890, 426 + 35 * num))
         else:
-            color = (255, 255, 255, 255)
-            orig_difflen = int(250 * max(0, original) / 10) if original <= 10 else 250
-            orig_diff_len = Image.new("RGBA", (orig_difflen, 8), color)
-            im.alpha_composite(orig_diff_len, (890, 426 + 35 * num))
+            raise Exception('没有这种情况')
         draw.text(
             (1170, 428 + 35 * num),
             str(float("%.2f" % new)).rstrip("0").rstrip("."),

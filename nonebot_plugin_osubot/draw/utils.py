@@ -264,3 +264,9 @@ async def open_user_icon(info: User) -> Image:
             f.write(user_icon.getvalue())
         image = Image.open(user_icon)
     return image
+
+
+def is_close(n1, n2) -> bool:
+    if abs(n1 - n2) < 0.01:
+        return True
+    return False

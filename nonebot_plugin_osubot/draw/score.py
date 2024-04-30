@@ -20,7 +20,7 @@ from .utils import (
     calc_songlen,
     stars_diff,
     get_modeimage,
-    open_user_icon,
+    open_user_icon, is_close,
 )
 
 
@@ -259,7 +259,11 @@ async def draw_score_pic(
     for num, (orig, new) in enumerate(zip(original_mapdiff, mapdiff)):
         orig_difflen = int(250 * max(0, orig) / 10) if orig <= 10 else 250
         new_difflen = int(250 * max(0, new) / 10) if new <= 10 else 250
-        if new > orig and not (score_info.mode == "mania" and mapinfo.mode == "osu"):
+        if is_close(new, orig):
+            color = (255, 255, 255, 255)
+            diff_len = Image.new("RGBA", (orig_difflen, 8), color)
+            im.alpha_composite(diff_len, (1190, 306 + 35 * num))
+        elif new > orig and not (score_info.mode == "mania" and mapinfo.mode == "osu"):
             color = (198, 92, 102, 255)
             orig_color = (246, 136, 144, 255)
             new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
@@ -274,9 +278,7 @@ async def draw_score_pic(
             new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
             im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
         else:
-            color = (255, 255, 255, 255)
-            diff_len = Image.new("RGBA", (orig_difflen, 8), color)
-            im.alpha_composite(diff_len, (1190, 306 + 35 * num))
+            raise Exception('没有这种情况')
         if new == round(new):
             draw.text(
                 (1470, 310 + 35 * num),
