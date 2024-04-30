@@ -53,31 +53,31 @@ files = [
 
 [[package]]
 name = "arclet-alconna"
-version = "1.8.7"
+version = "1.8.11"
 requires_python = ">=3.8"
 summary = "A High-performance, Generality, Humane Command Line Arguments Parser Library."
 dependencies = [
-    "nepattern<1.0.0,>=0.6.4",
+    "nepattern<1.0.0,>=0.7.0",
     "tarina>=0.4.4",
     "typing-extensions>=4.5.0",
 ]
 files = [
-    {file = "arclet_alconna-1.8.7-py3-none-any.whl", hash = "sha256:4f4feb9d8a9f6195057d37dfeeef45f6753b395361903b40defbd19477083756"},
-    {file = "arclet_alconna-1.8.7.tar.gz", hash = "sha256:98486ae09907dcbb35b8516f29772111acf333e785e055a21183be53acf433f4"},
+    {file = "arclet_alconna-1.8.11-py3-none-any.whl", hash = "sha256:8a0c188400214abe2b72b2e6f4f23ed8d3021270654c15bc46cad62b725b7a44"},
+    {file = "arclet_alconna-1.8.11.tar.gz", hash = "sha256:3fed5e946709d63b9d7ee7cddf32b145e1f931b8ea9d0b8174cac753d965e9c8"},
 ]
 
 [[package]]
 name = "arclet-alconna-tools"
-version = "0.7.2"
+version = "0.7.3"
 requires_python = ">=3.8"
 summary = "Builtin Tools for Alconna"
 dependencies = [
-    "arclet-alconna>=1.8.7",
-    "nepattern<1.0.0,>=0.6.5",
+    "arclet-alconna>=1.8.10",
+    "nepattern<1.0.0,>=0.7.0",
 ]
 files = [
-    {file = "arclet_alconna_tools-0.7.2-py3-none-any.whl", hash = "sha256:69739aab07c039537cd72b4ab6d37aff896cd794031a8ff8157e5f85e842ed9b"},
-    {file = "arclet_alconna_tools-0.7.2.tar.gz", hash = "sha256:98a6aad6284efd8af34b10cd35667bd5885f530327b9ac9ea2944bf6325d0d6f"},
+    {file = "arclet_alconna_tools-0.7.3-py3-none-any.whl", hash = "sha256:e7d70025900d348ced62c824a5d7569c140e64714903f8498ed4b8e5f0b2c8fe"},
+    {file = "arclet_alconna_tools-0.7.3.tar.gz", hash = "sha256:f150640182983902292ab1d50ca16a811ffd76bb46eac53fa2cd0479890da337"},
 ]
 
 [[package]]
@@ -383,7 +383,7 @@ files = [
 
 [[package]]
 name = "fastapi"
-version = "0.110.1"
+version = "0.110.3"
 requires_python = ">=3.8"
 summary = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 dependencies = [
@@ -392,8 +392,8 @@ dependencies = [
     "typing-extensions>=4.8.0",
 ]
 files = [
-    {file = "fastapi-0.110.1-py3-none-any.whl", hash = "sha256:5df913203c482f820d31f48e635e022f8cbfe7350e4830ef05a3163925b1addc"},
-    {file = "fastapi-0.110.1.tar.gz", hash = "sha256:6feac43ec359dfe4f45b2c18ec8c94edb8dc2dfc461d417d9e626590c071baad"},
+    {file = "fastapi-0.110.3-py3-none-any.whl", hash = "sha256:fd7600612f755e4050beb74001310b5a7e1796d149c2ee363124abdfa0289d32"},
+    {file = "fastapi-0.110.3.tar.gz", hash = "sha256:555700b0159379e94fdbfc6bb66a0f1c43f4cf7060f25239af3d84b63a656626"},
 ]
 
 [[package]]
@@ -690,7 +690,7 @@ files = [
 
 [[package]]
 name = "nepattern"
-version = "0.6.5"
+version = "0.7.2"
 requires_python = ">=3.8"
 summary = "a complex pattern, support typing"
 dependencies = [
@@ -698,24 +698,24 @@ dependencies = [
     "typing-extensions>=4.5.0",
 ]
 files = [
-    {file = "nepattern-0.6.5-py3-none-any.whl", hash = "sha256:6c06dc6b2e06b9b2d98c4dee024c63e10d1301dc90091548b94cf76c7dfbd8fb"},
-    {file = "nepattern-0.6.5.tar.gz", hash = "sha256:dc91ad72cfa907b270ac1e99b6589cddb576d1ae52948b9f9367c86a58ec0ea8"},
+    {file = "nepattern-0.7.2-py3-none-any.whl", hash = "sha256:75406623a4a533628a6fb1996a7cc79d7b535a268e2a8bf4b405197175baecca"},
+    {file = "nepattern-0.7.2.tar.gz", hash = "sha256:7869e7998d870c920611b7a25649fb451c57bf2de450fb5d2e87408ff2917885"},
 ]
 
 [[package]]
 name = "nonebot-plugin-alconna"
-version = "0.42.4"
-requires_python = ">=3.8"
+version = "0.45.0"
+requires_python = ">=3.9"
 summary = "Alconna Adapter for Nonebot"
 dependencies = [
-    "arclet-alconna-tools>=0.7.2",
-    "arclet-alconna>=1.8.7",
-    "nepattern>=0.6.5",
+    "arclet-alconna-tools>=0.7.3",
+    "arclet-alconna>=1.8.10",
+    "nepattern>=0.7.0",
     "nonebot2>=2.2.1",
 ]
 files = [
-    {file = "nonebot_plugin_alconna-0.42.4-py3-none-any.whl", hash = "sha256:8dd843f37c1d4a13bf58966a6d592c7f685ec6346954d774b12b53e0864b98b0"},
-    {file = "nonebot_plugin_alconna-0.42.4.tar.gz", hash = "sha256:5fe0ea1374bacbf2eaae6eb4a0e41fd8ebc983bab6f0224a4e64fba5984e219d"},
+    {file = "nonebot_plugin_alconna-0.45.0-py3-none-any.whl", hash = "sha256:3394961dc27f2322e8ebb8e5f700b567b3749262689c3a0f85fab55112bc050e"},
+    {file = "nonebot_plugin_alconna-0.45.0.tar.gz", hash = "sha256:6fa530ef6df02c3b8c2a67979ac55d6978cc647df2ce5a393c87f42e919be641"},
 ]
 
 [[package]]
