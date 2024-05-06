@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, date
 from io import BytesIO
 from typing import Union
-from PIL import ImageDraw, ImageSequence
+from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
 from .static import *
 from .utils import draw_fillet, info_calc, open_user_icon
@@ -71,7 +71,11 @@ async def draw_info(
     # 获取背景
     bg_path = user_cache_path / str(info.id) / "info.png"
     if bg_path.exists():
-        bg = Image.open(bg_path)
+        try:
+            bg = Image.open(bg_path)
+        except UnidentifiedImageError:
+            bg_path.unlink()
+            return '自定义背景图片读取错误，请重新上传！'
     else:
         bg = await get_random_bg()
         if bg:
@@ -112,7 +116,11 @@ async def draw_info(
             badges_path = badge_cache_path / f"{hash(badge.description)}.png"
             if not badges_path.exists():
                 await make_badge_cache_file(badge)
-            badges_img = Image.open(badges_path).convert("RGBA").resize((86, 40))
+            try:
+                badges_img = Image.open(badges_path).convert("RGBA").resize((86, 40))
+            except UnidentifiedImageError:
+                badges_path.unlink()
+                return '图片下载错误，请重试！'
             im.alpha_composite(badges_img, (length, height))
     # 地区
     country_bg = Image.open(country).convert("RGBA").resize((80, 54))
