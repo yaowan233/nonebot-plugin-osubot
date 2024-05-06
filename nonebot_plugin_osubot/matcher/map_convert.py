@@ -32,9 +32,8 @@ async def _(argv: list[str] = ShellCommandArgv()):
         args = parser.parse_args(argv)
     except ParserExit as e:
         if e.status == 0:
-            await UniMessage.image(path=Path(__file__).parent / 'osufile' / 'convert.jpg').send(reply_to=True)
-            return
-        await UniMessage.text(str(e)).send(reply_to=True)
+            await UniMessage.image(path=Path(__file__).parent / 'osufile' / 'convert.jpg').finish(reply_to=True)
+        await UniMessage.text(str(e)).finish(reply_to=True)
         return
     options = Options(**vars(args))
     if options.map:
@@ -42,15 +41,12 @@ async def _(argv: list[str] = ShellCommandArgv()):
         options.set = sayo_map_info.data.sid
         options.sayo_info = sayo_map_info
     if not options.set:
-        await UniMessage.text('请提供需要转换的谱面setid').send(reply_to=True)
-        return
+        await UniMessage.text('请提供需要转换的谱面setid').finish(reply_to=True)
     if options.nln and options.fln:
-        await UniMessage.text('指令矛盾！').send(reply_to=True)
-        return
+        await UniMessage.text('指令矛盾！').finish(reply_to=True)
     osz_file = await convert_mania_map(options)
     if not osz_file:
-        await UniMessage.text('未找到该地图，请检查是否搞混了mapID与setID').send(reply_to=True)
-        return
+        await UniMessage.text('未找到该地图，请检查是否搞混了mapID与setID').finish(reply_to=True)
     file_path = osz_file.absolute()
     try:
         with open(file_path, 'rb') as f:
@@ -72,12 +68,10 @@ async def _(msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ['--map']
     if not args:
-        await UniMessage.text('请输入需要倍速的地图mapID').send(reply_to=True)
-        return
+        await UniMessage.text('请输入需要倍速的地图mapID').finish(reply_to=True)
     set_id = args[0]
     if not set_id.isdigit():
-        await UniMessage.text('请输入正确的mapID').send(reply_to=True)
-        return
+        await UniMessage.text('请输入正确的mapID').finish(reply_to=True)
     argv.append(set_id)
     if len(args) >= 2:
         argv.append('--rate')
@@ -87,8 +81,7 @@ async def _(msg: Message = CommandArg()):
         else:
             argv.append(args[1])
     else:
-        await UniMessage.text('请输入倍速速率').send(reply_to=True)
-        return
+        await UniMessage.text('请输入倍速速率').finish(reply_to=True)
     args = parser.parse_args(argv)
     options = Options(**vars(args))
     if options.map:
@@ -97,8 +90,7 @@ async def _(msg: Message = CommandArg()):
         options.sayo_info = sayo_map_info
     osz_path = await convert_mania_map(options)
     if not osz_path:
-        await UniMessage.text('未找到该地图，请检查是否搞混了mapID与setID').send(reply_to=True)
-        return
+        await UniMessage.text('未找到该地图，请检查是否搞混了mapID与setID').finish(reply_to=True)
     file_path = osz_path.absolute()
     try:
         with open(file_path, 'rb') as f:
@@ -119,12 +111,10 @@ generate_full_ln = on_command('反键', priority=11, block=True)
 async def _(msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     if not args:
-        await UniMessage.text('请输入需要转ln的地图setID').send(reply_to=True)
-        return
+        await UniMessage.text('请输入需要转ln的地图setID').finish(reply_to=True)
     set_id = args[0]
     if not set_id.isdigit():
-        await UniMessage.text('请输入正确的setID').send(reply_to=True)
-        return
+        await UniMessage.text('请输入正确的setID').finish(reply_to=True)
     argv = ['--set', set_id, '--fln']
     if len(args) >= 2:
         argv.append('--gap')
@@ -136,8 +126,7 @@ async def _(msg: Message = CommandArg()):
     options = Options(**vars(args))
     osz_path = await convert_mania_map(options)
     if not osz_path:
-        await UniMessage.text('未找到该地图，请检查是否搞混了mapID与setID').send(reply_to=True)
-        return
+        await UniMessage.text('未找到该地图，请检查是否搞混了mapID与setID').finish(reply_to=True)
     file_path = osz_path.absolute()
     try:
         with open(file_path, 'rb') as f:

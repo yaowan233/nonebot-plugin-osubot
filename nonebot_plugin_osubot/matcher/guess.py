@@ -73,17 +73,14 @@ async def _(
     group_id = session_id
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
-        await UniMessage.text("还没有人绑定该模式的osu账号呢，绑定了再来试试吧").send(reply_to=True)
-        return
+        await UniMessage.text("还没有人绑定该模式的osu账号呢，绑定了再来试试吧").finish(reply_to=True)
     if not guess_song_cache.get(group_id):
         guess_song_cache[group_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
     if not selected_score:
-        await UniMessage.text("好像没有可以猜的歌了，今天的猜歌就到此结束吧！").send(reply_to=True)
-        return
+        await UniMessage.text("好像没有可以猜的歌了，今天的猜歌就到此结束吧！").finish(reply_to=True)
     if games.get(group_id, None):
-        await UniMessage.text("现在还有进行中的猜歌呢，请等待当前猜歌结束").send(reply_to=True)
-        return
+        await UniMessage.text("现在还有进行中的猜歌呢，请等待当前猜歌结束").finish(reply_to=True)
     games[group_id] = selected_score
     set_timeout(matcher, group_id)
     await UniMessage.text(f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name} {NGM[mode]} 模式的bp").send(
@@ -101,7 +98,7 @@ async def _(
         await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
     with open(audio_path, "rb") as f:
         silk_byte = f.read()
-    await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").send()
+    await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
 
 
 async def stop_game(matcher: Matcher, cid: str):
@@ -173,7 +170,7 @@ async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
         None, song_name_unicode.lower(), event.get_plaintext().lower()
     ).ratio()
     r3 = SequenceMatcher(
-        None, re.sub(r"[\(\[].*[\)\]]", "", song_name.lower()), event.get_plaintext().lower()
+        None, re.sub(r"[(\[].*[)\]]", "", song_name.lower()), event.get_plaintext().lower()
     ).ratio()
     if r1 >= 0.5 or r2 >= 0.5 or r3 >= 0.5:
         games.pop(session_id)
@@ -211,8 +208,7 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
     if not group_hint.get(session_id, None):
         group_hint[session_id] = hint_dic.copy()
     if all(group_hint[session_id].values()):
-        await UniMessage.text("已无更多提示，加油哦").send(reply_to=True)
-        return
+        await UniMessage.text("已无更多提示，加油哦").finish(reply_to=True)
     true_keys = []
     for key, value in group_hint[session_id].items():
         if not value:
@@ -220,18 +216,16 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
     action = random.choice(true_keys)
     if action == "pic":
         group_hint[session_id]["pic"] = True
-        await UniMessage.image(url=score.beatmapset.covers.cover).send(reply_to=True)
-        return
+        await UniMessage.image(url=score.beatmapset.covers.cover).finish(reply_to=True)
     if action == "artist":
         group_hint[session_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
         if score.beatmapset.artist_unicode != score.beatmapset.artist:
             msg += f" [{score.beatmapset.artist}]"
-        await UniMessage.text(msg).send(reply_to=True)
-        return
+        await UniMessage.text(msg).finish(reply_to=True)
     if action == "creator":
         group_hint[session_id]["creator"] = True
-        await UniMessage.text(f"谱师为：{score.beatmapset.creator}").send(reply_to=True)
+        await UniMessage.text(f"谱师为：{score.beatmapset.creator}").finish(reply_to=True)
 
 
 pic_hint = on_command("图片提示", priority=11, block=True, rule=Rule(pic_game_running))
@@ -262,8 +256,7 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
             await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
         with open(audio_path, "rb") as f:
             silk_byte = f.read()
-        await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").send()
-        return
+        await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
@@ -292,7 +285,6 @@ async def _(
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
         await guess_pic.finish("还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
-        return
     if not guess_song_cache.get(session_id):
         guess_song_cache[session_id] = set()
     selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
@@ -318,4 +310,4 @@ async def _(
     await (
         UniMessage.text(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name} {NGM[mode]} 模式的bp")
         + UniMessage.image(raw=byt)
-    ).send()
+    ).finish()

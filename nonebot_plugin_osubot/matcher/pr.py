@@ -77,11 +77,9 @@ async def _pr(state: T_State):
             limit=high,
         )
         if not data:
-            await UniMessage.text(f"未查询到在 {NGM[mode]} 的游玩记录").send(reply_to=True)
-            return
+            await UniMessage.text(f"未查询到在 {NGM[mode]} 的游玩记录").finish(reply_to=True)
         if isinstance(data, str):
-            await UniMessage.text(data).send(reply_to=True)
-            return
+            await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
             info = await get_user_info(
                 f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
@@ -92,14 +90,12 @@ async def _pr(state: T_State):
                 state["user"] = info["username"]
         score_ls = [Score(**score_json) for score_json in data]
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
-        await UniMessage.image(raw=pic).send(reply_to=True)
-        return
+        await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
         state["day"] = 1
     data = await draw_score(
         "pr", state["user"], NGM[mode], [], state["day"] - 1, is_name=state["is_name"]
     )
     if isinstance(data, str):
-        await UniMessage.text(data).send(reply_to=True)
-        return
-    await UniMessage.image(raw=data).send(reply_to=True)
+        await UniMessage.text(data).finish(reply_to=True)
+    await UniMessage.image(raw=data).finish(reply_to=True)

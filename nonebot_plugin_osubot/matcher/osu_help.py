@@ -17,5 +17,5 @@ with open(Path(__file__).parent.parent / "osufile" / "detail.png", "rb") as f:
 async def _help(arg: Message = CommandArg()):
     arg = arg.extract_plain_text().strip()
     if arg == "detail":
-        await UniMessage.image(raw=img2).send(reply_to=True)
-    await UniMessage.image(raw=img1).send(reply_to=True)
+        await UniMessage.image(raw=img2).finish(reply_to=True)
+    await UniMessage.image(raw=img1).finish(reply_to=True)

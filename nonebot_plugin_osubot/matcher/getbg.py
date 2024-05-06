@@ -11,10 +11,8 @@ getbg = on_command("getbg", priority=11, block=True)
 async def _get_bg(bg: Message = CommandArg()):
     bg = bg.extract_plain_text().strip()
     if not bg:
-        await UniMessage.text("请输入需要提取BG的地图ID").send(reply_to=True)
-        return
+        await UniMessage.text("请输入需要提取BG的地图ID").finish(reply_to=True)
     byt = await get_bg(bg)
     if isinstance(byt, str):
-        await UniMessage.text(byt).send(reply_to=True)
-        return
-    await UniMessage.image(raw=byt).send(reply_to=True)
+        await UniMessage.text(byt).finish(reply_to=True)
+    await UniMessage.image(raw=byt).finish(reply_to=True)

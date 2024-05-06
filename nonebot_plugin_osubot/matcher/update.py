@@ -41,18 +41,16 @@ async def _(
     user_data = await UserData.get_or_none(user_id=int(qq))
     state["user"] = user_data.osu_id if user_data else 0
     if state["user"] == 0:
-        await UniMessage.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号").send(reply_to=True)
-        return
+        await UniMessage.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号").finish(reply_to=True)
     if not img.available:
-        await UniMessage.text("请在指令之后附上图片").send(reply_to=True)
-        return
+        await UniMessage.text("请在指令之后附上图片").finish(reply_to=True)
     user = state["user"]
     pic_url = img.result
     await save_info_pic(str(user), pic_url)
     msg = f"收到自{qq}的更新背景申请" + UniMessage.image(raw=pic_url)
     for superuser in get_driver().config.superusers:
         await Target.user(superuser, SupportScope.qq_client).send(msg)
-    await UniMessage.text("更新背景成功").send(reply_to=True)
+    await UniMessage.text("更新背景成功").finish(reply_to=True)
 
 
 @update_info.handle(parameterless=[split_msg()])

@@ -12,8 +12,7 @@ score = on_command("score", priority=11, block=True)
 @score.handle(parameterless=[split_msg()])
 async def _score(state: T_State):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-        return
+        await UniMessage.text(state["error"]).finish(reply_to=True)
     data = await get_score_data(
         state["user"],
         NGM[state["mode"]],
@@ -22,6 +21,5 @@ async def _score(state: T_State):
         is_name=state["is_name"],
     )
     if isinstance(data, str):
-        await UniMessage.text(data).send(reply_to=True)
-        return
-    await UniMessage.image(raw=data).send(reply_to=True)
+        await UniMessage.text(data).finish(reply_to=True)
+    await UniMessage.image(raw=data).finish(reply_to=True)

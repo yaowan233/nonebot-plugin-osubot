@@ -11,12 +11,10 @@ info = on_command("info", priority=11, block=True, aliases={"Info", "INFO"})
 @info.handle(parameterless=[split_msg()])
 async def _info(state: T_State):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-        return
+        await UniMessage.text(state["error"]).finish(reply_to=True)
     data = await draw_info(
         state["user"], NGM[state["mode"]], state["day"], state["is_name"]
     )
     if isinstance(data, str):
-        await UniMessage.text(data).send(reply_to=True)
-        return
-    await UniMessage.image(raw=data).send(reply_to=True)
+        await UniMessage.text(data).finish(reply_to=True)
+    await UniMessage.image(raw=data).finish(reply_to=True)

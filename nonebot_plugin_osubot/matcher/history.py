@@ -15,8 +15,7 @@ history = on_command("history", priority=11, block=True)
 @history.handle(parameterless=[split_msg()])
 async def _info(state: T_State):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-        return
+        await UniMessage.text(state["error"]).finish(reply_to=True)
     data = InfoData.filter(osu_id=state["user"], osu_mode=state["mode"])
     user = await UserData.filter(osu_id=state["user"]).first()
     if state["day"] > 0:
@@ -30,7 +29,7 @@ async def _info(state: T_State):
     byt = draw_plot(
         pp_ls, date_ls, rank_ls, f'{user.osu_name} {NGM[state["mode"]]} pp/rank history'
     )
-    await UniMessage.image(raw=byt).send(reply_to=True)
+    await UniMessage.image(raw=byt).finish(reply_to=True)
 
 
 def draw_plot(pp_ls, date_ls, rank_ls, title):

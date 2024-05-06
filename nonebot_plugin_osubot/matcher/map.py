@@ -14,29 +14,23 @@ async def _map(state: T_State):
     map_id = state["para"]
     mods = state["mods"]
     if not map_id:
-        await UniMessage.text("请输入地图ID").send(reply_to=True)
-        return
+        await UniMessage.text("请输入地图ID").finish(reply_to=True)
     elif not map_id.isdigit():
-        await UniMessage.text("请输入正确的地图ID").send(reply_to=True)
-        return
+        await UniMessage.text("请输入正确的地图ID").finish(reply_to=True)
     m = await draw_map_info(map_id, mods)
     if isinstance(m, str):
-        await UniMessage.text(m).send(reply_to=True)
-        return
-    await UniMessage.image(raw=m).send(reply_to=True)
+        await UniMessage.text(m).finish(reply_to=True)
+    await UniMessage.image(raw=m).finish(reply_to=True)
 
 
 @bmap.handle(parameterless=[split_msg()])
 async def _bmap(state: T_State):
     set_id = state["para"]
     if not set_id:
-        await UniMessage.text("请输入setID").send(reply_to=True)
-        return
+        await UniMessage.text("请输入setID").finish(reply_to=True)
     if not set_id.isdigit():
-        await UniMessage.text("请输入正确的setID").send(reply_to=True)
-        return
+        await UniMessage.text("请输入正确的setID").finish(reply_to=True)
     m = await draw_bmap_info(set_id)
     if isinstance(m, str):
-        await UniMessage.text(m).send(reply_to=True)
-        return
-    await UniMessage.image(raw=m).send(reply_to=True)
+        await UniMessage.text(m).finish(reply_to=True)
+    await UniMessage.image(raw=m).finish(reply_to=True)

@@ -10,5 +10,5 @@ mu = on_command("mu", priority=11, block=True)
 @mu.handle(parameterless=[split_msg()])
 async def _mu(state: T_State):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-    await UniMessage.text(f"https://osu.ppy.sh/u/{state['user']}").send(reply_to=True)
+        await UniMessage.text(state["error"]).finish(reply_to=True)
+    await UniMessage.text(f"https://osu.ppy.sh/u/{state['user']}").finish(reply_to=True)

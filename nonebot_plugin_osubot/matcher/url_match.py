@@ -16,4 +16,4 @@ async def _url(state: T_State, bid: tuple = RegexGroup()):
     state["para"] = beatmap_id
     state["mods"] = ""
     m = await draw_map_info(beatmap_id, state["mods"])
-    await (UniMessage.image(raw=m) + "\n" + url_total).send(reply_to=True)
+    await (UniMessage.image(raw=m) + "\n" + url_total).finish(reply_to=True)

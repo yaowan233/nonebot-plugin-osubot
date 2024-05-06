@@ -66,7 +66,6 @@ async def handle_recommend(state: T_State, matcher: type[Matcher]):
 @recommend.handle(parameterless=[split_msg()])
 async def _(state: T_State):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-        return
+        await UniMessage.text(state["error"]).finish(reply_to=True)
     pic_url, s = await handle_recommend(state, recommend)
-    await (UniMessage.image(url=pic_url) + s).send(reply_to=True)
+    await (UniMessage.image(url=pic_url) + s).finish(reply_to=True)
