@@ -95,7 +95,7 @@ async def _(
         audio = await safe_async_get(
             f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3"
         )
-        await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+        await silkcoder.async_encode(audio.read(), audio_path, rate=25000)
     with open(audio_path, "rb") as f:
         silk_byte = f.read()
     await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
@@ -253,7 +253,7 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
             audio = await safe_async_get(
                 f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3"
             )
-            await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+            await silkcoder.async_encode(audio.read(), audio_path, rate=25000)
         with open(audio_path, "rb") as f:
             silk_byte = f.read()
         await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
