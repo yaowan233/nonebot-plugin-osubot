@@ -68,7 +68,7 @@ async def get_projectimg(url: str):
     if "avatar-guest.png" in url:
         url = "https://osu.ppy.sh/images/layout/avatar-guest.png"
     req = await safe_async_get(url)
-    if req.status_code == 403:
+    if not req or req.status_code == 403:
         return osufile / "work" / "mapbg.png"
     data = req.read()
     im = BytesIO(data)
