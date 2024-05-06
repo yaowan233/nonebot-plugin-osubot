@@ -162,6 +162,8 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
     user_icon = await get_projectimg(icon_url)
+    if not user_icon.exists():
+        return '用户头像下载出错，请重试！'
     icon = Image.open(user_icon).convert("RGBA").resize((100, 100))
     icon_img = draw_fillet(icon, 10)
     im.alpha_composite(icon_img, (50, 400))
