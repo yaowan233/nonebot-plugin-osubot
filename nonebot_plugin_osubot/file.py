@@ -1,3 +1,4 @@
+import random
 import re
 from io import BytesIO, TextIOWrapper
 from typing import Union, Optional
@@ -7,6 +8,7 @@ from .api import safe_async_get
 from .network import auto_retry
 from .network.first_response import get_first_response
 from .schema import Badge
+from .api import bg_url
 
 osufile = Path(__file__).parent / "osufile"
 map_path = Path() / "data" / "osu" / "map"
@@ -64,12 +66,15 @@ async def download_osu(set_id, map_id):
         raise Exception("下载出错，请稍后再试")
 
 
-async def get_projectimg(url: str):
+async def get_projectimg(url: str) -> BytesIO:
     if "avatar-guest.png" in url:
         url = "https://osu.ppy.sh/images/layout/avatar-guest.png"
     req = await safe_async_get(url)
-    if not req or req.status_code == 403:
-        return osufile / "work" / "mapbg.png"
+    if not req or req.status_code >= 400:
+        # todo 加个自创的错误图片
+        req = await safe_async_get(random.choice(bg_url))
+        if not req or req.status_code >= 400:
+            raise Exception('图片下载失败')
     data = req.read()
     im = BytesIO(data)
     return im
