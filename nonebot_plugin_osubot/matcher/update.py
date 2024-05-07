@@ -47,9 +47,8 @@ async def _(event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img"
 @update_pic.got_path('img', "请发送图片", image_fetch)
 async def _(img: bytes, state: T_State, event: Event):
     user = state["user"]
-    pic_url = img
-    await save_info_pic(str(user), pic_url)
-    msg = f"收到自{event.get_user_id()}的更新背景申请" + UniMessage.image(raw=pic_url)
+    await save_info_pic(str(user), img)
+    msg = f"收到自{event.get_user_id()}的更新背景申请" + UniMessage.image(raw=img)
     for superuser in get_driver().config.superusers:
         await Target.user(superuser, SupportScope.qq_client).send(msg)
     await UniMessage.text("更新背景成功").send(reply_to=True)
