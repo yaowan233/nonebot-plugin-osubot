@@ -47,10 +47,8 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
         return
     user = await UserData.filter(user_id=selected_user).first()
     bp_info = await osu_api("bp", user.osu_id, NGM[str(user.osu_mode)])
-    if not bp_info:
+    if not bp_info or isinstance(bp_info, str):
         return await get_random_beatmap_set(binded_id, group_id, ttl - 1)
-    if isinstance(bp_info, str):
-        await guess_audio.finish("发生了错误，再试试吧")
     selected_score = random.choice([Score(**i) for i in bp_info])
     if selected_score.beatmapset.id not in guess_song_cache[group_id]:
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
