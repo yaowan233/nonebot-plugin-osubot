@@ -34,23 +34,25 @@ clear_background = on_command("清空背景", priority=11, block=True, aliases={
 
 
 @update_pic.handle()
-async def _(
-    event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img", image_fetch)
-):
+async def _(event: Event, state: T_State, img: Match[bytes] = AlconnaMatch("img", image_fetch)):
     qq = event.get_user_id()
     user_data = await UserData.get_or_none(user_id=int(qq))
     state["user"] = user_data.osu_id if user_data else 0
     if state["user"] == 0:
         await UniMessage.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号").finish(reply_to=True)
-    if not img.available:
-        await UniMessage.text("请在指令之后附上图片").finish(reply_to=True)
+    if img.available:
+        update_pic.set_path_arg("target", img.result)
+
+
+@update_pic.got_path('img', "请发送图片", image_fetch)
+async def _(img: bytes, state: T_State, event: Event):
     user = state["user"]
-    pic_url = img.result
+    pic_url = img
     await save_info_pic(str(user), pic_url)
-    msg = f"收到自{qq}的更新背景申请" + UniMessage.image(raw=pic_url)
+    msg = f"收到自{event.get_user_id()}的更新背景申请" + UniMessage.image(raw=pic_url)
     for superuser in get_driver().config.superusers:
         await Target.user(superuser, SupportScope.qq_client).send(msg)
-    await UniMessage.text("更新背景成功").finish(reply_to=True)
+    await UniMessage.text("更新背景成功").send(reply_to=True)
 
 
 @update_info.handle(parameterless=[split_msg()])
