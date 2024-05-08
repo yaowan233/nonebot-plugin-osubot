@@ -135,6 +135,10 @@ async def get_score_data(
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     map_attribute_json = await task
+    if isinstance(map_json, str):
+        return map_json
+    if isinstance(map_attribute_json, str):
+        return map_attribute_json
     return await draw_score_pic(
         score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid
     )
