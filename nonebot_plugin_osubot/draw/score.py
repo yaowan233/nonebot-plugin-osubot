@@ -110,6 +110,7 @@ async def get_score_data(
                     score_info = score
                     break
             else:
+                score_ls.sort(key=lambda x: x.score, reverse=True)
                 for score in score_ls:
                     if set(mods).issubset(set(score.mods)):
                         score_info = score
