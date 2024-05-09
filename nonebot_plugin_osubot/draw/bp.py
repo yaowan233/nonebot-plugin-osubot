@@ -6,7 +6,7 @@ from typing import Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
 
-from ..schema import Score
+from ..schema import NewScore
 from ..api import osu_api
 from ..utils import GMN
 from ..mods import get_mods_list
@@ -29,7 +29,7 @@ async def draw_bp(
     bp_info = await osu_api("bp", uid, mode, is_name=is_name)
     if isinstance(bp_info, str):
         return bp_info
-    score_ls = [Score(**i) for i in bp_info]
+    score_ls = [NewScore(**i) for i in bp_info]
     if not bp_info:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     user = bp_info[0]["user"]["username"]
@@ -68,8 +68,8 @@ async def draw_bp(
 async def draw_pfm(
     project: str,
     user: str,
-    score_ls: list[Score],
-    score_ls_filtered: list[Score],
+    score_ls: list[NewScore],
+    score_ls_filtered: list[NewScore],
     mode: str,
     low_bound: int = 0,
     high_bound: int = 0,
@@ -141,7 +141,7 @@ async def draw_pfm(
         # mods
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
-                mods_bg = osufile / "mods" / f"{s_mods}.png"
+                mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
                 mods_img = Image.open(mods_bg).convert("RGBA")
                 im.alpha_composite(
                     mods_img, (210 + offset + 50 * mods_num, 192 + h_num)
@@ -161,7 +161,7 @@ async def draw_pfm(
 
         # 地图版本&时间
         old_time = datetime.strptime(
-            bp.created_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
+            bp.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
         )
         new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
         difficulty = bp.beatmap.version

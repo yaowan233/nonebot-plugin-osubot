@@ -1,4 +1,5 @@
 from nonebot import on_command
+from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
 from .utils import split_msg
@@ -12,7 +13,7 @@ tbp = on_command("tbp", priority=11, block=True, aliases={"todaybp"})
 
 
 @bp.handle(parameterless=[split_msg()])
-async def _bp(state: T_State):
+async def _bp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if "-" in state["para"]:
@@ -29,6 +30,7 @@ async def _bp(state: T_State):
     data = await draw_score(
         "bp",
         state["user"],
+        int(event.get_user_id()),
         NGM[state["mode"]],
         best=best,
         mods=state["mods"],

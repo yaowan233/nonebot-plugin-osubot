@@ -1,11 +1,12 @@
 from nonebot import on_command
+from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 from nonebot.params import T_State
 
 from ..api import get_user_info
 from .utils import split_msg
 from ..draw import draw_score
-from ..schema import Score
+from ..schema import NewScore
 from ..api import osu_api
 from ..draw.bp import draw_pfm
 from ..utils import NGM
@@ -15,7 +16,7 @@ pr = on_command("pr", priority=11, block=True, aliases={"PR", "Pr", "pR"})
 
 
 @recent.handle(parameterless=[split_msg()])
-async def _recent(state: T_State):
+async def _recent(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
         return
@@ -44,14 +45,14 @@ async def _recent(state: T_State):
                 return info
             else:
                 state["user"] = info["username"]
-        score_ls = [Score(**score_json) for score_json in data]
+        score_ls = [NewScore(**score_json) for score_json in data]
         pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
         await UniMessage.image(raw=pic).send(reply_to=True)
         return
     if state["day"] == 0:
         state["day"] = 1
     data = await draw_score(
-        "recent", state["user"], mode, [], state["day"] - 1, is_name=state["is_name"]
+        "recent", state["user"], int(event.get_user_id()), mode, [], state["day"] - 1, is_name=state["is_name"]
     )
     if isinstance(data, str):
         await UniMessage.text(data).send(reply_to=True)
@@ -60,7 +61,7 @@ async def _recent(state: T_State):
 
 
 @pr.handle(parameterless=[split_msg()])
-async def _pr(state: T_State):
+async def _pr(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).send(reply_to=True)
         return
@@ -88,13 +89,13 @@ async def _pr(state: T_State):
                 return info
             else:
                 state["user"] = info["username"]
-        score_ls = [Score(**score_json) for score_json in data]
+        score_ls = [NewScore(**score_json) for score_json in data]
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
         state["day"] = 1
     data = await draw_score(
-        "pr", state["user"], NGM[mode], [], state["day"] - 1, is_name=state["is_name"]
+        "pr", state["user"], int(event.get_user_id()), NGM[mode], [], state["day"] - 1, is_name=state["is_name"]
     )
     if isinstance(data, str):
         await UniMessage.text(data).finish(reply_to=True)

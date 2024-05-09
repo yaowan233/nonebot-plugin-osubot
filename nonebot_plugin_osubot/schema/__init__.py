@@ -1,4 +1,4 @@
-from .score import Score, BeatmapUserScore
+from .score import Score, BeatmapUserScore, NewScore
 from .user import User, Badge
 from .beatmap import (
     Beatmap,

@@ -91,14 +91,14 @@ def info_calc(
     return [op, value]
 
 
-def draw_acc(img: Image, acc: float, mode: str):
+def draw_acc(img: Image, acc: float, mode: int):
     acc *= 100
     size = [acc, 100 - acc]
-    if mode == "osu":
+    if mode == 0:
         insize = [60, 20, 7, 7, 5, 1]
-    elif mode == "taiko":
+    elif mode == 1:
         insize = [60, 20, 5, 5, 4, 1]
-    elif mode == "fruits":
+    elif mode == 2:
         insize = [85, 5, 4, 4, 1, 1]
     else:
         insize = [70, 10, 10, 5, 4, 1]

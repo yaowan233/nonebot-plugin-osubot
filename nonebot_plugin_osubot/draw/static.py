@@ -55,4 +55,4 @@ __colors = ['#4290FB', '#4FC0FF', '#4FFFD5', '#7CFF4F', '#F6F05C', '#FF8068', '#
 __cmap = mcolors.LinearSegmentedColormap.from_list('difficultyColourSpectrum', list(zip(__normalized_values, __colors)), N=16384)
 __norm = mpl.colors.Normalize(vmin=0, vmax=9)
 ColorArr = mpl.cm.ScalarMappable(norm=__norm, cmap=__cmap).to_rgba(np.linspace(0, 9, 900), bytes=True)
-IconLs = {"osu": '\uE800', "taiko": '\uE803', "fruits": '\uE801', "mania": '\uE802'}
+IconLs = ['\uE800', '\uE803', '\uE801', '\uE802']

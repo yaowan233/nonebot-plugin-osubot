@@ -22,11 +22,11 @@ from ..file import map_path
 from ..info import get_bg
 from ..utils import NGM
 from ..api import osu_api, safe_async_get
-from ..schema import Score
+from ..schema import NewScore
 from ..database.models import UserData
 
-games: dict[str, Score] = {}
-pic_games: dict[str, Score] = {}
+games: dict[str, NewScore] = {}
+pic_games: dict[str, NewScore] = {}
 timers: dict[str, TimerHandle] = {}
 pic_timers: dict[str, TimerHandle] = {}
 hint_dic = {"pic": False, "artist": False, "creator": False}
@@ -49,7 +49,7 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
     bp_info = await osu_api("bp", user.osu_id, NGM[str(user.osu_mode)])
     if not bp_info or isinstance(bp_info, str):
         return await get_random_beatmap_set(binded_id, group_id, ttl - 1)
-    selected_score = random.choice([Score(**i) for i in bp_info])
+    selected_score = random.choice([NewScore(**i) for i in bp_info])
     if selected_score.beatmapset.id not in guess_song_cache[group_id]:
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
     else:

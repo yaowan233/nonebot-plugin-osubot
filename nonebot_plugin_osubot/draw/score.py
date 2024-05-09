@@ -6,11 +6,13 @@ from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 
 from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
 from ..beatmap_stats_moder import with_mods
-from ..schema import Score, Beatmap, User, BeatmapDifficultyAttributes
+from ..schema import NewScore, Beatmap, User, BeatmapDifficultyAttributes
 from ..mods import get_mods_list
 from ..file import re_map, download_osu, user_cache_path, map_path
-from ..utils import GMN, FGM
+from ..schema.score import NewStatistics
+from ..utils import GMN
 from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
+from ..database.models import UserData
 
 from .static import *
 from .utils import (
@@ -27,6 +29,7 @@ from .utils import (
 async def draw_score(
     project: str,
     uid: int,
+    user_id: int,
     mode: str,
     mods: Optional[list[str]],
     best: int = 0,
@@ -43,14 +46,14 @@ async def draw_score(
     if project in ("recent", "pr"):
         if len(score_json) < best:
             return f"未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录"
-        score_info = Score(**score_json[best])
+        score_info = NewScore(**score_json[best])
         grank = "--"
     elif project == "bp":
-        score_ls = [Score(**i) for i in score_json]
+        score_ls = [NewScore(**i) for i in score_json]
         mods_ls = get_mods_list(score_ls, mods)
         if len(mods_ls) < best:
             return f'未找到开启 {"|".join(mods)} Mods的第{best}个成绩'
-        score_info = Score(**score_json[mods_ls[best - 1]])
+        score_info = NewScore(**score_json[mods_ls[best - 1]])
         grank = "--"
     else:
         raise "Project Error"
@@ -70,6 +73,12 @@ async def draw_score(
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     map_attribute_json = await task
+    # 判断是否开启lazer模式
+    user = await UserData.get_or_none(user_id=user_id)
+    if user.lazer_mode:
+        score_info.legacy_total_score = score_info.total_score
+    if score_info.ruleset_id == 3 and not user.lazer_mode:
+        score_info.accuracy = cal_legacy_acc(score_info.statistics)
     return await draw_score_pic(
         score_info,
         info,
@@ -82,6 +91,7 @@ async def draw_score(
 
 async def get_score_data(
     uid: int,
+    user_id: int,
     mode: str,
     mods: Optional[list[str]],
     mapid: int = 0,
@@ -98,7 +108,7 @@ async def get_score_data(
     elif isinstance(score_json, str):
         return score_json
     if "score" not in score_json:
-        score_ls = [Score(**i) for i in score_json["scores"]]
+        score_ls = [NewScore(**i) for i in score_json["scores"]]
         if not score_ls:
             return f"未查询到在 {GMN[mode]} 的游玩记录"
         if mods:
@@ -110,9 +120,9 @@ async def get_score_data(
                     score_info = score
                     break
             else:
-                score_ls.sort(key=lambda x: x.score, reverse=True)
+                score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
                 for score in score_ls:
-                    if set(mods).issubset(set(score.mods)):
+                    if set(mods).issubset(set([i['acronym'] for i in score.mods])):
                         score_info = score
                         break
                 else:
@@ -120,7 +130,7 @@ async def get_score_data(
         else:
             score_info = score_ls[0]
     else:
-        score_info = Score(**score_json["score"])
+        score_info = NewScore(**score_json["score"])
     sayo_map_info = await task3
     path = map_path / str(sayo_map_info.data.sid)
     if not path.exists():
@@ -139,13 +149,19 @@ async def get_score_data(
         return map_json
     if isinstance(map_attribute_json, str):
         return map_attribute_json
+    # 判断是否开启lazer模式
+    user = await UserData.get_or_none(user_id=user_id)
+    if user.lazer_mode:
+        score_info.legacy_total_score = score_info.total_score
+    if score_info.ruleset_id == 3 and not user.lazer_mode:
+        score_info.accuracy = cal_legacy_acc(score_info.statistics)
     return await draw_score_pic(
         score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid
     )
 
 
 async def draw_score_pic(
-    score_info, info, map_json, map_attribute_json, bid, sid
+    score_info: NewScore, info, map_json, map_attribute_json, bid, sid
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
@@ -173,11 +189,11 @@ async def draw_score_pic(
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
     # 获取成绩背景做底图
-    bg = get_modeimage(FGM[score_info.mode])
+    bg = get_modeimage(score_info.ruleset_id)
     recent_bg = Image.open(bg).convert("RGBA")
     im.alpha_composite(recent_bg)
     # 模式
-    draw.text((75, 75), IconLs[score_info.mode], font=extra_30, anchor="lt")
+    draw.text((75, 75), IconLs[score_info.ruleset_id], font=extra_30, anchor="lt")
     # 难度星星
     stars_bg = stars_diff(pp_info.difficulty.stars)
     stars_img = stars_bg.resize((85, 37))
@@ -201,7 +217,7 @@ async def draw_score_pic(
         ranking = ["X", "S", "A", "B", "C", "D", "F"]
     if score_info.mods:
         for mods_num, s_mods in enumerate(score_info.mods):
-            mods_bg = osufile / "mods" / f"{s_mods}.png"
+            mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
             mods_img = Image.open(mods_bg).convert("RGBA")
             im.alpha_composite(mods_img, (500 + 50 * mods_num, 160))
     # 成绩S-F
@@ -221,7 +237,7 @@ async def draw_score_pic(
             rank_ok = True
         im.alpha_composite(rank_bg, (75, 163 + 39 * rank_num))
     # 成绩+acc
-    im = draw_acc(im, score_info.accuracy, score_info.mode)
+    im = draw_acc(im, score_info.accuracy, score_info.ruleset_id)
     # 地区
     country = osufile / "flags" / f"{info.country_code}.png"
     country_bg = Image.open(country).convert("RGBA").resize((66, 45))
@@ -231,7 +247,7 @@ async def draw_score_pic(
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     map_attribute = BeatmapDifficultyAttributes(**map_attribute_json["attributes"])
     # 处理mania转谱cs
-    if score_info.mode == "mania" and mapinfo.mode == "osu":
+    if score_info.ruleset_id == 3 and mapinfo.mode == 0:
         temp_accuracy = mapinfo.accuracy
         convert = (mapinfo.count_sliders + mapinfo.count_spinners) / (
             mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners
@@ -268,14 +284,14 @@ async def draw_score_pic(
             color = (255, 255, 255, 255)
             diff_len = Image.new("RGBA", (orig_difflen, 8), color)
             im.alpha_composite(diff_len, (1190, 306 + 35 * num))
-        elif new > orig and not (score_info.mode == "mania" and mapinfo.mode == "osu"):
+        elif new > orig and not (score_info.ruleset_id == 3 and mapinfo.mode == "osu"):
             color = (198, 92, 102, 255)
             orig_color = (246, 136, 144, 255)
             new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
             im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
             orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
             im.alpha_composite(orig_diff_len, (1190, 306 + 35 * num))
-        elif new < orig and not (score_info.mode == "mania" and mapinfo.mode == "osu"):
+        elif new < orig and not (score_info.ruleset_id == 3 and mapinfo.mode == "osu"):
             color = (161, 212, 238, 255)
             orig_color = (255, 255, 255, 255)
             orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
@@ -367,11 +383,11 @@ async def draw_score_pic(
     # 评价
     draw.text((316, 307), score_info.rank, font=Venera_75, anchor="mm")
     # 分数
-    draw.text((498, 251), f"{score_info.score:,}", font=Torus_Regular_75, anchor="lm")
+    draw.text((498, 251), f"{score_info.legacy_total_score or score_info.total_score:,}", font=Torus_Regular_75, anchor="lm")
     # 时间
     draw.text((498, 341), "达成时间:", font=Torus_SemiBold_20, anchor="lm")
     old_time = datetime.strptime(
-        score_info.created_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
+        score_info.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
     )
     new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor="lm")
@@ -386,7 +402,7 @@ async def draw_score_pic(
         font=Torus_SemiBold_25,
         anchor="lm",
     )
-    if score_info.mode == "osu":
+    if score_info.ruleset_id == 0:
         draw.text((720, 550), ss_pp, font=Torus_Regular_30, anchor="mm")
         draw.text((840, 550), if_pp, font=Torus_Regular_30, anchor="mm")
         draw.text((960, 550), f"{pp_info.pp:.0f}", font=Torus_Regular_30, anchor="mm")
@@ -413,29 +429,29 @@ async def draw_score_pic(
         )
         draw.text(
             (1100, 645),
-            f"{score_info.statistics.count_300}",
+            f"{score_info.statistics.great or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1214, 645),
-            f"{score_info.statistics.count_100}",
+            f"{score_info.statistics.ok or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1328, 645),
-            f"{score_info.statistics.count_50}",
+            f"{score_info.statistics.meh or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1442, 645),
-            f"{score_info.statistics.count_miss}",
+            f"{score_info.statistics.miss or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
-    elif score_info.mode == "taiko":
+    elif score_info.ruleset_id == 1:
         draw.text(
             (1118, 550),
             f"{score_info.accuracy * 100:.2f}%",
@@ -450,23 +466,23 @@ async def draw_score_pic(
         )
         draw.text(
             (1118, 645),
-            f"{score_info.statistics.count_300}",
+            f"{score_info.statistics.great or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1270, 645),
-            f"{score_info.statistics.count_100}",
+            f"{score_info.statistics.ok or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1420, 645),
-            f"{score_info.statistics.count_miss}",
+            f"{score_info.statistics.miss or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
-    elif score_info.mode == "fruits":
+    elif score_info.ruleset_id == 2:
         draw.text(
             (1083, 550),
             f"{score_info.accuracy * 100:.2f}%",
@@ -484,33 +500,33 @@ async def draw_score_pic(
         )
         draw.text(
             (1062, 645),
-            f"{score_info.statistics.count_300}",
+            f"{score_info.statistics.great or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1185, 645),
-            f"{score_info.statistics.count_100}",
+            f"{score_info.statistics.large_tick_hit or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1309, 645),
-            f"{score_info.statistics.count_katu}",
+            f"{score_info.statistics.small_tick_miss or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1432, 645),
-            f"{score_info.statistics.count_miss}",
+            f"{score_info.statistics.miss or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
     else:
         draw.text(
             (1002, 580),
-            f"{score_info.statistics.count_geki / score_info.statistics.count_300 :.1f}:1"
-            if score_info.statistics.count_300 != 0
+            f"{score_info.statistics.perfect / score_info.statistics.great :.1f}:1"
+            if (score_info.statistics.great or 0) != 0
             else "∞:1",
             font=Torus_Regular_20,
             anchor="mm",
@@ -529,37 +545,37 @@ async def draw_score_pic(
         )
         draw.text(
             (953, 645),
-            f"{score_info.statistics.count_geki}",
+            f"{score_info.statistics.perfect or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1051, 645),
-            f"{score_info.statistics.count_300}",
+            f"{score_info.statistics.great or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1150, 645),
-            f"{score_info.statistics.count_katu}",
+            f"{score_info.statistics.good or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1249, 645),
-            f"{score_info.statistics.count_100}",
+            f"{score_info.statistics.ok or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1347, 645),
-            f"{score_info.statistics.count_50}",
+            f"{score_info.statistics.meh or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
         draw.text(
             (1445, 645),
-            f"{score_info.statistics.count_miss}",
+            f"{score_info.statistics.miss or 0}",
             font=Torus_Regular_30,
             anchor="mm",
         )
@@ -593,3 +609,16 @@ async def draw_score_pic(
     gif_frames[0].close()
     user_icon.close()
     return gif_bytes
+
+
+def cal_legacy_acc(statistics: NewStatistics) -> float:
+    statistics.great = statistics.great or 0
+    statistics.good = statistics.good or 0
+    statistics.ok = statistics.ok or 0
+    statistics.meh = statistics.meh or 0
+    statistics.perfect = statistics.perfect or 0
+    statistics.miss = statistics.miss or 0
+    num = statistics.great + statistics.good + statistics.ok + statistics.meh + statistics.perfect + statistics.miss
+    if num == 0:
+        return 1
+    return (statistics.perfect * 300 + statistics.great * 300 + statistics.good * 200 + statistics.ok * 100 + statistics.meh * 50) / (num * 300)

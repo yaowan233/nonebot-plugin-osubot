@@ -130,7 +130,7 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
         if not token:
             await renew_token()
             token = cache.get("token")
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
     req = await safe_async_get(url, headers=headers)
     if not req:
         return "api请求失败，请稍后再试"
