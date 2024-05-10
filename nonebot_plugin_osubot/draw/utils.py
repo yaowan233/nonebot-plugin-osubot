@@ -135,7 +135,7 @@ def draw_acc(img: Image, acc: float, mode: int):
     return img
 
 
-async def crop_bg(size: str, path: Union[str, Path]):
+async def crop_bg(size: str, path: Union[str, Path, BytesIO]):
     try:
         bg = Image.open(path).convert("RGBA")
     except UnidentifiedImageError:
