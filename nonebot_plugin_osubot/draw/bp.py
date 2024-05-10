@@ -6,6 +6,8 @@ from typing import Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
 
+from .score import cal_legacy_acc
+from ..database import UserData
 from ..schema import NewScore
 from ..api import osu_api
 from ..utils import GMN
@@ -19,6 +21,7 @@ from .static import *
 async def draw_bp(
     project: str,
     uid: int,
+    user_id: int,
     mode: str,
     mods: Optional[list],
     low_bound: int = 0,
@@ -59,6 +62,13 @@ async def draw_bp(
         score_ls_filtered = [score_ls[i] for i in ls]
         if not score_ls_filtered:
             return f"近{day + 1}日内在 {GMN[mode]} 没有新增的BP成绩"
+    for score_info in score_ls_filtered:
+        # 判断是否开启lazer模式
+        user = await UserData.get_or_none(user_id=user_id)
+        if user.lazer_mode:
+            score_info.legacy_total_score = score_info.total_score
+        if score_info.ruleset_id == 3 and not user.lazer_mode:
+            score_info.accuracy = cal_legacy_acc(score_info.statistics)
     msg = await draw_pfm(
         project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day
     )

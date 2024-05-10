@@ -42,7 +42,7 @@ async def _bp(event: Event, state: T_State):
 
 
 @pfm.handle(parameterless=[split_msg()])
-async def _pfm(state: T_State):
+async def _pfm(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     ls = state["para"].split("-")
@@ -55,6 +55,7 @@ async def _pfm(state: T_State):
     data = await draw_bp(
         "bp",
         state["user"],
+        int(event.get_user_id()),
         NGM[state["mode"]],
         state["mods"],
         low,
@@ -67,11 +68,12 @@ async def _pfm(state: T_State):
 
 
 @tbp.handle(parameterless=[split_msg()])
-async def _tbp(state: T_State):
+async def _tbp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     data = await draw_bp(
         "tbp",
+        int(event.get_user_id()),
         state["user"],
         NGM[state["mode"]],
         [],
