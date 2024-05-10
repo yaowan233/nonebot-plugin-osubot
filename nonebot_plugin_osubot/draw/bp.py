@@ -51,7 +51,7 @@ async def draw_bp(
             now = datetime.now() - timedelta(days=day + 1)
             today_stamp = mktime(strptime(str(now), "%Y-%m-%d %H:%M:%S.%f"))
             playtime = datetime.strptime(
-                score.started_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
+                score.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
             ) + timedelta(hours=8)
             play_stamp = mktime(strptime(str(playtime), "%Y-%m-%d %H:%M:%S"))
             if play_stamp > today_stamp:
