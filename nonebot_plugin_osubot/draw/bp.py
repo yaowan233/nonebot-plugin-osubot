@@ -6,7 +6,7 @@ from typing import Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
 
-from .score import cal_legacy_acc
+from .score import cal_legacy_acc, cal_legacy_rank
 from ..database import UserData
 from ..schema import NewScore
 from ..api import osu_api
@@ -33,6 +33,9 @@ async def draw_bp(
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [NewScore(**i) for i in bp_info]
+    player = await UserData.get_or_none(user_id=user_id)
+    if not player.lazer_mode:
+        score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
     if not bp_info:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     user = bp_info[0]["user"]["username"]
@@ -64,11 +67,14 @@ async def draw_bp(
             return f"近{day + 1}日内在 {GMN[mode]} 没有新增的BP成绩"
     for score_info in score_ls_filtered:
         # 判断是否开启lazer模式
-        user = await UserData.get_or_none(user_id=user_id)
-        if user.lazer_mode:
+        if player.lazer_mode:
             score_info.legacy_total_score = score_info.total_score
-        if score_info.ruleset_id == 3 and not user.lazer_mode:
+        if not player.lazer_mode:
+            score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
+        if score_info.ruleset_id == 3 and not player.lazer_mode:
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
+            is_hidden = {'acronym': 'HD'} in score_info.mods
+            score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
     msg = await draw_pfm(
         project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day
     )

@@ -43,6 +43,9 @@ async def draw_score(
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     elif isinstance(score_json, str):
         return score_json
+    user = await UserData.get_or_none(user_id=user_id)
+    if not user.lazer_mode:
+        score_json = [i for i in score_json if {"acronym": "CL"} in i["mods"]]
     if project in ("recent", "pr"):
         if len(score_json) < best:
             return f"未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录"
@@ -74,11 +77,14 @@ async def draw_score(
     map_json = await task2
     map_attribute_json = await task
     # 判断是否开启lazer模式
-    user = await UserData.get_or_none(user_id=user_id)
     if user.lazer_mode:
         score_info.legacy_total_score = score_info.total_score
+    if not user.lazer_mode:
+        score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
     if score_info.ruleset_id == 3 and not user.lazer_mode:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
+        is_hidden = {'acronym': 'HD'} in score_info.mods
+        score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
     return await draw_score_pic(
         score_info,
         info,
@@ -107,30 +113,32 @@ async def get_score_data(
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     elif isinstance(score_json, str):
         return score_json
-    if "score" not in score_json:
-        score_ls = [NewScore(**i) for i in score_json["scores"]]
-        if not score_ls:
-            return f"未查询到在 {GMN[mode]} 的游玩记录"
-        if mods:
+    user = await UserData.get_or_none(user_id=user_id)
+    score_ls = [NewScore(**i) for i in score_json["scores"]]
+    if not score_ls:
+        return f"未查询到在 {GMN[mode]} 的游玩记录"
+    if not user.lazer_mode:
+        score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
+        for i in score_ls:
+            i.mods.remove({"acronym": "CL"})
+    if mods:
+        for score in score_ls:
+            if mods == "NM" and not score.mods:
+                score_info = score
+                break
+            if score.mods == [{'acronym': i} for i in mods]:
+                score_info = score
+                break
+        else:
+            score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
             for score in score_ls:
-                if mods == "NM" and not score.mods:
-                    score_info = score
-                    break
-                if score.mods == mods:
+                if set(mods).issubset(set([i['acronym'] for i in score.mods])):
                     score_info = score
                     break
             else:
-                score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
-                for score in score_ls:
-                    if set(mods).issubset(set([i['acronym'] for i in score.mods])):
-                        score_info = score
-                        break
-                else:
-                    return f'未找到开启 {"|".join(mods)} Mods的成绩'
-        else:
-            score_info = score_ls[0]
+                return f'未找到开启 {"|".join(mods)} Mods的成绩'
     else:
-        score_info = NewScore(**score_json["score"])
+        score_info = score_ls[0]
     sayo_map_info = await task3
     path = map_path / str(sayo_map_info.data.sid)
     if not path.exists():
@@ -150,11 +158,12 @@ async def get_score_data(
     if isinstance(map_attribute_json, str):
         return map_attribute_json
     # 判断是否开启lazer模式
-    user = await UserData.get_or_none(user_id=user_id)
     if user.lazer_mode:
         score_info.legacy_total_score = score_info.total_score
     if score_info.ruleset_id == 3 and not user.lazer_mode:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
+        is_hidden = {'acronym': 'HD'} in score_info.mods
+        score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
     return await draw_score_pic(
         score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid
     )
@@ -622,3 +631,22 @@ def cal_legacy_acc(statistics: NewStatistics) -> float:
     if num == 0:
         return 1
     return (statistics.perfect * 300 + statistics.great * 300 + statistics.good * 200 + statistics.ok * 100 + statistics.meh * 50) / (num * 300)
+
+
+def cal_legacy_rank(accuracy: float, is_hidden: bool):
+    if accuracy == 1 and not is_hidden:
+        return "X"
+    elif accuracy == 1 and is_hidden:
+        return "XH"
+    elif accuracy >= 0.95 and not is_hidden:
+        return "S"
+    elif accuracy >= 0.95 and is_hidden:
+        return "SH"
+    elif accuracy >= 0.9:
+        return "A"
+    elif accuracy >= 0.8:
+        return "B"
+    elif accuracy >= 0.7:
+        return "C"
+    else:
+        return "D"
