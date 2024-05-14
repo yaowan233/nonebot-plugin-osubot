@@ -17,7 +17,7 @@ async def _bp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if "-" in state["para"]:
-        await _pfm(state)
+        await _pfm(event, state)
         return
     best = state["para"]
     if not best:
