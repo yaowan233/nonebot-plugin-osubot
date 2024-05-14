@@ -64,7 +64,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     else:
         im.alpha_composite(MapBg)
     # 模式
-    draw.text((50, 65), IconLs[mapinfo.mode], font=extra_30, anchor="lt")
+    draw.text((50, 65), IconLs[FGM[mapinfo.mode]], font=extra_30, anchor="lt")
     # 难度星星
     stars_bg = stars_diff(ss_pp_info.difficulty.stars)
     stars_img = stars_bg.resize((80, 30))
