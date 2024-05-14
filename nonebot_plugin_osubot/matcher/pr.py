@@ -30,7 +30,7 @@ async def _recent(event: Event, state: T_State):
             state["user"],
             mode,
             is_name=state["is_name"],
-            offset=low,
+            offset=low - 1,
             limit=high,
         )
         if not data:
@@ -89,7 +89,7 @@ async def _pr(event: Event, state: T_State):
             state["user"],
             NGM[mode],
             is_name=state["is_name"],
-            offset=low,
+            offset=low - 1,
             limit=high,
         )
         if not data:
