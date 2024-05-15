@@ -56,8 +56,12 @@ async def _recent(event: Event, state: T_State):
                 } in score_info.mods else None
             if score_info.ruleset_id == 3 and not player.lazer_mode:
                 score_info.accuracy = cal_legacy_acc(score_info.statistics)
-                is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
-                score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
+            if not player.lazer_mode:
+                is_hidden = any(
+                    i in score_info.mods
+                    for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+                )
+                score_info.rank = cal_legacy_rank(score_info, is_hidden)
         pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
@@ -115,8 +119,12 @@ async def _pr(event: Event, state: T_State):
                 } in score_info.mods else None
             if score_info.ruleset_id == 3 and not player.lazer_mode:
                 score_info.accuracy = cal_legacy_acc(score_info.statistics)
-                is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
-                score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
+            if not player.lazer_mode:
+                is_hidden = any(
+                    i in score_info.mods
+                    for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+                )
+                score_info.rank = cal_legacy_rank(score_info, is_hidden)
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:

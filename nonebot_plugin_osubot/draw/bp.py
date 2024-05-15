@@ -70,11 +70,17 @@ async def draw_bp(
         if player.lazer_mode:
             score_info.legacy_total_score = score_info.total_score
         if not player.lazer_mode:
-            score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
+            score_info.mods.remove({"acronym": "CL"}) if {
+                "acronym": "CL"
+            } in score_info.mods else None
         if score_info.ruleset_id == 3 and not player.lazer_mode:
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
-            is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
-            score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
+        if not player.lazer_mode:
+            is_hidden = any(
+                i in score_info.mods
+                for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+            )
+            score_info.rank = cal_legacy_rank(score_info, is_hidden)
     msg = await draw_pfm(
         project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day
     )
@@ -176,9 +182,7 @@ async def draw_pfm(
         )
 
         # 地图版本&时间
-        old_time = datetime.strptime(
-            bp.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
-        )
+        old_time = datetime.strptime(bp.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
         new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
         difficulty = bp.beatmap.version
         if len(difficulty) > 30:

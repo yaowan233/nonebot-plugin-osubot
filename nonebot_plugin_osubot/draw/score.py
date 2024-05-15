@@ -22,7 +22,8 @@ from .utils import (
     calc_songlen,
     stars_diff,
     get_modeimage,
-    open_user_icon, is_close,
+    open_user_icon,
+    is_close,
 )
 
 
@@ -36,7 +37,9 @@ async def draw_score(
     mapid: int = 0,
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
-    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid, is_name=is_name, limit=100))
+    task0 = asyncio.create_task(
+        osu_api(project, uid, mode, mapid, is_name=is_name, limit=100)
+    )
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     score_json = await task0
     if not score_json:
@@ -80,11 +83,17 @@ async def draw_score(
     if user.lazer_mode:
         score_info.legacy_total_score = score_info.total_score
     if not user.lazer_mode:
-        score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
+        score_info.mods.remove({"acronym": "CL"}) if {
+            "acronym": "CL"
+        } in score_info.mods else None
     if score_info.ruleset_id == 3 and not user.lazer_mode:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
-        score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
+    if not user.lazer_mode:
+        is_hidden = any(
+            i in score_info.mods
+            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+        )
+        score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return await draw_score_pic(
         score_info,
         info,
@@ -126,13 +135,13 @@ async def get_score_data(
             if mods == "NM" and not score.mods:
                 score_info = score
                 break
-            if score.mods == [{'acronym': i} for i in mods]:
+            if score.mods == [{"acronym": i} for i in mods]:
                 score_info = score
                 break
         else:
             score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
             for score in score_ls:
-                if set(mods).issubset(set([i['acronym'] for i in score.mods])):
+                if set(mods).issubset(set([i["acronym"] for i in score.mods])):
                     score_info = score
                     break
             else:
@@ -162,8 +171,12 @@ async def get_score_data(
         score_info.legacy_total_score = score_info.total_score
     if score_info.ruleset_id == 3 and not user.lazer_mode:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
-        score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
+    if not user.lazer_mode:
+        is_hidden = any(
+            i in score_info.mods
+            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+        )
+        score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return await draw_score_pic(
         score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid
     )
@@ -220,7 +233,10 @@ async def draw_score_pic(
         fill=color,
     )
     # mods
-    if any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})):
+    if any(
+        i in score_info.mods
+        for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+    ):
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
     else:
         ranking = ["X", "S", "A", "B", "C", "D", "F"]
@@ -311,7 +327,7 @@ async def draw_score_pic(
             new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
             im.alpha_composite(new_diff_len, (1190, 306 + 35 * num))
         else:
-            raise Exception('没有这种情况')
+            raise Exception("没有这种情况")
         if new == round(new):
             draw.text(
                 (1470, 310 + 35 * num),
@@ -395,7 +411,12 @@ async def draw_score_pic(
     # 评价
     draw.text((316, 307), score_info.rank, font=Venera_75, anchor="mm")
     # 分数
-    draw.text((498, 251), f"{score_info.legacy_total_score or score_info.total_score:,}", font=Torus_Regular_75, anchor="lm")
+    draw.text(
+        (498, 251),
+        f"{score_info.legacy_total_score or score_info.total_score:,}",
+        font=Torus_Regular_75,
+        anchor="lm",
+    )
     # 时间
     draw.text((498, 341), "达成时间:", font=Torus_SemiBold_20, anchor="lm")
     old_time = datetime.strptime(
@@ -630,26 +651,94 @@ def cal_legacy_acc(statistics: NewStatistics) -> float:
     statistics.meh = statistics.meh or 0
     statistics.perfect = statistics.perfect or 0
     statistics.miss = statistics.miss or 0
-    num = statistics.great + statistics.good + statistics.ok + statistics.meh + statistics.perfect + statistics.miss
+    num = (
+        statistics.great
+        + statistics.good
+        + statistics.ok
+        + statistics.meh
+        + statistics.perfect
+        + statistics.miss
+    )
     if num == 0:
         return 1
-    return (statistics.perfect * 300 + statistics.great * 300 + statistics.good * 200 + statistics.ok * 100 + statistics.meh * 50) / (num * 300)
+    return (
+        statistics.perfect * 300
+        + statistics.great * 300
+        + statistics.good * 200
+        + statistics.ok * 100
+        + statistics.meh * 50
+    ) / (num * 300)
 
 
-def cal_legacy_rank(accuracy: float, is_hidden: bool):
-    if accuracy == 1 and not is_hidden:
-        return "X"
-    elif accuracy == 1 and is_hidden:
-        return "XH"
-    elif accuracy >= 0.95 and not is_hidden:
-        return "S"
-    elif accuracy >= 0.95 and is_hidden:
-        return "SH"
-    elif accuracy >= 0.9:
-        return "A"
-    elif accuracy >= 0.8:
-        return "B"
-    elif accuracy >= 0.7:
-        return "C"
+def cal_legacy_rank(score_info: NewScore, is_hidden: bool):
+    great = score_info.statistics.great or 0
+    miss = score_info.statistics.miss or 0
+    meh = score_info.statistics.meh or 0
+    ok = score_info.statistics.ok or 0
+
+    if score_info.ruleset_id == 0:
+        max_combo = great + ok + meh + miss
+    elif score_info.ruleset_id == 1:
+        max_combo = great + ok + miss
     else:
-        return "D"
+        max_combo = score_info.max_combo
+
+    max_combo_90 = max_combo * 0.9
+    max_combo_80 = max_combo * 0.8
+    max_combo_70 = max_combo * 0.7
+    max_combo_60 = max_combo * 0.6
+    max_combo_1_percent = max_combo * 0.01
+
+    if score_info.accuracy == 1:
+        return "XH" if is_hidden else "X"
+
+    if score_info.ruleset_id == 3:
+        if score_info.accuracy >= 0.95:
+            return "SH" if is_hidden else "S"
+        elif score_info.accuracy >= 0.9:
+            return "A"
+        elif score_info.accuracy >= 0.8:
+            return "B"
+        elif score_info.accuracy >= 0.7:
+            return "C"
+        else:
+            return "D"
+
+    elif score_info.ruleset_id == 2:
+        if score_info.accuracy >= 0.98:
+            return "SH" if is_hidden else "S"
+        elif score_info.accuracy >= 0.94:
+            return "A"
+        elif score_info.accuracy >= 0.9:
+            return "B"
+        elif score_info.accuracy >= 0.85:
+            return "C"
+        else:
+            return "D"
+
+    elif score_info.ruleset_id == 1:
+        if great >= max_combo_90 and miss == 0:
+            return "SH" if is_hidden else "S"
+        elif (great >= max_combo_80 and miss == 0) or great >= max_combo_90:
+            return "A"
+        elif (great >= max_combo_70 and miss == 0) or great >= max_combo_80:
+            return "B"
+        elif great >= max_combo_60:
+            return "C"
+        else:
+            return "D"
+
+    elif score_info.ruleset_id == 0:
+        if great >= max_combo_90 and meh <= max_combo_1_percent and miss == 0:
+            return "SH" if is_hidden else "S"
+        elif (great >= max_combo_80 and miss == 0) or great >= max_combo_90:
+            return "A"
+        elif (great >= max_combo_70 and miss == 0) or great >= max_combo_80:
+            return "B"
+        elif great >= max_combo_60:
+            return "C"
+        else:
+            return "D"
+
+    else:
+        return "N/A"
