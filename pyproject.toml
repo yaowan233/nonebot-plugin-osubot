@@ -16,7 +16,7 @@ dependencies = [
     "nonebot-plugin-apscheduler~=0.4.0",
     "tortoise-orm>=0.20.0",
     "nonebot-plugin-tortoise-orm>=0.1.1",
-    "rosu-pp-py==1.0.0",
+    "rosu-pp-py==1.0.1",
     "reamber>=0.2.1",
     "httpx>=0.23.3",
     "typing_extensions>=4.11.0",
