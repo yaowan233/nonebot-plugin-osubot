@@ -72,8 +72,8 @@ async def _tbp(event: Event, state: T_State):
         await UniMessage.text(state["error"]).finish(reply_to=True)
     data = await draw_bp(
         "tbp",
-        int(event.get_user_id()),
         state["user"],
+        int(event.get_user_id()),
         NGM[state["mode"]],
         [],
         day=state["day"],
