@@ -227,8 +227,11 @@ async def draw_score_pic(
     if score_info.mods:
         for mods_num, s_mods in enumerate(score_info.mods):
             mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
-            mods_img = Image.open(mods_bg).convert("RGBA")
-            im.alpha_composite(mods_img, (500 + 50 * mods_num, 160))
+            try:
+                mods_img = Image.open(mods_bg).convert("RGBA")
+                im.alpha_composite(mods_img, (500 + 50 * mods_num, 160))
+            except FileNotFoundError:
+                pass
     # 成绩S-F
     rank_ok = False
     for rank_num, i in enumerate(ranking):

@@ -50,5 +50,5 @@ def get_mods_list(score_ls: list[NewScore], mods: list[str]) -> list[int]:
 def calc_mods(mods: list[dict]) -> int:
     num = 0
     for mod in mods:
-        num ^= mods_dic[mod['acronym']]
+        num ^= mods_dic.get(mod['acronym'], 0)
     return num
