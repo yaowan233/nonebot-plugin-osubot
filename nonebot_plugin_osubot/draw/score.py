@@ -83,7 +83,7 @@ async def draw_score(
         score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
     if score_info.ruleset_id == 3 and not user.lazer_mode:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        is_hidden = {'acronym': 'HD'} in score_info.mods
+        is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
         score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
     return await draw_score_pic(
         score_info,
@@ -162,7 +162,7 @@ async def get_score_data(
         score_info.legacy_total_score = score_info.total_score
     if score_info.ruleset_id == 3 and not user.lazer_mode:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        is_hidden = {'acronym': 'HD'} in score_info.mods
+        is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
         score_info.rank = cal_legacy_rank(score_info.accuracy, is_hidden)
     return await draw_score_pic(
         score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid
@@ -220,7 +220,7 @@ async def draw_score_pic(
         fill=color,
     )
     # mods
-    if "HD" in score_info.mods or "FL" in score_info.mods:
+    if any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})):
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
     else:
         ranking = ["X", "S", "A", "B", "C", "D", "F"]
