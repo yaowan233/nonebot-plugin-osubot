@@ -1,6 +1,6 @@
 from datetime import date
 from nonebot.log import logger
-from ..utils import GM
+from ..utils import GM, FGM
 from ..database.models import UserData, InfoData
 from ..schema import User
 from ..api import osu_api
@@ -14,9 +14,10 @@ async def bind_user_info(project: str, uid, qid, is_name) -> str:
         return info
     uid = info["id"]
     name = info["username"]
-    await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=0)
+    playmode = info["playmode"]
+    await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=FGM[playmode])
     await update_user_info(uid)
-    msg = f"用户 {name} 已成功绑定QQ {qid}\n默认模式为std，若更改模式至mania请输入/更新模式 3"
+    msg = f"用户 {name} 已成功绑定 {qid}\n默认模式为 {playmode}，如若更改模式至 mania 请输入/更新模式 3"
     return msg
 
 
