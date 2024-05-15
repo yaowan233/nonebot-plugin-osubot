@@ -671,6 +671,8 @@ def cal_legacy_acc(statistics: NewStatistics) -> float:
 
 
 def cal_legacy_rank(score_info: NewScore, is_hidden: bool):
+    if score_info.rank == "F":
+        return "F"
     great = score_info.statistics.great or 0
     miss = score_info.statistics.miss or 0
     meh = score_info.statistics.meh or 0

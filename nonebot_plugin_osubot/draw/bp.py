@@ -164,10 +164,13 @@ async def draw_pfm(
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
                 mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
-                mods_img = Image.open(mods_bg).convert("RGBA")
-                im.alpha_composite(
-                    mods_img, (210 + offset + 50 * mods_num, 192 + h_num)
-                )
+                try:
+                    mods_img = Image.open(mods_bg).convert("RGBA")
+                    im.alpha_composite(
+                        mods_img, (210 + offset + 50 * mods_num, 192 + h_num)
+                    )
+                except FileNotFoundError:
+                    pass
             if (bp.rank == "X" or bp.rank == "S") and (
                 "HD" in bp.mods or "FL" in bp.mods
             ):
