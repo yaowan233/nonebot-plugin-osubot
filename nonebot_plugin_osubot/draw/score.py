@@ -36,7 +36,7 @@ async def draw_score(
     mapid: int = 0,
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
-    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid, is_name=is_name))
+    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid, is_name=is_name, limit=100))
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     score_json = await task0
     if not score_json:
@@ -47,7 +47,7 @@ async def draw_score(
     if not user.lazer_mode:
         score_json = [i for i in score_json if {"acronym": "CL"} in i["mods"]]
     if project in ("recent", "pr"):
-        if len(score_json) < best:
+        if len(score_json) <= best:
             return f"未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录"
         score_info = NewScore(**score_json[best])
         grank = "--"
