@@ -147,6 +147,7 @@ async def get_score_data(
             else:
                 return f'未找到开启 {"|".join(mods)} Mods的成绩'
     else:
+        score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
         score_info = score_ls[0]
     sayo_map_info = await task3
     path = map_path / str(sayo_map_info.data.sid)
