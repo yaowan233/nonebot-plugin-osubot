@@ -86,6 +86,8 @@ async def osu_api(
         )
     elif project == "score":
         url = f"{api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={mode}"
+    elif project == "best_score":
+        url = f"{api}/beatmaps/{map_id}/scores/users/{uid}?mode={mode}"
     elif project == "bp":
         url = f"{api}/users/{uid}/scores/best?mode={mode}&limit=100"
     elif project == "map":

@@ -53,16 +53,14 @@ async def draw_score(
         if len(score_json) <= best:
             return f"未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录"
         score_info = NewScore(**score_json[best])
-        grank = "--"
     elif project == "bp":
         score_ls = [NewScore(**i) for i in score_json]
         mods_ls = get_mods_list(score_ls, mods)
         if len(mods_ls) < best:
             return f'未找到开启 {"|".join(mods)} Mods的第{best}个成绩'
         score_info = NewScore(**score_json[mods_ls[best - 1]])
-        grank = "--"
     else:
-        raise "Project Error"
+        raise Exception("Project Error")
     # 从官网获取信息
     path = map_path / str(score_info.beatmap.beatmapset_id)
     if not path.exists():
@@ -101,6 +99,7 @@ async def draw_score(
         map_attribute_json,
         score_info.beatmap.id,
         score_info.beatmap.beatmapset_id,
+        "",
     )
 
 
@@ -112,8 +111,14 @@ async def get_score_data(
     mapid: int = 0,
     is_name: bool = False,
 ):
+    grank = ""
     task = asyncio.create_task(get_beatmap_attribute(mapid, mode))
-    task0 = asyncio.create_task(osu_api("score", uid, mode, mapid, is_name=is_name))
+    if mods:
+        task0 = asyncio.create_task(osu_api("score", uid, mode, mapid, is_name=is_name))
+    else:
+        task0 = asyncio.create_task(
+            osu_api("best_score", uid, mode, mapid, is_name=is_name)
+        )
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     task2 = asyncio.create_task(osu_api("map", map_id=mapid))
     task3 = asyncio.create_task(get_sayo_map_info(mapid, 1))
@@ -122,8 +127,12 @@ async def get_score_data(
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     elif isinstance(score_json, str):
         return score_json
+    if not mods:
+        grank = score_json.get("position", "")
+        score_ls = [NewScore(**score_json["score"])]
+    else:
+        score_ls = [NewScore(**i) for i in score_json["scores"]]
     user = await UserData.get_or_none(user_id=user_id)
-    score_ls = [NewScore(**i) for i in score_json["scores"]]
     if not score_ls:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     if not user.lazer_mode:
@@ -178,12 +187,18 @@ async def get_score_data(
         )
         score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return await draw_score_pic(
-        score_info, info, map_json, map_attribute_json, mapid, sayo_map_info.data.sid
+        score_info,
+        info,
+        map_json,
+        map_attribute_json,
+        mapid,
+        sayo_map_info.data.sid,
+        grank,
     )
 
 
 async def draw_score_pic(
-    score_info: NewScore, info, map_json, map_attribute_json, bid, sid
+    score_info: NewScore, info, map_json, map_attribute_json, bid, sid, grank
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
@@ -425,7 +440,7 @@ async def draw_score_pic(
     new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    # draw.text((583, 410), grank, font=Torus_SemiBold_25, anchor='mm')
+    draw.text((583, 410), f"#{grank}", font=Torus_SemiBold_25, anchor="mm")
     # 左下玩家名
     draw.text((250, 530), info.username, font=Torus_SemiBold_30, anchor="lm")
     # 国内排名
