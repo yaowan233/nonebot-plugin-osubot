@@ -159,7 +159,7 @@ async def get_beatmap_attribute(map_id, mode):
     headers = {"Authorization": f"Bearer {token}"}
     req = await safe_async_post(url, headers, {"ruleset": mode})
     if req.status_code == 404:
-        raise "内部错误"
+        raise Exception("内部错误")
     return req.json()
 
 
