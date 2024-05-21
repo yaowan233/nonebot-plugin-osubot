@@ -12,7 +12,6 @@ from .schema import SayoBeatmap, RecommendData
 
 api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"
-pp_calc_api = "https://api.yuzuai.xyz/osu/ppcalc"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 plugin_config = get_plugin_config(Config)
 proxy = plugin_config.osu_proxy
