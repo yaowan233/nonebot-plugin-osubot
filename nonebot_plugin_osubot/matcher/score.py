@@ -14,6 +14,8 @@ score = on_command("score", priority=11, block=True)
 async def _score(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
+    if not state["para"].isdigit():
+        await UniMessage.text("请输入正确的谱面ID").finish(reply_to=True)
     data = await get_score_data(
         state["user"],
         int(event.get_user_id()),
