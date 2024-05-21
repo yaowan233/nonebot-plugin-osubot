@@ -1,0 +1,61 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Awesome-pyecharts</title>
+    <script type="text/javascript" src="https://assets.pyecharts.org/assets/v5/echarts.min.js"></script>
+</head>
+<body >
+    <div id="1" class="chart-container" style="width:900px; height:500px; "></div>
+    <script>
+        const chart = echarts.init(
+            document.getElementById('1'), 'white', {renderer: 'canvas'}
+        );
+        const option = {
+            "animation": false,
+        title: {
+          text: '{{ title }}',
+          left: 'center' // 标题水平居中
+        },
+        xAxis: {
+          type: 'category',
+          data: {{ date_ls }}
+        },
+        yAxis: [{
+          type: 'value',
+          scale: true
+        },
+        {
+          type: 'value',
+          scale: true,
+          alignTicks: true,
+          inverse: true
+        }],
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross'
+          }
+        },
+        legend: {
+          top: 30,
+          left: 'center',
+          data: ['pp', 'rank']
+        },
+        series: [
+          {
+            name: 'pp',
+            type: 'line',
+            data: {{ pp_ls }},
+            yAxisIndex: 0,
+            connectNulls: true
+          },
+          {
+            name: 'rank',
+            type: 'line',
+            data: {{ rank_ls }},
+            yAxisIndex: 1,
+            connectNulls: true
+          }
+        ]};
+        chart.setOption(option);
+    </script>
+</body>
