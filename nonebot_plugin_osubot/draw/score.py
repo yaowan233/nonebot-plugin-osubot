@@ -440,7 +440,7 @@ async def draw_score_pic(
     new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    draw.text((583, 410), f"#{grank}", font=Torus_SemiBold_25, anchor="mm")
+    draw.text((583, 410), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="mm")
     # 左下玩家名
     draw.text((250, 530), info.username, font=Torus_SemiBold_30, anchor="lm")
     # 国内排名
