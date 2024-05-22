@@ -8,7 +8,7 @@ require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_session")
 require("nonebot_plugin_tortoise_orm")
-require("nonebot-plugin-htmlrender")
+require("nonebot_plugin_htmlrender")
 from .database.models import UserData
 from .info import update_user_info
 from .config import Config
