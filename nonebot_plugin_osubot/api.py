@@ -142,6 +142,8 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
             return "未找到该玩家，请确认玩家ID"
         elif project == "score":
             return "未找到该地图成绩，请检查是否搞混了mapID与setID或模式"
+        elif project == "best_score":
+            return "未找到该地图成绩，请检查是否搞混了mapID与setID或模式"
         elif project == "bp":
             return "未找到该玩家BP"
         elif project == "map":
