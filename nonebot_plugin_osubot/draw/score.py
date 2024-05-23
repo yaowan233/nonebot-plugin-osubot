@@ -78,20 +78,7 @@ async def draw_score(
     map_json = await task2
     map_attribute_json = await task
     # 判断是否开启lazer模式
-    if user.lazer_mode:
-        score_info.legacy_total_score = score_info.total_score
-    if not user.lazer_mode:
-        score_info.mods.remove({"acronym": "CL"}) if {
-            "acronym": "CL"
-        } in score_info.mods else None
-    if score_info.ruleset_id == 3 and not user.lazer_mode:
-        score_info.accuracy = cal_legacy_acc(score_info.statistics)
-    if not user.lazer_mode:
-        is_hidden = any(
-            i in score_info.mods
-            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
-        )
-        score_info.rank = cal_legacy_rank(score_info, is_hidden)
+    score_info = cal_score_info(user.lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
@@ -176,16 +163,7 @@ async def get_score_data(
     if isinstance(map_attribute_json, str):
         return map_attribute_json
     # 判断是否开启lazer模式
-    if user.lazer_mode:
-        score_info.legacy_total_score = score_info.total_score
-    if score_info.ruleset_id == 3 and not user.lazer_mode:
-        score_info.accuracy = cal_legacy_acc(score_info.statistics)
-    if not user.lazer_mode:
-        is_hidden = any(
-            i in score_info.mods
-            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
-        )
-        score_info.rank = cal_legacy_rank(score_info, is_hidden)
+    score_info = cal_score_info(user.lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
@@ -440,7 +418,9 @@ async def draw_score_pic(
     new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    draw.text((583, 410), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="mm")
+    draw.text(
+        (583, 410), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="mm"
+    )
     # 左下玩家名
     draw.text((250, 530), info.username, font=Torus_SemiBold_30, anchor="lm")
     # 国内排名
@@ -759,3 +739,21 @@ def cal_legacy_rank(score_info: NewScore, is_hidden: bool):
 
     else:
         return "N/A"
+
+
+def cal_score_info(is_lazer: bool, score_info: NewScore) -> NewScore:
+    if is_lazer:
+        score_info.legacy_total_score = score_info.total_score
+    if not is_lazer:
+        score_info.mods.remove({"acronym": "CL"}) if {
+            "acronym": "CL"
+        } in score_info.mods else None
+    if score_info.ruleset_id == 3 and not is_lazer:
+        score_info.accuracy = cal_legacy_acc(score_info.statistics)
+    if not is_lazer:
+        is_hidden = any(
+            i in score_info.mods
+            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+        )
+        score_info.rank = cal_legacy_rank(score_info, is_hidden)
+    return score_info

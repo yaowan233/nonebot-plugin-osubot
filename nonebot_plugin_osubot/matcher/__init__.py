@@ -9,7 +9,7 @@ from .guess import (
 from .medal import medal
 # from .rank import group_pp_rank
 
-# from .bp_analyze import bp_analyze
+from .bp_analyze import bp_analyze
 from .pr import pr, recent
 from .osu_help import osu_help
 from .url_match import url_match
