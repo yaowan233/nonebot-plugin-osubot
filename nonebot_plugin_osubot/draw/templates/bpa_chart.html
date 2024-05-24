@@ -11,9 +11,14 @@
         );
         const option = {
           animation: false,
-          legend: {
+          legend: [{
             data: ['pp', 'time']
           },
+            {
+              data: ['XH', 'X', 'SH', 'S', 'A', 'B', 'C', 'D'],
+              top: 'bottom'
+            }
+          ],
           xAxis: [
             {
               type: 'category',
@@ -61,6 +66,87 @@
               type: 'bar',
               yAxisIndex: 1,
               data: {{ length_ls }}
+            },
+            {
+              name: 'XH',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#c7eaf5',
+                borderColor: '#b4ffff',
+              }
+            },
+            {
+              name: 'X',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#ffc83a',
+                borderColor: '#ffff00',
+              }
+            },
+            {
+              name: 'SH',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#c7eaf5',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'S',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#ffc83a',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'A',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#84d61c',
+                borderColor: 'transparent'
+
+              }
+            },
+            {
+              name: 'B',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#e9b941',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'C',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#fa8a59',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'D',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#f55757',
+                borderColor: 'transparent'
+              }
             }
           ]
         };
