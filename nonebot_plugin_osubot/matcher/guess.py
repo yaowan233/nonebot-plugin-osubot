@@ -39,7 +39,7 @@ data_path = Path() / "data" / "osu"
 pcm_path = data_path / "out.pcm"
 
 
-async def get_random_beatmap_set(binded_id, group_id, ttl=10):
+async def get_random_beatmap_set(binded_id, group_id, ttl=10) -> (NewScore, str):
     if ttl == 0:
         return
     selected_user = random.choice(binded_id)
@@ -54,7 +54,7 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10):
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
     else:
         return await get_random_beatmap_set(binded_id, group_id, ttl - 1)
-    return selected_score, user
+    return selected_score, user.osu_name
 
 
 @guess_audio.handle(parameterless=[split_msg()])
@@ -86,7 +86,7 @@ async def _(
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         selected_score = random.choice([NewScore(**i) for i in bp_info])
-        selected_user = user_data
+        selected_user = user_data.osu_name
     elif state["para"]:
         bp_info = await osu_api("bp", state["para"], NGM[state["mode"]], is_name=True)
         if not bp_info or isinstance(bp_info, str):
@@ -104,7 +104,7 @@ async def _(
     games[group_id] = selected_score
     set_timeout(matcher, group_id)
     await UniMessage.text(
-        f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user.osu_name} {NGM[mode]} 模式的bp"
+        f"开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自{selected_user} {NGM[mode]} 模式的bp"
     ).send(reply_to=True)
     logger.info(f"本次猜歌名为: {selected_score.beatmapset.title}")
     path = map_path / f"{selected_score.beatmapset.id}"
@@ -325,7 +325,7 @@ async def _(
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         selected_score = random.choice([NewScore(**i) for i in bp_info])
-        selected_user = user_data
+        selected_user = user_data.osu_name
     elif state["para"]:
         bp_info = await osu_api("bp", state["para"], NGM[state["mode"]], is_name=True)
         if not bp_info or isinstance(bp_info, str):
@@ -357,7 +357,7 @@ async def _(
     logger.info(f"本次猜歌名为: {selected_score.beatmapset.title_unicode}")
     await (
         UniMessage.text(
-            f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user.osu_name} {NGM[mode]} 模式的bp"
+            f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user} {NGM[mode]} 模式的bp"
         )
         + UniMessage.image(raw=byt)
     ).finish()
