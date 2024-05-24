@@ -87,6 +87,12 @@ async def _(
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         selected_score = random.choice([NewScore(**i) for i in bp_info])
         selected_user = user_data
+    elif state["para"]:
+        bp_info = await osu_api("bp", state["para"], NGM[state["mode"]], is_name=True)
+        if not bp_info or isinstance(bp_info, str):
+            await UniMessage.text("该用户无bp记录").finish(reply_to=True)
+        selected_score = random.choice([NewScore(**i) for i in bp_info])
+        selected_user = state["para"]
     else:
         selected_score, selected_user = await get_random_beatmap_set(
             binded_id, group_id
@@ -320,6 +326,12 @@ async def _(
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         selected_score = random.choice([NewScore(**i) for i in bp_info])
         selected_user = user_data
+    elif state["para"]:
+        bp_info = await osu_api("bp", state["para"], NGM[state["mode"]], is_name=True)
+        if not bp_info or isinstance(bp_info, str):
+            await UniMessage.text("该用户无bp记录").finish(reply_to=True)
+        selected_score = random.choice([NewScore(**i) for i in bp_info])
+        selected_user = state["para"]
     else:
         selected_score, selected_user = await get_random_beatmap_set(
             binded_id, session_id
