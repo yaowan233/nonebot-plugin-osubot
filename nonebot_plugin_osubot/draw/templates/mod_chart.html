@@ -1,0 +1,62 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Awesome-pyecharts</title>
+    <script type="text/javascript" src="./echarts.min.js"></script>
+</head>
+<body >
+    <div id="1" class="chart-container" style="width:900px; height:500px; "></div>
+    <script>
+        const chart = echarts.init(
+            document.getElementById('1'), 'white', {renderer: 'canvas'}
+        );
+        const option = {
+            animation: false,
+  series: [{
+      type: 'pie',
+      radius: [60, 110],
+      top: top + '%',
+      left: 'center',
+      width: 400,
+      itemStyle: {
+        borderRadius: 10,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: {
+        alignTo: 'edge',
+        formatter: '{name|{b}}\n{pp|{c} pp}',
+        minMargin: 5,
+        edgeDistance: 10,
+        lineHeight: 15,
+        rich: {
+          pp: {
+            fontSize: 12,
+            color: '#999'
+          },
+          name: {
+            fontSize: 10
+            }
+        }
+      },
+      labelLine: {
+        length: 15,
+        length2: 1,
+        maxSurfaceAngle: 80
+      },
+      labelLayout: function (params) {
+        const isLeft = params.labelRect.x < chart.getWidth() / 2;
+        const points = params.labelLinePoints;
+        // Update the end point.
+        points[2][0] = isLeft
+          ? params.labelRect.x
+          : params.labelRect.x + params.labelRect.width;
+        return {
+          labelLinePoints: points
+        };
+      },
+      data: {{ mod_pp_ls }}
+  }]
+};
+        chart.setOption(option);
+    </script>
+</body>

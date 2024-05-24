@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from nonebot import on_command
 from nonebot.internal.adapter import Event
 from nonebot.typing import T_State
@@ -5,7 +7,7 @@ from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
 from ..database import UserData
-from ..draw.echarts import draw_bpa_plot
+from ..draw.echarts import draw_bpa_plot, draw_mod_pp_plot
 from ..draw.score import cal_score_info
 from ..utils import NGM
 from ..schema import NewScore
@@ -52,7 +54,17 @@ async def _(event: Event, state: T_State):
         else:
             length_ls.append({'value': i.beatmap.total_length, 'itemStyle': {'color': rank_color[i.rank]}})
     byt = await draw_bpa_plot(pp_ls, length_ls)
-    await UniMessage.image(raw=byt).finish(reply_to=True)
+    mods_pp = defaultdict(int)
+    for num, i in enumerate(score_ls):
+        if not i.mods:
+            mods_pp["NM"] += i.pp * 0.95 ** num
+        for j in i.mods:
+            mods_pp[j['acronym']] += i.pp * 0.95 ** num
+    pp_data = []
+    for mod, pp in mods_pp.items():
+        pp_data.append({'name': mod, 'value': round(pp, 2)})
+    byt2 = await draw_mod_pp_plot(pp_data)
+    await (UniMessage.image(raw=byt) + UniMessage.image(raw=byt2)).finish(reply_to=True)
     # # 统计mods pp
     # mods_pp = defaultdict(int)
     # for num, i in enumerate(score_ls):
