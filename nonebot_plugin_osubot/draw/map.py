@@ -22,6 +22,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         return info
     mapinfo = Beatmap(**info)
     original_mapinfo = mapinfo.copy()
+    mods = [{'acronym': mod} for mod in mods]
     mapinfo = with_mods(mapinfo, None, mods)
     diffinfo = (
         calc_songlen(mapinfo.total_length),
