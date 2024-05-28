@@ -11,7 +11,7 @@ from ..draw.echarts import draw_bpa_plot, draw_mod_pp_plot
 from ..draw.score import cal_score_info
 from ..utils import NGM
 from ..schema import NewScore
-from ..api import osu_api
+from ..api import osu_api, get_users
 
 bp_analyze = on_command("bpa", aliases={"bp分析"}, priority=11, block=True)
 rank_color = {
@@ -64,18 +64,17 @@ async def _(event: Event, state: T_State):
     for mod, pp in mods_pp.items():
         pp_data.append({'name': mod, 'value': round(pp, 2)})
     byt2 = await draw_mod_pp_plot(pp_data)
-    await (UniMessage.image(raw=byt) + UniMessage.image(raw=byt2)).finish(reply_to=True)
-    # # 统计mods pp
-    # mods_pp = defaultdict(int)
-    # for num, i in enumerate(score_ls):
-    #     if not i.mods:
-    #         mods_pp["NM"] += i.pp * 0.95 ** num
-    #     for j in i.mods:
-    #         mods_pp[j] += i.pp * 0.95 ** num
-    # plt.pie(mods_pp.values(), labels=mods_pp.keys())
-    # legend_labels = [
-    #     f"{label}: {size:.0f}pp"
-    #     for label, size in zip(mods_pp.keys(), mods_pp.values())
-    # ]
-    # plt.legend(legend_labels, loc="upper right")
-    # plt.show()
+    mapper_pp = defaultdict(int)
+    for num, i in enumerate(score_ls):
+        mapper_pp[i.beatmap.user_id] += i.pp * 0.95 ** num
+    mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)
+    mapper_pp = mapper_pp[: 10]
+    users = await get_users([i[0] for i in mapper_pp])
+    user_dic = {i.id: i.username for i in users}
+    mapper_pp_data = []
+    for mapper, pp in mapper_pp:
+        mapper_pp_data.append({'name': user_dic.get(mapper, ''), 'value': round(pp, 2)})
+    if len(mapper_pp_data) > 20:
+        mapper_pp_data = mapper_pp_data[: 20]
+    byt3 = await draw_mod_pp_plot(mapper_pp_data)
+    await (UniMessage.image(raw=byt) + UniMessage.image(raw=byt2) + UniMessage.image(raw=byt3)).finish(reply_to=True)

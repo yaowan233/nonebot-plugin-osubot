@@ -10,7 +10,7 @@ require("nonebot_plugin_session")
 require("nonebot_plugin_tortoise_orm")
 require("nonebot_plugin_htmlrender")
 from .database.models import UserData
-from .info import update_user_info
+from .info import update_users_info
 from .config import Config
 from .matcher import *
 from nonebot_plugin_apscheduler import scheduler
@@ -39,9 +39,11 @@ async def update_info():
     result = await UserData.all()
     if not result:
         return
-    for user in result:
-        await update_user_info(user.osu_id)
-    logger.info(f"已更新{len(result)}位玩家数据")
+    users = [i.osu_id for i in result]
+    groups = [users[i:i + 50] for i in range(0, len(users), 50)]
+    for group in groups:
+        await update_users_info(group)
+    logger.info(f'已更新{len(result)}位玩家数据')
 
 
 @scheduler.scheduled_job("cron", hour="4", day_of_week="0", misfire_grace_time=60)
