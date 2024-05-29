@@ -57,6 +57,13 @@ class UserCompact(Base):
     statistics: Optional[UserStatistics]
 
 
+class StatisticsRulesets(Base):
+    osu: Optional[UserStatistics]
+    taiko: Optional[UserStatistics]
+    fruits: Optional[UserStatistics]
+    mania: Optional[UserStatistics]
+
+
 class User(UserCompact):
     cover_url: Optional[str]
     has_supported: Optional[bool]
@@ -66,3 +73,4 @@ class User(UserCompact):
     playmode: Optional[Literal["fruits", "mania", "osu", "taiko"]]
     playstyle: Optional[list[str]]
     badges: Optional[list[Badge]]
+    statistics_rulesets: Optional[StatisticsRulesets]
