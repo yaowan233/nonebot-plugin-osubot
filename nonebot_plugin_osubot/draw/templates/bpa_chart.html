@@ -59,7 +59,18 @@
               name: 'pp',
               symbol: 'none',
               type: 'line',
-              data: {{ pp_ls }}
+              data: {{ pp_ls }},
+           markPoint: {
+        data: [
+          { type: 'max', name: 'Max' },
+          { type: 'min', name: 'Min' }
+        ]
+      },
+      markLine: {
+        data: [{ type: 'average', name: 'Avg', symbol: 'arrow' }],
+          label: {position: 'start', formatter: '{c} pp'},
+
+      }
             },
             {
               name: 'time',
