@@ -157,7 +157,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     # 绘制mods
     if mods:
         for mods_num, s_mods in enumerate(mods):
-            mods_bg = osufile / "mods" / f"{s_mods}.png"
+            mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
             mods_img = Image.open(mods_bg).convert("RGBA")
             im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
     # mapper
