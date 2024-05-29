@@ -69,7 +69,7 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
         if num < 20:
             h_num = 102 * num
             # 难度
-            draw.text((20, 320 + h_num), IconLs[GM[cmap.mode]], font=extra_30, anchor="lt")
+            draw.text((20, 320 + h_num), IconLs[cmap.mode], font=extra_30, anchor="lt")
             # 星星
             stars_bg = stars_diff(cmap.star)
             stars_img = stars_bg.resize((80, 30))
