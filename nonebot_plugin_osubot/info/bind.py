@@ -16,7 +16,7 @@ async def bind_user_info(project: str, uid, qid, is_name) -> str:
     playmode = info["playmode"]
     await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=FGM[playmode])
     await update_users_info([uid])
-    msg = f"用户 {name} 已成功绑定QQ {qid}\n默认模式为 {playmode}，若更改模式至mania请输入/更新模式 3"
+    msg = f"成功绑定 {name}\n默认模式为 {playmode}，若更改模式至其他模式，如 mania，请输入 /更新模式 3"
     return msg
 
 
