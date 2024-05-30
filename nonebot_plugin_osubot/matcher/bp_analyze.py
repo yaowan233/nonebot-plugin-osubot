@@ -42,7 +42,7 @@ async def _(event: Event, state: T_State):
         if {'acronym': 'HT'} in score.mods:
             score.beatmap.total_length /= 0.75
     score_ls = [cal_score_info(user.lazer_mode, score) for score in score_ls]
-    pp_ls = [i.pp for i in score_ls]
+    pp_ls = [round(i.pp, 0) for i in score_ls]
     length_ls = []
     for i in score_ls:
         if i.rank == "XH":
