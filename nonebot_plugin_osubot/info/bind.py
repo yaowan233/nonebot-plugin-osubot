@@ -125,4 +125,4 @@ async def update_users_info(uids: list[int]):
         if user_info.osu_name != user.username:
             user_info.osu_name = user.username
             await user_info.save()
-        logger.info(f"玩家:[{user.uid}] 个人信息更新完毕")
+        logger.info(f"玩家:[{user.username}] 个人信息更新完毕")
