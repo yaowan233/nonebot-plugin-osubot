@@ -25,6 +25,8 @@ async def update_users_info(uids: list[int]):
     for user in users:
         if await InfoData.filter(osu_id=user.id, date=date.today()).first():
             continue
+        if not user.statistics_rulesets:
+            continue
         if not user.statistics_rulesets.osu:
             await InfoData.create(
                 osu_id=user.id,
