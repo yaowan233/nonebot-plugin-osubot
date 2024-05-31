@@ -163,19 +163,6 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
     return req.json()
 
 
-async def get_beatmap_attribute(map_id, mode):
-    url = f"{api}/beatmaps/{map_id}/attributes"
-    token = cache.get("token")
-    if not token:
-        await renew_token()
-        token = cache.get("token")
-    headers = {"Authorization": f"Bearer {token}"}
-    req = await safe_async_post(url, headers, {"ruleset": mode})
-    if req.status_code == 404:
-        raise Exception("内部错误")
-    return req.json()
-
-
 async def get_random_bg() -> Optional[bytes]:
     res = await safe_async_get(random.choice(bg_url))
     if res.status_code != 200:

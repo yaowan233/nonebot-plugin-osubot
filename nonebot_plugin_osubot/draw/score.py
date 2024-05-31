@@ -4,9 +4,9 @@ from io import BytesIO
 from typing import Optional, Union
 from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 
-from ..api import osu_api, get_map_bg, get_beatmap_attribute, get_sayo_map_info
+from ..api import osu_api, get_map_bg, get_sayo_map_info
 from ..beatmap_stats_moder import with_mods
-from ..schema import NewScore, Beatmap, User, BeatmapDifficultyAttributes
+from ..schema import NewScore, Beatmap, User
 from ..mods import get_mods_list
 from ..file import re_map, download_osu, user_cache_path, map_path
 from ..schema.score import NewStatistics
@@ -66,7 +66,6 @@ async def draw_score(
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score_info.beatmap.id}.osu"
-    task = asyncio.create_task(get_beatmap_attribute(score_info.beatmap.id, mode))
     task2 = asyncio.create_task(osu_api("map", map_id=score_info.beatmap.id))
     if not osu.exists():
         await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
@@ -78,14 +77,12 @@ async def draw_score(
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
-    map_attribute_json = await task
     # 判断是否开启lazer模式
     score_info = cal_score_info(user.lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
         map_json,
-        map_attribute_json,
         score_info.beatmap.id,
         score_info.beatmap.beatmapset_id,
         "",
@@ -101,7 +98,6 @@ async def get_score_data(
     is_name: bool = False,
 ):
     grank = ""
-    task = asyncio.create_task(get_beatmap_attribute(mapid, mode))
     if mods:
         task0 = asyncio.create_task(osu_api("score", uid, mode, mapid, is_name=is_name))
     else:
@@ -159,18 +155,14 @@ async def get_score_data(
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
-    map_attribute_json = await task
     if isinstance(map_json, str):
         return map_json
-    if isinstance(map_attribute_json, str):
-        return map_attribute_json
     # 判断是否开启lazer模式
     score_info = cal_score_info(user.lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
         map_json,
-        map_attribute_json,
         mapid,
         sayo_map_info.data.sid,
         grank,
@@ -178,7 +170,7 @@ async def get_score_data(
 
 
 async def draw_score_pic(
-    score_info: NewScore, info, map_json, map_attribute_json, bid, sid, grank
+    score_info: NewScore, info, map_json, bid, sid, grank
 ) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
@@ -268,7 +260,6 @@ async def draw_score_pic(
     # supporter
     if info.is_supporter:
         im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
-    map_attribute = BeatmapDifficultyAttributes(**map_attribute_json["attributes"])
     # 处理mania转谱cs
     if score_info.ruleset_id == 3 and mapinfo.mode == 0:
         temp_accuracy = mapinfo.accuracy
@@ -453,7 +444,7 @@ async def draw_score_pic(
         )
         draw.text(
             (1385, 550),
-            f"{score_info.max_combo:,}/{map_attribute.max_combo:,}",
+            f"{score_info.max_combo:,}/{pp_info.difficulty.max_combo}",
             font=Torus_Regular_30,
             anchor="mm",
         )
@@ -521,7 +512,7 @@ async def draw_score_pic(
         )
         draw.text(
             (1247, 550),
-            f"{score_info.max_combo}/{map_attribute.max_combo}",
+            f"{score_info.max_combo}/{pp_info.difficulty.max_combo}",
             font=Torus_Regular_30,
             anchor="mm",
         )

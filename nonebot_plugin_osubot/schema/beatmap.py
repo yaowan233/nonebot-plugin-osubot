@@ -80,11 +80,6 @@ class Beatmap(BeatmapCompact):
     url: str
 
 
-class BeatmapDifficultyAttributes(Base):
-    max_combo: int
-    star_rating: float
-
-
 class BackgroundsAttributes(Base):
     url: str
     user: dict
