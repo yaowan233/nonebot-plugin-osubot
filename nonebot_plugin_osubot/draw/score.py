@@ -71,6 +71,8 @@ async def draw_score(
     if not osu.exists():
         await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
     info_json = await task1
+    if isinstance(info_json, str):
+        return info_json
     info = User(**info_json)
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
