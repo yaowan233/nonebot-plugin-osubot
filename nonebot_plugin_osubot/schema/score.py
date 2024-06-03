@@ -2,6 +2,7 @@ from typing import Literal, Optional
 
 from .basemodel import Base
 from .beatmap import Beatmap, Beatmapset
+from .user import UserCompact
 
 
 class Statistics(Base):
@@ -84,5 +85,4 @@ class NewScore(Base):
     position: Optional[int]
     rank_country: Optional[int]
     rank_global: Optional[int]
-
-
+    user: Optional[UserCompact]

@@ -7,7 +7,7 @@ from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
 from ..database import UserData
-from ..draw.echarts import draw_bpa_plot, draw_mod_pp_plot
+from ..draw.echarts import draw_bpa_plot
 from ..draw.score import cal_score_info
 from ..utils import NGM
 from ..schema import NewScore
@@ -28,10 +28,12 @@ rank_color = {
 
 @bp_analyze.handle(parameterless=[split_msg()])
 async def _(event: Event, state: T_State):
+    if "error" in state:
+        await UniMessage.text(state["error"]).finish(reply_to=True)
     user = state["para"] if state["para"] else state["user"]
     bp_info = await osu_api("bp", user, NGM[state["mode"]], is_name=state["is_name"])
     if not bp_info:
-        await UniMessage.text(f'未查询到在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
+        await UniMessage.text(f'未查询到 {user} 在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
     if isinstance(bp_info, str):
         await UniMessage.text(bp_info).finish(reply_to=True)
     user = await UserData.get_or_none(user_id=event.get_user_id())
@@ -53,7 +55,6 @@ async def _(event: Event, state: T_State):
                               'itemStyle': {'color': rank_color[i.rank], 'shadowBlur': 8, 'shadowColor': "#ffff00"}})
         else:
             length_ls.append({'value': i.beatmap.total_length, 'itemStyle': {'color': rank_color[i.rank]}})
-    byt = await draw_bpa_plot(pp_ls, length_ls)
     mods_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
         if not i.mods:
@@ -63,7 +64,6 @@ async def _(event: Event, state: T_State):
     pp_data = []
     for mod, pp in mods_pp.items():
         pp_data.append({'name': mod, 'value': round(pp, 2)})
-    byt2 = await draw_mod_pp_plot(pp_data)
     mapper_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
         mapper_pp[i.beatmap.user_id] += i.pp * 0.95 ** num
@@ -76,5 +76,6 @@ async def _(event: Event, state: T_State):
         mapper_pp_data.append({'name': user_dic.get(mapper, ''), 'value': round(pp, 2)})
     if len(mapper_pp_data) > 20:
         mapper_pp_data = mapper_pp_data[: 20]
-    byt3 = await draw_mod_pp_plot(mapper_pp_data)
-    await (UniMessage.image(raw=byt) + UniMessage.image(raw=byt2) + UniMessage.image(raw=byt3)).finish(reply_to=True)
+    name = f'{score_ls[0].user.username} {NGM[state["mode"]]} 模式 '
+    byt = await draw_bpa_plot(name, pp_ls, length_ls, pp_data, mapper_pp_data)
+    await (UniMessage.image(raw=byt)).finish(reply_to=True)
