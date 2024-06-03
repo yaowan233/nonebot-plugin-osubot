@@ -58,397 +58,219 @@
                 formatter: '{value} pp'
               }
             },
-              {
-                  type: 'value',
-                  name: 'time',
-                  min: 0,
-                  alignTicks: true,
-                  axisLabel: {
-                      formatter: function (value, index) {
-                          const date = new Date(value * 1000);
-                          const minute = date.getMinutes();
-                          const seconds = date.getSeconds();
-                          if (seconds.toString().length === 1)
-                              return minute + ':' + '0' + seconds;
-                          return minute + ':' + seconds;
-                      }
-                  }
-              }
+            {
+              type: 'value',
+              name: 'time',
+              min: 0,
+              alignTicks: true,
+              axisLabel: {
+                  formatter: function (value, index) {
+                      const date = new Date(value * 1000);
+                      const minute = date.getMinutes();
+                      const seconds = date.getSeconds();
+                      if (seconds.toString().length === 1)
+                          return minute + ':' + '0' + seconds;
+                      return minute + ':' + seconds;
+                    }
+                }
+            }
           ],
-                series: [
-                    {
-                        name: 'pp',
-                        symbol: 'none',
-                        type: 'line',
-                        data: {{pp_ls}
-            },
-            markPoint: {
-                data: [
-                    { type: 'max', name: 'Max' },
-                    { type: 'min', name: 'Min' }
-                ]
-            },
-            markLine: {
-                data: [{ type: 'average', name: 'Avg', symbol: 'arrow' }],
-                label: {position: 'start', formatter: '{c} pp'},
-
-            }
-        },
-        {
-            name: 'time',
-                type
-        :
-            'bar',
-                yAxisIndex
-        :
-            1,
-                data
-        :
+          series: [
             {
-                {
-                    length_ls
-                }
-            }
-        }
-        ,
-        {
-            name: 'XH',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#c7eaf5',
-                    borderColor
-            :
-                '#b4ffff',
-            }
-        }
-        ,
-        {
-            name: 'X',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#ffc83a',
-                    borderColor
-            :
-                '#ffff00',
-            }
-        }
-        ,
-        {
-            name: 'SH',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#c7eaf5',
-                    borderColor
-            :
-                'transparent'
-            }
-        }
-        ,
-        {
-            name: 'S',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#ffc83a',
-                    borderColor
-            :
-                'transparent'
-            }
-        }
-        ,
-        {
-            name: 'A',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#84d61c',
-                    borderColor
-            :
-                'transparent'
-
-            }
-        }
-        ,
-        {
-            name: 'B',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#e9b941',
-                    borderColor
-            :
-                'transparent'
-            }
-        }
-        ,
-        {
-            name: 'C',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#fa8a59',
-                    borderColor
-            :
-                'transparent'
-            }
-        }
-        ,
-        {
-            name: 'D',
-                type
-        :
-            'candlestick',
-                yAxisIndex
-        :
-            1,
-                data
-        :
-            [],
-                itemStyle
-        :
-            {
-                color: '#f55757',
-                    borderColor
-            :
-                'transparent'
-            }
-        }
-        ,
-        {
-            type: 'pie',
-                left
-        :
-            '0%',
-                center
-        :
-            ['50%', '75%'],
-                radius
-        :
-            [60, 110],
-                width
-        :
-            400,
-                padAngle
-        :
-            3,
-                itemStyle
-        :
-            {
-                borderRadius: 10
-            }
-        ,
-            label: {
-                alignTo: 'edge',
-                    formatter
-            :
-                '{name|{b}}\n{pp|{c} pp}',
-                    minMargin
-            :
-                5,
-                    edgeDistance
-            :
-                10,
-                    lineHeight
-            :
-                15,
-                    rich
-            :
-                {
-                    pp: {
-                        fontSize: 12,
-                            color
-                    :
-                        '#999'
-                    }
-                ,
-                    name: {
-                        fontSize: 10
-                    }
-                }
-            }
-        ,
-            labelLine: {
-                length: 15,
-                    length2
-            :
-                1,
-                    maxSurfaceAngle
-            :
-                80
-            }
-        ,
-            labelLayout: function (params) {
-                const isLeft = params.labelRect.x < chart.getWidth() / 2;
-                const points = params.labelLinePoints;
-                // Update the end point.
-                points[2][0] = isLeft
-                    ? params.labelRect.x
-                    : params.labelRect.x + params.labelRect.width;
-                return {
-                    labelLinePoints: points
-                };
-            }
-        ,
-            data: {
-                {
-                    mod_pp_ls
-                }
-            }
-        }
-        ,
-        {
-            type: 'pie',
-                right
-        :
-            '0%',
-                left
-        :
-            '50%',
-                center
-        :
-            ['50%', '75%'],
-                radius
-        :
-            [60, 110],
-                width
-        :
-            400,
-                padAngle
-        :
-            3,
-                itemStyle
-        :
-            {
-                borderRadius: 10
-            }
-        ,
-            label: {
-                alignTo: 'edge',
-                    formatter
-            :
-                '{name|{b}}\n{pp|{c} pp}',
-                    minMargin
-            :
-                5,
-                    edgeDistance
-            :
-                10,
-                    lineHeight
-            :
-                15,
-                    rich
-            :
-                {
-                    pp: {
-                        fontSize: 12,
-                            color
-                    :
-                        '#999'
-                    }
-                ,
-                    name: {
-                        fontSize: 10
-                    }
-                }
-            }
-        ,
-            labelLine: {
-                length: 15,
-                    length2
-            :
-                1,
-                    maxSurfaceAngle
-            :
-                80
-            }
-        ,
-            labelLayout: function (params) {
-                const isLeft = params.labelRect.x < chart.getWidth() / 2;
-                const points = params.labelLinePoints;
-                // Update the end point.
-                points[2][0] = isLeft
-                    ? params.labelRect.x
-                    : params.labelRect.x + params.labelRect.width;
-                return {
-                    labelLinePoints: points
-                };
-            }
-        ,
-            data: {
-                {
-                    mapper_pp_ls
-                }
-            }
-        }
+              name: 'pp',
+              symbol: 'none',
+              type: 'line',
+              data: {{ pp_ls }},
+           markPoint: {
+        data: [
+          { type: 'max', name: 'Max' },
+          { type: 'min', name: 'Min' }
         ]
+      },
+      markLine: {
+        data: [{ type: 'average', name: 'Avg', symbol: 'arrow' }],
+          label: {position: 'start', formatter: '{c} pp'},
+
+      }
+            },
+            {
+              name: 'time',
+              type: 'bar',
+              yAxisIndex: 1,
+              data: {{ length_ls }}
+            },
+            {
+              name: 'XH',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#c7eaf5',
+                borderColor: '#b4ffff',
+              }
+            },
+            {
+              name: 'X',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#ffc83a',
+                borderColor: '#ffff00',
+              }
+            },
+            {
+              name: 'SH',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#c7eaf5',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'S',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#ffc83a',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'A',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#84d61c',
+                borderColor: 'transparent'
+
+              }
+            },
+            {
+              name: 'B',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#e9b941',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'C',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#fa8a59',
+                borderColor: 'transparent'
+              }
+            },
+            {
+              name: 'D',
+              type: 'candlestick',
+              yAxisIndex: 1,
+              data: [],
+              itemStyle: {
+                color: '#f55757',
+                borderColor: 'transparent'
+              }
+            },
+        {
+      type: 'pie',
+      left: '0%',
+      center: ['50%', '75%'],
+      radius: [60, 110],
+      width: 400,
+      padAngle: 3,
+      itemStyle: {
+        borderRadius: 10
+      },
+      label: {
+        alignTo: 'edge',
+        formatter: '{name|{b}}\n{pp|{c} pp}',
+        minMargin: 5,
+        edgeDistance: 10,
+        lineHeight: 15,
+        rich: {
+          pp: {
+            fontSize: 12,
+            color: '#999'
+          },
+          name: {
+            fontSize: 10
+            }
         }
-        ;
+      },
+      labelLine: {
+        length: 15,
+        length2: 1,
+        maxSurfaceAngle: 80
+      },
+      labelLayout: function (params) {
+        const isLeft = params.labelRect.x < chart.getWidth() / 2;
+        const points = params.labelLinePoints;
+        // Update the end point.
+        points[2][0] = isLeft
+          ? params.labelRect.x
+          : params.labelRect.x + params.labelRect.width;
+        return {
+          labelLinePoints: points
+        };
+      },
+      data: {{ mod_pp_ls }}
+  },
+        {
+      type: 'pie',
+      right: '0%',
+      left: '50%',
+      center: ['50%', '75%'],
+      radius: [60, 110],
+      width: 400,
+      padAngle: 3,
+      itemStyle: {
+        borderRadius: 10
+      },
+      label: {
+        alignTo: 'edge',
+        formatter: '{name|{b}}\n{pp|{c} pp}',
+        minMargin: 5,
+        edgeDistance: 10,
+        lineHeight: 15,
+        rich: {
+          pp: {
+            fontSize: 12,
+            color: '#999'
+          },
+          name: {
+            fontSize: 10
+            }
+        }
+      },
+      labelLine: {
+        length: 15,
+        length2: 1,
+        maxSurfaceAngle: 80
+      },
+      labelLayout: function (params) {
+        const isLeft = params.labelRect.x < chart.getWidth() / 2;
+        const points = params.labelLinePoints;
+        // Update the end point.
+        points[2][0] = isLeft
+          ? params.labelRect.x
+          : params.labelRect.x + params.labelRect.width;
+        return {
+          labelLinePoints: points
+        };
+      },
+      data: {{ mapper_pp_ls }}
+  }
+          ]
+        };
         chart.setOption(option);
     </script>
 </body>
