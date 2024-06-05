@@ -305,7 +305,7 @@ async def _(
     session_id: str = SessionId(SessionIdType.GROUP),
 ):
     if "error" in state:
-        mode = random.randint(0, 3)
+        mode = str(random.randint(0, 3))
         await UniMessage.text(f"由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(
             reply_to=True
         )
