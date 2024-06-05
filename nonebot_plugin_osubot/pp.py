@@ -1,5 +1,5 @@
 import math
-from rosu_pp_py import Beatmap, Performance, PerformanceAttributes, GameMode
+from rosu_pp_py import Beatmap, Performance, PerformanceAttributes, GameMode, Strains
 from .schema import NewScore
 from .mods import calc_mods
 
@@ -84,3 +84,13 @@ def get_ss_pp(path: str, mods: int) -> PerformanceAttributes:
     c = Performance(accuracy=100, mods=mods)
     ss_pp_info = c.calculate(beatmap)
     return ss_pp_info
+
+
+def get_strains(path: str, mods: int) -> Strains:
+    beatmap = Beatmap(path=path)
+    if mods & (1 << 9):
+        mods -= 1 << 9
+        mods += 1 << 6
+    c = Performance(accuracy=100, mods=mods)
+    strains = c.difficulty().strains(beatmap)
+    return strains
