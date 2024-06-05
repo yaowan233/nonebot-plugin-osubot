@@ -9,7 +9,7 @@ license = {text = "AGPL-3.0"}
 dependencies = [
     "nonebot2>=2.3.0",
     "pydantic~=1.10",
-    "nonebot-plugin-alconna>=0.45.3",
+    "nonebot-plugin-alconna>=0.46.4",
     "nonebot-plugin-session~=0.3",
     "pillow>=9.2.0",
     "expiringdict>=1.2.2",
