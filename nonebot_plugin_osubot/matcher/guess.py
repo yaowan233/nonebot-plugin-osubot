@@ -9,6 +9,7 @@ from PIL import Image
 
 from expiringdict import ExpiringDict
 from graiax import silkcoder
+from graiax.silkcoder.utils import CoderError
 from nonebot_plugin_alconna import UniMessage, UniMsg, At
 from nonebot import on_command, on_message
 from nonebot.internal.rule import Rule, Event
@@ -115,7 +116,10 @@ async def _(
         audio = await safe_async_get(
             f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3"
         )
-        await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+        try:
+            await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+        except CoderError:
+            await UniMessage.text("音频编码失败了 qaq " + f"本次猜歌名为: {selected_score.beatmapset.title}").finish(reply_to=True)
     with open(audio_path, "rb") as f:
         silk_byte = f.read()
     await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
@@ -277,7 +281,10 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
             audio = await safe_async_get(
                 f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3"
             )
-            await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+            try:
+                await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+            except CoderError:
+                await UniMessage.text("音频编码失败了 qaq").finish(reply_to=True)
         with open(audio_path, "rb") as f:
             silk_byte = f.read()
         await UniMessage.audio(
