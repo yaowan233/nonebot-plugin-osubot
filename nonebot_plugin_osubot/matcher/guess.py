@@ -343,6 +343,8 @@ async def _(
     pic_games[session_id] = selected_score
     pic_set_timeout(matcher, session_id)
     byt = await get_bg(selected_score.beatmap.id)
+    if isinstance(byt, str):
+        await guess_pic.finish(f"本次猜歌名为: {selected_score.beatmapset.title_unicode}" + byt)
     img = Image.open(byt)
     width, height = img.size
     crop_width = int(width * 0.3)
