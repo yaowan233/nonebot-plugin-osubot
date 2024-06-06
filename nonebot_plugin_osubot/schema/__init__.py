@@ -9,4 +9,15 @@ from .sayo_beatmap import SayoBeatmap
 from .alphaosu import RecommendData
 
 
-__all__ = ["Score", "BeatmapUserScore", "NewScore", "User", "Badge", "Beatmap", "Beatmapset", "SeasonalBackgrounds", "SayoBeatmap", "RecommendData"]
+__all__ = [
+    "Score",
+    "BeatmapUserScore",
+    "NewScore",
+    "User",
+    "Badge",
+    "Beatmap",
+    "Beatmapset",
+    "SeasonalBackgrounds",
+    "SayoBeatmap",
+    "RecommendData",
+]

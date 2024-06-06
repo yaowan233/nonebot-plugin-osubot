@@ -105,7 +105,7 @@ def draw_acc(img: Image, acc: float, mode: int):
         startangle=90,
         counterclock=False,
         pctdistance=0.9,
-        wedgeprops=dict(width=0.20),
+        wedgeprops={"width": 0.20},
         colors=["#66cbfd"],
     )
     ax.pie(
@@ -115,7 +115,7 @@ def draw_acc(img: Image, acc: float, mode: int):
         startangle=90,
         counterclock=False,
         pctdistance=0.9,
-        wedgeprops=dict(width=0.05),
+        wedgeprops={"width": 0.05},
     )
     patches[0][1].set_alpha(0)
     acc_img = BytesIO()

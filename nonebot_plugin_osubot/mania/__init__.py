@@ -6,7 +6,15 @@ from reamber.algorithms.generate import full_ln
 from reamber.osu.OsuHit import OsuHit
 from reamber.osu.OsuMap import OsuMap
 from reamber.algorithms.playField import PlayField
-from reamber.algorithms.playField.parts import PFDrawColumnLines, PFDrawBeatLines, PFDrawBpm, PFDrawSv, PFDrawNotes, PFDrawLines, PFDrawOffsets
+from reamber.algorithms.playField.parts import (
+    PFDrawColumnLines,
+    PFDrawBeatLines,
+    PFDrawBpm,
+    PFDrawSv,
+    PFDrawNotes,
+    PFDrawLines,
+    PFDrawOffsets,
+)
 from reamber.algorithms.pattern.combos.PtnCombo import PtnCombo
 from reamber.algorithms.pattern.Pattern import Pattern
 from pathlib import Path
@@ -109,7 +117,7 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
                 )
             )
         await asyncio.gather(*tasks)
-    osu_ls = list()
+    osu_ls = []
     for file in path.rglob("*.osu"):
         osu = OsuMap.read_file(str(file.absolute()))
         if options.rate:
