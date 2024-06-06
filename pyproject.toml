@@ -23,6 +23,7 @@ dependencies = [
     "matplotlib>=3.7.1",
     "graiax-silkcoder>=0.3.6",
     "nonebot-plugin-htmlrender>=0.3.1",
+    "nonebot-plugin-waiter>=0.6.1",
 ]
 requires-python = ">=3.9.8,<3.13"
 readme = "README.md"

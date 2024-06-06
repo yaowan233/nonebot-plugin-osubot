@@ -9,6 +9,7 @@ require("nonebot_plugin_alconna")
 require("nonebot_plugin_session")
 require("nonebot_plugin_tortoise_orm")
 require("nonebot_plugin_htmlrender")
+require("nonebot_plugin_waiter")
 from .database.models import UserData
 from .info import update_users_info
 from .config import Config
