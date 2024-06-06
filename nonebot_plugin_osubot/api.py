@@ -23,9 +23,7 @@ bg_url = plugin_config.info_bg
 
 
 @auto_retry
-async def safe_async_get(
-    url, headers: Optional[dict] = None, params: Optional[dict] = None
-) -> Response:
+async def safe_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
     async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
         client: AsyncClient
         req = await client.get(url, headers=headers, params=params)
@@ -51,7 +49,7 @@ async def renew_token():
             "client_secret": f"{key}",
             "grant_type": "client_credentials",
             "scope": "public",
-        }
+        },
     )
     if req.status_code == 200:
         osu_token = req.json()
@@ -80,9 +78,7 @@ async def osu_api(
     elif project == "recent":
         url = f"{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}"
     elif project == "pr":
-        url = (
-            f"{api}/users/{uid}/scores/recent?mode={mode}&limit={limit}&offset={offset}"
-        )
+        url = f"{api}/users/{uid}/scores/recent?mode={mode}&limit={limit}&offset={offset}"
     elif project == "score":
         url = f"{api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={mode}"
     elif project == "best_score":
@@ -127,15 +123,13 @@ async def get_users(users: list[int]):
         await renew_token()
         token = cache.get("token")
     headers = {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
-    req = await safe_async_get(f"{api}/users", headers=headers, params={'ids[]': users})
+    req = await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users})
     return [User(**i) for i in req.json()["users"]]
 
 
 async def api_info(project: str, url: str) -> Union[dict, str]:
     if project == "mapinfo" or project == "PPCalc":
-        headers = {
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"
-        }
+        headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"}
     else:
         token = cache.get("token")
         if not token:
@@ -176,9 +170,13 @@ async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
 
 
 async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
-    res = await get_first_response([f"https://api.osu.direct/media/background/{mapid}",
-                                    f"https://subapi.nerinyan.moe/bg/{mapid}",
-                                    f'https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}'])
+    res = await get_first_response(
+        [
+            f"https://api.osu.direct/media/background/{mapid}",
+            f"https://subapi.nerinyan.moe/bg/{mapid}",
+            f"https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}",
+        ]
+    )
     return BytesIO(res)
 
 
@@ -219,6 +217,4 @@ async def get_recommend(uid, mode, key_count):
 
 async def update_recommend(uid):
     headers = {"uid": str(uid)}
-    await safe_async_post(
-        "https://alphaosu.keytoix.vip/api/v1/self/users/synchronize", headers=headers
-    )
+    await safe_async_post("https://alphaosu.keytoix.vip/api/v1/self/users/synchronize", headers=headers)

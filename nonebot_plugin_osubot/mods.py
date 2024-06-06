@@ -42,7 +42,7 @@ def get_mods_list(score_ls: list[NewScore], mods: list[str]) -> list[int]:
         return list(range(len(score_ls)))
     mods_index_ls = []
     for i, score in enumerate(score_ls):
-        if score.mods and set(mods).issubset(j['acronym'] for j in score.mods):
+        if score.mods and set(mods).issubset(j["acronym"] for j in score.mods):
             mods_index_ls.append(i)
     return mods_index_ls
 
@@ -50,5 +50,5 @@ def get_mods_list(score_ls: list[NewScore], mods: list[str]) -> list[int]:
 def calc_mods(mods: list[dict]) -> int:
     num = 0
     for mod in mods:
-        num ^= mods_dic.get(mod['acronym'], 0)
+        num ^= mods_dic.get(mod["acronym"], 0)
     return num

@@ -8,9 +8,7 @@ from ..mania import generate_preview_pic
 from ..api import osu_api
 from ..file import download_tmp_osu
 
-generate_preview = on_command(
-    "预览", aliases={"preview", "完整预览"}, priority=11, block=True
-)
+generate_preview = on_command("预览", aliases={"preview", "完整预览"}, priority=11, block=True)
 
 
 @generate_preview.handle()

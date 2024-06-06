@@ -67,9 +67,7 @@ async def _(
 ):
     if "error" in state:
         mode = str(random.randint(0, 3))
-        await UniMessage.text(f"由于未绑定OSU账号，本次随机挑选模式进行猜歌\n" + state["error"]).send(
-            reply_to=True
-        )
+        await UniMessage.text(f"由于未绑定OSU账号，本次随机挑选模式进行猜歌\n" + state["error"]).send(reply_to=True)
     else:
         mode = state["mode"]
     group_id = session_id
@@ -95,9 +93,7 @@ async def _(
         selected_score = random.choice([NewScore(**i) for i in bp_info])
         selected_user = state["para"]
     else:
-        selected_score, selected_user = await get_random_beatmap_set(
-            binded_id, group_id
-        )
+        selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
     if not selected_score:
         await UniMessage.text("好像没有可以猜的歌了，今天的猜歌就到此结束吧！").finish(reply_to=True)
     if games.get(group_id, None):
@@ -113,13 +109,13 @@ async def _(
         path.mkdir(parents=True, exist_ok=True)
     audio_path = path / "audio.silk"
     if not audio_path.exists():
-        audio = await safe_async_get(
-            f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3"
-        )
+        audio = await safe_async_get(f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3")
         try:
             await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
         except CoderError:
-            await UniMessage.text("音频编码失败了 qaq " + f"本次猜歌名为: {selected_score.beatmapset.title}").finish(reply_to=True)
+            await UniMessage.text("音频编码失败了 qaq " + f"本次猜歌名为: {selected_score.beatmapset.title}").finish(
+                reply_to=True
+            )
     with open(audio_path, "rb") as f:
         silk_byte = f.read()
     await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
@@ -154,9 +150,7 @@ def set_timeout(matcher: Matcher, cid: str, timeout: float = 300):
     if timer:
         timer.cancel()
     loop = asyncio.get_running_loop()
-    timer = loop.call_later(
-        timeout, lambda: asyncio.ensure_future(stop_game(matcher, cid))
-    )
+    timer = loop.call_later(timeout, lambda: asyncio.ensure_future(stop_game(matcher, cid)))
     timers[cid] = timer
 
 
@@ -165,9 +159,7 @@ def pic_set_timeout(matcher: Matcher, cid: str, timeout: float = 300):
     if timer:
         timer.cancel()
     loop = asyncio.get_running_loop()
-    timer = loop.call_later(
-        timeout, lambda: asyncio.ensure_future(pic_stop_game(matcher, cid))
-    )
+    timer = loop.call_later(timeout, lambda: asyncio.ensure_future(pic_stop_game(matcher, cid)))
     pic_timers[cid] = timer
 
 
@@ -190,9 +182,7 @@ async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
     song_name = games[session_id].beatmapset.title
     song_name_unicode = games[session_id].beatmapset.title_unicode
     r1 = SequenceMatcher(None, song_name.lower(), event.get_plaintext().lower()).ratio()
-    r2 = SequenceMatcher(
-        None, song_name_unicode.lower(), event.get_plaintext().lower()
-    ).ratio()
+    r2 = SequenceMatcher(None, song_name_unicode.lower(), event.get_plaintext().lower()).ratio()
     r3 = SequenceMatcher(
         None,
         re.sub(r"[(\[].*[)\]]", "", song_name.lower()),
@@ -211,9 +201,7 @@ async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
     song_name = pic_games[session_id].beatmapset.title
     song_name_unicode = pic_games[session_id].beatmapset.title_unicode
     r1 = SequenceMatcher(None, song_name.lower(), event.get_plaintext().lower()).ratio()
-    r2 = SequenceMatcher(
-        None, song_name_unicode.lower(), event.get_plaintext().lower()
-    ).ratio()
+    r2 = SequenceMatcher(None, song_name_unicode.lower(), event.get_plaintext().lower()).ratio()
     r3 = SequenceMatcher(
         None,
         re.sub(r"[(\[].*[)\]]", "", song_name.lower()),
@@ -278,18 +266,14 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
             path.mkdir(parents=True, exist_ok=True)
         audio_path = map_path / f"{score.beatmapset.id}" / "audio.silk"
         if not audio_path.exists():
-            audio = await safe_async_get(
-                f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3"
-            )
+            audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
             try:
                 await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
             except CoderError:
                 await UniMessage.text("音频编码失败了 qaq").finish(reply_to=True)
         with open(audio_path, "rb") as f:
             silk_byte = f.read()
-        await UniMessage.audio(
-            raw=silk_byte, name="audio.silk", mimetype="silk"
-        ).finish()
+        await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
@@ -313,9 +297,7 @@ async def _(
 ):
     if "error" in state:
         mode = str(random.randint(0, 3))
-        await UniMessage.text(f"由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(
-            reply_to=True
-        )
+        await UniMessage.text(f"由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(reply_to=True)
     else:
         mode = state["mode"]
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
@@ -340,9 +322,7 @@ async def _(
         selected_score = random.choice([NewScore(**i) for i in bp_info])
         selected_user = state["para"]
     else:
-        selected_score, selected_user = await get_random_beatmap_set(
-            binded_id, session_id
-        )
+        selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
     if not selected_score:
         await guess_pic.finish("好像没有可以猜的歌了，今天的猜歌就到此结束吧！")
     if pic_games.get(session_id, None):
@@ -365,8 +345,6 @@ async def _(
     cropped_image.save(byt, "png")
     logger.info(f"本次猜歌名为: {selected_score.beatmapset.title_unicode}")
     await (
-        UniMessage.text(
-            f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user} {NGM[mode]} 模式的bp"
-        )
+        UniMessage.text(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user} {NGM[mode]} 模式的bp")
         + UniMessage.image(raw=byt)
     ).finish()

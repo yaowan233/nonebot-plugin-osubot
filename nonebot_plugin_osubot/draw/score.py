@@ -37,9 +37,7 @@ async def draw_score(
     mapid: int = 0,
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
-    task0 = asyncio.create_task(
-        osu_api(project, uid, mode, mapid, is_name=is_name, limit=100)
-    )
+    task0 = asyncio.create_task(osu_api(project, uid, mode, mapid, is_name=is_name, limit=100))
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     score_json = await task0
     if not score_json:
@@ -101,9 +99,7 @@ async def get_score_data(
     if mods:
         task0 = asyncio.create_task(osu_api("score", uid, mode, mapid, is_name=is_name))
     else:
-        task0 = asyncio.create_task(
-            osu_api("best_score", uid, mode, mapid, is_name=is_name)
-        )
+        task0 = asyncio.create_task(osu_api("best_score", uid, mode, mapid, is_name=is_name))
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     task2 = asyncio.create_task(osu_api("map", map_id=mapid))
     task3 = asyncio.create_task(get_sayo_map_info(mapid, 1))
@@ -169,9 +165,7 @@ async def get_score_data(
     )
 
 
-async def draw_score_pic(
-    score_info: NewScore, info, map_json, bid, sid, grank
-) -> BytesIO:
+async def draw_score_pic(score_info: NewScore, info, map_json, bid, sid, grank) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
@@ -220,10 +214,7 @@ async def draw_score_pic(
         fill=color,
     )
     # mods
-    if any(
-        i in score_info.mods
-        for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
-    ):
+    if any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})):
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
     else:
         ranking = ["X", "S", "A", "B", "C", "D", "F"]
@@ -267,11 +258,7 @@ async def draw_score_pic(
             mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners
         )
         convert_od = round(temp_accuracy)
-        if (
-            convert < 0.20
-            or (convert < 0.30 or round(mapinfo.cs) >= 5)
-            and convert_od > 5
-        ):
+        if convert < 0.20 or (convert < 0.30 or round(mapinfo.cs) >= 5) and convert_od > 5:
             mapinfo.cs = 7.0
         elif (convert < 0.30 or round(mapinfo.cs) >= 5) and convert_od <= 5:
             mapinfo.cs = 6.0
@@ -337,17 +324,13 @@ async def draw_score_pic(
         new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
         new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
         im.alpha_composite(new_diff_len, (1190, 446))
-        orig_difflen = (
-            int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
-        )
+        orig_difflen = int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
         orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
         im.alpha_composite(orig_diff_len, (1190, 446))
     elif stars < original_stars:
         color = (161, 187, 127, 255)
         orig_color = (255, 204, 34, 255)
-        orig_difflen = (
-            int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
-        )
+        orig_difflen = int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
         orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
         im.alpha_composite(orig_diff_len, (1190, 446))
         new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
@@ -375,9 +358,7 @@ async def draw_score_pic(
             fill=(255, 204, 34, 255),
         )
     # 状态
-    draw.text(
-        (1400, 184), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor="mm"
-    )
+    draw.text((1400, 184), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor="mm")
     # mapid
     draw.text((1485, 90), f"Mapid: {bid}", font=Torus_SemiBold_20, anchor="rm")
     # 曲名
@@ -405,15 +386,11 @@ async def draw_score_pic(
     )
     # 时间
     draw.text((498, 341), "达成时间:", font=Torus_SemiBold_20, anchor="lm")
-    old_time = datetime.strptime(
-        score_info.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
-    )
+    old_time = datetime.strptime(score_info.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
     new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    draw.text(
-        (583, 410), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="mm"
-    )
+    draw.text((583, 410), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="mm")
     # 左下玩家名
     draw.text((250, 530), info.username, font=Torus_SemiBold_30, anchor="lm")
     # 国内排名
@@ -427,15 +404,9 @@ async def draw_score_pic(
         draw.text((720, 550), ss_pp, font=Torus_Regular_30, anchor="mm")
         draw.text((840, 550), if_pp, font=Torus_Regular_30, anchor="mm")
         draw.text((960, 550), f"{pp_info.pp:.0f}", font=Torus_Regular_30, anchor="mm")
-        draw.text(
-            (720, 645), f"{pp_info.pp_aim:.0f}", font=Torus_Regular_30, anchor="mm"
-        )
-        draw.text(
-            (840, 645), f"{pp_info.pp_speed:.0f}", font=Torus_Regular_30, anchor="mm"
-        )
-        draw.text(
-            (960, 645), f"{pp_info.pp_accuracy:.0f}", font=Torus_Regular_30, anchor="mm"
-        )
+        draw.text((720, 645), f"{pp_info.pp_aim:.0f}", font=Torus_Regular_30, anchor="mm")
+        draw.text((840, 645), f"{pp_info.pp_speed:.0f}", font=Torus_Regular_30, anchor="mm")
+        draw.text((960, 645), f"{pp_info.pp_accuracy:.0f}", font=Torus_Regular_30, anchor="mm")
         draw.text(
             (1157, 550),
             f"{score_info.accuracy * 100:.2f}%",
@@ -479,12 +450,8 @@ async def draw_score_pic(
             font=Torus_Regular_30,
             anchor="mm",
         )
-        draw.text(
-            (1270, 550), f"{score_info.max_combo:,}", font=Torus_Regular_30, anchor="mm"
-        )
-        draw.text(
-            (1420, 550), f"{pp_info.pp:.0f}/{ss_pp}", font=Torus_Regular_30, anchor="mm"
-        )
+        draw.text((1270, 550), f"{score_info.max_combo:,}", font=Torus_Regular_30, anchor="mm")
+        draw.text((1420, 550), f"{pp_info.pp:.0f}/{ss_pp}", font=Torus_Regular_30, anchor="mm")
         draw.text(
             (1118, 645),
             f"{score_info.statistics.great or 0}",
@@ -516,9 +483,7 @@ async def draw_score_pic(
             font=Torus_Regular_30,
             anchor="mm",
         )
-        draw.text(
-            (1411, 550), f"{pp_info.pp:.0f}/{ss_pp}", font=Torus_Regular_30, anchor="mm"
-        )
+        draw.text((1411, 550), f"{pp_info.pp:.0f}/{ss_pp}", font=Torus_Regular_30, anchor="mm")
         draw.text(
             (1062, 645),
             f"{score_info.statistics.great or 0}",
@@ -558,12 +523,8 @@ async def draw_score_pic(
             font=Torus_Regular_30,
             anchor="mm",
         )
-        draw.text(
-            (1197, 550), f"{score_info.max_combo}", font=Torus_Regular_30, anchor="mm"
-        )
-        draw.text(
-            (1395, 550), f"{pp_info.pp:.0f}/{ss_pp}", font=Torus_Regular_30, anchor="mm"
-        )
+        draw.text((1197, 550), f"{score_info.max_combo}", font=Torus_Regular_30, anchor="mm")
+        draw.text((1395, 550), f"{pp_info.pp:.0f}/{ss_pp}", font=Torus_Regular_30, anchor="mm")
         draw.text(
             (953, 645),
             f"{score_info.statistics.perfect or 0}",
@@ -623,9 +584,7 @@ async def draw_score_pic(
         gif_frames.append(rgba_frame)
     gif_bytes = BytesIO()
     # 保存 GIF 图片
-    gif_frames[0].save(
-        gif_bytes, format="gif", save_all=True, append_images=gif_frames[1:]
-    )
+    gif_frames[0].save(gif_bytes, format="gif", save_all=True, append_images=gif_frames[1:])
     # 输出
     gif_frames[0].close()
     user_icon.close()
@@ -639,14 +598,7 @@ def cal_legacy_acc(statistics: NewStatistics) -> float:
     statistics.meh = statistics.meh or 0
     statistics.perfect = statistics.perfect or 0
     statistics.miss = statistics.miss or 0
-    num = (
-        statistics.great
-        + statistics.good
-        + statistics.ok
-        + statistics.meh
-        + statistics.perfect
-        + statistics.miss
-    )
+    num = statistics.great + statistics.good + statistics.ok + statistics.meh + statistics.perfect + statistics.miss
     if num == 0:
         return 1
     return (
@@ -738,15 +690,10 @@ def cal_score_info(is_lazer: bool, score_info: NewScore) -> NewScore:
     if is_lazer:
         score_info.legacy_total_score = score_info.total_score
     if not is_lazer:
-        score_info.mods.remove({"acronym": "CL"}) if {
-            "acronym": "CL"
-        } in score_info.mods else None
+        score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
     if score_info.ruleset_id == 3 and not is_lazer:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
     if not is_lazer:
-        is_hidden = any(
-            i in score_info.mods
-            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
-        )
+        is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
         score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return score_info
