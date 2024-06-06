@@ -13,7 +13,7 @@ require("nonebot_plugin_waiter")
 from .database.models import UserData
 from .info import update_users_info
 from .config import Config
-from .matcher import *
+from .matcher import *  # noqa
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_tortoise_orm import add_model
 
