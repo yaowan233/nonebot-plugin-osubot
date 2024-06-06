@@ -31,7 +31,7 @@ BgImg1 = Image.open(osufile / "History Score.jpg").convert("RGBA")
 MapBg = Image.open(osufile / "beatmapinfo.png").convert("RGBA")
 MapBg1 = Image.open(osufile / "maniabeatmapinfo.png").convert("RGBA")
 BarImg = Image.open(osufile / "work" / "bmap.png").convert("RGBA")
-Stars = Image.open(osufile / "work" / f"stars.png").convert("RGBA")
+Stars = Image.open(osufile / "work" / "stars.png").convert("RGBA")
 
 # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
 

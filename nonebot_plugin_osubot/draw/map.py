@@ -11,7 +11,7 @@ from ..file import re_map, get_projectimg, download_osu, map_path
 from ..utils import FGM
 from ..pp import get_ss_pp
 from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio, is_close
-from .static import *
+from .static import Image, Torus_Regular_20, Torus_SemiBold_20, MapBg1, MapBg, IconLs, Torus_SemiBold_25, osufile, extra_30
 
 
 async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
@@ -117,7 +117,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             raise Exception("没有这种情况")
         draw.text(
             (1170, 428 + 35 * num),
-            str(float("%.2f" % new)).rstrip("0").rstrip("."),
+            str(float(f"{new}.2f")).rstrip("0").rstrip("."),
             font=Torus_SemiBold_20,
             anchor="mm",
         )

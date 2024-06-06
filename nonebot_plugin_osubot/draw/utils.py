@@ -10,7 +10,7 @@ from ..file import get_projectimg, user_cache_path
 from ..schema import SeasonalBackgrounds, User
 from ..api import get_seasonal_bg, safe_async_get
 
-from .static import *
+from .static import Stars, ColorArr, Image, osufile, Path, np
 
 
 def image2bytesio(pic: Image):

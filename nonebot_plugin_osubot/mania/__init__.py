@@ -6,7 +6,7 @@ from reamber.algorithms.generate import full_ln
 from reamber.osu.OsuHit import OsuHit
 from reamber.osu.OsuMap import OsuMap
 from reamber.algorithms.playField import PlayField
-from reamber.algorithms.playField.parts import *
+from reamber.algorithms.playField.parts import PFDrawColumnLines, PFDrawBeatLines, PFDrawBpm, PFDrawSv, PFDrawNotes, PFDrawLines, PFDrawOffsets
 from reamber.algorithms.pattern.combos.PtnCombo import PtnCombo
 from reamber.algorithms.pattern.Pattern import Pattern
 from pathlib import Path

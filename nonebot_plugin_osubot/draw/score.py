@@ -14,7 +14,7 @@ from ..utils import GMN
 from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 from ..database.models import UserData
 
-from .static import *
+from .static import Torus_Regular_30, Torus_SemiBold_20, Torus_SemiBold_30, Venera_75, Torus_Regular_75, Torus_SemiBold_25, IconLs, Image, osufile, SupporterBg, Torus_Regular_20, extra_30
 from .utils import (
     draw_acc,
     draw_fillet,
@@ -131,7 +131,7 @@ async def get_score_data(
         else:
             score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
             for score in score_ls:
-                if set(mods).issubset(set([i["acronym"] for i in score.mods])):
+                if set(mods).issubset(set(i["acronym"] for i in score.mods)):
                     score_info = score
                     break
             else:
@@ -304,14 +304,14 @@ async def draw_score_pic(score_info: NewScore, info, map_json, bid, sid, grank) 
         if new == round(new):
             draw.text(
                 (1470, 310 + 35 * num),
-                "%.0f" % new,
+                f"{new}.0f",
                 font=Torus_SemiBold_20,
                 anchor="mm",
             )
         else:
             draw.text(
                 (1470, 310 + 35 * num),
-                "%.2f" % new if new != round(new, 1) else "%.1f" % new,
+                f"{new}.2f" if new != round(new, 1) else f"{new}.1f",
                 font=Torus_SemiBold_20,
                 anchor="mm",
             )

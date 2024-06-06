@@ -10,7 +10,7 @@ from ..api import safe_async_get
 
 
 medal_data_path = Path(__file__).parent.parent / "osufile" / "medals" / "medals.json"
-with open(medal_data_path, "r") as file:
+with open(medal_data_path) as file:
     medal_json = json.load(file)
 
 

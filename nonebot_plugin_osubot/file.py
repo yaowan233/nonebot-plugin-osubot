@@ -84,7 +84,7 @@ def re_map(file: Union[bytes, Path]) -> str:
     if isinstance(file, bytes):
         text = TextIOWrapper(BytesIO(file), "utf-8").read()
     else:
-        with open(file, "r", encoding="utf-8") as f:
+        with open(file, encoding="utf-8") as f:
             text = f.read()
     res = re.search(r"\d,\d,\"(.+)\"", text)
     bg = "mapbg.png" if not res else res.group(1).strip()

@@ -3,7 +3,7 @@ from io import BytesIO
 from typing import Union
 from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
-from .static import *
+from .static import Image, Torus_Regular_20, ExpLeftBg, ExpRightBg, ExpCenterBg, Torus_Regular_45, Torus_Regular_40, Torus_Regular_30, Torus_Regular_25, Torus_Regular_35, SupporterBg, osufile, Torus_Regular_50, InfoImg
 from .utils import draw_fillet, info_calc, open_user_icon
 
 from ..api import osu_api, get_random_bg

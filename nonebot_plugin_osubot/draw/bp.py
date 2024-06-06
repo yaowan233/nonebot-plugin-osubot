@@ -15,7 +15,7 @@ from ..mods import get_mods_list
 from ..file import get_projectimg
 
 from .utils import draw_fillet, draw_fillet2
-from .static import *
+from .static import BgImg, BgImg1, Torus_Regular_25, Torus_Regular_20, Torus_SemiBold_25, Image, osufile
 
 
 async def draw_bp(

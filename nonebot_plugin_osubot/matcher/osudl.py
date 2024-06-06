@@ -16,7 +16,7 @@ async def _osudl(setid: Message = CommandArg()):
     file_path = osz_path.absolute()
     try:
         await UniMessage.file(path=file_path).send()
-    except Exception as e:
+    except Exception:
         await UniMessage.text("上传文件失败，可能是群空间满或没有权限导致的").send(reply_to=True)
     finally:
         try:

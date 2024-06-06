@@ -67,7 +67,7 @@ async def _(
 ):
     if "error" in state:
         mode = str(random.randint(0, 3))
-        await UniMessage.text(f"由于未绑定OSU账号，本次随机挑选模式进行猜歌\n" + state["error"]).send(reply_to=True)
+        await UniMessage.text("由于未绑定OSU账号，本次随机挑选模式进行猜歌\n" + state["error"]).send(reply_to=True)
     else:
         mode = state["mode"]
     group_id = session_id
@@ -297,7 +297,7 @@ async def _(
 ):
     if "error" in state:
         mode = str(random.randint(0, 3))
-        await UniMessage.text(f"由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(reply_to=True)
+        await UniMessage.text("由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(reply_to=True)
     else:
         mode = state["mode"]
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
