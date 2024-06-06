@@ -58,18 +58,14 @@ async def generate_preview_pic(file: Path, full=False) -> BytesIO:
             **PFDrawLines.Colors.RED,
             keys=keys,
             combo=np.concatenate(
-                PtnCombo(grp).template_chord_stream(
-                    primary=3, secondary=2, keys=keys, and_lower=True
-                ),
+                PtnCombo(grp).template_chord_stream(primary=3, secondary=2, keys=keys, and_lower=True),
                 axis=0,
             ),
         )
         pf += PFDrawLines.from_combo(
             **PFDrawLines.Colors.PURPLE,
             keys=keys,
-            combo=np.concatenate(
-                PtnCombo(grp).template_jacks(minimum_length=2, keys=keys), axis=0
-            ),
+            combo=np.concatenate(PtnCombo(grp).template_jacks(minimum_length=2, keys=keys), axis=0),
         )
     byt = BytesIO()
     pf.export_fold(max_height=3000).save(byt, "png")

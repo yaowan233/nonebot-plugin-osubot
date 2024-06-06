@@ -41,10 +41,10 @@ async def update_info():
     if not result:
         return
     users = [i.osu_id for i in result]
-    groups = [users[i:i + 50] for i in range(0, len(users), 50)]
+    groups = [users[i : i + 50] for i in range(0, len(users), 50)]
     for group in groups:
         await update_users_info(group)
-    logger.info(f'已更新{len(result)}位玩家数据')
+    logger.info(f"已更新{len(result)}位玩家数据")
 
 
 @scheduler.scheduled_job("cron", hour="4", day_of_week="0", misfire_grace_time=60)

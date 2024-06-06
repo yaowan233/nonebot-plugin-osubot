@@ -11,9 +11,7 @@ from nonebot.log import logger
 from .utils import split_msg
 from ..api import get_sayo_map_info, get_recommend, update_recommend
 
-recommend = on_command(
-    "推荐", priority=11, block=True, aliases={"recommend", "推荐铺面", "推荐谱面"}
-)
+recommend = on_command("推荐", priority=11, block=True, aliases={"recommend", "推荐铺面", "推荐谱面"})
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
 
 

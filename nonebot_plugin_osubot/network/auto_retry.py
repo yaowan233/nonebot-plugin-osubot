@@ -17,4 +17,5 @@ def auto_retry(func: Callable[P, T]) -> Callable[P, T]:
             except Exception as e:
                 logger.warning(f"{e} | Retrying... {i + 1}/5")
         logger.error(f"多次重试失败，请检查网络连接")
+
     return wrapper

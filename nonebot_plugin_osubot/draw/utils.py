@@ -31,9 +31,7 @@ def draw_fillet(img, radii):
     alpha = Image.new("L", img.size, 255)
     alpha.paste(circle.crop((0, 0, radii, radii)), (0, 0))  # 左上角
     alpha.paste(circle.crop((radii, 0, radii * 2, radii)), (w - radii, 0))  # 右上角
-    alpha.paste(
-        circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii)
-    )  # 右下角
+    alpha.paste(circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii))  # 右下角
     alpha.paste(circle.crop((0, radii, radii, radii * 2)), (0, h - radii))  # 左下角
     # 白色区域透明可见，黑色区域不可见
     img.putalpha(alpha)
@@ -55,9 +53,7 @@ def draw_fillet2(img, radii):
     alpha = Image.new("L", img.size, 255)
     alpha.paste(circle.crop((0, 0, radii, radii)), (0, 0))  # 左上角
     alpha.paste(circle.crop((radii, 0, radii * 2, radii)), (w - radii, 0))  # 右上角
-    alpha.paste(
-        circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii)
-    )  # 右下角
+    alpha.paste(circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii))  # 右下角
     alpha.paste(circle.crop((0, radii, radii, radii * 2)), (0, h - radii))  # 左下角
     # 高斯模糊效果
     img = img.filter(ImageFilter.GaussianBlur(radius=2))
@@ -66,9 +62,7 @@ def draw_fillet2(img, radii):
     return img
 
 
-def info_calc(
-    n1: Optional[float], n2: Optional[float], rank: bool = False, pp: bool = False
-):
+def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: bool = False):
     if not n1 or not n2:
         return "", 0
     num = n1 - n2
