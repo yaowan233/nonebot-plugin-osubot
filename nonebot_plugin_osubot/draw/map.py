@@ -22,7 +22,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         return info
     mapinfo = Beatmap(**info)
     original_mapinfo = mapinfo.copy()
-    mods = [{'acronym': mod} for mod in mods]
+    mods = [{"acronym": mod} for mod in mods]
     mapinfo = with_mods(mapinfo, None, mods)
     diffinfo = (
         calc_songlen(mapinfo.total_length),
@@ -41,9 +41,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0)
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
-        old_time = datetime.strptime(
-            mapinfo.beatmapset.ranked_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
-        )
+        old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
         new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     else:
         new_time = "谱面状态非上架"
@@ -116,7 +114,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
             im.alpha_composite(new_diff_len, (890, 426 + 35 * num))
         else:
-            raise Exception('没有这种情况')
+            raise Exception("没有这种情况")
         draw.text(
             (1170, 428 + 35 * num),
             str(float("%.2f" % new)).rstrip("0").rstrip("."),
@@ -132,17 +130,13 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
         new_diff_len = Image.new("RGBA", (new_difflen, 8), color)
         im.alpha_composite(new_diff_len, (890, 566))
-        orig_difflen = (
-            int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
-        )
+        orig_difflen = int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
         orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
         im.alpha_composite(orig_diff_len, (890, 566))
     elif stars < original_stars:
         color = (161, 187, 127, 255)
         orig_color = (255, 204, 34, 255)
-        orig_difflen = (
-            int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
-        )
+        orig_difflen = int(250 * max(0.0, original_stars) / 10) if original_stars <= 10 else 250
         orig_diff_len = Image.new("RGBA", (orig_difflen, 8), orig_color)
         im.alpha_composite(orig_diff_len, (890, 566))
         new_difflen = int(250 * max(0.0, stars) / 10) if stars <= 10 else 250
@@ -191,16 +185,12 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     # draw.text((50, 260), f"Source:{mapinfo.beatmapset.source}", font=Torus_SemiBold_25, anchor="rt")
     # mapper
     draw.text((160, 400), "谱师:", font=Torus_SemiBold_20, anchor="lt")
-    draw.text(
-        (160, 425), mapinfo.beatmapset.creator, font=Torus_SemiBold_20, anchor="lt"
-    )
+    draw.text((160, 425), mapinfo.beatmapset.creator, font=Torus_SemiBold_20, anchor="lt")
     # ranked时间
     draw.text((160, 460), "上架时间:", font=Torus_SemiBold_20, anchor="lt")
     draw.text((160, 485), new_time, font=Torus_SemiBold_20, anchor="lt")
     # 状态
-    draw.text(
-        (1100, 304), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor="mm"
-    )
+    draw.text((1100, 304), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor="mm")
     # 时长 - 滑条
     for num, i in enumerate(diffinfo):
         draw.text(
@@ -211,9 +201,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             fill=(255, 204, 34, 255),
         )
     # maxcb
-    draw.text(
-        (50, 570), f"最大连击: {mapinfo.max_combo}", font=Torus_SemiBold_20, anchor="lm"
-    )
+    draw.text((50, 570), f"最大连击: {mapinfo.max_combo}", font=Torus_SemiBold_20, anchor="lm")
     # pp
     draw.text(
         (320, 570),

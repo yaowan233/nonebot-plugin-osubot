@@ -38,9 +38,7 @@ async def _recent(event: Event, state: T_State):
         if isinstance(data, str):
             await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
-            info = await get_user_info(
-                f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
-            )
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
             if isinstance(info, str):
                 await UniMessage.text(info).finish(reply_to=True)
             else:
@@ -51,16 +49,11 @@ async def _recent(event: Event, state: T_State):
             score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
         for score_info in score_ls:
             if not player.lazer_mode:
-                score_info.mods.remove({"acronym": "CL"}) if {
-                    "acronym": "CL"
-                } in score_info.mods else None
+                score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
             if score_info.ruleset_id == 3 and not player.lazer_mode:
                 score_info.accuracy = cal_legacy_acc(score_info.statistics)
             if not player.lazer_mode:
-                is_hidden = any(
-                    i in score_info.mods
-                    for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
-                )
+                is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
                 score_info.rank = cal_legacy_rank(score_info, is_hidden)
         pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
         await UniMessage.image(raw=pic).finish(reply_to=True)
@@ -101,9 +94,7 @@ async def _pr(event: Event, state: T_State):
         if isinstance(data, str):
             await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
-            info = await get_user_info(
-                f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
-            )
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
             if isinstance(info, str):
                 return info
             else:
@@ -114,16 +105,11 @@ async def _pr(event: Event, state: T_State):
             score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
         for score_info in score_ls:
             if not player.lazer_mode:
-                score_info.mods.remove({"acronym": "CL"}) if {
-                    "acronym": "CL"
-                } in score_info.mods else None
+                score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
             if score_info.ruleset_id == 3 and not player.lazer_mode:
                 score_info.accuracy = cal_legacy_acc(score_info.statistics)
             if not player.lazer_mode:
-                is_hidden = any(
-                    i in score_info.mods
-                    for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
-                )
+                is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
                 score_info.rank = cal_legacy_rank(score_info, is_hidden)
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
         await UniMessage.image(raw=pic).finish(reply_to=True)

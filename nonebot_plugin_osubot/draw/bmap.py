@@ -106,13 +106,7 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
                 color = (0, 0, 0, 255)
             else:
                 color = (255, 217, 102, 255)
-            draw.text(
-                (65, 335 + h_num),
-                f"★{cmap.star:.2f}",
-                font=Torus_SemiBold_20,
-                anchor="lm",
-                fill=color
-            )
+            draw.text((65, 335 + h_num), f"★{cmap.star:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
             # version
             draw.text(
                 (150, 335 + h_num),
@@ -139,9 +133,7 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
             im.alpha_composite(div, (25, 400 + h_num))
         else:
             plusnum = f"+ {num - 19}"
-            draw.text(
-                (600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor="mm"
-            )
+            draw.text((600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor="mm")
     base = image2bytesio(im)
     im.close()
     return base

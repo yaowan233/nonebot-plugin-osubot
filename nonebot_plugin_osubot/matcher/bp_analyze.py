@@ -39,43 +39,51 @@ async def _(event: Event, state: T_State):
     user = await UserData.get_or_none(user_id=event.get_user_id())
     score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:
-        if {'acronym': 'DT'} in score.mods or {'acronym': 'NC'} in score.mods:
+        if {"acronym": "DT"} in score.mods or {"acronym": "NC"} in score.mods:
             score.beatmap.total_length /= 1.5
-        if {'acronym': 'HT'} in score.mods:
+        if {"acronym": "HT"} in score.mods:
             score.beatmap.total_length /= 0.75
     score_ls = [cal_score_info(user.lazer_mode, score) for score in score_ls]
     pp_ls = [round(i.pp, 0) for i in score_ls]
     length_ls = []
     for i in score_ls:
         if i.rank == "XH":
-            length_ls.append({'value': i.beatmap.total_length,
-                              'itemStyle': {'color': rank_color[i.rank], 'shadowBlur': 8, 'shadowColor': "#b4ffff"}})
+            length_ls.append(
+                {
+                    "value": i.beatmap.total_length,
+                    "itemStyle": {"color": rank_color[i.rank], "shadowBlur": 8, "shadowColor": "#b4ffff"},
+                }
+            )
         elif i.rank == "X":
-            length_ls.append({'value': i.beatmap.total_length,
-                              'itemStyle': {'color': rank_color[i.rank], 'shadowBlur': 8, 'shadowColor': "#ffff00"}})
+            length_ls.append(
+                {
+                    "value": i.beatmap.total_length,
+                    "itemStyle": {"color": rank_color[i.rank], "shadowBlur": 8, "shadowColor": "#ffff00"},
+                }
+            )
         else:
-            length_ls.append({'value': i.beatmap.total_length, 'itemStyle': {'color': rank_color[i.rank]}})
+            length_ls.append({"value": i.beatmap.total_length, "itemStyle": {"color": rank_color[i.rank]}})
     mods_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
         if not i.mods:
-            mods_pp["NM"] += i.pp * 0.95 ** num
+            mods_pp["NM"] += i.pp * 0.95**num
         for j in i.mods:
-            mods_pp[j['acronym']] += i.pp * 0.95 ** num
+            mods_pp[j["acronym"]] += i.pp * 0.95**num
     pp_data = []
     for mod, pp in mods_pp.items():
-        pp_data.append({'name': mod, 'value': round(pp, 2)})
+        pp_data.append({"name": mod, "value": round(pp, 2)})
     mapper_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
-        mapper_pp[i.beatmap.user_id] += i.pp * 0.95 ** num
+        mapper_pp[i.beatmap.user_id] += i.pp * 0.95**num
     mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)
-    mapper_pp = mapper_pp[: 10]
+    mapper_pp = mapper_pp[:10]
     users = await get_users([i[0] for i in mapper_pp])
     user_dic = {i.id: i.username for i in users}
     mapper_pp_data = []
     for mapper, pp in mapper_pp:
-        mapper_pp_data.append({'name': user_dic.get(mapper, ''), 'value': round(pp, 2)})
+        mapper_pp_data.append({"name": user_dic.get(mapper, ""), "value": round(pp, 2)})
     if len(mapper_pp_data) > 20:
-        mapper_pp_data = mapper_pp_data[: 20]
+        mapper_pp_data = mapper_pp_data[:20]
     name = f'{score_ls[0].user.username} {NGM[state["mode"]]} 模式 '
     byt = await draw_bpa_plot(name, pp_ls, length_ls, pp_data, mapper_pp_data)
     await (UniMessage.image(raw=byt)).finish(reply_to=True)

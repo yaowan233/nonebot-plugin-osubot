@@ -20,9 +20,7 @@ medal = on_command("medal", aliases={"成就"}, priority=11, block=True)
 @medal.handle()
 async def _(msg: Message = CommandArg()):
     name = msg.extract_plain_text()
-    data = await safe_async_get(
-        f"https://osekai.net/medals/api/public/get_medal.php?medal={name}"
-    )
+    data = await safe_async_get(f"https://osekai.net/medals/api/public/get_medal.php?medal={name}")
     medal_data = data.json()
     if "MedalID" not in medal_data:
         await medal.finish("没有找到欸，看看是不是名字打错了")
@@ -33,11 +31,7 @@ async def _(msg: Message = CommandArg()):
     if medal_data["Name"] in medal_json:
         words += medal_json[medal_data["Name"]]["MedalSolution"]
     else:
-        words += (
-            medal_data["Solution"]
-            if medal_data["Solution"]
-            else medal_data["Instructions"]
-        )
+        words += medal_data["Solution"] if medal_data["Solution"] else medal_data["Instructions"]
         table_regex = r"<table[^>]*>(.*?)<\/table>"
         table_match = re.search(table_regex, words, re.DOTALL)
         if table_match:
@@ -66,9 +60,7 @@ async def _(msg: Message = CommandArg()):
     words = re.sub(style_regex, "", words)
     words = re.sub(r"<[^>]+>", "", words)
     if medal_data["PackID"]:
-        words += (
-            f'\nhttps://osu.ppy.sh/beatmaps/packs/{medal_data["PackID"].rstrip(",,,")}'
-        )
+        words += f'\nhttps://osu.ppy.sh/beatmaps/packs/{medal_data["PackID"].rstrip(",,,")}'
     await (UniMessage.image(url=medal_data["Link"]) + words).send(reply_to=True)
     if medal_data["beatmaps"]:
         msg = UniMessage()

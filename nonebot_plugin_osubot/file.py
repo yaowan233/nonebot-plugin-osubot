@@ -74,7 +74,7 @@ async def get_projectimg(url: str) -> BytesIO:
         # todo 加个自创的错误图片
         req = await safe_async_get(random.choice(bg_url))
         if not req or req.status_code >= 400:
-            raise Exception('图片下载失败')
+            raise Exception("图片下载失败")
     data = req.read()
     im = BytesIO(data)
     return im
