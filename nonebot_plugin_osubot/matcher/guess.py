@@ -110,6 +110,10 @@ async def _(
     audio_path = path / "audio.silk"
     if not audio_path.exists():
         audio = await safe_async_get(f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3")
+        if not audio:
+            await UniMessage.text("音频下载失败了 qaq " + f"本次猜歌名为: {selected_score.beatmapset.title}").finish(
+                reply_to=True
+            )
         try:
             await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
         except CoderError:
@@ -267,6 +271,8 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
         audio_path = map_path / f"{score.beatmapset.id}" / "audio.silk"
         if not audio_path.exists():
             audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
+            if not audio:
+                await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
             try:
                 await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
             except CoderError:
