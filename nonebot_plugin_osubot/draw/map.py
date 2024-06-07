@@ -127,7 +127,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
             raise Exception("没有这种情况")
         draw.text(
             (1170, 428 + 35 * num),
-            str(float(f"{new}.2f")).rstrip("0").rstrip("."),
+            str(float(f"{new:.2f}")).rstrip("0").rstrip("."),
             font=Torus_SemiBold_20,
             anchor="mm",
         )
