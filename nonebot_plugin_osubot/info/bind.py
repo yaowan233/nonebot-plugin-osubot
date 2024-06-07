@@ -39,7 +39,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=0,
                 date=date.today(),
             )
-        elif not user.statistics_rulesets.taiko:
+        if not user.statistics_rulesets.taiko:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=0,
@@ -51,7 +51,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=1,
                 date=date.today(),
             )
-        elif not user.statistics_rulesets.fruits:
+        if not user.statistics_rulesets.fruits:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=0,
@@ -63,7 +63,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=2,
                 date=date.today(),
             )
-        elif not user.statistics_rulesets.mania:
+        if not user.statistics_rulesets.mania:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=0,
@@ -75,7 +75,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=3,
                 date=date.today(),
             )
-        elif user.statistics_rulesets.osu:
+        if user.statistics_rulesets.osu:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=user.statistics_rulesets.osu.country_rank,
@@ -87,7 +87,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=0,
                 date=date.today(),
             )
-        elif user.statistics_rulesets.taiko:
+        if user.statistics_rulesets.taiko:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=user.statistics_rulesets.taiko.country_rank,
@@ -99,7 +99,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=1,
                 date=date.today(),
             )
-        elif user.statistics_rulesets.fruits:
+        if user.statistics_rulesets.fruits:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=user.statistics_rulesets.fruits.country_rank,
@@ -111,7 +111,7 @@ async def update_users_info(uids: list[int]):
                 osu_mode=2,
                 date=date.today(),
             )
-        elif user.statistics_rulesets.mania:
+        if user.statistics_rulesets.mania:
             await InfoData.create(
                 osu_id=user.id,
                 c_rank=user.statistics_rulesets.mania.country_rank,
