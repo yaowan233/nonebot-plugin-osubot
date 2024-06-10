@@ -317,14 +317,14 @@ async def draw_score_pic(score_info: NewScore, info, map_json, bid, sid, grank) 
         if new == round(new):
             draw.text(
                 (1470, 310 + 35 * num),
-                f"{new}.0f",
+                f"{new:.0f}",
                 font=Torus_SemiBold_20,
                 anchor="mm",
             )
         else:
             draw.text(
                 (1470, 310 + 35 * num),
-                f"{new}.2f" if new != round(new, 1) else f"{new}.1f",
+                f"{new:.2f}" if new != round(new, 1) else f"{new:.1f}",
                 font=Torus_SemiBold_20,
                 anchor="mm",
             )
