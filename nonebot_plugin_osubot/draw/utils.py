@@ -245,7 +245,7 @@ def calc_songlen(length: int) -> str:
 
 async def open_user_icon(info: User) -> Image:
     path = user_cache_path / str(info.id)
-    for file_path in path.glob("info*.*"):
+    for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
         if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
             img = Image.open(file_path)
