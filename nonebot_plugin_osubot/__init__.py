@@ -52,7 +52,3 @@ async def delete_cached_map():
     map_path = Path("data/osu/map")
     shutil.rmtree(map_path)
     map_path.mkdir(parents=True, exist_ok=True)
-    user_path = Path("data/osu/user")
-    for file_path in user_path.glob("**/*"):
-        if file_path.is_file() and file_path.name in ("icon.png", "icon.gif"):
-            file_path.unlink()

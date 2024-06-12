@@ -1,3 +1,4 @@
+import datetime
 import os
 import random
 
@@ -262,3 +263,19 @@ def is_close(n1, n2) -> bool:
     if abs(n1 - n2) < 0.01:
         return True
     return False
+
+
+async def update_icon(info: User):
+    path = user_cache_path / str(info.id)
+    for file_path in path.glob("info*.*"):
+        # 检查文件是否为图片格式
+        if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
+            creation_time = file_path.stat().st_ctime
+            creation_datetime = datetime.datetime.fromtimestamp(creation_time)
+            time_diff = datetime.datetime.now() - creation_datetime
+            # 判断文件是否创建超过一天
+            if time_diff > datetime.timedelta(days=1):
+                user_icon = await get_projectimg(info.avatar_url)
+                with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
+                    f.write(user_icon.getvalue())
+

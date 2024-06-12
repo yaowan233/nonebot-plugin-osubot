@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, date
 from io import BytesIO
 from typing import Union
@@ -19,7 +20,7 @@ from .static import (
     Torus_Regular_50,
     InfoImg,
 )
-from .utils import draw_fillet, info_calc, open_user_icon
+from .utils import draw_fillet, info_calc, open_user_icon, update_icon
 
 from ..api import osu_api, get_random_bg
 from ..schema import User
@@ -279,4 +280,5 @@ async def draw_info(
     # 输出
     gif_frames[0].close()
     user_icon.close()
+    _ = asyncio.create_task(update_icon(info))
     return gif_bytes
