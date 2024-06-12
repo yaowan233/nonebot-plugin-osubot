@@ -245,19 +245,17 @@ def calc_songlen(length: int) -> str:
 
 async def open_user_icon(info: User) -> Image:
     path = user_cache_path / str(info.id)
-    png_user_icon = user_cache_path / str(info.id) / "icon.png"
-    gif_user_icon = user_cache_path / str(info.id) / "icon.gif"
-    # 判断文件是否存在，并读取图片
-    if png_user_icon.exists():
-        image = Image.open(png_user_icon)
-    elif gif_user_icon.exists():
-        image = Image.open(gif_user_icon)
+    for file_path in path.glob("info*.*"):
+        # 检查文件是否为图片格式
+        if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
+            img = Image.open(file_path)
+            break
     else:
         user_icon = await get_projectimg(info.avatar_url)
-        with open(path / f"icon.{info.avatar_url[-3:]}", "wb") as f:
+        with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
             f.write(user_icon.getvalue())
-        image = Image.open(user_icon)
-    return image
+        img = Image.open(user_icon)
+    return img
 
 
 def is_close(n1, n2) -> bool:

@@ -28,7 +28,9 @@ from ..database.models import InfoData
 from ..utils import GMN, FGM
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union[str, BytesIO]:
+async def draw_info(
+    uid: Union[int, str], mode: str, day: int, is_name
+) -> Union[str, BytesIO]:
     info_json = await osu_api("info", uid, mode, is_name=is_name)
     if isinstance(info_json, str):
         return info_json
@@ -37,12 +39,18 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
     if statistics.play_count == 0:
         return f"此玩家尚未游玩过{GMN[mode]}模式"
     # 对比
-    user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by("-date").first()
+    user = (
+        await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode])
+        .order_by("-date")
+        .first()
+    )
     if user:
         today_date = date.today()
         query_date = today_date - timedelta(days=day)
         if (
-            user := await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date)
+            user := await InfoData.filter(
+                osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date
+            )
             .order_by("date")
             .first()
         ):
@@ -150,12 +158,20 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
     if not statistics.country_rank:
         t_crank = "#0"
     else:
-        t_crank = f"#{statistics.country_rank:,}({op}{value:,})" if value != 0 else f"#{statistics.country_rank:,}"
+        t_crank = (
+            f"#{statistics.country_rank:,}({op}{value:,})"
+            if value != 0
+            else f"#{statistics.country_rank:,}"
+        )
     draw.text((495, 448), t_crank, font=Torus_Regular_30, anchor="lb")
     # 等级
-    draw.text((900, 650), str(statistics.level.current), font=Torus_Regular_25, anchor="mm")
+    draw.text(
+        (900, 650), str(statistics.level.current), font=Torus_Regular_25, anchor="mm"
+    )
     # 经验百分比
-    draw.text((750, 660), f"{statistics.level.progress}%", font=Torus_Regular_20, anchor="rt")
+    draw.text(
+        (750, 660), f"{statistics.level.progress}%", font=Torus_Regular_20, anchor="rt"
+    )
     # 全球排名
     if not statistics.global_rank:
         draw.text((55, 785), "#0", font=Torus_Regular_35, anchor="lt")
@@ -177,23 +193,41 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
     # SS - A
     # gc_x = 493
     for gc_num, (_, num) in enumerate(statistics.grade_counts):
-        draw.text((493 + 100 * gc_num, 788), f"{num}", font=Torus_Regular_30, anchor="mt")
+        draw.text(
+            (493 + 100 * gc_num, 788), f"{num}", font=Torus_Regular_30, anchor="mt"
+        )
         # gc_x+=100
     # rank分
-    draw.text((935, 895), f"{statistics.ranked_score:,}", font=Torus_Regular_40, anchor="rt")
+    draw.text(
+        (935, 895), f"{statistics.ranked_score:,}", font=Torus_Regular_40, anchor="rt"
+    )
     # acc
     op, value = info_calc(statistics.hit_accuracy, n_acc)
-    t_acc = f"{statistics.hit_accuracy:.2f}%({op}{value:.2f}%)" if value != 0 else f"{statistics.hit_accuracy:.2f}%"
+    t_acc = (
+        f"{statistics.hit_accuracy:.2f}%({op}{value:.2f}%)"
+        if value != 0
+        else f"{statistics.hit_accuracy:.2f}%"
+    )
     draw.text((935, 965), t_acc, font=Torus_Regular_40, anchor="rt")
     # 游玩次数
     op, value = info_calc(statistics.play_count, n_pc)
-    t_pc = f"{statistics.play_count:,}({op}{value:,})" if value != 0 else f"{statistics.play_count:,}"
+    t_pc = (
+        f"{statistics.play_count:,}({op}{value:,})"
+        if value != 0
+        else f"{statistics.play_count:,}"
+    )
     draw.text((935, 1035), t_pc, font=Torus_Regular_40, anchor="rt")
     # 总分
-    draw.text((935, 1105), f"{statistics.total_score:,}", font=Torus_Regular_40, anchor="rt")
+    draw.text(
+        (935, 1105), f"{statistics.total_score:,}", font=Torus_Regular_40, anchor="rt"
+    )
     # 总命中
     op, value = info_calc(statistics.total_hits, n_count)
-    t_count = f"{statistics.total_hits:,}({op}{value:,})" if value != 0 else f"{statistics.total_hits:,}"
+    t_count = (
+        f"{statistics.total_hits:,}({op}{value:,})"
+        if value != 0
+        else f"{statistics.total_hits:,}"
+    )
     draw.text((935, 1175), t_count, font=Torus_Regular_40, anchor="rt")
     # 游玩时间
     sec = timedelta(seconds=statistics.play_time)
@@ -235,7 +269,13 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
         gif_frames.append(rgba_frame)
     gif_bytes = BytesIO()
     # 保存 GIF 图片
-    gif_frames[0].save(gif_bytes, format="gif", save_all=True, append_images=gif_frames[1:])
+    gif_frames[0].save(
+        gif_bytes,
+        format="gif",
+        save_all=True,
+        append_images=gif_frames[1:],
+        duration=user_icon.info["duration"],
+    )
     # 输出
     gif_frames[0].close()
     user_icon.close()
