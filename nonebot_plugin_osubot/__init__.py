@@ -1,5 +1,3 @@
-import shutil
-from pathlib import Path
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 from nonebot.log import logger
 from nonebot import require
