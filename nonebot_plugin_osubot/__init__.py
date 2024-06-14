@@ -45,10 +45,3 @@ async def update_info():
     for group in groups:
         await update_users_info(group)
     logger.info(f"已更新{len(result)}位玩家数据")
-
-
-@scheduler.scheduled_job("cron", hour="4", day_of_week="0", misfire_grace_time=60)
-async def delete_cached_map():
-    map_path = Path("data/osu/map")
-    shutil.rmtree(map_path)
-    map_path.mkdir(parents=True, exist_ok=True)

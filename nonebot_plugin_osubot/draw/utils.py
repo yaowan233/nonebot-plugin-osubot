@@ -7,7 +7,7 @@ from typing import Optional, Union
 from PIL import ImageDraw, UnidentifiedImageError, ImageEnhance, ImageFilter
 from matplotlib.figure import Figure
 
-from ..file import get_projectimg, user_cache_path
+from ..file import get_projectimg, user_cache_path, map_path, download_osu
 from ..schema import SeasonalBackgrounds, User
 from ..api import get_seasonal_bg, safe_async_get
 
@@ -279,3 +279,14 @@ async def update_icon(info: User):
                 with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
                     f.write(user_icon.getvalue())
 
+
+async def update_map(set_id, map_id):
+    path = map_path / str(set_id)
+    for file_path in path.glob("*.osu"):
+        # 检查文件是否为图片格式
+        creation_time = file_path.stat().st_ctime
+        creation_datetime = datetime.datetime.fromtimestamp(creation_time)
+        time_diff = datetime.datetime.now() - creation_datetime
+        # 判断文件是否创建超过一天
+        if time_diff > datetime.timedelta(days=1):
+            await download_osu(set_id, map_id)
