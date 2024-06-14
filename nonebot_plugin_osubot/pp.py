@@ -41,6 +41,18 @@ def cal_pp(score: NewScore, path: str) -> PerformanceAttributes:
             n300=score.statistics.great or 0,
             mods=mods,
         )
+    for mod in score.mods:
+        if mod["acronym"] == "DT" and mod.get("settings"):
+            c.set_clock_rate(mod["settings"]["speed_change"])
+        if mod["acronym"] == "DA" and mod.get("settings"):
+            if mod["settings"].get("circle_size") is not None:
+                c.set_cs(mod["settings"]["circle_size"], False)
+            if mod["settings"].get("approach_rate") is not None:
+                c.set_ar(mod["settings"]["approach_rate"], False)
+            if mod["settings"].get("drain_rate") is not None:
+                c.set_hp(mod["settings"]["drain_rate"], False)
+            if mod["settings"].get("overall_difficulty") is not None:
+                c.set_od(mod["settings"]["overall_difficulty"], False)
     return c.calculate(beatmap)
 
 
@@ -70,6 +82,18 @@ def get_if_pp_ss_pp(score: NewScore, path: str) -> tuple:
     )
     if_pp = c.calculate(beatmap).pp
     c = Performance(accuracy=100, mods=mods)
+    for mod in score.mods:
+        if mod["acronym"] == "DT" and mod.get("settings"):
+            c.set_clock_rate(mod["settings"]["speed_change"])
+        if mod["acronym"] == "DA" and mod.get("settings"):
+            if mod["settings"].get("circle_size") is not None:
+                c.set_cs(mod["settings"]["circle_size"], False)
+            if mod["settings"].get("approach_rate") is not None:
+                c.set_ar(mod["settings"]["approach_rate"], False)
+            if mod["settings"].get("drain_rate") is not None:
+                c.set_hp(mod["settings"]["drain_rate"], False)
+            if mod["settings"].get("overall_difficulty") is not None:
+                c.set_od(mod["settings"]["overall_difficulty"], False)
     ss_pp = c.calculate(beatmap).pp
     if math.isnan(if_pp):
         return "nan", "nan"
