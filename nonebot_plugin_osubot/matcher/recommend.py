@@ -53,7 +53,7 @@ async def handle_recommend(state: T_State, matcher: type[Matcher]):
         logger.debug(f"如果看到这句话请联系作者 有问题的是{bid}, {sid}")
     s = (
         f'推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{"".join(recommend_map.mod)}\n'
-        f"预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent*100, 2)}%\n"
+        f"预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent * 100, 2)}%\n"
         f"{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\n"
         f"https://txy1.sayobot.cn/beatmaps/download/novideo/{sid}"
     )

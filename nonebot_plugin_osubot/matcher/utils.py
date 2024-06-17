@@ -23,7 +23,7 @@ def split_msg():
         double_command = ("bp", "score")
         dic = {}
         arg = arg.extract_plain_text().strip()
-        if max([arg.find(i) for i in symbol_ls]) >= 0:
+        if max(arg.find(i) for i in symbol_ls) >= 0:
             for i in symbol_ls:
                 dic[i] = arg.find(i)
             sorted_dict = sorted(dic.items(), key=lambda x: x[1])
@@ -34,7 +34,7 @@ def split_msg():
                 state[symbol_dic[sorted_dict[-1][0]]] = arg[sorted_dict[-1][1] + 1 :].strip()
             if isinstance(state["mods"], str):
                 state["mods"] = mods2list(state["mods"].strip())
-            index = min([arg.find(i) for i in symbol_ls if arg.find(i) >= 0])
+            index = min(arg.find(i) for i in symbol_ls if arg.find(i) >= 0)
             state["para"] = arg[:index].strip()
         else:
             state["para"] = arg.strip()

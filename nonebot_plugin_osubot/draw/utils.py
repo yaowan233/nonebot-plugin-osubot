@@ -208,7 +208,7 @@ def stars_diff(stars: float):
         r, g, b = 0, 0, 0
     else:
         # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
-        r, g, b, a = ColorArr[int(stars * 100)]
+        r, g, b, _a = ColorArr[int(stars * 100)]
     # 打开底图
     xx, yy = Stars.size
     # 填充背景
