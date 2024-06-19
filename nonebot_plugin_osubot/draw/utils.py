@@ -1,23 +1,16 @@
 import datetime
 import os
 import random
-
 from io import BytesIO
 from typing import Optional, Union
+
 from PIL import ImageDraw, UnidentifiedImageError, ImageEnhance, ImageFilter
 from matplotlib.figure import Figure
 
+from .static import Stars, ColorArr, Image, osufile, Path, np
+from ..api import get_seasonal_bg, safe_async_get
 from ..file import get_projectimg, user_cache_path, map_path, download_osu
 from ..schema import SeasonalBackgrounds, User
-from ..api import get_seasonal_bg, safe_async_get
-
-from .static import Stars, ColorArr, Image, osufile, Path, np
-
-
-def image2bytesio(pic: Image):
-    byt = BytesIO()
-    pic.save(byt, "png")
-    return byt
 
 
 def draw_fillet(img, radii):
