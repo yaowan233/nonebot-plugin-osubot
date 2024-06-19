@@ -1,17 +1,16 @@
 import datetime
 import os
 import random
-
 from io import BytesIO
 from typing import Optional, Union
+
 from PIL import ImageDraw, UnidentifiedImageError, ImageEnhance, ImageFilter
 from matplotlib.figure import Figure
 
+from .static import Stars, ColorArr, Image, osufile, Path, np
+from ..api import get_seasonal_bg, safe_async_get
 from ..file import get_projectimg, user_cache_path, map_path, download_osu
 from ..schema import SeasonalBackgrounds, User
-from ..api import get_seasonal_bg, safe_async_get
-
-from .static import Stars, ColorArr, Image, osufile, Path, np
 
 
 def image2bytesio(pic: Image):
@@ -151,8 +150,8 @@ async def crop_bg(size: str, path: Union[str, Path, BytesIO]):
         fix_w = 1500
         fix_h = 720
     elif size == "H":
-        fix_w = 540
-        fix_h = 180
+        fix_w = 240
+        fix_h = 120
     elif size == "HI":
         fix_w = 1000
         fix_h = 400
