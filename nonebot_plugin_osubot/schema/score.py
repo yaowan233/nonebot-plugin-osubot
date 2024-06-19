@@ -15,7 +15,7 @@ class Statistics(Base):
 
 
 class Score(Base):
-    id: int
+    id: Optional[int]
     best_id: Optional[int]
     user_id: int
     accuracy: float
@@ -32,6 +32,7 @@ class Score(Base):
     mode_int: int
     beatmap: Optional[Beatmap]
     beatmapset: Optional[Beatmapset]
+    match: Optional[dict]
 
 
 class BeatmapUserScore(Base):

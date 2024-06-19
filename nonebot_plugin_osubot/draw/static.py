@@ -1,8 +1,9 @@
 from pathlib import Path
-from PIL import Image, ImageFont
+
+import matplotlib as mpl
 import matplotlib.colors as mcolors
 import numpy as np
-import matplotlib as mpl
+from PIL import Image, ImageFont
 
 osufile = Path(__file__).parent.parent / "osufile"
 Torus_Regular_20 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 20)
@@ -32,6 +33,11 @@ MapBg = Image.open(osufile / "beatmapinfo.png").convert("RGBA")
 MapBg1 = Image.open(osufile / "maniabeatmapinfo.png").convert("RGBA")
 BarImg = Image.open(osufile / "work" / "bmap.png").convert("RGBA")
 Stars = Image.open(osufile / "work" / "stars.png").convert("RGBA")
+TeamBlue = Image.open(osufile / "match" / "team_blue.png").convert("RGBA")
+TeamRed = Image.open(osufile / "match" / "team_red.png").convert("RGBA")
+MpLink = Image.open(osufile / "match" / "mplink.png").convert("RGBA")
+MpLinkMap = Image.open(osufile / "match" / "mplink_map.png").convert("RGBA")
+
 
 # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
 
