@@ -1,5 +1,6 @@
 from nonebot import on_command, get_driver, Bot
 from nonebot.internal.adapter import Event
+from nonebot.typing import T_State
 from nonebot_plugin_alconna import (
     UniMessage,
     image_fetch,
@@ -8,13 +9,11 @@ from nonebot_plugin_alconna import (
     UniMsg,
 )
 from nonebot_plugin_alconna.uniseg import Image
-from nonebot.typing import T_State
 from nonebot_plugin_waiter import waiter
 
+from .utils import split_msg
 from ..database import UserData
 from ..file import user_cache_path, save_info_pic
-
-from .utils import split_msg
 
 update_pic = on_command("更新背景", priority=11, block=True, aliases={"更改背景"})
 update_info = on_command("update", priority=11, block=True, aliases={"更新信息"})
@@ -41,6 +40,9 @@ async def _(event: Event, bot: Bot, state: T_State):
         if not resp.has(Image):
             continue
         pic = await image_fetch(event, bot, state, resp.get(Image)[0])
+        if not pic:
+            await UniMessage.text("图片下载失败，请重新发送").send()
+            continue
         await save_info_pic(str(state["user"]), pic)
         msg = f"收到自{event.get_user_id()}的更新背景申请" + UniMessage.image(raw=pic)
         for superuser in get_driver().config.superusers:
