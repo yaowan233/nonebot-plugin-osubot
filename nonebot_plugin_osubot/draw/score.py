@@ -197,7 +197,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
     cover = re_map(osu)
     cover_path = path / cover
     if not cover_path.exists():
-        if bg := await get_map_bg(mapinfo.beatmapset_id, mapinfo.id, cover):
+        if bg := await get_map_bg(mapinfo.id, mapinfo.beatmapset_id, cover):
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
     cover_crop = await crop_bg("BG", cover_path)
