@@ -395,7 +395,7 @@ async def draw_match_history(match_id: str) -> bytes:
     )
 
     byt = BytesIO()
-    im.convert('RGB').save(byt, "jpeg")
+    im.convert("RGB").save(byt, "jpeg")
     im.close()
 
     return byt.getvalue()
