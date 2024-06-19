@@ -1,3 +1,7 @@
+from .bind import bind, unbind
+from .bp import bp, tbp
+from .bp_analyze import bp_analyze
+from .getbg import getbg
 from .guess import (
     guess_audio,
     guess_pic,
@@ -6,26 +10,23 @@ from .guess import (
     hint,
     pic_hint,
 )
-from .medal import medal
-# from .rank import group_pp_rank
-
-from .bp_analyze import bp_analyze
-from .pr import pr, recent
-from .osu_help import osu_help
-from .url_match import url_match
-from .recommend import recommend
-from .update import update_info, update_pic, clear_background
-from .preview import generate_preview
-from .getbg import getbg
-from .bind import bind, unbind
-from .bp import bp, tbp
+from .history import history
 from .info import info
 from .map import osu_map, bmap
-from .mu import mu
-from .score import score
-from .update_mode import update_mode
-from .history import history
 from .map_convert import convert, change, generate_full_ln
+from .match import match
+from .medal import medal
+from .mu import mu
+from .osu_help import osu_help
+from .pr import pr, recent
+from .preview import generate_preview
+from .recommend import recommend
+from .score import score
+from .update import update_info, update_pic, clear_background
+from .update_mode import update_mode
+from .url_match import url_match
+
+# from .rank import group_pp_rank
 
 __all__ = [
     "guess_audio",
@@ -60,4 +61,5 @@ __all__ = [
     "convert",
     "change",
     "generate_full_ln",
+    "match"
 ]

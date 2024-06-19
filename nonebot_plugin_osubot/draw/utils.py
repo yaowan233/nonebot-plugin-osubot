@@ -13,6 +13,7 @@ from ..file import get_projectimg, user_cache_path, map_path, download_osu
 from ..schema import SeasonalBackgrounds, User
 
 
+
 def draw_fillet(img, radii):
     # 画圆（用于分离4个角）
     circle = Image.new("L", (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
@@ -144,8 +145,8 @@ async def crop_bg(size: str, path: Union[str, Path, BytesIO]):
         fix_w = 1500
         fix_h = 720
     elif size == "H":
-        fix_w = 540
-        fix_h = 180
+        fix_w = 240
+        fix_h = 120
     elif size == "HI":
         fix_w = 1000
         fix_h = 400

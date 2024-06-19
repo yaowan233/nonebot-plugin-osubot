@@ -52,3 +52,10 @@ def calc_mods(mods: list[dict]) -> int:
     for mod in mods:
         num ^= mods_dic.get(mod["acronym"], 0)
     return num
+
+
+def calc_old_mods(mods: list[str]) -> int:
+    num = 0
+    for mod in mods:
+        num ^= mods_dic.get(mod, 0)
+    return num
