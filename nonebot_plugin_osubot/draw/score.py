@@ -37,7 +37,8 @@ from .utils import (
     get_modeimage,
     open_user_icon,
     is_close,
-    update_map, update_icon,
+    update_map,
+    update_icon,
 )
 
 
@@ -97,8 +98,6 @@ async def draw_score(
         score_info,
         info,
         map_json,
-        score_info.beatmap.id,
-        score_info.beatmap.beatmapset_id,
         "",
     )
 
@@ -155,43 +154,39 @@ async def get_score_data(
                 return f'未找到开启 {"|".join(mods)} Mods的成绩'
     else:
         score_info = score_ls[0]
-    path = map_path / str(score_info.beatmap.beatmapset_id)
+    map_json = await task2
+    if isinstance(map_json, str):
+        return map_json
+    path = map_path / str(map_json["beatmapset_id"])
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{mapid}.osu"
     if not osu.exists():
-        await download_osu(score_info.beatmap.beatmapset_id, mapid)
+        await download_osu(map_json["beatmapset_id"], mapid)
     info_json = await task1
     info = User(**info_json)
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
-    map_json = await task2
-    if isinstance(map_json, str):
-        return map_json
     # 判断是否开启lazer模式
     score_info = cal_score_info(user.lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
         map_json,
-        mapid,
-        score_info.beatmap.beatmapset_id,
         grank,
     )
 
 
-async def draw_score_pic(
-    score_info: NewScore, info, map_json, bid, sid, grank
-) -> BytesIO:
+async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
-    path = map_path / str(sid)
+    path = map_path / str(mapinfo.beatmapset_id)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
     # pp
-    osu = path / f"{bid}.osu"
+    osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()))
     original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0)
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
@@ -202,7 +197,7 @@ async def draw_score_pic(
     cover = re_map(osu)
     cover_path = path / cover
     if not cover_path.exists():
-        if bg := await get_map_bg(bid, sid, cover):
+        if bg := await get_map_bg(mapinfo.beatmapset_id, mapinfo.id, cover):
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
     cover_crop = await crop_bg("BG", cover_path)
@@ -391,7 +386,7 @@ async def draw_score_pic(
         (1400, 184), mapinfo.status.capitalize(), font=Torus_SemiBold_20, anchor="mm"
     )
     # mapid
-    draw.text((1485, 90), f"Mapid: {bid}", font=Torus_SemiBold_20, anchor="rm")
+    draw.text((1485, 90), f"Mapid: {mapinfo.id}", font=Torus_SemiBold_20, anchor="rm")
     # 曲名
     draw.text(
         (75, 38),
@@ -558,7 +553,7 @@ async def draw_score_pic(
     else:
         draw.text(
             (1002, 580),
-            f"{score_info.statistics.perfect / score_info.statistics.great:.1f}:1"
+            f"{score_info.statistics.perfect / score_info.statistics.great :.1f}:1"
             if (score_info.statistics.great or 0) != 0
             else "∞:1",
             font=Torus_Regular_20,
@@ -645,7 +640,7 @@ async def draw_score_pic(
     # 输出
     gif_frames[0].close()
     user_icon.close()
-    _ = asyncio.create_task(update_map(sid, bid))
+    _ = asyncio.create_task(update_map(mapinfo.beatmapset_id, mapinfo.id))
     _ = asyncio.create_task(update_icon(info))
     return gif_bytes
 
