@@ -614,7 +614,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
         icon_img = draw_fillet(icon_bg, 15)
         im.alpha_composite(icon_img, (60, 510))
         byt = BytesIO()
-        im.convert('RGB').save(byt, "jpeg")
+        im.convert("RGB").save(byt, "jpeg")
         im.close()
         user_icon.close()
         return byt

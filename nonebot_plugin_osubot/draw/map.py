@@ -222,6 +222,6 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     )
     # 输出
     byt = BytesIO()
-    im.convert('RGB').save(byt, "jpeg")
+    im.convert("RGB").save(byt, "jpeg")
     im.close()
     return byt

@@ -254,7 +254,7 @@ async def draw_info(
         icon_img = draw_fillet(icon_bg, 25)
         im.alpha_composite(icon_img, (50, 148))
         byt = BytesIO()
-        im.convert('RGB').save(byt, "jpeg")
+        im.convert("RGB").save(byt, "jpeg")
         im.close()
         user_icon.close()
         return byt

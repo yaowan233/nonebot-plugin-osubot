@@ -134,6 +134,6 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
             plusnum = f"+ {num - 19}"
             draw.text((600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor="mm")
     byt = BytesIO()
-    im.convert('RGB').save(byt, "jpeg")
+    im.convert("RGB").save(byt, "jpeg")
     im.close()
     return byt
