@@ -2,17 +2,8 @@ import asyncio
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, Union
-from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 
-from ..api import osu_api, get_map_bg
-from ..beatmap_stats_moder import with_mods
-from ..schema import NewScore, Beatmap, User
-from ..mods import get_mods_list
-from ..file import re_map, download_osu, user_cache_path, map_path
-from ..schema.score import NewStatistics
-from ..utils import GMN
-from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
-from ..database.models import UserData
+from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
 
 from .static import (
     Torus_Regular_30,
@@ -40,6 +31,15 @@ from .utils import (
     update_map,
     update_icon,
 )
+from ..api import osu_api, get_map_bg
+from ..beatmap_stats_moder import with_mods
+from ..database.models import UserData
+from ..file import re_map, download_osu, user_cache_path, map_path
+from ..mods import get_mods_list
+from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
+from ..schema import NewScore, Beatmap, User
+from ..schema.score import NewStatistics
+from ..utils import GMN
 
 
 async def draw_score(
@@ -197,7 +197,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
     cover = re_map(osu)
     cover_path = path / cover
     if not cover_path.exists():
-        if bg := await get_map_bg(mapinfo.beatmapset_id, mapinfo.id, cover):
+        if bg := await get_map_bg(mapinfo.id, mapinfo.beatmapset_id, cover):
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
     cover_crop = await crop_bg("BG", cover_path)
@@ -614,7 +614,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
         icon_img = draw_fillet(icon_bg, 15)
         im.alpha_composite(icon_img, (60, 510))
         byt = BytesIO()
-        im.save(byt, "png")
+        im.convert("RGB").save(byt, "jpeg")
         im.close()
         user_icon.close()
         return byt

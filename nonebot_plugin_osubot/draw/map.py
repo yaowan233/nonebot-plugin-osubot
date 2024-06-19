@@ -1,16 +1,9 @@
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
+
 from PIL import ImageEnhance, ImageDraw
 
-from ..api import osu_api, get_map_bg
-from ..beatmap_stats_moder import with_mods
-from ..schema import Beatmap
-from ..mods import calc_mods
-from ..file import re_map, get_projectimg, download_osu, map_path
-from ..utils import FGM
-from ..pp import get_ss_pp
-from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, image2bytesio, is_close
 from .static import (
     Image,
     Torus_Regular_20,
@@ -22,6 +15,14 @@ from .static import (
     osufile,
     extra_30,
 )
+from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, is_close
+from ..api import osu_api, get_map_bg
+from ..beatmap_stats_moder import with_mods
+from ..file import re_map, get_projectimg, download_osu, map_path
+from ..mods import calc_mods
+from ..pp import get_ss_pp
+from ..schema import Beatmap
+from ..utils import FGM
 
 
 async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
@@ -220,6 +221,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         anchor="lm",
     )
     # 输出
-    base = image2bytesio(im)
+    byt = BytesIO()
+    im.convert("RGB").save(byt, "jpeg")
     im.close()
-    return base
+    return byt

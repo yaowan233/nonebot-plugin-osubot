@@ -4,11 +4,11 @@ from typing import Union
 
 from PIL import ImageFilter, ImageEnhance, ImageDraw
 
-from ..api import osu_api, sayo_api
-from ..schema import SayoBeatmap
-from ..file import get_projectimg
 from .static import Image, Torus_SemiBold_40, Torus_SemiBold_20, IconLs, extra_30, BarImg, Torus_SemiBold_50
-from .utils import crop_bg, calc_songlen, stars_diff, image2bytesio
+from .utils import crop_bg, calc_songlen, stars_diff
+from ..api import osu_api, sayo_api
+from ..file import get_projectimg
+from ..schema import SayoBeatmap
 
 
 async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
@@ -133,6 +133,7 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
         else:
             plusnum = f"+ {num - 19}"
             draw.text((600, 350 + 102 * 20), plusnum, font=Torus_SemiBold_50, anchor="mm")
-    base = image2bytesio(im)
+    byt = BytesIO()
+    im.convert("RGB").save(byt, "jpeg")
     im.close()
-    return base
+    return byt

@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta, date
 from io import BytesIO
 from typing import Union
+
 from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
 from .static import (
@@ -21,11 +22,10 @@ from .static import (
     InfoImg,
 )
 from .utils import draw_fillet, info_calc, open_user_icon, update_icon
-
 from ..api import osu_api, get_random_bg
-from ..schema import User
-from ..file import make_badge_cache_file, user_cache_path, badge_cache_path
 from ..database.models import InfoData
+from ..file import make_badge_cache_file, user_cache_path, badge_cache_path
+from ..schema import User
 from ..utils import GMN, FGM
 
 
@@ -254,7 +254,7 @@ async def draw_info(
         icon_img = draw_fillet(icon_bg, 25)
         im.alpha_composite(icon_img, (50, 148))
         byt = BytesIO()
-        im.save(byt, "png")
+        im.convert("RGB").save(byt, "jpeg")
         im.close()
         user_icon.close()
         return byt

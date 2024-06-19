@@ -13,11 +13,6 @@ from ..file import get_projectimg, user_cache_path, map_path, download_osu
 from ..schema import SeasonalBackgrounds, User
 
 
-def image2bytesio(pic: Image):
-    byt = BytesIO()
-    pic.save(byt, "png")
-    return byt
-
 
 def draw_fillet(img, radii):
     # 画圆（用于分离4个角）
@@ -245,6 +240,8 @@ def calc_songlen(length: int) -> str:
 
 async def open_user_icon(info: User) -> Image:
     path = user_cache_path / str(info.id)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
     for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
         if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
