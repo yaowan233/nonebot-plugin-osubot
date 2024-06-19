@@ -2,7 +2,6 @@ import re
 from datetime import datetime
 from io import BytesIO
 from statistics import mode
-from typing import List
 
 from PIL import Image, ImageDraw, ImageEnhance
 from nonebot import logger
@@ -99,7 +98,7 @@ async def draw_match_history(match_id: str) -> bytes:
     )
     draw.text(
         (710, 180),
-        f":",
+        ":",
         font=Torus_SemiBold_50,
         anchor="mm",
     )
@@ -112,7 +111,8 @@ async def draw_match_history(match_id: str) -> bytes:
     # 绘制时间
     draw.text(
         (1400, 260),
-        f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - {datetime.fromisoformat(match_info.match['end_time']).strftime('%H:%M')}",
+        f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - "
+        f"{datetime.fromisoformat(match_info.match['end_time']).strftime('%H:%M')}",
         font=Torus_SemiBold_25,
         anchor="rb",
     )
@@ -237,7 +237,9 @@ async def draw_match_history(match_id: str) -> bytes:
             for mods_num, s_mods in enumerate(entry.mods):
                 mods_bg = osufile / "mods" / f"{s_mods}.png"
                 mods_img = Image.open(mods_bg).convert("RGBA").resize((30, 18))
-                score_img.alpha_composite(mods_img, ((slot + 1) * gutter + 32 * mods_num - 40, 185))
+                score_img.alpha_composite(
+                    mods_img, ((slot + 1) * gutter + 32 * mods_num - 40, 185)
+                )
             slot += 1
         im.alpha_composite(score_img, (10, 280 * sequence + 280 + 35))
         score_img.close()
@@ -304,7 +306,9 @@ async def draw_match_history(match_id: str) -> bytes:
             for mods_num, s_mods in enumerate(entry.mods):
                 mods_bg = osufile / "mods" / f"{s_mods}.png"
                 mods_img = Image.open(mods_bg).convert("RGBA").resize((30, 18))
-                score_img.alpha_composite(mods_img, ((slot + 1) * gutter - 40 + 32 * mods_num, 190))
+                score_img.alpha_composite(
+                    mods_img, ((slot + 1) * gutter - 40 + 32 * mods_num, 190)
+                )
             slot += 1
         im.alpha_composite(score_img, (830, 280 * sequence + 280 + 35))
         cover = re_map(osu)
@@ -379,7 +383,7 @@ async def draw_match_history(match_id: str) -> bytes:
             f"{stars:.2f}★",
             font=Torus_Regular_25,
             anchor="mt",
-            color=color
+            color=color,
         )
 
     avg_stars = total_stars / (len(game_history) - number_of_invalid_records)
@@ -397,7 +401,7 @@ async def draw_match_history(match_id: str) -> bytes:
     return byt.getvalue()
 
 
-def analyze_team_vs_game_history(game_history: List[Game]) -> dict:
+def analyze_team_vs_game_history(game_history: list[Game]) -> dict:
     red_score = 0
     blue_score = 0
     team_size_list = []
@@ -429,7 +433,7 @@ def analyze_team_vs_game_history(game_history: List[Game]) -> dict:
     return analyze_result
 
 
-def analyze_head_to_head_history(game_history: List[Game], user_id: int) -> dict:
+def analyze_head_to_head_history(game_history: list[Game], user_id: int) -> dict:
     number_of_games = 0
     number_of_games_top1 = 0
     # 获取用户上场次数

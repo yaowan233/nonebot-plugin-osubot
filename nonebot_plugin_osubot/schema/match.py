@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from . import Score
 from .basemodel import Base
@@ -8,9 +8,9 @@ from .user import User
 
 class Game(Base):
     beatmap_id: int
-    mods: List[str]
+    mods: list[str]
     beatmap: BeatmapCompact
-    scores: List[Score]
+    scores: list[Score]
     team_type: str
 
 
@@ -27,5 +27,5 @@ class Event(Base):
 
 class Match(Base):
     match: dict
-    events: List[Event]
-    users: List[User]
+    events: list[Event]
+    users: list[User]
