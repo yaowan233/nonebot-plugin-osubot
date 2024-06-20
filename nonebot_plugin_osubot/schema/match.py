@@ -1,8 +1,8 @@
 from typing import Optional
 
-from . import Score
 from .basemodel import Base
 from .beatmap import BeatmapCompact
+from .score import Score
 from .user import User
 
 
