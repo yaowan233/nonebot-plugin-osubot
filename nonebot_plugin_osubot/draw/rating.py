@@ -3,13 +3,20 @@ from collections import Counter
 from datetime import datetime
 from io import BytesIO
 from statistics import mode, median
-from typing import Union
 
 from PIL import Image, ImageDraw
 from nonebot.log import logger
 
-from .static import Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_25, TeamRed, TeamBlue, Torus_SemiBold_30, \
-    Torus_SemiBold_45, MpLink
+from .static import (
+    Torus_SemiBold_20,
+    Torus_SemiBold_40,
+    Torus_SemiBold_25,
+    TeamRed,
+    TeamBlue,
+    Torus_SemiBold_30,
+    Torus_SemiBold_45,
+    MpLink,
+)
 from .utils import draw_fillet, draw_rounded_rectangle, crop_bg, open_user_icon
 from ..api import api_info
 from ..schema.match import Match, Game
@@ -43,7 +50,9 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         for entry in game.scores:
             if entry.user_id in invalid_user_list:
                 game.scores.remove(entry)
-    match_info.users = [user for user in match_info.users if user.id in appeared_user_list]
+    match_info.users = [
+        user for user in match_info.users if user.id in appeared_user_list
+    ]
     # TEAM_VS 模式下，分析比赛历史
     if team_type == "team-vs":
         analyzed_result = analyze_team_vs_game_history(game_history)
@@ -54,8 +63,11 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
 
     # 绘制背景
     logger.info("开始绘制比赛历史地图信息")
-    im = Image.new("RGBA", (1020, 280 + 170 * (len(match_info.users) - len(invalid_user_list)) + 90),
-                   (31, 41, 46, 255))
+    im = Image.new(
+        "RGBA",
+        (1020, 280 + 170 * (len(match_info.users) - len(invalid_user_list)) + 90),
+        (31, 41, 46, 255),
+    )
 
     draw = ImageDraw.Draw(im)
     im.alpha_composite(MpLink, (0, 0))
@@ -73,7 +85,8 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
     # 绘制时间
     draw.text(
         (950, 220),
-        f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - {datetime.fromisoformat(match_info.match['end_time']).strftime('%H:%M')}",
+        f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - "
+        f"{datetime.fromisoformat(match_info.match['end_time']).strftime('%H:%M')}",
         font=Torus_SemiBold_25,
         anchor="rb",
     )
@@ -98,14 +111,18 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         if player_stats.total_score == 0:
             continue
         if player_stats.player_team == "red":
-            fill = '#d32f2e'
+            fill = "#d32f2e"
             background = TeamRed
         else:
-            fill = '#00a0e8'
+            fill = "#00a0e8"
             background = TeamBlue
         rating_color = rating_to_wn8_hex(rating, player_stats.win_rate)
-        draw_rounded_rectangle(draw, ((140, 170 * i + 280), (336, 170 * i + 390)), 20, fill=fill)
-        draw_rounded_rectangle(draw, ((736, 170 * i + 280), (966, 170 * i + 389)), 20, fill=rating_color[1])
+        draw_rounded_rectangle(
+            draw, ((140, 170 * i + 280), (336, 170 * i + 390)), 20, fill=fill
+        )
+        draw_rounded_rectangle(
+            draw, ((736, 170 * i + 280), (966, 170 * i + 389)), 20, fill=rating_color[1]
+        )
         background = await crop_bg((650, 110), background)
         background = draw_fillet(background, 20)
         im.paste(background, (160, 170 * i + 280), background)
@@ -188,16 +205,16 @@ def rating_to_wn8_hex(rating: float, win_rate: float) -> tuple[float, str]:
 
     # Define the WN8 ranges and corresponding hex colors from the image
     wn8_ranges_hex_colors = [
-        (0, 300, '#871F17'),  # Very Bad
-        (300, 449, '#BD413A'),  # Bad
-        (450, 649, '#C17E2B'),  # Below Average
-        (650, 899, '#C9B93C'),  # Average
-        (900, 1199, '#899B3B'),  # Above Average
-        (1200, 1599, '#557232'),  # Good
-        (1600, 1999, '#5998BC'),  # Very Good
-        (2000, 2449, '#4871C1'),  # Great
-        (2450, 2899, '#7141AF'),  # Unicum
-        (2900, float('inf'), '#3A136B')  # Super Unicum
+        (0, 300, "#871F17"),  # Very Bad
+        (300, 449, "#BD413A"),  # Bad
+        (450, 649, "#C17E2B"),  # Below Average
+        (650, 899, "#C9B93C"),  # Average
+        (900, 1199, "#899B3B"),  # Above Average
+        (1200, 1599, "#557232"),  # Good
+        (1600, 1999, "#5998BC"),  # Very Good
+        (2000, 2449, "#4871C1"),  # Great
+        (2450, 2899, "#7141AF"),  # Unicum
+        (2900, float("inf"), "#3A136B"),  # Super Unicum
     ]
 
     # Determine the hex color based on the WN8 rating
@@ -207,7 +224,7 @@ def rating_to_wn8_hex(rating: float, win_rate: float) -> tuple[float, str]:
     return wn8_rating, "#FFFFFF"  # Default color (white) if not found
 
 
-def score_to_3digit(score: Union[int, float]) -> str:
+def score_to_3digit(score: float) -> str:
     if score > 1000000:
         short_score = score / 1000000
         return f"{short_score:.2f}M"
@@ -244,7 +261,7 @@ def analyze_team_vs_game_history(game_history: list[Game]) -> dict:
     analyze_result = {
         "red_score": red_score,
         "blue_score": blue_score,
-        "team_size": mode(team_size_list)  # 从 TeamSize 中获取众数, 即队伍大小
+        "team_size": mode(team_size_list),  # 从 TeamSize 中获取众数, 即队伍大小
     }
     return analyze_result
 
@@ -266,7 +283,9 @@ def analyze_head_to_head_history(game_history: list[Game], user_id: int) -> dict
     analyze_result = {
         "number_of_games": number_of_games,
         "number_of_games_top1": number_of_games_top1,
-        "top1_rate": number_of_games_top1 / number_of_games if number_of_games != 0 else 0
+        "top1_rate": (
+            number_of_games_top1 / number_of_games if number_of_games != 0 else 0
+        ),
     }
     return analyze_result
 
@@ -323,18 +342,23 @@ class PlayerRatingCalculation:
             number_of_games += 1
             for entry in game.scores:
                 user_info = next(
-                    (user for user in self._match_info.users if user.id == user_id), (None, None, None)
+                    (user for user in self._match_info.users if user.id == user_id),
+                    (None, None, None),
                 )
                 if user_info is None:
                     continue
                 if entry.user_id == user_id:
-                    average_scores.append(sum([entry.score for entry in game.scores]) / len(game.scores))
+                    average_scores.append(
+                        sum([entry.score for entry in game.scores]) / len(game.scores)
+                    )
                     user_scores.append(entry.score)
                     number_of_games_by_user += 1
 
         # 计算osuplus算法评分
         n_prime = len(user_scores)  # number of games by the player
-        sum_of_ratios = sum(s_i / m_i for s_i, m_i in zip(user_scores, average_scores) if m_i != 0)
+        sum_of_ratios = sum(
+            s_i / m_i for s_i, m_i in zip(user_scores, average_scores) if m_i != 0
+        )
         cost = (2 / (n_prime + 2)) * sum_of_ratios
 
         return cost
@@ -369,37 +393,51 @@ class PlayerRatingCalculation:
                 blue_score += 1
             for entry in game.scores:
                 user_info = next(
-                    (user for user in self._match_info.users if user.id == user_id), (None, None, None)
+                    (user for user in self._match_info.users if user.id == user_id),
+                    (None, None, None),
                 )
                 if user_info is None:
                     continue
                 if entry.user_id == user_id:
                     for mod in entry.mods:
                         all_played_mods.add(mod)
-                    average_scores.append(sum([entry.score for entry in game.scores]) / len(game.scores))
+                    average_scores.append(
+                        sum([entry.score for entry in game.scores]) / len(game.scores)
+                    )
                     user_scores.append(entry.score)
                     number_of_games_by_user += 1
             # 获取加时赛数据
             if i == len(game_history) - 2 and red_score == blue_score:
                 tiebreaker = True
-                average_tiebreaker_score = sum(entry.score for entry in game.scores) / len(game.scores)
+                average_tiebreaker_score = sum(
+                    entry.score for entry in game.scores
+                ) / len(game.scores)
                 for entry in game.scores:
                     if entry.user_id == user_id:
                         user_tiebreaker_score = entry.score
                         break
 
         # 计算bathbot算法评分
-        score_sum = sum(player_score / avg_score for player_score, avg_score in zip(user_scores, average_scores))
+        score_sum = sum(
+            player_score / avg_score
+            for player_score, avg_score in zip(user_scores, average_scores)
+        )
         participation_bonus = number_of_games_by_user * 0.5
         if tiebreaker:
             tiebreaker_bonus = user_tiebreaker_score / average_tiebreaker_score
         else:
             tiebreaker_bonus = 0
         average_factor = 1 / number_of_games_by_user
-        participation_bonus_factor = 1.4 ** ((number_of_games_by_user - 1) / (number_of_games - 1)) ** 0.6
+        participation_bonus_factor = (
+                1.4 ** ((number_of_games_by_user - 1) / (number_of_games - 1)) ** 0.6
+        )
         mod_combination_bonus_factor = 1 + 0.02 * max(0, len(all_played_mods) - 2)
-        rating = ((score_sum + participation_bonus + tiebreaker_bonus) * average_factor *
-                  participation_bonus_factor * mod_combination_bonus_factor)
+        rating = (
+                (score_sum + participation_bonus + tiebreaker_bonus)
+                * average_factor
+                * participation_bonus_factor
+                * mod_combination_bonus_factor
+        )
 
         return rating
 
@@ -423,7 +461,8 @@ class PlayerRatingCalculation:
             for entry in game.scores:
                 counts[entry.user_id] += 1
                 user_info = next(
-                    (user for user in self._match_info.users if user.id == user_id), (None, None, None)
+                    (user for user in self._match_info.users if user.id == user_id),
+                    (None, None, None),
                 )
                 if user_info is None:
                     continue
@@ -439,7 +478,9 @@ class PlayerRatingCalculation:
         # 计算flashlight算法评分
         sum_of_ratios = sum(N_i / M_i for N_i, M_i in zip(user_scores, median_scores))
         average_ratio = sum_of_ratios / number_of_games_by_user
-        adjustment_factor = (number_of_games_by_user / median_of_games_of_all_users) ** (1 / 3)
+        adjustment_factor = (
+                                    number_of_games_by_user / median_of_games_of_all_users
+                            ) ** (1 / 3)
         match_costs = average_ratio * adjustment_factor
 
         return match_costs
