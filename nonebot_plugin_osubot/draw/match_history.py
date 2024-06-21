@@ -428,7 +428,7 @@ def analyze_team_vs_game_history(game_history: list[Game]) -> dict:
     analyze_result = {
         "red_score": red_score,
         "blue_score": blue_score,
-        "team_size": mode(team_size_list),  # 从 TeamSize 中获取众数, 即队伍大小
+        "team_size": mode(team_size_list) if team_size_list else 0,  # 从 TeamSize 中获取众数, 即队伍大小
     }
     return analyze_result
 
