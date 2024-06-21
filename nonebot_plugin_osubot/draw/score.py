@@ -200,7 +200,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
         if bg := await get_map_bg(mapinfo.id, mapinfo.beatmapset_id, cover):
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
-    cover_crop = await crop_bg("BG", cover_path)
+    cover_crop = await crop_bg((1500, 720), cover_path)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))

@@ -317,7 +317,7 @@ async def draw_match_history(match_id: str) -> bytes:
             if bg := await get_map_bg(map_info.id, map_info.beatmapset_id, cover):
                 with open(cover_path, "wb") as f:
                     f.write(bg.getvalue())
-        cropped_bg = await crop_bg("H", cover_path)
+        cropped_bg = await crop_bg((240, 120), cover_path)
         rounded_bg = draw_fillet(cropped_bg, 20)
         enhanced_bg = ImageEnhance.Brightness(rounded_bg).enhance(0.5)
         im.alpha_composite(enhanced_bg, (590, 280 * sequence + 280 + 40))

@@ -65,7 +65,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         if bg := await get_map_bg(mapid, mapinfo.beatmapset_id, cover):
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
-    cover_crop = await crop_bg("MB", cover_path)
+    cover_crop = await crop_bg((1200, 600), cover_path)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info
