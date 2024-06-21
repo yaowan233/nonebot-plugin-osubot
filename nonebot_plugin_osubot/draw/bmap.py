@@ -37,7 +37,7 @@ async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
     im = Image.new("RGBA", (1200, im_h), (31, 41, 46, 255))
     draw = ImageDraw.Draw(im)
     # 背景
-    cover_crop = await crop_bg("MP", cover)
+    cover_crop = await crop_bg((1200, 300), cover)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(1))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))

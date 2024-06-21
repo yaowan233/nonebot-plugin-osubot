@@ -13,7 +13,6 @@ from ..file import get_projectimg, user_cache_path, map_path, download_osu
 from ..schema import SeasonalBackgrounds, User
 
 
-
 def draw_fillet(img, radii):
     # 画圆（用于分离4个角）
     circle = Image.new("L", (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
@@ -124,40 +123,27 @@ def draw_acc(img: Image, acc: float, mode: int):
     return img
 
 
-async def crop_bg(size: str, path: Union[str, Path, BytesIO]):
-    try:
-        bg = Image.open(path).convert("RGBA")
-    except UnidentifiedImageError:
-        os.remove(path)
-        data = await get_seasonal_bg()
-        pic = SeasonalBackgrounds(**data)
-        url = random.choice(pic.backgrounds).url
-        res = await safe_async_get(url)
-        bg = Image.open(BytesIO(res.content)).convert("RGBA")
-    except FileNotFoundError:
-        data = await get_seasonal_bg()
-        pic = SeasonalBackgrounds(**data)
-        url = random.choice(pic.backgrounds).url
-        res = await safe_async_get(url)
-        bg = Image.open(BytesIO(res.content)).convert("RGBA")
-    bg_w, bg_h = bg.size[0], bg.size[1]
-    if size == "BG":
-        fix_w = 1500
-        fix_h = 720
-    elif size == "H":
-        fix_w = 240
-        fix_h = 120
-    elif size == "HI":
-        fix_w = 1000
-        fix_h = 400
-    elif size == "MP":
-        fix_w = 1200
-        fix_h = 300
-    elif size == "MB":
-        fix_w = 1200
-        fix_h = 600
+async def crop_bg(size: tuple[int, int], path: Union[str, Path, BytesIO, Image.Image]):
+    if not isinstance(path, Image.Image):
+        try:
+            bg = Image.open(path).convert("RGBA")
+        except UnidentifiedImageError:
+            os.remove(path)
+            data = await get_seasonal_bg()
+            pic = SeasonalBackgrounds(**data)
+            url = random.choice(pic.backgrounds).url
+            res = await safe_async_get(url)
+            bg = Image.open(BytesIO(res.content)).convert("RGBA")
+        except FileNotFoundError:
+            data = await get_seasonal_bg()
+            pic = SeasonalBackgrounds(**data)
+            url = random.choice(pic.backgrounds).url
+            res = await safe_async_get(url)
+            bg = Image.open(BytesIO(res.content)).convert("RGBA")
     else:
-        raise
+        bg = path
+    bg_w, bg_h = bg.size[0], bg.size[1]
+    fix_w, fix_h = size[0], size[1]
     # 固定比例
     fix_scale = fix_h / fix_w
     # 图片比例
@@ -286,3 +272,31 @@ async def update_map(set_id, map_id):
         # 判断文件是否创建超过一天
         if time_diff > datetime.timedelta(days=1):
             await download_osu(set_id, map_id)
+
+
+def draw_rounded_rectangle(draw: ImageDraw.Draw, xy: tuple[tuple[int, int], tuple[int, int]],
+                           corner_radius: int, fill: str = None) -> None:
+    upper_left_point = xy[0]
+    bottom_right_point = xy[1]
+
+    # 计算矩形的四个角的坐标
+    top_left = (upper_left_point[0], upper_left_point[1])
+    top_right = (bottom_right_point[0], upper_left_point[1])
+    bottom_left = (upper_left_point[0], bottom_right_point[1])
+    bottom_right = (bottom_right_point[0], bottom_right_point[1])
+
+    # 绘制四个角的四分之一圆
+    draw.pieslice([top_left, (top_left[0] + corner_radius * 2, top_left[1] + corner_radius * 2)],
+                  start=180, end=270, fill=fill)
+    draw.pieslice([(top_right[0] - corner_radius * 2, top_right[1]),
+                   (top_right[0], top_right[1] + corner_radius * 2)], start=270, end=360, fill=fill)
+    draw.pieslice([(bottom_left[0], bottom_left[1] - corner_radius * 2),
+                   (bottom_left[0] + corner_radius * 2, bottom_left[1])], start=90, end=180, fill=fill)
+    draw.pieslice([(bottom_right[0] - corner_radius * 2, bottom_right[1] - corner_radius * 2),
+                   (bottom_right[0], bottom_right[1])], start=0, end=90, fill=fill)
+
+    # 绘制矩形填充四个圆角之间的空间
+    draw.rectangle([top_left[0] + corner_radius, top_left[1],
+                    bottom_right[0] - corner_radius, bottom_right[1]], fill=fill)
+    draw.rectangle([top_left[0], top_left[1] + corner_radius,
+                    bottom_right[0], bottom_right[1] - corner_radius], fill=fill)

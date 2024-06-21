@@ -20,6 +20,7 @@ from .mu import mu
 from .osu_help import osu_help
 from .pr import pr, recent
 from .preview import generate_preview
+from .rating import rating
 from .recommend import recommend
 from .score import score
 from .update import update_info, update_pic, clear_background
@@ -61,5 +62,6 @@ __all__ = [
     "convert",
     "change",
     "generate_full_ln",
-    "match"
+    "match",
+    "rating"
 ]

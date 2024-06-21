@@ -18,6 +18,7 @@ Torus_SemiBold_20 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.o
 Torus_SemiBold_25 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 25)
 Torus_SemiBold_30 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 30)
 Torus_SemiBold_40 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 40)
+Torus_SemiBold_45 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 45)
 Torus_SemiBold_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 50)
 Venera_75 = ImageFont.truetype(str(osufile / "fonts" / "Venera.otf"), 75)
 extra_30 = ImageFont.truetype(str(osufile / "fonts" / "Extra.otf"), 30)
