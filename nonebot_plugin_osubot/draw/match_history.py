@@ -108,11 +108,15 @@ async def draw_match_history(match_id: str) -> bytes:
         font=Torus_SemiBold_50,
         anchor="lm",
     )
+    end_time = (
+        datetime.fromisoformat(match_info.match["end_time"]).strftime("%H:%M")
+        if match_info.match["end_time"]
+        else "未结束"
+    )
     # 绘制时间
     draw.text(
         (1400, 260),
-        f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - "
-        f"{datetime.fromisoformat(match_info.match['end_time']).strftime('%H:%M')}",
+        f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - {end_time}",
         font=Torus_SemiBold_25,
         anchor="rb",
     )
@@ -428,7 +432,9 @@ def analyze_team_vs_game_history(game_history: list[Game]) -> dict:
     analyze_result = {
         "red_score": red_score,
         "blue_score": blue_score,
-        "team_size": mode(team_size_list) if team_size_list else 0,  # 从 TeamSize 中获取众数, 即队伍大小
+        "team_size": (
+            mode(team_size_list) if team_size_list else max(len(game.scores) for game in game_history)
+        ),  # 从 TeamSize 中获取众数, 即队伍大小
     }
     return analyze_result
 
@@ -450,9 +456,9 @@ def analyze_head_to_head_history(game_history: list[Game], user_id: int) -> dict
     analyze_result = {
         "number_of_games": number_of_games,
         "number_of_games_top1": number_of_games_top1,
-        "top1_rate": number_of_games_top1 / number_of_games
-        if number_of_games != 0
-        else 0,
+        "top1_rate": (
+            number_of_games_top1 / number_of_games if number_of_games != 0 else 0
+        ),
     }
     return analyze_result
 
