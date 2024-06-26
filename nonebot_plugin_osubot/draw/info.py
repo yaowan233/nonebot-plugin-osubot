@@ -249,6 +249,7 @@ async def draw_info(
     # 头像
     gif_frames = []
     user_icon = await open_user_icon(info)
+    _ = asyncio.create_task(update_icon(info))
     if not getattr(user_icon, "is_animated", False):
         icon_bg = user_icon.convert("RGBA").resize((300, 300))
         icon_img = draw_fillet(icon_bg, 25)
@@ -280,5 +281,4 @@ async def draw_info(
     # 输出
     gif_frames[0].close()
     user_icon.close()
-    _ = asyncio.create_task(update_icon(info))
     return gif_bytes

@@ -608,6 +608,8 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
             anchor="mm",
         )
     user_icon = await open_user_icon(info)
+    _ = asyncio.create_task(update_map(mapinfo.beatmapset_id, mapinfo.id))
+    _ = asyncio.create_task(update_icon(info))
     gif_frames = []
     if not getattr(user_icon, "is_animated", False):
         icon_bg = user_icon.convert("RGBA").resize((170, 170))
@@ -640,8 +642,6 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
     # 输出
     gif_frames[0].close()
     user_icon.close()
-    _ = asyncio.create_task(update_map(mapinfo.beatmapset_id, mapinfo.id))
-    _ = asyncio.create_task(update_icon(info))
     return gif_bytes
 
 
