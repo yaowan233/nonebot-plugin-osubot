@@ -85,7 +85,7 @@ def draw_acc(img: Image, acc: float, mode: int):
     if mode == 0:
         insize = [60, 20, 7, 7, 5, 1]
     elif mode == 1:
-        insize = [60, 20, 5, 5, 4, 1]
+        insize = [60, 15, 8, 8, 8, 1]
     elif mode == 2:
         insize = [85, 5, 4, 4, 1, 1]
     else:
