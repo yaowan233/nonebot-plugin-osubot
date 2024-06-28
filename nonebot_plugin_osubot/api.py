@@ -1,10 +1,12 @@
 import random
 from io import BytesIO
-from httpx import AsyncClient, Response
 from typing import Union, Optional
-from nonebot.log import logger
-from nonebot import get_plugin_config
+
 from expiringdict import ExpiringDict
+from httpx import AsyncClient, Response
+from nonebot import get_plugin_config
+from nonebot.log import logger
+
 from .config import Config
 from .network import auto_retry
 from .network.first_response import get_first_response
@@ -66,6 +68,7 @@ async def osu_api(
     is_name: bool = False,
     offset: int = 0,
     limit: int = 5,
+        legacy_only: int = 0
 ) -> Union[str, dict]:
     if is_name:
         info = await get_user_info(f"{api}/users/{uid}?key=username")
@@ -76,15 +79,16 @@ async def osu_api(
     if project == "info" or project == "bind" or project == "update":
         url = f"{api}/users/{uid}/{mode}"
     elif project == "recent":
-        url = f"{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}"
+        url = (f"{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}"
+               f"&legacy_only={legacy_only}")
     elif project == "pr":
-        url = f"{api}/users/{uid}/scores/recent?mode={mode}&limit={limit}&offset={offset}"
+        url = f"{api}/users/{uid}/scores/recent?mode={mode}&limit={limit}&offset={offset}&legacy_only={legacy_only}"
     elif project == "score":
         url = f"{api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={mode}"
     elif project == "best_score":
         url = f"{api}/beatmaps/{map_id}/scores/users/{uid}?mode={mode}"
     elif project == "bp":
-        url = f"{api}/users/{uid}/scores/best?mode={mode}&limit=100"
+        url = f"{api}/users/{uid}/scores/best?mode={mode}&limit=100&legacy_only={legacy_only}"
     elif project == "map":
         url = f"{api}/beatmaps/{map_id}"
     else:

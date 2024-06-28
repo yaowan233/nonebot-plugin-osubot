@@ -52,8 +52,9 @@ async def draw_score(
     mapid: int = 0,
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
+    user = await UserData.get_or_none(user_id=user_id)
     task0 = asyncio.create_task(
-        osu_api(project, uid, mode, mapid, is_name=is_name, limit=100)
+        osu_api(project, uid, mode, mapid, is_name=is_name, limit=100, legacy_only=int(not user.lazer_mode))
     )
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     score_json = await task0
@@ -61,7 +62,6 @@ async def draw_score(
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     elif isinstance(score_json, str):
         return score_json
-    user = await UserData.get_or_none(user_id=user_id)
     if not user.lazer_mode:
         score_json = [i for i in score_json if {"acronym": "CL"} in i["mods"]]
     if project in ("recent", "pr"):

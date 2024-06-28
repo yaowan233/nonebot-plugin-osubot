@@ -6,12 +6,12 @@ from nonebot.typing import T_State
 from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
+from ..api import osu_api, get_users
 from ..database import UserData
 from ..draw.echarts import draw_bpa_plot
 from ..draw.score import cal_score_info
-from ..utils import NGM
 from ..schema import NewScore
-from ..api import osu_api, get_users
+from ..utils import NGM
 
 bp_analyze = on_command("bpa", aliases={"bp分析"}, priority=11, block=True)
 rank_color = {
@@ -30,13 +30,14 @@ rank_color = {
 async def _(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    user = state["para"] if state["para"] else state["user"]
-    bp_info = await osu_api("bp", user, NGM[state["mode"]], is_name=state["is_name"])
+    user = await UserData.get_or_none(user_id=event.get_user_id())
+    uid = state["para"] if state["para"] else state["user"]
+    bp_info = await osu_api("bp", uid, NGM[state["mode"]], is_name=state["is_name"],
+                            legacy_only=int(not user.lazer_mode))
     if not bp_info:
-        await UniMessage.text(f'未查询到 {user} 在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
+        await UniMessage.text(f'未查询到 {user.osu_name} 在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
     if isinstance(bp_info, str):
         await UniMessage.text(bp_info).finish(reply_to=True)
-    user = await UserData.get_or_none(user_id=event.get_user_id())
     score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:
         if {"acronym": "DT"} in score.mods or {"acronym": "NC"} in score.mods:

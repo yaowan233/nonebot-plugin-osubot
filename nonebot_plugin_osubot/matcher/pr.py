@@ -1,16 +1,16 @@
 from nonebot import on_command
 from nonebot.internal.adapter import Event
-from nonebot_plugin_alconna import UniMessage
 from nonebot.params import T_State
+from nonebot_plugin_alconna import UniMessage
 
-from ..database import UserData
-from ..api import get_user_info
 from .utils import split_msg
+from ..api import get_user_info
+from ..api import osu_api
+from ..database import UserData
 from ..draw import draw_score
+from ..draw.bp import draw_pfm
 from ..draw.score import cal_legacy_acc, cal_legacy_rank
 from ..schema import NewScore
-from ..api import osu_api
-from ..draw.bp import draw_pfm
 from ..utils import NGM
 
 recent = on_command("recent", priority=11, block=True, aliases={"re", "RE", "Re", "rE"})
@@ -22,6 +22,7 @@ async def _recent(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = NGM[state["mode"]]
+    player = await UserData.get_or_none(user_id=int(event.get_user_id()))
     if "-" in state["para"]:
         ls = state["para"].split("-")
         low, high = ls[0], ls[1]
@@ -32,6 +33,7 @@ async def _recent(event: Event, state: T_State):
             is_name=state["is_name"],
             offset=int(low) - 1,
             limit=high,
+            legacy_only=int(not player.lazer_mode)
         )
         if not data:
             await UniMessage.text(f"未查询到在 {mode} 的游玩记录").finish(reply_to=True)
@@ -44,7 +46,6 @@ async def _recent(event: Event, state: T_State):
             else:
                 state["user"] = info["username"]
         score_ls = [NewScore(**score_json) for score_json in data]
-        player = await UserData.get_or_none(user_id=int(event.get_user_id()))
         if not player.lazer_mode:
             score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
         for score_info in score_ls:
@@ -78,6 +79,7 @@ async def _pr(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = state["mode"]
+    player = await UserData.get_or_none(user_id=int(event.get_user_id()))
     if "-" in state["para"]:
         ls = state["para"].split("-")
         low, high = ls[0], ls[1]
@@ -88,6 +90,7 @@ async def _pr(event: Event, state: T_State):
             is_name=state["is_name"],
             offset=int(low) - 1,
             limit=high,
+            legacy_only=int(not player.lazer_mode)
         )
         if not data:
             await UniMessage.text(f"未查询到在 {NGM[mode]} 的游玩记录").finish(reply_to=True)
@@ -100,7 +103,6 @@ async def _pr(event: Event, state: T_State):
             else:
                 state["user"] = info["username"]
         score_ls = [NewScore(**score_json) for score_json in data]
-        player = await UserData.get_or_none(user_id=int(event.get_user_id()))
         if not player.lazer_mode:
             score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
         for score_info in score_ls:

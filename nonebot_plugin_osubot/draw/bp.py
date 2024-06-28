@@ -1,21 +1,20 @@
 import asyncio
-from io import BytesIO
 from datetime import datetime, timedelta
+from io import BytesIO
 from time import strptime, mktime
 from typing import Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
 
 from .score import cal_legacy_acc, cal_legacy_rank
-from ..database import UserData
-from ..schema import NewScore
-from ..api import osu_api
-from ..utils import GMN
-from ..mods import get_mods_list
-from ..file import get_projectimg
-
-from .utils import draw_fillet, draw_fillet2
 from .static import BgImg, BgImg1, Torus_Regular_25, Torus_Regular_20, Torus_SemiBold_25, Image, osufile
+from .utils import draw_fillet, draw_fillet2
+from ..api import osu_api
+from ..database import UserData
+from ..file import get_projectimg
+from ..mods import get_mods_list
+from ..schema import NewScore
+from ..utils import GMN
 
 
 async def draw_bp(
@@ -29,11 +28,11 @@ async def draw_bp(
     day: int = 0,
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
-    bp_info = await osu_api("bp", uid, mode, is_name=is_name)
+    player = await UserData.get_or_none(user_id=user_id)
+    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not player.lazer_mode))
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [NewScore(**i) for i in bp_info]
-    player = await UserData.get_or_none(user_id=user_id)
     if not player.lazer_mode:
         score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
     if not bp_info:
