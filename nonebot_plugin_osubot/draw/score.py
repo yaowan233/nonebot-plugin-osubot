@@ -92,6 +92,8 @@ async def draw_score(
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
+    if isinstance(map_json, str):
+        return map_json
     # 判断是否开启lazer模式
     score_info = cal_score_info(user.lazer_mode, score_info)
     return await draw_score_pic(
