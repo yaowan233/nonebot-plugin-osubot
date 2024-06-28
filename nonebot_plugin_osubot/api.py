@@ -25,7 +25,9 @@ bg_url = plugin_config.info_bg
 
 
 @auto_retry
-async def safe_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
+async def safe_async_get(
+        url, headers: Optional[dict] = None, params: Optional[dict] = None
+) -> Response:
     async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
         client: AsyncClient
         req = await client.get(url, headers=headers, params=params)
@@ -68,7 +70,7 @@ async def osu_api(
     is_name: bool = False,
     offset: int = 0,
     limit: int = 5,
-    legacy_only: int = 0
+        legacy_only: int = 0,
 ) -> Union[str, dict]:
     if is_name:
         info = await get_user_info(f"{api}/users/{uid}?key=username")
@@ -79,8 +81,10 @@ async def osu_api(
     if project == "info" or project == "bind" or project == "update":
         url = f"{api}/users/{uid}/{mode}"
     elif project == "recent":
-        url = (f"{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}"
-               f"&legacy_only={legacy_only}")
+        url = (
+            f"{api}/users/{uid}/scores/recent?mode={mode}&include_fails=1&limit={limit}&offset={offset}"
+            f"&legacy_only={legacy_only}"
+        )
     elif project == "pr":
         url = f"{api}/users/{uid}/scores/recent?mode={mode}&limit={limit}&offset={offset}&legacy_only={legacy_only}"
     elif project == "score":
@@ -133,7 +137,9 @@ async def get_users(users: list[int]):
 
 async def api_info(project: str, url: str) -> Union[dict, str]:
     if project == "mapinfo" or project == "PPCalc":
-        headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"}
+        headers = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"
+        }
     else:
         token = cache.get("token")
         if not token:
@@ -221,4 +227,6 @@ async def get_recommend(uid, mode, key_count):
 
 async def update_recommend(uid):
     headers = {"uid": str(uid)}
-    await safe_async_post("https://alphaosu.keytoix.vip/api/v1/self/users/synchronize", headers=headers)
+    await safe_async_post(
+        "https://alphaosu.keytoix.vip/api/v1/self/users/synchronize", headers=headers
+    )
