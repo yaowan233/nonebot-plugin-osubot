@@ -24,7 +24,7 @@ _✨ NoneBot osubot ✨_
 
 ## 📖 介绍
 
-本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用，可能与其他使用了tortoise-orm的插件会相冲突如harukabot
+本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用
 
 变速功能依赖ffmpeg，需要[自行安装ffmpeg](https://docs.go-cqhttp.org/guide/quick_start.html#%E5%AE%89%E8%A3%85-ffmpeg)才能正常使用
 
@@ -57,11 +57,7 @@ _✨ NoneBot osubot ✨_
 
     poetry add nonebot-plugin-osubot
 </details>
-<details>
-<summary>conda</summary>
 
-    conda install nonebot-plugin-osubot
-</details>
 
 打开 nonebot2 项目的 `bot.py` 文件, 在其中写入
 
@@ -103,6 +99,7 @@ _✨ NoneBot osubot ✨_
 
 
 ## 💡 贡献
-由于当前开发缺乏测试，欢迎提各种issue来反馈bug
-或者你可以加群(228986744)来直接反馈！
+
+如果遇到任何问题，欢迎提各种issue来反馈bug
+你也可以加群(228986744)来进行反馈！
 ![1665504476458_temp_qrcode_share_9993](https://user-images.githubusercontent.com/30517062/195143643-5c212f4e-5ee2-49fd-8e71-4f360eef2d46.png)
