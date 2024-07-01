@@ -29,11 +29,12 @@ async def draw_bp(
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
     player = await UserData.get_or_none(user_id=user_id)
-    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not player.lazer_mode))
+    lazer_mode = True if not player else player.lazer_mode
+    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not lazer_mode))
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [NewScore(**i) for i in bp_info]
-    if not player.lazer_mode:
+    if not lazer_mode:
         score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
     if not bp_info:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
@@ -64,13 +65,13 @@ async def draw_bp(
             return f"近{day + 1}日内在 {GMN[mode]} 没有新增的BP成绩"
     for score_info in score_ls_filtered:
         # 判断是否开启lazer模式
-        if player.lazer_mode:
+        if lazer_mode:
             score_info.legacy_total_score = score_info.total_score
-        if not player.lazer_mode:
+        if not lazer_mode:
             score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
-        if score_info.ruleset_id == 3 and not player.lazer_mode:
+        if score_info.ruleset_id == 3 and not lazer_mode:
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        if not player.lazer_mode:
+        if not lazer_mode:
             is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
             score_info.rank = cal_legacy_rank(score_info, is_hidden)
     msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day)

@@ -53,6 +53,7 @@ async def draw_score(
     is_name: bool = False,
 ) -> Union[str, BytesIO]:
     user = await UserData.get_or_none(user_id=user_id)
+    lazer_mode = True if not user else user.lazer_mode
     task0 = asyncio.create_task(
         osu_api(project, uid, mode, mapid, is_name=is_name, limit=100, legacy_only=int(not user.lazer_mode))
     )
@@ -62,7 +63,7 @@ async def draw_score(
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     elif isinstance(score_json, str):
         return score_json
-    if not user.lazer_mode:
+    if not lazer_mode:
         score_json = [i for i in score_json if {"acronym": "CL"} in i["mods"]]
     if project in ("recent", "pr"):
         if len(score_json) <= best:
@@ -95,7 +96,7 @@ async def draw_score(
     if isinstance(map_json, str):
         return map_json
     # 判断是否开启lazer模式
-    score_info = cal_score_info(user.lazer_mode, score_info)
+    score_info = cal_score_info(lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
@@ -132,9 +133,10 @@ async def get_score_data(
     else:
         score_ls = [NewScore(**i) for i in score_json["scores"]]
     user = await UserData.get_or_none(user_id=user_id)
+    lazer_mode = True if not user else user.lazer_mode
     if not score_ls:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
-    if not user.lazer_mode:
+    if not lazer_mode:
         score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
         for i in score_ls:
             i.mods.remove({"acronym": "CL"})
