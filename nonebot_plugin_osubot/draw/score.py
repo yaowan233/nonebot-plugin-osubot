@@ -134,12 +134,12 @@ async def get_score_data(
         score_ls = [NewScore(**i) for i in score_json["scores"]]
     user = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not user else user.lazer_mode
-    if not score_ls:
-        return f"未查询到在 {GMN[mode]} 的游玩记录"
     if not lazer_mode:
         score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
         for i in score_ls:
             i.mods.remove({"acronym": "CL"})
+    if not score_ls:
+        return f"未查询到在 {GMN[mode]} 的游玩记录"
     if mods:
         for score in score_ls:
             if mods == "NM" and not score.mods:
