@@ -73,13 +73,22 @@ def get_if_pp_ss_pp(score: NewScore, path: str) -> tuple:
     if mods & (1 << 9):
         mods -= 1 << 9
         mods += 1 << 6
+    total = beatmap.n_objects
+    passed = (score.statistics.great or 0) + (score.statistics.miss or 0) + (
+                score.statistics.large_tick_hit or score.statistics.ok or 0) + (score.statistics.meh or 0)
+    n300 = score.statistics.great + total - passed
+    count_hits = total - (score.statistics.miss or 0)
+    ratio = 1 - n300 / count_hits
+    new100s = int(ratio * (score.statistics.miss or 0))
+    n300 += (score.statistics.miss or 0) - new100s
+    n100 = new100s + (score.statistics.ok or 0)
     c = Performance(
-        accuracy=score.accuracy * 100,
-        n_katu=score.statistics.small_tick_miss or score.statistics.good or 0,
-        n_geki=score.statistics.perfect or 0,
+        # accuracy=score.accuracy * 100,
+        # n_katu=score.statistics.small_tick_miss or score.statistics.good or 0,
+        # n_geki=score.statistics.perfect or 0,
         n50=score.statistics.meh or 0,
-        n100=score.statistics.large_tick_hit or score.statistics.ok or 0,
-        n300=(score.statistics.great or 0) + (score.statistics.miss or 0),
+        n100=n100,
+        n300=n300,
         mods=mods,
     )
     if_pp = c.calculate(beatmap).pp
