@@ -59,12 +59,11 @@ async def _(state: T_State):
         await UniMessage.text(state["error"]).send(reply_to=True)
         return
     user = state["user"]
-    path = user_cache_path / str(user) / "icon.png"
-    gif_path = user_cache_path / str(user) / "icon.gif"
-    if path.exists():
-        path.unlink()
-    if gif_path.exists():
-        gif_path.unlink()
+    user_path = user_cache_path / str(user)
+    for file_path in user_path.glob("icon*.*"):
+        # 检查文件是否为图片格式
+        if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp", ".peg"]:
+            file_path.unlink()
     await UniMessage.text("个人信息更新成功").send(reply_to=True)
 
 
