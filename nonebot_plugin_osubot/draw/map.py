@@ -22,10 +22,11 @@ from ..file import re_map, get_projectimg, download_osu, map_path
 from ..mods import calc_mods
 from ..pp import get_ss_pp
 from ..schema import Beatmap
+from ..schema.score import Mod
 from ..utils import FGM
 
 
-async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
+async def draw_map_info(mapid: int, mods: list[str]) -> Union[str, BytesIO]:
     info = await osu_api("map", map_id=mapid)
     if not info:
         return "未查询到该地图信息"
@@ -33,7 +34,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
         return info
     mapinfo = Beatmap(**info)
     original_mapinfo = mapinfo.copy()
-    mods = [{"acronym": mod} for mod in mods]
+    mods = [Mod(acronym=mod) for mod in mods]
     mapinfo = with_mods(mapinfo, None, mods)
     diffinfo = (
         calc_songlen(mapinfo.total_length),
@@ -162,7 +163,7 @@ async def draw_map_info(mapid: int, mods: list) -> Union[str, BytesIO]:
     # 绘制mods
     if mods:
         for mods_num, s_mods in enumerate(mods):
-            mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
+            mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
             mods_img = Image.open(mods_bg).convert("RGBA")
             im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
     # mapper
