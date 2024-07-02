@@ -11,7 +11,7 @@
 _✨ NoneBot osubot ✨_
 
 
-<a href="./LICENSE">
+<a href="./License">
     <img src="https://img.shields.io/github/license/yaowan233/nonebot-plugin-osubot.svg" alt="license">
 </a>
 <a href="https://pypi.python.org/pypi/nonebot-plugin-osubot">
