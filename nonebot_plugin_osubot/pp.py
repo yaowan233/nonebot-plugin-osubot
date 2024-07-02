@@ -48,10 +48,10 @@ def get_if_pp_ss_pp(score: NewScore, path: str) -> tuple:
         mods += 1 << 6
     total = beatmap.n_objects
     passed = (
-            score.statistics.great
-            + score.statistics.miss
-            + score.statistics.ok
-            + score.statistics.meh
+        score.statistics.great
+        + score.statistics.miss
+        + score.statistics.ok
+        + score.statistics.meh
     )
     n300 = score.statistics.great + total - passed
     count_hits = total - score.statistics.miss
