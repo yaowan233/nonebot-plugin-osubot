@@ -90,7 +90,7 @@ _✨ NoneBot osubot ✨_
 | OSU_CLIENT | 是 | 无 | 客户端ID |
 | OSU_KEY | 是 | 无 | 客户端密钥 |
 | DB_URL | 否 | sqlite://db.sqlite3 | 数据库地址 |
-| INFO_BG | 否 | ['https://api.gumengya.com/Api/DmImg?format=image'] | 随机背景api地址 |
+| INFO_BG | 否 | ['https://example.com'] | 随机背景api地址，需要打开网页后随机获得一张图片 |
 
 ## 🎉 使用
 ### 指令
