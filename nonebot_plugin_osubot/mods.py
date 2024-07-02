@@ -1,4 +1,5 @@
 from .schema import NewScore
+from .schema.score import Mod
 
 mods_dic = {
     "CL": 0,
@@ -47,15 +48,8 @@ def get_mods_list(score_ls: list[NewScore], mods: list[str]) -> list[int]:
     return mods_index_ls
 
 
-def calc_mods(mods: list[dict]) -> int:
+def calc_mods(mods: list[Mod]) -> int:
     num = 0
     for mod in mods:
-        num ^= mods_dic.get(mod["acronym"], 0)
-    return num
-
-
-def calc_old_mods(mods: list[str]) -> int:
-    num = 0
-    for mod in mods:
-        num ^= mods_dic.get(mod, 0)
+        num ^= mods_dic.get(mod.acronym, 0)
     return num
