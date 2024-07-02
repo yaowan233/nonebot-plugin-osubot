@@ -4,6 +4,7 @@ from rosu_pp_py import Beatmap, Performance, PerformanceAttributes, GameMode, St
 
 from .mods import calc_mods
 from .schema import NewScore
+from .schema.score import Mod
 
 
 def cal_pp(score: NewScore, path: str) -> PerformanceAttributes:
@@ -98,19 +99,19 @@ def get_strains(path: str, mods: int) -> Strains:
     return strains
 
 
-def adjust_performance(mods: list[dict], c: Performance):
+def adjust_performance(mods: list[Mod], c: Performance):
     for mod in mods:
-        if mod["acronym"] == "DT" and mod.get("settings"):
-            c.set_clock_rate(mod["settings"]["speed_change"])
-        if mod["acronym"] == "DA" and mod.get("settings"):
-            if mod["settings"].get("circle_size") is not None:
-                c.set_cs(mod["settings"]["circle_size"], False)
-            if mod["settings"].get("approach_rate") is not None:
-                c.set_ar(mod["settings"]["approach_rate"], False)
-            if mod["settings"].get("drain_rate") is not None:
-                c.set_hp(mod["settings"]["drain_rate"], False)
-            if mod["settings"].get("overall_difficulty") is not None:
-                c.set_od(mod["settings"]["overall_difficulty"], False)
+        if mod.acronym == "DT" and mod.settings:
+            c.set_clock_rate(mod.settings.speed_change)
+        if mod.acronym == "DA" and mod.settings:
+            if mod.settings.circle_size is not None:
+                c.set_cs(mod.settings.circle_size, False)
+            if mod.settings.approach_rate is not None:
+                c.set_ar(mod.settings.approach_rate, False)
+            if mod.settings.drain_rate is not None:
+                c.set_hp(mod.settings.drain_rate, False)
+            if mod.settings.overall_difficulty is not None:
+                c.set_od(mod.settings.overall_difficulty, False)
 
 
 def convert_mode(score: NewScore, beatmap: Beatmap):
