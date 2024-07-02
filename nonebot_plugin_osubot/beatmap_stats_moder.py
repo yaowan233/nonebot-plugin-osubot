@@ -49,13 +49,13 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
     for mod in mods:
         if mod.acronym == "DT" or mod.acronym == "NC":
             speed_mul = 1.5
-            if mod.settings.speed_change:
+            if mod.settings and mod.settings.speed_change:
                 speed_mul = mod.settings.speed_change
             mapinfo.bpm *= speed_mul
             mapinfo.total_length /= speed_mul
         if mod.acronym == "HT":
             speed_mul = 0.75
-            if mod.settings.speed_change:
+            if mod.settings and mod.settings.speed_change:
                 speed_mul = mod.settings.speed_change
             mapinfo.bpm *= speed_mul
             mapinfo.total_length /= speed_mul
