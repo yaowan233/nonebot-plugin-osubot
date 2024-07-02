@@ -1,5 +1,7 @@
 from typing import Literal, Optional
 
+from pydantic.fields import Field
+
 from .basemodel import Base
 from .beatmap import Beatmap, Beatmapset
 from .user import UserCompact
@@ -41,15 +43,15 @@ class BeatmapUserScore(Base):
 
 
 class NewStatistics(Base):
-    great: Optional[int]
-    large_tick_hit: Optional[int]
-    small_tick_hit: Optional[int]
-    small_tick_miss: Optional[int]
-    miss: Optional[int]
-    ok: Optional[int]
-    meh: Optional[int]
-    good: Optional[int]
-    perfect: Optional[int]
+    great: Optional[int] = Field(default=0)
+    large_tick_hit: Optional[int] = Field(default=0)
+    small_tick_hit: Optional[int] = Field(default=0)
+    small_tick_miss: Optional[int] = Field(default=0)
+    miss: Optional[int] = Field(default=0)
+    ok: Optional[int] = Field(default=0)
+    meh: Optional[int] = Field(default=0)
+    good: Optional[int] = Field(default=0)
+    perfect: Optional[int] = Field(default=0)
 
 
 class NewScore(Base):

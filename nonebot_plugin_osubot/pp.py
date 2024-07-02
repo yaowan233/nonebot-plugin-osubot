@@ -2,21 +2,13 @@ import math
 
 from rosu_pp_py import Beatmap, Performance, PerformanceAttributes, GameMode, Strains
 
-from .mods import calc_mods, calc_old_mods
-from .schema import NewScore, Score
+from .mods import calc_mods
+from .schema import NewScore
 
 
 def cal_pp(score: NewScore, path: str) -> PerformanceAttributes:
     beatmap = Beatmap(path=path)
-    if score.ruleset_id == 0:
-        mode = GameMode.Osu
-    elif score.ruleset_id == 1:
-        mode = GameMode.Taiko
-    elif score.ruleset_id == 2:
-        mode = GameMode.Catch
-    else:
-        mode = GameMode.Mania
-    beatmap.convert(mode)
+    convert_mode(score, beatmap)
     mods = calc_mods(score.mods)
     if mods & (1 << 9):
         mods -= 1 << 9
@@ -24,23 +16,23 @@ def cal_pp(score: NewScore, path: str) -> PerformanceAttributes:
     if score.ruleset_id == 2:
         c = Performance(
             accuracy=score.accuracy * 100,
-            n_katu=score.statistics.small_tick_miss or 0,
+            n_katu=score.statistics.small_tick_miss,
             combo=score.max_combo,
-            misses=score.statistics.miss or 0,
-            n100=score.statistics.large_tick_hit or 0,
-            n300=score.statistics.great or 0,
+            misses=score.statistics.miss,
+            n100=score.statistics.large_tick_hit,
+            n300=score.statistics.great,
             mods=mods,
         )
     else:
         c = Performance(
             accuracy=score.accuracy * 100,
-            n_katu=score.statistics.good or 0,
-            n_geki=score.statistics.perfect or 0,
+            n_katu=score.statistics.good,
+            n_geki=score.statistics.perfect,
             combo=score.max_combo,
-            misses=score.statistics.miss or 0,
-            n50=score.statistics.meh or 0,
-            n100=score.statistics.ok or 0,
-            n300=score.statistics.great or 0,
+            misses=score.statistics.miss,
+            n50=score.statistics.meh,
+            n100=score.statistics.ok,
+            n300=score.statistics.great,
             mods=mods,
         )
     adjust_performance(score.mods, c)
@@ -49,37 +41,29 @@ def cal_pp(score: NewScore, path: str) -> PerformanceAttributes:
 
 def get_if_pp_ss_pp(score: NewScore, path: str) -> tuple:
     beatmap = Beatmap(path=path)
-    if score.ruleset_id == 0:
-        mode = GameMode.Osu
-    elif score.ruleset_id == 1:
-        mode = GameMode.Taiko
-    elif score.ruleset_id == 2:
-        mode = GameMode.Catch
-    else:
-        mode = GameMode.Mania
-    beatmap.convert(mode)
+    convert_mode(score, beatmap)
     mods = calc_mods(score.mods)
     if mods & (1 << 9):
         mods -= 1 << 9
         mods += 1 << 6
     total = beatmap.n_objects
     passed = (
-            (score.statistics.great or 0)
-            + (score.statistics.miss or 0)
-            + (score.statistics.ok or 0)
-            + (score.statistics.meh or 0)
+            score.statistics.great
+            + score.statistics.miss
+            + score.statistics.ok
+            + score.statistics.meh
     )
     n300 = score.statistics.great + total - passed
-    count_hits = total - (score.statistics.miss or 0)
+    count_hits = total - score.statistics.miss
     ratio = 1 - n300 / count_hits
-    new100s = int(ratio * (score.statistics.miss or 0))
-    n300 += (score.statistics.miss or 0) - new100s
-    n100 = new100s + (score.statistics.ok or 0)
+    new100s = int(ratio * score.statistics.miss)
+    n300 += score.statistics.miss - new100s
+    n100 = new100s + score.statistics.ok
     c = Performance(
         # accuracy=score.accuracy * 100,
         # n_katu=score.statistics.small_tick_miss or score.statistics.good or 0,
         # n_geki=score.statistics.perfect or 0,
-        n50=score.statistics.meh or 0,
+        n50=score.statistics.meh,
         n100=n100,
         n300=n300,
         mods=mods,
@@ -114,46 +98,6 @@ def get_strains(path: str, mods: int) -> Strains:
     return strains
 
 
-def cal_old_pp(score: Score, path: str) -> PerformanceAttributes:
-    beatmap = Beatmap(path=path)
-    if score.mode_int == 0:
-        mode = GameMode.Osu
-    elif score.mode_int == 1:
-        mode = GameMode.Taiko
-    elif score.mode_int == 2:
-        mode = GameMode.Catch
-    else:
-        mode = GameMode.Mania
-    beatmap.convert(mode)
-    mods = calc_old_mods(score.mods)
-    if mods & (1 << 9):
-        mods -= 1 << 9
-        mods += 1 << 6
-    if score.mode_int == 2:
-        c = Performance(
-            accuracy=score.accuracy * 100,
-            n_katu=score.statistics.count_katu,
-            combo=score.max_combo,
-            misses=score.statistics.count_miss,
-            n100=score.statistics.count_100,
-            n300=score.statistics.count_300,
-            mods=mods,
-        )
-    else:
-        c = Performance(
-            accuracy=score.accuracy * 100,
-            n_katu=score.statistics.count_katu if score.statistics.count_katu else 0,
-            n_geki=score.statistics.count_geki if score.statistics.count_geki else 0,
-            combo=score.max_combo,
-            misses=score.statistics.count_miss if score.statistics.count_miss else 0,
-            n50=score.statistics.count_50 if score.statistics.count_50 else 0,
-            n100=score.statistics.count_100 if score.statistics.count_100 else 0,
-            n300=score.statistics.count_300 if score.statistics.count_300 else 0,
-            mods=mods,
-        )
-    return c.calculate(beatmap)
-
-
 def adjust_performance(mods: list[dict], c: Performance):
     for mod in mods:
         if mod["acronym"] == "DT" and mod.get("settings"):
@@ -167,3 +111,15 @@ def adjust_performance(mods: list[dict], c: Performance):
                 c.set_hp(mod["settings"]["drain_rate"], False)
             if mod["settings"].get("overall_difficulty") is not None:
                 c.set_od(mod["settings"]["overall_difficulty"], False)
+
+
+def convert_mode(score: NewScore, beatmap: Beatmap):
+    if score.ruleset_id == 0:
+        mode = GameMode.Osu
+    elif score.ruleset_id == 1:
+        mode = GameMode.Taiko
+    elif score.ruleset_id == 2:
+        mode = GameMode.Catch
+    else:
+        mode = GameMode.Mania
+    beatmap.convert(mode)
