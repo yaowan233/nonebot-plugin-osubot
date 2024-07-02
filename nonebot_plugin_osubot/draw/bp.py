@@ -7,13 +7,22 @@ from typing import Union, Optional
 from PIL import ImageDraw, UnidentifiedImageError
 
 from .score import cal_legacy_acc, cal_legacy_rank
-from .static import BgImg, BgImg1, Torus_Regular_25, Torus_Regular_20, Torus_SemiBold_25, Image, osufile
+from .static import (
+    BgImg,
+    BgImg1,
+    Torus_Regular_25,
+    Torus_Regular_20,
+    Torus_SemiBold_25,
+    Image,
+    osufile,
+)
 from .utils import draw_fillet, draw_fillet2
 from ..api import osu_api
 from ..database import UserData
 from ..file import get_projectimg
 from ..mods import get_mods_list
 from ..schema import NewScore
+from ..schema.score import Mod
 from ..utils import GMN
 
 
@@ -30,12 +39,14 @@ async def draw_bp(
 ) -> Union[str, BytesIO]:
     player = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not player else player.lazer_mode
-    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not lazer_mode))
+    bp_info = await osu_api(
+        "bp", uid, mode, is_name=is_name, legacy_only=int(not lazer_mode)
+    )
     if isinstance(bp_info, str):
         return bp_info
     score_ls = [NewScore(**i) for i in bp_info]
     if not lazer_mode:
-        score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
+        score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
     if not bp_info:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     user = bp_info[0]["user"]["username"]
@@ -56,7 +67,9 @@ async def draw_bp(
         for i, score in enumerate(score_ls):
             now = datetime.now() - timedelta(days=day + 1)
             today_stamp = mktime(strptime(str(now), "%Y-%m-%d %H:%M:%S.%f"))
-            playtime = datetime.strptime(score.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8)
+            playtime = datetime.strptime(
+                score.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
+            ) + timedelta(hours=8)
             play_stamp = mktime(strptime(str(playtime), "%Y-%m-%d %H:%M:%S"))
             if play_stamp > today_stamp:
                 ls.append(i)
@@ -67,14 +80,19 @@ async def draw_bp(
         # 判断是否开启lazer模式
         if lazer_mode:
             score_info.legacy_total_score = score_info.total_score
-        if not lazer_mode:
-            score_info.mods.remove({"acronym": "CL"}) if {"acronym": "CL"} in score_info.mods else None
+        if not player.lazer_mode and Mod(acronym="CL") in score_info.mods:
+            score_info.mods.remove(Mod(acronym="CL"))
         if score_info.ruleset_id == 3 and not lazer_mode:
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
         if not lazer_mode:
-            is_hidden = any(i in score_info.mods for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"}))
+            is_hidden = any(
+                i in score_info.mods
+                for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI"))
+            )
             score_info.rank = cal_legacy_rank(score_info, is_hidden)
-    msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day)
+    msg = await draw_pfm(
+        project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day
+    )
     return msg
 
 
@@ -89,15 +107,23 @@ async def draw_pfm(
     day: int = 0,
 ) -> Union[str, BytesIO]:
     task0 = [
-        get_projectimg(f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg") for i in score_ls_filtered
+        get_projectimg(
+            f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg"
+        )
+        for i in score_ls_filtered
     ]
     task1 = [
-        get_projectimg(f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg") for i in score_ls_filtered
+        get_projectimg(
+            f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg"
+        )
+        for i in score_ls_filtered
     ]
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     bplist_len = len(score_ls_filtered)
-    im = Image.new("RGBA", (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
+    im = Image.new(
+        "RGBA", (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255)
+    )
     if project in ("prlist", "relist"):
         im.alpha_composite(BgImg1)
     else:
@@ -106,7 +132,9 @@ async def draw_pfm(
     f_div = Image.new("RGBA", (1450, 2), (255, 255, 255, 255)).convert("RGBA")
     im.alpha_composite(f_div, (0, 100))
     if project == "bp":
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
+        uinfo = (
+            f"玩家：{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
+        )
     elif project == "prlist":
         uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内上传成绩"
     elif project == "relist":
@@ -146,20 +174,28 @@ async def draw_pfm(
         # mods
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
-                mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
+                mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
                 try:
                     mods_img = Image.open(mods_bg).convert("RGBA")
-                    im.alpha_composite(mods_img, (210 + offset + 50 * mods_num, 192 + h_num))
+                    im.alpha_composite(
+                        mods_img, (210 + offset + 50 * mods_num, 192 + h_num)
+                    )
                 except FileNotFoundError:
                     pass
-            if (bp.rank == "X" or bp.rank == "S") and ("HD" in bp.mods or "FL" in bp.mods):
+            if (bp.rank == "X" or bp.rank == "S") and (
+                Mod(acronym="HD") in bp.mods
+                or Mod(acronym="FL") in bp.mods
+                or Mod(acronym="FI") in bp.mods
+            ):
                 bp.rank += "H"
 
         # 曲名&作曲
         metadata = f"{bp.beatmapset.title} | by {bp.beatmapset.artist}"
         if len(metadata) > 30:
             metadata = metadata[:27] + "..."
-        draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm")
+        draw.text(
+            (210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm"
+        )
 
         # 地图版本&时间
         old_time = datetime.strptime(bp.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")

@@ -38,7 +38,7 @@ from ..file import re_map, download_osu, user_cache_path, map_path
 from ..mods import get_mods_list
 from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 from ..schema import NewScore, Beatmap, User
-from ..schema.score import NewStatistics
+from ..schema.score import NewStatistics, Mod
 from ..utils import GMN
 
 
@@ -55,7 +55,15 @@ async def draw_score(
     user = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not user else user.lazer_mode
     task0 = asyncio.create_task(
-        osu_api(project, uid, mode, mapid, is_name=is_name, limit=100, legacy_only=int(not user.lazer_mode))
+        osu_api(
+            project,
+            uid,
+            mode,
+            mapid,
+            is_name=is_name,
+            limit=100,
+            legacy_only=int(not user.lazer_mode),
+        )
     )
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     score_json = await task0
@@ -135,9 +143,9 @@ async def get_score_data(
     user = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not user else user.lazer_mode
     if not lazer_mode:
-        score_ls = [i for i in score_ls if {"acronym": "CL"} in i.mods]
+        score_ls = [i for i in score_ls if Mod(acronym="CL") in i.mods]
         for i in score_ls:
-            i.mods.remove({"acronym": "CL"})
+            i.mods.remove(Mod(acronym="CL"))
     if not score_ls:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     if mods:
@@ -145,13 +153,13 @@ async def get_score_data(
             if mods == "NM" and not score.mods:
                 score_info = score
                 break
-            if score.mods == [{"acronym": i} for i in mods]:
+            if score.mods == [Mod(acronym=i) for i in mods]:
                 score_info = score
                 break
         else:
             score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
             for score in score_ls:
-                if set(mods).issubset({i["acronym"] for i in score.mods}):
+                if set(mods).issubset(i.acronym for i in score.mods):
                     score_info = score
                     break
             else:
@@ -233,14 +241,14 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
     # mods
     if any(
         i in score_info.mods
-        for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+        for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI"))
     ):
         ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
     else:
         ranking = ["X", "S", "A", "B", "C", "D", "F"]
     if score_info.mods:
         for mods_num, s_mods in enumerate(score_info.mods):
-            mods_bg = osufile / "mods" / f"{s_mods['acronym']}.png"
+            mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
             try:
                 mods_img = Image.open(mods_bg).convert("RGBA")
                 im.alpha_composite(mods_img, (500 + 50 * mods_num, 160))
@@ -557,9 +565,11 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
     else:
         draw.text(
             (1002, 580),
-            f"{score_info.statistics.perfect / score_info.statistics.great :.1f}:1"
-            if (score_info.statistics.great or 0) != 0
-            else "∞:1",
+            (
+                f"{score_info.statistics.perfect / score_info.statistics.great :.1f}:1"
+                if (score_info.statistics.great or 0) != 0
+                else "∞:1"
+            ),
             font=Torus_Regular_20,
             anchor="mm",
         )
@@ -754,16 +764,14 @@ def cal_legacy_rank(score_info: NewScore, is_hidden: bool):
 def cal_score_info(is_lazer: bool, score_info: NewScore) -> NewScore:
     if is_lazer:
         score_info.legacy_total_score = score_info.total_score
-    if not is_lazer:
-        score_info.mods.remove({"acronym": "CL"}) if {
-            "acronym": "CL"
-        } in score_info.mods else None
+    if not is_lazer and Mod(acronym="CL") in score_info.mods:
+        score_info.mods = [i for i in score_info.mods if i.acronym != "CL"]
     if score_info.ruleset_id == 3 and not is_lazer:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
     if not is_lazer:
         is_hidden = any(
             i in score_info.mods
-            for i in ({"acronym": "HD"}, {"acronym": "FL"}, {"acronym": "FI"})
+            for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI"))
         )
         score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return score_info

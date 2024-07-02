@@ -54,6 +54,19 @@ class NewStatistics(Base):
     perfect: Optional[int] = Field(default=0)
 
 
+class Settings(Base):
+    speed_change: Optional[float]
+    circle_size: Optional[float]
+    approach_rate: Optional[float]
+    overall_difficulty: Optional[float]
+    drain_rate: Optional[float]
+
+
+class Mod(Base):
+    acronym: str
+    settings: Optional[Settings]
+
+
 class NewScore(Base):
     accuracy: float
     beatmap_id: int
@@ -68,7 +81,7 @@ class NewScore(Base):
     legacy_total_score: int
     max_combo: int
     maximum_statistics: Optional[Statistics]
-    mods: list[dict]
+    mods: list[Mod]
     passed: bool
     playlist_item_id: Optional[int]
     pp: Optional[float]

@@ -32,18 +32,26 @@ async def _(event: Event, state: T_State):
         await UniMessage.text(state["error"]).finish(reply_to=True)
     user = await UserData.get_or_none(user_id=event.get_user_id())
     uid = state["para"] if state["para"] else state["user"]
-    bp_info = await osu_api("bp", uid, NGM[state["mode"]], is_name=state["is_name"],
-                            legacy_only=int(not user.lazer_mode))
+    bp_info = await osu_api(
+        "bp",
+        uid,
+        NGM[state["mode"]],
+        is_name=state["is_name"],
+        legacy_only=int(not user.lazer_mode),
+    )
     if not bp_info:
-        await UniMessage.text(f'未查询到 {user.osu_name} 在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
+        await UniMessage.text(
+            f'未查询到 {user.osu_name} 在 {NGM[state["mode"]]} 的游玩记录'
+        ).finish(reply_to=True)
     if isinstance(bp_info, str):
         await UniMessage.text(bp_info).finish(reply_to=True)
     score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:
-        if {"acronym": "DT"} in score.mods or {"acronym": "NC"} in score.mods:
-            score.beatmap.total_length /= 1.5
-        if {"acronym": "HT"} in score.mods:
-            score.beatmap.total_length /= 0.75
+        for mod in score.mods:
+            if mod.acronym == "DT" or mod.acronym == "NC":
+                score.beatmap.total_length /= 1.5
+            if mod.acronym == "HT":
+                score.beatmap.total_length /= 0.75
     score_ls = [cal_score_info(user.lazer_mode, score) for score in score_ls]
     pp_ls = [round(i.pp, 0) for i in score_ls]
     length_ls = []
@@ -52,24 +60,37 @@ async def _(event: Event, state: T_State):
             length_ls.append(
                 {
                     "value": i.beatmap.total_length,
-                    "itemStyle": {"color": rank_color[i.rank], "shadowBlur": 8, "shadowColor": "#b4ffff"},
+                    "itemStyle": {
+                        "color": rank_color[i.rank],
+                        "shadowBlur": 8,
+                        "shadowColor": "#b4ffff",
+                    },
                 }
             )
         elif i.rank == "X":
             length_ls.append(
                 {
                     "value": i.beatmap.total_length,
-                    "itemStyle": {"color": rank_color[i.rank], "shadowBlur": 8, "shadowColor": "#ffff00"},
+                    "itemStyle": {
+                        "color": rank_color[i.rank],
+                        "shadowBlur": 8,
+                        "shadowColor": "#ffff00",
+                    },
                 }
             )
         else:
-            length_ls.append({"value": i.beatmap.total_length, "itemStyle": {"color": rank_color[i.rank]}})
+            length_ls.append(
+                {
+                    "value": i.beatmap.total_length,
+                    "itemStyle": {"color": rank_color[i.rank]},
+                }
+            )
     mods_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
         if not i.mods:
             mods_pp["NM"] += i.pp * 0.95**num
         for j in i.mods:
-            mods_pp[j["acronym"]] += i.pp * 0.95**num
+            mods_pp[j.acronym] += i.pp * 0.95**num
     pp_data = []
     for mod, pp in mods_pp.items():
         pp_data.append({"name": mod, "value": round(pp, 2)})
@@ -87,4 +108,4 @@ async def _(event: Event, state: T_State):
         mapper_pp_data = mapper_pp_data[:20]
     name = f'{score_ls[0].user.username} {NGM[state["mode"]]} 模式 '
     byt = await draw_bpa_plot(name, pp_ls, length_ls, pp_data, mapper_pp_data)
-    await (UniMessage.image(raw=byt)).finish(reply_to=True)
+    await UniMessage.image(raw=byt).finish(reply_to=True)

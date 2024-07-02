@@ -1,6 +1,7 @@
 from typing import Optional
 
 from .schema import Beatmap, NewScore
+from .schema.score import Mod
 from .utils import GM
 
 OD0_MS = 80
@@ -23,7 +24,11 @@ def modify_ar(base_ar, speed_mul, multiplier):
     arms = min(AR0_MS, max(AR10_MS, arms))
     arms /= speed_mul
 
-    ar = (AR0_MS - arms) / AR_MS_STEP1 if arms > AR5_MS else 5 + (AR5_MS - arms) / AR_MS_STEP2
+    ar = (
+        (AR0_MS - arms) / AR_MS_STEP1
+        if arms > AR5_MS
+        else 5 + (AR5_MS - arms) / AR_MS_STEP2
+    )
     return ar
 
 
@@ -37,22 +42,27 @@ def modify_od(base_od, speed_mul, multiplier):
     return od
 
 
-def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list):
+def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
     speed_mul = 1
     od_ar_hp_multiplier = 1
     mode = GM[scoreinfo.ruleset_id] if scoreinfo else mapinfo.mode
-    if {"acronym": "DT"} in mods or {"acronym": "NC"} in mods:
-        speed_mul = 1.5
-        mapinfo.bpm *= 1.5
-        mapinfo.total_length /= 1.5
-    if {"acronym": "HT"} in mods:
-        speed_mul *= 0.75
-        mapinfo.bpm *= 0.75
-        mapinfo.total_length /= 0.75
-    if {"acronym": "HR"} in mods:
-        od_ar_hp_multiplier = 1.4
-    if {"acronym": "EZ"} in mods:
-        od_ar_hp_multiplier *= 0.5
+    for mod in mods:
+        if mod.acronym == "DT" or mod.acronym == "NC":
+            speed_mul = 1.5
+            if mod.settings.speed_change:
+                speed_mul = mod.settings.speed_change
+            mapinfo.bpm *= speed_mul
+            mapinfo.total_length /= speed_mul
+        if mod.acronym == "HT":
+            speed_mul = 0.75
+            if mod.settings.speed_change:
+                speed_mul = mod.settings.speed_change
+            mapinfo.bpm *= speed_mul
+            mapinfo.total_length /= speed_mul
+        if {"acronym": "HR"} in mods:
+            od_ar_hp_multiplier = 1.4
+        if {"acronym": "EZ"} in mods:
+            od_ar_hp_multiplier *= 0.5
     if mode == "mania":
         speed_mul = 1
     if mode not in ("mania", "taiko"):
