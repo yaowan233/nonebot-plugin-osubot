@@ -16,6 +16,7 @@ async def draw_match_history(match_id: str) -> bytes:
                 display: none !important;
             }
         """)
+        await page.wait_for_selector(".mp-history-content__item--match")
         pic = await page.screenshot(
             omit_background=True,
             full_page=True,
