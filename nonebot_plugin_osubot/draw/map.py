@@ -16,9 +16,10 @@ from .static import (
     extra_30,
 )
 from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, is_close
-from ..api import osu_api, get_map_bg
+from ..api import osu_api
 from ..beatmap_stats_moder import with_mods
-from ..file import re_map, get_projectimg, download_osu, map_path
+from ..file import get_projectimg, download_osu, map_path
+from ..info import get_bg
 from ..mods import calc_mods
 from ..pp import get_ss_pp
 from ..schema import Beatmap
@@ -60,13 +61,8 @@ async def draw_map_info(mapid: int, mods: list[str]) -> Union[str, BytesIO]:
     # BG做地图
     im = Image.new("RGBA", (1200, 600))
     draw = ImageDraw.Draw(im)
-    cover = re_map(osu)
-    cover_path = path / cover
-    if not cover_path.exists():
-        if bg := await get_map_bg(mapid, mapinfo.beatmapset_id, cover):
-            with open(cover_path, "wb") as f:
-                f.write(bg.getvalue())
-    cover_crop = await crop_bg((1200, 600), cover_path)
+    bg = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
+    cover_crop = await crop_bg((1200, 600), bg)
     cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
     im.alpha_composite(cover_img)
     # 获取地图info

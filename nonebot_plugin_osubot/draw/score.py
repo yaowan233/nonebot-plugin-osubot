@@ -31,10 +31,11 @@ from .utils import (
     update_map,
     update_icon,
 )
-from ..api import osu_api, get_map_bg
+from ..api import osu_api
 from ..beatmap_stats_moder import with_mods
 from ..database.models import UserData
-from ..file import re_map, download_osu, user_cache_path, map_path
+from ..file import download_osu, user_cache_path, map_path
+from ..info import get_bg
 from ..mods import get_mods_list
 from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
 from ..schema import NewScore, Beatmap, User
@@ -206,13 +207,8 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
     im = Image.new("RGBA", (1500, 720))
     draw = ImageDraw.Draw(im)
     # 获取cover并裁剪，高斯，降低亮度
-    cover = re_map(osu)
-    cover_path = path / cover
-    if not cover_path.exists():
-        if bg := await get_map_bg(mapinfo.id, mapinfo.beatmapset_id, cover):
-            with open(cover_path, "wb") as f:
-                f.write(bg.getvalue())
-    cover_crop = await crop_bg((1500, 720), cover_path)
+    bg = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
+    cover_crop = await crop_bg((1500, 720), bg)
     cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
     cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
     im.alpha_composite(cover_img, (0, 0))
