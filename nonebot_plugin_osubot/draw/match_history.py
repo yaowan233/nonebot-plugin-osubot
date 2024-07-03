@@ -16,7 +16,12 @@ async def draw_match_history(match_id: str) -> bytes:
                 display: none !important;
             }
         """)
-        await page.wait_for_selector(".mp-history-content__item--match")
+        while True:
+            try:
+                await page.wait_for_selector(".show-more-link", timeout=3000)
+                await page.evaluate("document.querySelector('.show-more-link').click()")
+            except Exception:
+                break
         pic = await page.screenshot(
             omit_background=True,
             full_page=True,
