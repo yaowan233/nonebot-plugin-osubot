@@ -131,8 +131,9 @@ async def get_users(users: list[int]):
         await renew_token()
         token = cache.get("token")
     headers = {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
-    req = await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users})
-    return [User(**i) for i in req.json()["users"]]
+    if req := await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users}):
+        return [User(**i) for i in req.json()["users"]]
+    return []
 
 
 async def api_info(project: str, url: str) -> Union[dict, str]:
