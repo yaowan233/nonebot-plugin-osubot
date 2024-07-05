@@ -2,9 +2,9 @@ from datetime import date
 
 from nonebot.log import logger
 
+from ..utils import GM, FGM
 from ..api import osu_api, get_users
 from ..database.models import InfoData, UserData
-from ..utils import GM, FGM
 
 
 async def bind_user_info(project: str, uid, qid, is_name) -> str:

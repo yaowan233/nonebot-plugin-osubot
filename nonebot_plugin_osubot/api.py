@@ -2,15 +2,15 @@ import random
 from io import BytesIO
 from typing import Union, Optional
 
-from expiringdict import ExpiringDict
-from httpx import Response, AsyncClient
-from nonebot import get_plugin_config
 from nonebot.log import logger
+from expiringdict import ExpiringDict
+from nonebot import get_plugin_config
+from httpx import Response, AsyncClient
 
 from .config import Config
 from .network import auto_retry
-from .network.first_response import get_first_response
 from .schema import User, SayoBeatmap, RecommendData
+from .network.first_response import get_first_response
 
 api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"

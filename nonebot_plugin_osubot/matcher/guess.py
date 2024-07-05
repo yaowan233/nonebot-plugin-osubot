@@ -1,30 +1,30 @@
-import asyncio
-import random
 import re
-from asyncio import TimerHandle
-from difflib import SequenceMatcher
+import random
+import asyncio
 from io import BytesIO
 from pathlib import Path
+from asyncio import TimerHandle
+from difflib import SequenceMatcher
 
 from PIL import Image
-from expiringdict import ExpiringDict
 from graiax import silkcoder
-from graiax.silkcoder.utils import CoderError
-from nonebot import on_command, on_message
-from nonebot.internal.rule import Rule, Event
 from nonebot.log import logger
-from nonebot.matcher import Matcher
 from nonebot.params import T_State
+from nonebot.matcher import Matcher
+from expiringdict import ExpiringDict
+from nonebot import on_command, on_message
+from graiax.silkcoder.utils import CoderError
+from nonebot.internal.rule import Rule, Event
 from nonebot_plugin_alconna import At, UniMsg, UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
 
-from .utils import split_msg
-from ..api import osu_api, safe_async_get
-from ..database.models import UserData
-from ..file import map_path
-from ..info import get_bg
-from ..schema import NewScore
 from ..utils import NGM
+from ..info import get_bg
+from ..file import map_path
+from .utils import split_msg
+from ..schema import NewScore
+from ..database.models import UserData
+from ..api import osu_api, safe_async_get
 
 games: dict[str, NewScore] = {}
 pic_games: dict[str, NewScore] = {}

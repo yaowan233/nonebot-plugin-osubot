@@ -1,9 +1,9 @@
 import asyncio
 
 from nonebot import on_command
-from nonebot.internal.adapter import Event, Message
 from nonebot.params import CommandArg
 from nonebot_plugin_alconna import UniMessage
+from nonebot.internal.adapter import Event, Message
 
 from ..database import UserData
 from ..info import bind_user_info

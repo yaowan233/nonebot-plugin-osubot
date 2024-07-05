@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
+from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageFilter, ImageEnhance
 
-from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30
-from .utils import crop_bg, stars_diff, calc_songlen
-from ..api import osu_api, sayo_api
-from ..file import get_projectimg
 from ..schema import SayoBeatmap
+from ..file import get_projectimg
+from ..api import osu_api, sayo_api
+from .utils import crop_bg, stars_diff, calc_songlen
+from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30
 
 
 async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:

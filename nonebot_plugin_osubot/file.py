@@ -1,15 +1,15 @@
-import random
 import re
-from io import BytesIO, TextIOWrapper
+import random
 from pathlib import Path
 from typing import Union, Optional
+from io import BytesIO, TextIOWrapper
 
 from nonebot.log import logger
 
-from .api import bg_url, safe_async_get
-from .network import auto_retry
-from .network.first_response import get_first_response
 from .schema import Badge
+from .network import auto_retry
+from .api import bg_url, safe_async_get
+from .network.first_response import get_first_response
 
 osufile = Path(__file__).parent / "osufile"
 map_path = Path() / "data" / "osu" / "map"

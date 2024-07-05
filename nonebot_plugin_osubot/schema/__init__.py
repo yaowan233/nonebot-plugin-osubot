@@ -1,9 +1,9 @@
-from .alphaosu import RecommendData
-from .beatmap import Beatmap, Beatmapset, SeasonalBackgrounds
+from .user import User, Badge
 from .match import Game, Match
+from .alphaosu import RecommendData
 from .sayo_beatmap import SayoBeatmap
 from .score import Score, NewScore, BeatmapUserScore
-from .user import User, Badge
+from .beatmap import Beatmap, Beatmapset, SeasonalBackgrounds
 
 __all__ = [
     "Score",

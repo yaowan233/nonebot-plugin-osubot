@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 
-from .basemodel import Base
 from .user import User
+from .basemodel import Base
 
 
 class Covers(Base):

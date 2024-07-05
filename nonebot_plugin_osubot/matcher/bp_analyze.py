@@ -1,17 +1,17 @@
 from collections import defaultdict
 
 from nonebot import on_command
-from nonebot.internal.adapter import Event
 from nonebot.typing import T_State
+from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
-from .utils import split_msg
-from ..api import osu_api, get_users
-from ..database import UserData
-from ..draw.echarts import draw_bpa_plot
-from ..draw.score import cal_score_info
-from ..schema import NewScore
 from ..utils import NGM
+from .utils import split_msg
+from ..schema import NewScore
+from ..database import UserData
+from ..api import osu_api, get_users
+from ..draw.score import cal_score_info
+from ..draw.echarts import draw_bpa_plot
 
 bp_analyze = on_command("bpa", aliases={"bp分析"}, priority=11, block=True)
 rank_color = {

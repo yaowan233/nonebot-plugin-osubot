@@ -1,17 +1,19 @@
-import asyncio
 import os
 import shutil
-from dataclasses import dataclass
+import asyncio
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
 from zipfile import ZipFile
+from dataclasses import dataclass
 
 import numpy as np
+from reamber.osu.OsuHit import OsuHit
+from reamber.osu.OsuMap import OsuMap
 from reamber.algorithms.generate import full_ln
+from reamber.algorithms.playField import PlayField
 from reamber.algorithms.pattern.Pattern import Pattern
 from reamber.algorithms.pattern.combos.PtnCombo import PtnCombo
-from reamber.algorithms.playField import PlayField
 from reamber.algorithms.playField.parts import (
     PFDrawSv,
     PFDrawBpm,
@@ -21,8 +23,6 @@ from reamber.algorithms.playField.parts import (
     PFDrawBeatLines,
     PFDrawColumnLines,
 )
-from reamber.osu.OsuHit import OsuHit
-from reamber.osu.OsuMap import OsuMap
 
 from ..file import download_map
 from ..schema import SayoBeatmap
