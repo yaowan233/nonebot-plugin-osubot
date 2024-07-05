@@ -1,7 +1,8 @@
 from nonebot import on_command
-from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
+from nonebot.internal.adapter import Message
 from nonebot_plugin_alconna import UniMessage
+
 from ..file import download_map
 
 osudl = on_command("osudl", priority=11, block=True)

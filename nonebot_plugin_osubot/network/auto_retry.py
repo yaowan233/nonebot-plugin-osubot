@@ -1,8 +1,8 @@
 from functools import wraps
 from typing import TypeVar, Callable
-from typing_extensions import ParamSpec
-from nonebot import logger
 
+from nonebot import logger
+from typing_extensions import ParamSpec
 
 T = TypeVar("T")
 P = ParamSpec("P")

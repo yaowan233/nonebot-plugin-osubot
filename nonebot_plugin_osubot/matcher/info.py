@@ -1,9 +1,10 @@
 from nonebot import on_command
-from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
-from .utils import split_msg
-from ..draw import draw_info
+from nonebot_plugin_alconna import UniMessage
+
 from ..utils import NGM
+from ..draw import draw_info
+from .utils import split_msg
 
 info = on_command("info", priority=11, block=True, aliases={"Info", "INFO"})
 

@@ -1,32 +1,32 @@
 import asyncio
-from datetime import datetime, timedelta, date
 from io import BytesIO
 from typing import Union
+from datetime import date, datetime, timedelta
 
 from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
+from ..schema import User
+from ..utils import FGM, GMN
+from ..database.models import InfoData
+from ..api import osu_api, get_random_bg
+from .utils import info_calc, draw_fillet, update_icon, open_user_icon
+from ..file import user_cache_path, badge_cache_path, make_badge_cache_file
 from .static import (
     Image,
-    Torus_Regular_20,
+    InfoImg,
     ExpLeftBg,
     ExpRightBg,
     ExpCenterBg,
-    Torus_Regular_45,
-    Torus_Regular_40,
-    Torus_Regular_30,
-    Torus_Regular_25,
-    Torus_Regular_35,
     SupporterBg,
-    osufile,
+    Torus_Regular_20,
+    Torus_Regular_25,
+    Torus_Regular_30,
+    Torus_Regular_35,
+    Torus_Regular_40,
+    Torus_Regular_45,
     Torus_Regular_50,
-    InfoImg,
+    osufile,
 )
-from .utils import draw_fillet, info_calc, open_user_icon, update_icon
-from ..api import osu_api, get_random_bg
-from ..database.models import InfoData
-from ..file import make_badge_cache_file, user_cache_path, badge_cache_path
-from ..schema import User
-from ..utils import GMN, FGM
 
 
 async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union[str, BytesIO]:

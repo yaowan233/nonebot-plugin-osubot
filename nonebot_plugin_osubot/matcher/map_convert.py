@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from nonebot.exception import ParserExit, ActionFailed
-from nonebot.internal.adapter import Message
-from nonebot.params import ShellCommandArgv, CommandArg
 from nonebot.rule import ArgumentParser
-from nonebot import on_command, on_shell_command
+from nonebot.internal.adapter import Message
 from nonebot_plugin_alconna import UniMessage
-from ..api import get_sayo_map_info
+from nonebot import on_command, on_shell_command
+from nonebot.exception import ParserExit, ActionFailed
+from nonebot.params import CommandArg, ShellCommandArgv
 
-from ..mania import convert_mania_map, Options
+from ..api import get_sayo_map_info
+from ..mania import Options, convert_mania_map
 
 parser = ArgumentParser("convert", description="变换mania谱面")
 parser.add_argument("--set", type=int, help="要转换的谱面的setid")

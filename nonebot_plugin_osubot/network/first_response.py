@@ -2,6 +2,7 @@ import asyncio
 
 from httpx import AsyncClient
 from nonebot import get_plugin_config
+
 from ..config import Config
 
 plugin_config = get_plugin_config(Config)

@@ -1,12 +1,12 @@
 from nonebot import on_command
-from nonebot.internal.adapter import Message
-from nonebot.params import CommandArg
 from nonebot.typing import T_State
+from nonebot.params import CommandArg
+from nonebot.internal.adapter import Message
 from nonebot_plugin_alconna import UniMessage
 
-from ..mania import generate_preview_pic
 from ..api import osu_api
 from ..file import download_tmp_osu
+from ..mania import generate_preview_pic
 
 generate_preview = on_command("预览", aliases={"preview", "完整预览"}, priority=11, block=True)
 

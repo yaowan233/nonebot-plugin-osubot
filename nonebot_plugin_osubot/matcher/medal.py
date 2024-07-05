@@ -2,12 +2,12 @@ import re
 import json
 from pathlib import Path
 
-from nonebot_plugin_alconna import UniMessage
 from nonebot import on_command
-from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
-from ..api import safe_async_get
+from nonebot.internal.adapter import Message
+from nonebot_plugin_alconna import UniMessage
 
+from ..api import safe_async_get
 
 medal_data_path = Path(__file__).parent.parent / "osufile" / "medals" / "medals.json"
 with open(medal_data_path) as file:

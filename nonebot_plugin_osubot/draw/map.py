@@ -1,30 +1,30 @@
-from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
+from datetime import datetime, timedelta
 
-from PIL import ImageEnhance, ImageDraw
+from PIL import ImageDraw, ImageEnhance
 
+from ..utils import FGM
+from ..api import osu_api
+from ..info import get_bg
+from ..pp import get_ss_pp
+from ..mods import calc_mods
+from ..schema import Beatmap
+from ..schema.score import Mod
+from ..beatmap_stats_moder import with_mods
+from ..file import map_path, download_osu, get_projectimg
+from .utils import crop_bg, is_close, stars_diff, draw_fillet, calc_songlen
 from .static import (
     Image,
-    Torus_Regular_20,
-    Torus_SemiBold_20,
-    MapBg1,
     MapBg,
     IconLs,
+    MapBg1,
+    Torus_Regular_20,
+    Torus_SemiBold_20,
     Torus_SemiBold_25,
     osufile,
     extra_30,
 )
-from .utils import calc_songlen, draw_fillet, stars_diff, crop_bg, is_close
-from ..api import osu_api
-from ..beatmap_stats_moder import with_mods
-from ..file import get_projectimg, download_osu, map_path
-from ..info import get_bg
-from ..mods import calc_mods
-from ..pp import get_ss_pp
-from ..schema import Beatmap
-from ..schema.score import Mod
-from ..utils import FGM
 
 
 async def draw_map_info(mapid: int, mods: list[str]) -> Union[str, BytesIO]:

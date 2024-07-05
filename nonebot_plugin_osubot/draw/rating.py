@@ -1,26 +1,26 @@
 import re
-from collections import Counter
-from datetime import datetime
 from io import BytesIO
+from datetime import datetime
+from collections import Counter
 from statistics import mode, median
 
-from PIL import Image, ImageDraw
 from nonebot.log import logger
+from PIL import Image, ImageDraw
 
+from ..api import api_info
+from ..schema.user import UserCompact
+from ..schema.match import Game, Match
+from .utils import crop_bg, draw_fillet, open_user_icon, draw_rounded_rectangle
 from .static import (
-    Torus_SemiBold_20,
-    Torus_SemiBold_40,
-    Torus_SemiBold_25,
+    MpLink,
     TeamRed,
     TeamBlue,
+    Torus_SemiBold_20,
+    Torus_SemiBold_25,
     Torus_SemiBold_30,
+    Torus_SemiBold_40,
     Torus_SemiBold_45,
-    MpLink,
 )
-from .utils import draw_fillet, draw_rounded_rectangle, crop_bg, open_user_icon
-from ..api import api_info
-from ..schema.match import Match, Game
-from ..schema.user import UserCompact
 
 
 async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:

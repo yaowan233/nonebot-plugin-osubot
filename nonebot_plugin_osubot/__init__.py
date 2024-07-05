@@ -1,6 +1,6 @@
-from nonebot.plugin import PluginMetadata, inherit_supported_adapters
-from nonebot.log import logger
 from nonebot import require
+from nonebot.log import logger
+from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_alconna")
@@ -8,13 +8,13 @@ require("nonebot_plugin_session")
 require("nonebot_plugin_tortoise_orm")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_waiter")
-from .database.models import UserData
-from .info import update_users_info
-from .config import Config
-from .matcher import *  # noqa
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_tortoise_orm import add_model
 
+from .config import Config
+from .matcher import *  # noqa
+from .info import update_users_info
+from .database.models import UserData
 
 add_model("nonebot_plugin_osubot.database.models")
 usage = "发送/osuhelp 查看帮助"

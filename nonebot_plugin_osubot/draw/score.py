@@ -1,46 +1,46 @@
 import asyncio
-from datetime import datetime, timedelta
 from io import BytesIO
-from typing import Optional, Union
+from typing import Union, Optional
+from datetime import datetime, timedelta
 
-from PIL import ImageFilter, ImageEnhance, ImageDraw, ImageSequence
+from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence
 
-from .static import (
-    Torus_Regular_30,
-    Torus_SemiBold_20,
-    Torus_SemiBold_30,
-    Venera_75,
-    Torus_Regular_75,
-    Torus_SemiBold_25,
-    IconLs,
-    Image,
-    osufile,
-    SupporterBg,
-    Torus_Regular_20,
-    extra_30,
-)
-from .utils import (
-    draw_acc,
-    draw_fillet,
-    crop_bg,
-    calc_songlen,
-    stars_diff,
-    get_modeimage,
-    open_user_icon,
-    is_close,
-    update_map,
-    update_icon,
-)
+from ..utils import GMN
 from ..api import osu_api
-from ..beatmap_stats_moder import with_mods
-from ..database.models import UserData
-from ..file import download_osu, user_cache_path, map_path
 from ..info import get_bg
 from ..mods import get_mods_list
-from ..pp import cal_pp, get_if_pp_ss_pp, get_ss_pp
-from ..schema import NewScore, Beatmap, User
-from ..schema.score import NewStatistics, Mod
-from ..utils import GMN
+from ..database.models import UserData
+from ..beatmap_stats_moder import with_mods
+from ..schema import User, Beatmap, NewScore
+from ..schema.score import Mod, NewStatistics
+from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
+from ..file import map_path, download_osu, user_cache_path
+from .utils import (
+    crop_bg,
+    draw_acc,
+    is_close,
+    stars_diff,
+    update_map,
+    draw_fillet,
+    update_icon,
+    calc_songlen,
+    get_modeimage,
+    open_user_icon,
+)
+from .static import (
+    Image,
+    IconLs,
+    Venera_75,
+    SupporterBg,
+    Torus_Regular_20,
+    Torus_Regular_30,
+    Torus_Regular_75,
+    Torus_SemiBold_20,
+    Torus_SemiBold_25,
+    Torus_SemiBold_30,
+    osufile,
+    extra_30,
+)
 
 
 async def draw_score(

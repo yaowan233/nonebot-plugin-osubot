@@ -1,11 +1,13 @@
 import datetime
+
 from nonebot import on_command
-from nonebot_plugin_alconna import UniMessage
 from nonebot.typing import T_State
+from nonebot_plugin_alconna import UniMessage
+
 from .utils import split_msg
+from ..database import InfoData, UserData
 from ..draw.echarts import draw_history_plot
 from ..utils import NGM
-from ..database import InfoData, UserData
 
 history = on_command("history", priority=11, block=True)
 

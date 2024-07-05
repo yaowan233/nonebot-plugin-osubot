@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Union
 
-from PIL import ImageFilter, ImageEnhance, ImageDraw
+from PIL import ImageDraw, ImageFilter, ImageEnhance
 
-from .static import Image, Torus_SemiBold_40, Torus_SemiBold_20, IconLs, extra_30, BarImg, Torus_SemiBold_50
-from .utils import crop_bg, calc_songlen, stars_diff
+from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30
+from .utils import crop_bg, stars_diff, calc_songlen
 from ..api import osu_api, sayo_api
 from ..file import get_projectimg
 from ..schema import SayoBeatmap

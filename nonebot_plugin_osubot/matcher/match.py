@@ -1,6 +1,6 @@
 from nonebot import on_command
-from nonebot.internal.adapter import Message
 from nonebot.params import CommandArg
+from nonebot.internal.adapter import Message
 from nonebot_plugin_alconna import UniMessage
 
 from ..draw.match_history import draw_match_history

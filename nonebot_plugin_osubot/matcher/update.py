@@ -1,19 +1,13 @@
-from nonebot import on_command, get_driver, Bot
-from nonebot.internal.adapter import Event
 from nonebot.typing import T_State
-from nonebot_plugin_alconna import (
-    UniMessage,
-    image_fetch,
-    Target,
-    SupportScope,
-    UniMsg,
-)
-from nonebot_plugin_alconna.uniseg import Image
 from nonebot_plugin_waiter import waiter
+from nonebot.internal.adapter import Event
+from nonebot import Bot, get_driver, on_command
+from nonebot_plugin_alconna.uniseg import Image
+from nonebot_plugin_alconna import Target, UniMsg, UniMessage, SupportScope, image_fetch
 
 from .utils import split_msg
 from ..database import UserData
-from ..file import user_cache_path, save_info_pic
+from ..file import save_info_pic, user_cache_path
 
 update_pic = on_command("更新背景", priority=11, block=True, aliases={"更改背景"})
 update_info = on_command("update", priority=11, block=True, aliases={"更新信息"})

@@ -1,9 +1,9 @@
 from pathlib import Path
-from nonebot import on_command
-from nonebot.internal.adapter import Message
-from nonebot.params import CommandArg
-from nonebot_plugin_alconna import UniMessage
 
+from nonebot import on_command
+from nonebot.params import CommandArg
+from nonebot.internal.adapter import Message
+from nonebot_plugin_alconna import UniMessage
 
 osu_help = on_command("osuhelp", aliases={"OSUBot", "osubot"}, priority=11, block=True)
 

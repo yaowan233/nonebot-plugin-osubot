@@ -1,9 +1,9 @@
 from pathlib import Path
 
-import matplotlib as mpl
-import matplotlib.colors as mcolors
 import numpy as np
+import matplotlib as mpl
 from PIL import Image, ImageFont
+import matplotlib.colors as mcolors
 
 osufile = Path(__file__).parent.parent / "osufile"
 Torus_Regular_20 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 20)

@@ -1,8 +1,8 @@
 from nonebot import on_command
 from nonebot.typing import T_State
 from nonebot_plugin_alconna import UniMessage
-from .utils import split_msg
 
+from .utils import split_msg
 
 mu = on_command("mu", priority=11, block=True)
 

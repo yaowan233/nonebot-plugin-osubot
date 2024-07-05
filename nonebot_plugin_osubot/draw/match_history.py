@@ -1,5 +1,5 @@
-from nonebot_plugin_htmlrender import get_new_page
 from playwright.async_api import ViewportSize
+from nonebot_plugin_htmlrender import get_new_page
 
 
 async def draw_match_history(match_id: str) -> bytes:

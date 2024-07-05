@@ -1,16 +1,16 @@
-import datetime
 import os
 import random
+import datetime
 from io import BytesIO
-from typing import Optional, Union
+from typing import Union, Optional
 
-from PIL import ImageDraw, UnidentifiedImageError, ImageEnhance, ImageFilter
 from matplotlib.figure import Figure
+from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
 
-from .static import Stars, ColorArr, Image, osufile, Path, np
-from ..api import get_seasonal_bg, safe_async_get
-from ..file import get_projectimg, user_cache_path, map_path, download_osu
-from ..schema import SeasonalBackgrounds, User
+from ..schema import User, SeasonalBackgrounds
+from ..api import safe_async_get, get_seasonal_bg
+from .static import Path, Image, Stars, ColorArr, np, osufile
+from ..file import map_path, download_osu, get_projectimg, user_cache_path
 
 
 def draw_fillet(img, radii):

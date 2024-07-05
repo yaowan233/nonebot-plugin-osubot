@@ -1,11 +1,11 @@
 from nonebot import on_command
+from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
-from nonebot.typing import T_State
+
+from ..utils import NGM
 from .utils import split_msg
 from ..draw import get_score_data
-from ..utils import NGM
-
 
 score = on_command("score", priority=11, block=True)
 

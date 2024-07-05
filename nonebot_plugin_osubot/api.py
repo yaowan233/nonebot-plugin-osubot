@@ -3,14 +3,14 @@ from io import BytesIO
 from typing import Union, Optional
 
 from expiringdict import ExpiringDict
-from httpx import AsyncClient, Response
+from httpx import Response, AsyncClient
 from nonebot import get_plugin_config
 from nonebot.log import logger
 
 from .config import Config
 from .network import auto_retry
 from .network.first_response import get_first_response
-from .schema import SayoBeatmap, RecommendData, User
+from .schema import User, SayoBeatmap, RecommendData
 
 api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"

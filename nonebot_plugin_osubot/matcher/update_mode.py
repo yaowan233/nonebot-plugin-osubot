@@ -1,11 +1,10 @@
 from nonebot import on_command
-from nonebot.internal.adapter import Event, Message
 from nonebot.params import CommandArg
 from nonebot_plugin_alconna import UniMessage
+from nonebot.internal.adapter import Event, Message
 
-from ..database import UserData
 from ..utils import NGM
-
+from ..database import UserData
 
 update_mode = on_command("更新模式", priority=11, block=True)
 update_lazer = on_command("切换lazer", priority=11, block=True)

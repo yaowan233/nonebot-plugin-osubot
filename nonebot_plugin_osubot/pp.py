@@ -1,6 +1,6 @@
 import math
 
-from rosu_pp_py import Beatmap, Performance, PerformanceAttributes, GameMode, Strains
+from rosu_pp_py import Beatmap, Strains, GameMode, Performance, PerformanceAttributes
 
 from .mods import calc_mods
 from .schema import NewScore

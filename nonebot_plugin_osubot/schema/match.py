@@ -1,9 +1,9 @@
 from typing import Optional
 
+from .user import User
+from .score import Score
 from .basemodel import Base
 from .beatmap import BeatmapCompact
-from .score import Score
-from .user import User
 
 
 class Game(Base):

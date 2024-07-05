@@ -1,15 +1,15 @@
 import re
 from random import shuffle
 
-from expiringdict import ExpiringDict
 from nonebot import on_command
-from nonebot_plugin_alconna import UniMessage
-from nonebot.internal.matcher import Matcher
-from nonebot.typing import T_State
 from nonebot.log import logger
+from nonebot.typing import T_State
+from expiringdict import ExpiringDict
+from nonebot.internal.matcher import Matcher
+from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
-from ..api import get_sayo_map_info, get_recommend, update_recommend
+from ..api import get_recommend, update_recommend, get_sayo_map_info
 
 recommend = on_command("推荐", priority=11, block=True, aliases={"recommend", "推荐铺面", "推荐谱面"})
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)

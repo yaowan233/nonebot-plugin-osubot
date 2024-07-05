@@ -1,21 +1,13 @@
 import asyncio
 from datetime import datetime, timedelta
 from io import BytesIO
-from time import strptime, mktime
+from time import mktime, strptime
 from typing import Union, Optional
 
 from PIL import ImageDraw, UnidentifiedImageError
 
 from .score import cal_legacy_acc, cal_legacy_rank
-from .static import (
-    BgImg,
-    BgImg1,
-    Torus_Regular_25,
-    Torus_Regular_20,
-    Torus_SemiBold_25,
-    Image,
-    osufile,
-)
+from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
 from .utils import draw_fillet, draw_fillet2
 from ..api import osu_api
 from ..database import UserData

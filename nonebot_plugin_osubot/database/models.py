@@ -1,5 +1,6 @@
 from typing import Optional
-from tortoise import fields, Model
+
+from tortoise import Model, fields
 
 
 class UserData(Model):

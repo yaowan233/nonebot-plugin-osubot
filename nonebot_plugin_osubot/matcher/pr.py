@@ -1,17 +1,16 @@
 from nonebot import on_command
-from nonebot.internal.adapter import Event
 from nonebot.params import T_State
+from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
-from .utils import split_msg
-from ..api import get_user_info
-from ..api import osu_api
-from ..database import UserData
-from ..draw import draw_score
-from ..draw.bp import draw_pfm
-from ..draw.score import cal_score_info
-from ..schema import NewScore
 from ..utils import NGM
+from .utils import split_msg
+from ..draw import draw_score
+from ..schema import NewScore
+from ..draw.bp import draw_pfm
+from ..database import UserData
+from ..draw.score import cal_score_info
+from ..api import osu_api, get_user_info
 
 recent = on_command("recent", priority=11, block=True, aliases={"re", "RE", "Re", "rE"})
 pr = on_command("pr", priority=11, block=True, aliases={"PR", "Pr", "pR"})

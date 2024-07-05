@@ -7,7 +7,7 @@ from typing import Union
 from PIL import Image, UnidentifiedImageError
 
 from ..api import osu_api, get_map_bg
-from ..file import download_osu, re_map, map_path
+from ..file import re_map, map_path, download_osu
 
 
 async def get_bg(mapid: Union[str, int], setid: int = None) -> Union[str, BytesIO]:
