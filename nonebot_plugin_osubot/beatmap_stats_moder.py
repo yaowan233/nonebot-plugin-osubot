@@ -24,11 +24,7 @@ def modify_ar(base_ar, speed_mul, multiplier):
     arms = min(AR0_MS, max(AR10_MS, arms))
     arms /= speed_mul
 
-    ar = (
-        (AR0_MS - arms) / AR_MS_STEP1
-        if arms > AR5_MS
-        else 5 + (AR5_MS - arms) / AR_MS_STEP2
-    )
+    ar = (AR0_MS - arms) / AR_MS_STEP1 if arms > AR5_MS else 5 + (AR5_MS - arms) / AR_MS_STEP2
     return ar
 
 

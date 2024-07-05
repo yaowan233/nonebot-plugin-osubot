@@ -40,9 +40,7 @@ async def _(event: Event, state: T_State):
         legacy_only=int(not user.lazer_mode),
     )
     if not bp_info:
-        await UniMessage.text(
-            f'未查询到 {user.osu_name} 在 {NGM[state["mode"]]} 的游玩记录'
-        ).finish(reply_to=True)
+        await UniMessage.text(f'未查询到 {user.osu_name} 在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
     if isinstance(bp_info, str):
         await UniMessage.text(bp_info).finish(reply_to=True)
     score_ls = [NewScore(**i) for i in bp_info]

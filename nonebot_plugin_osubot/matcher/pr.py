@@ -40,18 +40,14 @@ async def _recent(event: Event, state: T_State):
         if isinstance(data, str):
             await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
-            info = await get_user_info(
-                f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
-            )
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
             if isinstance(info, str):
                 await UniMessage.text(info).finish(reply_to=True)
             else:
                 state["user"] = info["username"]
         score_ls = [NewScore(**score_json) for score_json in data]
         if not player.lazer_mode:
-            score_ls = [
-                i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)
-            ]
+            score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
         for score_info in score_ls:
             cal_score_info(player.lazer_mode, score_info)
         pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
@@ -91,24 +87,18 @@ async def _pr(event: Event, state: T_State):
             legacy_only=int(not player.lazer_mode),
         )
         if not data:
-            await UniMessage.text(f"未查询到在 {NGM[mode]} 的游玩记录").finish(
-                reply_to=True
-            )
+            await UniMessage.text(f"未查询到在 {NGM[mode]} 的游玩记录").finish(reply_to=True)
         if isinstance(data, str):
             await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
-            info = await get_user_info(
-                f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id"
-            )
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
             if isinstance(info, str):
                 return info
             else:
                 state["user"] = info["username"]
         score_ls = [NewScore(**score_json) for score_json in data]
         if not player.lazer_mode:
-            score_ls = [
-                i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)
-            ]
+            score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
         for score_info in score_ls:
             cal_score_info(player.lazer_mode, score_info)
         pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])

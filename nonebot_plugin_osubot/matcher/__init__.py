@@ -63,5 +63,5 @@ __all__ = [
     "change",
     "generate_full_ln",
     "match",
-    "rating"
+    "rating",
 ]

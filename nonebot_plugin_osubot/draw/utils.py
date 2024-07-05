@@ -274,8 +274,9 @@ async def update_map(set_id, map_id):
             await download_osu(set_id, map_id)
 
 
-def draw_rounded_rectangle(draw: ImageDraw.Draw, xy: tuple[tuple[int, int], tuple[int, int]],
-                           corner_radius: int, fill: str = None) -> None:
+def draw_rounded_rectangle(
+    draw: ImageDraw.Draw, xy: tuple[tuple[int, int], tuple[int, int]], corner_radius: int, fill: str = None
+) -> None:
     upper_left_point = xy[0]
     bottom_right_point = xy[1]
 
@@ -286,17 +287,35 @@ def draw_rounded_rectangle(draw: ImageDraw.Draw, xy: tuple[tuple[int, int], tupl
     bottom_right = (bottom_right_point[0], bottom_right_point[1])
 
     # 绘制四个角的四分之一圆
-    draw.pieslice([top_left, (top_left[0] + corner_radius * 2, top_left[1] + corner_radius * 2)],
-                  start=180, end=270, fill=fill)
-    draw.pieslice([(top_right[0] - corner_radius * 2, top_right[1]),
-                   (top_right[0], top_right[1] + corner_radius * 2)], start=270, end=360, fill=fill)
-    draw.pieslice([(bottom_left[0], bottom_left[1] - corner_radius * 2),
-                   (bottom_left[0] + corner_radius * 2, bottom_left[1])], start=90, end=180, fill=fill)
-    draw.pieslice([(bottom_right[0] - corner_radius * 2, bottom_right[1] - corner_radius * 2),
-                   (bottom_right[0], bottom_right[1])], start=0, end=90, fill=fill)
+    draw.pieslice(
+        [top_left, (top_left[0] + corner_radius * 2, top_left[1] + corner_radius * 2)], start=180, end=270, fill=fill
+    )
+    draw.pieslice(
+        [(top_right[0] - corner_radius * 2, top_right[1]), (top_right[0], top_right[1] + corner_radius * 2)],
+        start=270,
+        end=360,
+        fill=fill,
+    )
+    draw.pieslice(
+        [(bottom_left[0], bottom_left[1] - corner_radius * 2), (bottom_left[0] + corner_radius * 2, bottom_left[1])],
+        start=90,
+        end=180,
+        fill=fill,
+    )
+    draw.pieslice(
+        [
+            (bottom_right[0] - corner_radius * 2, bottom_right[1] - corner_radius * 2),
+            (bottom_right[0], bottom_right[1]),
+        ],
+        start=0,
+        end=90,
+        fill=fill,
+    )
 
     # 绘制矩形填充四个圆角之间的空间
-    draw.rectangle([top_left[0] + corner_radius, top_left[1],
-                    bottom_right[0] - corner_radius, bottom_right[1]], fill=fill)
-    draw.rectangle([top_left[0], top_left[1] + corner_radius,
-                    bottom_right[0], bottom_right[1] - corner_radius], fill=fill)
+    draw.rectangle(
+        [top_left[0] + corner_radius, top_left[1], bottom_right[0] - corner_radius, bottom_right[1]], fill=fill
+    )
+    draw.rectangle(
+        [top_left[0], top_left[1] + corner_radius, bottom_right[0], bottom_right[1] - corner_radius], fill=fill
+    )
