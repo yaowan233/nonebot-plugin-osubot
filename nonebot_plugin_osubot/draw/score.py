@@ -63,7 +63,7 @@ async def draw_score(
             mapid,
             is_name=is_name,
             limit=100,
-            legacy_only=int(not user.lazer_mode),
+            legacy_only=int(not lazer_mode),
         )
     )
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
@@ -182,7 +182,7 @@ async def get_score_data(
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
-    score_info = cal_score_info(user.lazer_mode, score_info)
+    score_info = cal_score_info(lazer_mode, score_info)
     return await draw_score_pic(
         score_info,
         info,
