@@ -122,9 +122,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
             base_y = 170 * ((i - 1) // 2)
             x_offset = 1020
 
-        draw_rounded_rectangle(
-            draw, ((140 + x_offset, 280 + base_y), (336 + x_offset, 390 + base_y)), 20, fill=fill
-        )
+        draw_rounded_rectangle(draw, ((140 + x_offset, 280 + base_y), (336 + x_offset, 390 + base_y)), 20, fill=fill)
         draw_rounded_rectangle(
             draw, ((736 + x_offset, 280 + base_y), (966 + x_offset, 389 + base_y)), 20, fill=rating_color[1]
         )
