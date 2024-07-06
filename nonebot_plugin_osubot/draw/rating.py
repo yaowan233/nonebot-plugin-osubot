@@ -61,7 +61,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
     logger.info("开始绘制比赛历史地图信息")
     im = Image.new(
         "RGBA",
-        (1020, 280 + 170 * (len(match_info.users) - len(invalid_user_list)) + 90),
+        (2040, 280 + 170 * ((len(match_info.users) - len(invalid_user_list) + 1) // 2) + 90),
         (31, 41, 46, 255),
     )
 
@@ -73,22 +73,22 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         team_red = match_name.group(2)
         team_blue = match_name.group(3)
         text = f"{match_title}:  {team_red} VS {team_blue}"
-        draw.text((510, 130), text, font=Torus_SemiBold_40, anchor="mm")
+        draw.text((1020, 130), text, font=Torus_SemiBold_40, anchor="mm")
     elif team_type == "head-to-head":
         match_title = match_info.match["name"]
-        draw.text((510, 130), f"{match_title}", font=Torus_SemiBold_40, anchor="mm")
+        draw.text((1020, 130), f"{match_title}", font=Torus_SemiBold_40, anchor="mm")
 
     # 绘制时间
     draw.text(
-        (950, 220),
+        (1020, 220),
         f"{datetime.fromisoformat(match_info.match['start_time']).strftime('%Y-%m-%d %H:%M')} - "
         f"{datetime.fromisoformat(match_info.match['end_time']).strftime('%H:%M')}",
         font=Torus_SemiBold_25,
-        anchor="rb",
+        anchor="mm",
     )
     # 在底部绘制当前时间
     draw.text(
-        (950, 170 * (len(match_info.users) - len(invalid_user_list)) + 280 + 50),
+        (1950, 280 + 170 * ((len(match_info.users) - len(invalid_user_list) + 1) // 2) + 90 - 50),
         f"绘制时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         font=Torus_SemiBold_20,
         anchor="rb",
@@ -113,18 +113,31 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
             fill = "#00a0e8"
             background = TeamBlue
         rating_color = rating_to_wn8_hex(rating, player_stats.win_rate)
-        draw_rounded_rectangle(draw, ((140, 170 * i + 280), (336, 170 * i + 390)), 20, fill=fill)
-        draw_rounded_rectangle(draw, ((736, 170 * i + 280), (966, 170 * i + 389)), 20, fill=rating_color[1])
+
+        # 左右列的判断
+        if i % 2 == 0:
+            base_y = 170 * (i // 2)
+            x_offset = 0
+        else:
+            base_y = 170 * ((i - 1) // 2)
+            x_offset = 1020
+
+        draw_rounded_rectangle(
+            draw, ((140 + x_offset, 280 + base_y), (336 + x_offset, 390 + base_y)), 20, fill=fill
+        )
+        draw_rounded_rectangle(
+            draw, ((736 + x_offset, 280 + base_y), (966 + x_offset, 389 + base_y)), 20, fill=rating_color[1]
+        )
         background = await crop_bg((650, 110), background)
         background = draw_fillet(background, 20)
-        im.paste(background, (160, 170 * i + 280), background)
+        im.paste(background, (160 + x_offset, 280 + base_y), background)
         avatar = await open_user_icon(user)
         avatar = await crop_bg((176, 110), avatar)
         avatar = draw_fillet(avatar, 20)
-        im.paste(avatar, (160, 170 * i + 280), avatar)
+        im.paste(avatar, (160 + x_offset, 280 + base_y), avatar)
 
         draw.text(
-            (40, 170 * i + 335),
+            (40 + x_offset, 335 + base_y),
             f"#{i + 1}",
             font=Torus_SemiBold_40,
             fill="#ffffff",
@@ -132,7 +145,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         )
 
         draw.text(
-            (350, 170 * i + 306),
+            (350 + x_offset, 306 + base_y),
             f"{user.username}",
             font=Torus_SemiBold_30,
             fill="#ffffff",
@@ -140,7 +153,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         )
 
         draw.text(
-            (350, 170 * i + 341),
+            (350 + x_offset, 341 + base_y),
             f"Total Score: {score_to_3digit(player_stats.total_score)}"
             f" ({score_to_3digit(player_stats.average_score)})",
             font=Torus_SemiBold_20,
@@ -150,7 +163,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
 
         if team_type == "team-vs":
             draw.text(
-                (350, 170 * i + 366),
+                (350 + x_offset, 366 + base_y),
                 f"Win Rate: {player_stats.win_rate:.2%} ({player_stats.win_and_lose[0]}W"
                 f"-{player_stats.win_and_lose[1]}L)",
                 font=Torus_SemiBold_20,
@@ -163,7 +176,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
             top1_count = head_to_head_result["number_of_games_top1"]
             game_amount = head_to_head_result["number_of_games"]
             draw.text(
-                (350, 170 * i + 366),
+                (350 + x_offset, 366 + base_y),
                 f"Top 1 Rate: {top1_rate:.2%} ({top1_count} W/{game_amount} P)",
                 font=Torus_SemiBold_20,
                 fill="#bbbbbb",
@@ -171,7 +184,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
             )
 
         draw.text(
-            (840, 170 * i + 340),
+            (840 + x_offset, 340 + base_y),
             f"{rating:.2f}",
             font=Torus_SemiBold_45,
             fill="#ffffff",
