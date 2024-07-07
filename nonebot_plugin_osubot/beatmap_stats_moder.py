@@ -64,9 +64,9 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
                 speed_mul = mod.settings.speed_change
             mapinfo.bpm *= speed_mul
             mapinfo.total_length /= speed_mul
-        if mod.acronym == "HR" in mods:
+        if Mod(acronym="HR") in mods:
             od_ar_hp_multiplier = 1.4
-        if mod.acronym == "EZ" in mods:
+        if Mod(acronym="EZ") in mods:
             od_ar_hp_multiplier *= 0.5
     if mode == "mania":
         speed_mul = 1

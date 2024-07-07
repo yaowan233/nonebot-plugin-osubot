@@ -31,7 +31,7 @@ async def get_bg(mapid: Union[str, int], setid: int = None) -> Union[str, BytesI
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
     try:
-        img = Image.open(cover_path)
+        img = Image.open(cover_path).convert("RGBA")
     except UnidentifiedImageError:
         cover_path.unlink()
         return "暂时无法下载背景图片＞︿＜"
