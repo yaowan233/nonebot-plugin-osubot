@@ -43,7 +43,7 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
     od_ar_hp_multiplier = 1
     mode = GM[scoreinfo.ruleset_id] if scoreinfo else mapinfo.mode
     for mod in mods:
-        if mod.acronym == "DA":
+        if Mod(acronym="DA"):
             if mod.settings.circle_size is not None:
                 mapinfo.cs = mod.settings.circle_size
             if mod.settings.approach_rate is not None:
@@ -52,21 +52,21 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
                 mapinfo.drain = mod.settings.drain_rate
             if mod.settings.overall_difficulty is not None:
                 mapinfo.accuracy = mod.settings.overall_difficulty
-        if mod.acronym == "DT" or mod.acronym == "NC":
+        if Mod(acronym="DT") or Mod(acronym="NC"):
             speed_mul = 1.5
             if mod.settings and mod.settings.speed_change:
                 speed_mul = mod.settings.speed_change
             mapinfo.bpm *= speed_mul
             mapinfo.total_length /= speed_mul
-        if mod.acronym == "HT":
+        if Mod(acronym="HT"):
             speed_mul = 0.75
             if mod.settings and mod.settings.speed_change:
                 speed_mul = mod.settings.speed_change
             mapinfo.bpm *= speed_mul
             mapinfo.total_length /= speed_mul
-        if mod.acronym == "HR" in mods:
+        if Mod(acronym="HR") in mods:
             od_ar_hp_multiplier = 1.4
-        if mod.acronym == "EZ" in mods:
+        if Mod(acronym="EZ") in mods:
             od_ar_hp_multiplier *= 0.5
     if mode == "mania":
         speed_mul = 1
