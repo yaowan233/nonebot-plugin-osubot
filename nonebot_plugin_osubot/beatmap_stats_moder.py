@@ -1,8 +1,8 @@
 from typing import Optional
 
-from .schema import Beatmap, NewScore
-from .schema.score import Mod
 from .utils import GM
+from .schema.score import Mod
+from .schema import Beatmap, NewScore
 
 OD0_MS = 80
 OD10_MS = 20
