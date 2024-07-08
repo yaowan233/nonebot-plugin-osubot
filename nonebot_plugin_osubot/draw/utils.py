@@ -249,7 +249,7 @@ def is_close(n1, n2) -> bool:
 
 async def update_icon(info: User):
     path = user_cache_path / str(info.id)
-    for file_path in path.glob("info*.*"):
+    for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
         if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
             creation_time = file_path.stat().st_ctime
