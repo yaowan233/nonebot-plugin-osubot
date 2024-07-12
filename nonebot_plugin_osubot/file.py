@@ -89,6 +89,8 @@ def re_map(file: Union[bytes, Path]) -> str:
             text = f.read()
     res = re.search(r"\d,\d,\"(.+)\"", text)
     bg = "mapbg.png" if not res else res.group(1).strip()
+    if "/" in bg:
+        bg = bg.split("/")[-1]
     return bg
 
 
