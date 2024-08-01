@@ -1,3 +1,4 @@
+import os
 import re
 import random
 from pathlib import Path
@@ -79,6 +80,23 @@ async def get_projectimg(url: str) -> BytesIO:
     data = req.read()
     im = BytesIO(data)
     return im
+
+
+async def get_pfm_img(url: str, cache_path: str) -> BytesIO:
+    cache_dir = os.path.dirname(cache_path)
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    if os.path.exists(cache_path):
+        with open(cache_path, "rb") as f:
+            return BytesIO(f.read())
+    req = await safe_async_get(url)
+    if req.status_code == 200:
+        image_data = req.read()
+        with open(cache_path, "wb") as f:
+            f.write(image_data)
+        return BytesIO(image_data)
+    else:
+        raise Exception("图片下载失败")
 
 
 def re_map(file: Union[bytes, Path]) -> str:
