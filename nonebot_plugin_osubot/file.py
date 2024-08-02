@@ -81,8 +81,7 @@ async def get_projectimg(url: str) -> BytesIO:
     return im
 
 
-async def get_pfm_img(url: str, cache_path: Union[str, Path]) -> BytesIO:
-    cache_path = Path(cache_path)
+async def get_pfm_img(url: str, cache_path: Path) -> BytesIO:
     cache_dir = cache_path.parent
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
