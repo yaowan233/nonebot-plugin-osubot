@@ -89,10 +89,10 @@ async def get_pfm_img(url: str, cache_path: Union[str, Path]) -> BytesIO:
     if cache_path.exists():
         with cache_path.open("rb") as f:
             return BytesIO(f.read())
-    response = await safe_async_get(url)
-    if response.status_code >= 400:
+    req = await safe_async_get(url)
+    if not req or req.status_code >= 400:
         return BytesIO()
-    image_data = response.content
+    image_data = req.content
     with cache_path.open("wb") as f:
         f.write(image_data)
     return BytesIO(image_data)
