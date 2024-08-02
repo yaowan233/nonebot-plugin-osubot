@@ -12,7 +12,7 @@ from ..schema import NewScore
 from ..schema.score import Mod
 from ..database import UserData
 from ..mods import get_mods_list
-from ..file import get_projectimg
+from ..file import map_path, get_pfm_img
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
@@ -90,10 +90,19 @@ async def draw_pfm(
     day: int = 0,
 ) -> Union[str, BytesIO]:
     task0 = [
-        get_projectimg(f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg") for i in score_ls_filtered
+        get_pfm_img(
+            f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg",
+            map_path / f"{i.beatmapset.id}" / "list.jpg",
+        )
+        for i in score_ls_filtered
     ]
+
     task1 = [
-        get_projectimg(f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg") for i in score_ls_filtered
+        get_pfm_img(
+            f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg",
+            map_path / f"{i.beatmapset.id}" / "cover.jpg",
+        )
+        for i in score_ls_filtered
     ]
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
