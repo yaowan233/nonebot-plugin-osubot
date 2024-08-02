@@ -92,7 +92,7 @@ async def draw_pfm(
     task0 = [
         get_pfm_img(
             f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg",
-            (map_path / f"{i.beatmapset.id}/list.jpg").as_posix(),
+            map_path / f"{i.beatmapset.id}" / "list.jpg",
         )
         for i in score_ls_filtered
     ]
@@ -100,7 +100,7 @@ async def draw_pfm(
     task1 = [
         get_pfm_img(
             f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg",
-            (map_path / f"{i.beatmapset.id}/cover.jpg").as_posix(),
+            map_path / f"{i.beatmapset.id}" / "cover.jpg",
         )
         for i in score_ls_filtered
     ]
