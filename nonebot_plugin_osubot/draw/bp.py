@@ -139,31 +139,19 @@ async def draw_pfm(
 
         # 获取谱面大banner
         try:
-            banner_data = large_banner_ls[num]
-            if banner_data:
-                banner = Image.open(banner_data).convert("RGBA").resize((650, 150))
-            else:
-                banner = Image.new("RGBA", (650, 150), (0, 0, 0, 255))
+            banner = Image.open(large_banner_ls[num]).convert("RGBA").resize((650, 150))
             banner_with_fillet = draw_fillet2(banner, 15)
             im.alpha_composite(banner_with_fillet, (45 + offset, 114 + h_num))
         except UnidentifiedImageError:
-            black_banner = Image.new("RGBA", (650, 150), (0, 0, 0, 255))
-            banner_with_fillet = draw_fillet2(black_banner, 15)
-            im.alpha_composite(banner_with_fillet, (45 + offset, 114 + h_num))
+            ...
 
         # 获取谱面banner
         try:
-            bg_data = bg_ls[num]
-            if bg_data:
-                bg = Image.open(bg_data).convert("RGBA").resize((150, 150))
-            else:
-                bg = Image.new("RGBA", (150, 150), (0, 0, 0, 0))
+            bg = Image.open(bg_ls[num]).convert("RGBA").resize((150, 150))
             bg_imag = draw_fillet(bg, 15)
             im.alpha_composite(bg_imag, (45 + offset, 114 + h_num))
         except UnidentifiedImageError:
-            black_bg = Image.new("RGBA", (150, 150), (0, 0, 0, 0))
-            bg_imag = draw_fillet(black_bg, 15)
-            im.alpha_composite(bg_imag, (45 + offset, 114 + h_num))
+            ...
 
         # mods
         if bp.mods:
