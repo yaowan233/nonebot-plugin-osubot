@@ -18,7 +18,8 @@ async def bind_user_info(project: str, uid, qid, is_name) -> str:
     playmode = info["playmode"]
     await UserData.create(user_id=qid, osu_id=uid, osu_name=name, osu_mode=FGM[playmode])
     await update_users_info([uid])
-    msg = f"成功绑定 {name}\n默认模式为 {playmode}，若更改模式至其他模式，如 mania，请输入 /更新模式 3"
+    msg = (f"成功绑定 {name}\n默认模式为 {playmode}，若更改模式至其他模式，如 mania，请发送 /更新模式 3\n"
+           f"默认为 lazer 分数，你可以发送 /切换lazer 切换分数显示方式")
     return msg
 
 
