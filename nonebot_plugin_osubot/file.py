@@ -82,21 +82,21 @@ async def get_projectimg(url: str) -> BytesIO:
     return im
 
 
-async def get_pfm_img(url: str, cache_path: str) -> BytesIO:
-    cache_dir = os.path.dirname(cache_path)
-    if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
-    if os.path.exists(cache_path):
-        with open(cache_path, "rb") as f:
+async def get_pfm_img(url: str, cache_path: Union[str, Path]) -> BytesIO:
+    cache_path = Path(cache_path)
+    cache_dir = cache_path.parent
+    if not cache_dir.exists():
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    if cache_path.exists():
+        with cache_path.open("rb") as f:
             return BytesIO(f.read())
-    req = await safe_async_get(url)
-    if req.status_code == 200:
-        image_data = req.read()
-        with open(cache_path, "wb") as f:
-            f.write(image_data)
-        return BytesIO(image_data)
-    else:
-        raise Exception("图片下载失败")
+    response = await safe_async_get(url)
+    if response.status_code >= 400:
+        return BytesIO()
+    image_data = response.content
+    with cache_path.open("wb") as f:
+        f.write(image_data)
+    return BytesIO(image_data)
 
 
 def re_map(file: Union[bytes, Path]) -> str:
