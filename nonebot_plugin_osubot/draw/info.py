@@ -113,9 +113,19 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
             if variant["pp"] != 0:
                 data[variant["variant"]] = variant
         if "4k" in data:
-            draw.text((935, 85), f"4K: {data['4k']['pp']} // #{data['4k']['global_rank']} // {info.country_code} #{data['4k']['country_rank']}", font=Torus_Regular_25, anchor="rt")
+            draw.text(
+                (935, 85),
+                f"4K: {data['4k']['pp']} // #{data['4k']['global_rank']} // {info.country_code} #{data['4k']['country_rank']}",
+                font=Torus_Regular_25,
+                anchor="rt",
+            )
         if "7k" in data:
-            draw.text((935, 120), f"7K: {data['7k']['pp']} // #{data['7k']['global_rank']} // {info.country_code} #{data['7k']['country_rank']}", font=Torus_Regular_25, anchor="rt")
+            draw.text(
+                (935, 120),
+                f"7K: {data['7k']['pp']} // #{data['7k']['global_rank']} // {info.country_code} #{data['7k']['country_rank']}",
+                font=Torus_Regular_25,
+                anchor="rt",
+            )
     # 底图
     im.alpha_composite(InfoImg)
     # 奖牌
