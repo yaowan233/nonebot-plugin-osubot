@@ -172,7 +172,9 @@ async def draw_pfm(
         if len(metadata) > 30:
             metadata = metadata[:27] + "..."
         if bp.legacy_perfect == False and FGM[mode] == 3:
-            draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm", fill=(255, 102, 171, 255))
+            draw.text(
+                (210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm", fill=(255, 102, 171, 255)
+            )
         else:
             draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm")
 
@@ -203,7 +205,8 @@ async def draw_pfm(
         if bp.legacy_perfect == False and FGM[mode] == 3:
             draw.text(
                 (585 + offset, 228 + h_num),
-                "*", font=Torus_Regular_50,
+                "*",
+                font=Torus_Regular_50,
                 anchor="rm",
                 fill=(255, 102, 171, 255),
             )
