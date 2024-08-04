@@ -15,7 +15,16 @@ from ..mods import get_mods_list
 from ..file import map_path, get_pfm_img
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
-from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, Torus_Regular_50, osufile
+from .static import (
+    BgImg,
+    Image,
+    BgImg1,
+    Torus_Regular_20,
+    Torus_Regular_25,
+    Torus_Regular_50,
+    Torus_SemiBold_25,
+    osufile,
+)
 
 
 async def draw_bp(
