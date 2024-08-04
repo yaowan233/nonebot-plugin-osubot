@@ -15,7 +15,7 @@ from ..mods import get_mods_list
 from ..file import map_path, get_pfm_img
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
-from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
+from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, Torus_Regular_50, osufile
 
 
 async def draw_bp(
@@ -171,7 +171,7 @@ async def draw_pfm(
         metadata = f"{bp.beatmapset.title} | by {bp.beatmapset.artist}"
         if len(metadata) > 30:
             metadata = metadata[:27] + "..."
-        if bp.legacy_perfect == False and FGM[mode] == 3:
+        if not bp.legacy_perfect and GMN[mode] != "Mania":
             draw.text(
                 (210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm", fill=(255, 102, 171, 255)
             )
@@ -202,7 +202,7 @@ async def draw_pfm(
         )
 
         # acc
-        if bp.legacy_perfect == False and FGM[mode] == 3:
+        if not bp.legacy_perfect and GMN[mode] != "Mania":
             draw.text(
                 (585 + offset, 228 + h_num),
                 "*",
