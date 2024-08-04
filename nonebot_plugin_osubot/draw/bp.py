@@ -171,7 +171,10 @@ async def draw_pfm(
         metadata = f"{bp.beatmapset.title} | by {bp.beatmapset.artist}"
         if len(metadata) > 30:
             metadata = metadata[:27] + "..."
-        draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm")
+        if bp.legacy_perfect == False and FGM[mode] == 3:
+            draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm", fill=(255, 102, 171, 255))
+        else:
+            draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm")
 
         # 地图版本&时间
         old_time = datetime.strptime(bp.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
@@ -197,6 +200,13 @@ async def draw_pfm(
         )
 
         # acc
+        if bp.legacy_perfect == False and FGM[mode] == 3:
+            draw.text(
+                (585 + offset, 228 + h_num),
+                "*", font=Torus_Regular_50,
+                anchor="rm",
+                fill=(255, 102, 171, 255),
+            )
         draw.text(
             (680 + offset, 210 + h_num),
             f"{bp.accuracy * 100:.2f}%",
