@@ -240,13 +240,7 @@ async def draw_pfm(
         im.alpha_composite(div, (25, 275 + h_num))
 
         await asyncio.sleep(0)
-
     image_bytesio = BytesIO()
-    im.save(image_bytesio, "PNG")
-    # 转换为 JPEG 格式
-    image_bytesio.seek(0)
-    image = Image.open(image_bytesio).convert("RGB")
-    image_bytesio = BytesIO()
-    image.save(image_bytesio, "JPEG", quality=85)
-    image.close()
+    im = im.convert("RGB")
+    im.save(image_bytesio, "JPEG", quality=40)
     return image_bytesio
