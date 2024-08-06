@@ -23,6 +23,14 @@ class Level(Base):
     progress: int
 
 
+class Variant(Base):
+    mode: str
+    variant: str
+    country_rank: Optional[int]
+    global_rank: Optional[int]
+    pp: Optional[float]
+
+
 class UserStatistics(Base):
     grade_counts: GradeCounts
     hit_accuracy: float
@@ -39,6 +47,7 @@ class UserStatistics(Base):
     global_rank: Optional[int]
     country_rank: Optional[int]
     badges: Optional[list[Badge]]
+    variants: Optional[list[Variant]]
 
 
 class UserCompact(Base):

@@ -108,6 +108,23 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
     country = osufile / "flags" / f"{info.country_code}.png"
     # 底图
     im.alpha_composite(InfoImg)
+    # 4/7K排名
+    if FGM[mode] == 3 and statistics.variants:
+        for variant in statistics.variants:
+            if variant.variant == "4k":
+                draw.text(
+                    (935, 85),
+                    f"4K: {variant.pp} // #{variant.global_rank} // {info.country_code} #{variant.country_rank}",
+                    font=Torus_Regular_25,
+                    anchor="rt",
+                )
+            if variant.variant == "7k":
+                draw.text(
+                    (935, 120),
+                    f"7K: {variant.pp} // #{variant.global_rank} // {info.country_code} #{variant.country_rank}",
+                    font=Torus_Regular_25,
+                    anchor="rt",
+                )
     # 奖牌
     if info.badges:
         badges_num = len(info.badges)
