@@ -22,6 +22,8 @@ async def _(
     data = await osu_api("map", map_id=int(osu_id))
     if not data:
         await UniMessage.text("未查询到该地图").finish(reply_to=True)
+    if data["total_length"] > 1200:
+        await UniMessage.text("谱面长度大于20分钟，预览其他短一点的谱吧！").finish(reply_to=True)
     if isinstance(data, str):
         await UniMessage.text(data).finish(reply_to=True)
     osu = await download_tmp_osu(osu_id)
