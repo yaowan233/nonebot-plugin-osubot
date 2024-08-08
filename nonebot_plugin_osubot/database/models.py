@@ -6,7 +6,7 @@ from tortoise import Model, fields
 class UserData(Model):
     id: int = fields.IntField(pk=True, generated=True, auto_increment=True)
     """自增主键"""
-    user_id: int = fields.BigIntField()
+    user_id: str = fields.TextField()
     """用户id"""
     osu_id: int = fields.IntField()
     """osu id"""

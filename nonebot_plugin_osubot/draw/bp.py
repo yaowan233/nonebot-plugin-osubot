@@ -21,7 +21,7 @@ from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, To
 async def draw_bp(
     project: str,
     uid: int,
-    user_id: int,
+    user_id: str,
     mode: str,
     mods: Optional[list],
     low_bound: int = 0,

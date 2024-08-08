@@ -18,7 +18,7 @@ async def _score(event: Event, state: T_State):
         await UniMessage.text("请输入正确的谱面ID").finish(reply_to=True)
     data = await get_score_data(
         state["user"],
-        int(event.get_user_id()),
+        event.get_user_id(),
         NGM[state["mode"]],
         mapid=state["para"],
         mods=state["mods"],

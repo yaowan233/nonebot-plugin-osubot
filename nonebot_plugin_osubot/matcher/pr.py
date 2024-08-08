@@ -21,7 +21,7 @@ async def _recent(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = NGM[state["mode"]]
-    player = await UserData.get_or_none(user_id=int(event.get_user_id()))
+    player = await UserData.get_or_none(user_id=event.get_user_id())
     if "-" in state["para"]:
         ls = state["para"].split("-")
         low, high = ls[0], ls[1]
@@ -56,7 +56,7 @@ async def _recent(event: Event, state: T_State):
     data = await draw_score(
         "recent",
         state["user"],
-        int(event.get_user_id()),
+        event.get_user_id(),
         mode,
         [],
         state["day"] - 1,
@@ -72,7 +72,7 @@ async def _pr(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = state["mode"]
-    player = await UserData.get_or_none(user_id=int(event.get_user_id()))
+    player = await UserData.get_or_none(user_id=event.get_user_id())
     if "-" in state["para"]:
         ls = state["para"].split("-")
         low, high = ls[0], ls[1]
@@ -107,7 +107,7 @@ async def _pr(event: Event, state: T_State):
     data = await draw_score(
         "pr",
         state["user"],
-        int(event.get_user_id()),
+        event.get_user_id(),
         NGM[mode],
         [],
         state["day"] - 1,

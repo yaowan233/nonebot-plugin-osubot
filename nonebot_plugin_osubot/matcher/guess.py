@@ -78,7 +78,7 @@ async def _(
         guess_song_cache[group_id] = set()
     if msg.has(At):
         qq = msg.get(At)[0].target
-        user_data = await UserData.get_or_none(user_id=int(qq))
+        user_data = await UserData.get_or_none(user_id=qq)
         if not user_data:
             await UniMessage.text("该用户未绑定osu账号").finish(reply_to=True)
         bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])

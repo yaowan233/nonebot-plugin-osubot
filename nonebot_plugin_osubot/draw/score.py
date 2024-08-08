@@ -46,7 +46,7 @@ from .static import (
 async def draw_score(
     project: str,
     uid: int,
-    user_id: int,
+    user_id: str,
     mode: str,
     mods: Optional[list[str]],
     best: int = 0,
@@ -116,7 +116,7 @@ async def draw_score(
 
 async def get_score_data(
     uid: int,
-    user_id: int,
+    user_id: str,
     mode: str,
     mods: Optional[list[str]],
     mapid: int = 0,

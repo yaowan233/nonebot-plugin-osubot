@@ -12,7 +12,7 @@ def split_msg():
         qq = event.get_user_id()
         if msg.has(At):
             qq = msg.get(At)[0].target
-        user_data = await UserData.get_or_none(user_id=int(qq))
+        user_data = await UserData.get_or_none(user_id=qq)
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
         state["mods"] = []

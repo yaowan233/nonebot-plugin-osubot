@@ -30,7 +30,7 @@ async def _bp(event: Event, state: T_State):
     data = await draw_score(
         "bp",
         state["user"],
-        int(event.get_user_id()),
+        event.get_user_id(),
         NGM[state["mode"]],
         best=best,
         mods=state["mods"],
@@ -55,7 +55,7 @@ async def _pfm(event: Event, state: T_State):
     data = await draw_bp(
         "bp",
         state["user"],
-        int(event.get_user_id()),
+        event.get_user_id(),
         NGM[state["mode"]],
         state["mods"],
         low,
@@ -74,7 +74,7 @@ async def _tbp(event: Event, state: T_State):
     data = await draw_bp(
         "tbp",
         state["user"],
-        int(event.get_user_id()),
+        event.get_user_id(),
         NGM[state["mode"]],
         [],
         day=state["day"],

@@ -17,7 +17,7 @@ clear_background = on_command("清空背景", priority=11, block=True, aliases={
 @update_pic.handle()
 async def _(event: Event, bot: Bot, state: T_State):
     qq = event.get_user_id()
-    user_data = await UserData.get_or_none(user_id=int(qq))
+    user_data = await UserData.get_or_none(user_id=qq)
     state["user"] = user_data.osu_id if user_data else 0
     if state["user"] == 0:
         await UniMessage.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号").finish(reply_to=True)
