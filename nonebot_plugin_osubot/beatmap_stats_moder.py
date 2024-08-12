@@ -43,7 +43,7 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
     od_ar_hp_multiplier = 1
     mode = GM[scoreinfo.ruleset_id] if scoreinfo else mapinfo.mode
     for mod in mods:
-        if mod.acronym == "DA":
+        if mod.acronym == "DA" and mod.settings:
             if mod.settings.circle_size is not None:
                 mapinfo.cs = mod.settings.circle_size
             if mod.settings.approach_rate is not None:
