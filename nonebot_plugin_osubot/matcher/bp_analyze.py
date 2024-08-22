@@ -96,7 +96,7 @@ async def _(event: Event, state: T_State):
     for num, i in enumerate(score_ls):
         mapper_pp[i.beatmap.user_id] += i.pp * 0.95**num
     mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)
-    mapper_pp = mapper_pp[:10]
+    mapper_pp = mapper_pp[:9]
     users = await get_users([i[0] for i in mapper_pp])
     user_dic = {i.id: i.username for i in users}
     mapper_pp_data = []
