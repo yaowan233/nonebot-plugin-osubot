@@ -257,6 +257,7 @@ async def update_icon(info: User):
             time_diff = datetime.datetime.now() - creation_datetime
             # 判断文件是否创建超过一天
             if time_diff > datetime.timedelta(days=1):
+                file_path.unlink()
                 user_icon = await get_projectimg(info.avatar_url)
                 with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
                     f.write(user_icon.getvalue())
