@@ -105,7 +105,8 @@ async def draw_pfm(
         )
         for i in score_ls_filtered
     ]
-    task2 = [download_osu(i.beatmapset.id, i.beatmap_id) for i in score_ls_filtered if not (map_path / f"{i.beatmapset.id}" / f"{i.beatmap_id}.osu").exists()]
+    task2 = [download_osu(i.beatmapset.id, i.beatmap_id) for i in score_ls_filtered
+             if not (map_path / f"{i.beatmapset.id}" / f"{i.beatmap_id}.osu").exists()]
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     await asyncio.gather(*task2)
