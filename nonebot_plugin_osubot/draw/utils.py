@@ -252,9 +252,9 @@ async def update_icon(info: User):
     for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
         if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
-            creation_time = file_path.stat().st_ctime
-            creation_datetime = datetime.datetime.fromtimestamp(creation_time)
-            time_diff = datetime.datetime.now() - creation_datetime
+            modified_time = file_path.stat().st_mtime
+            modified_datetime = datetime.datetime.fromtimestamp(modified_time)
+            time_diff = datetime.datetime.now() - modified_datetime
             # 判断文件是否创建超过一天
             if time_diff > datetime.timedelta(days=1):
                 file_path.unlink()
@@ -267,9 +267,9 @@ async def update_map(set_id, map_id):
     path = map_path / str(set_id)
     for file_path in path.glob("*.osu"):
         # 检查文件是否为图片格式
-        creation_time = file_path.stat().st_ctime
-        creation_datetime = datetime.datetime.fromtimestamp(creation_time)
-        time_diff = datetime.datetime.now() - creation_datetime
+        modified_time = file_path.stat().st_mtime
+        modified_datetime = datetime.datetime.fromtimestamp(modified_time)
+        time_diff = datetime.datetime.now() - modified_datetime
         # 判断文件是否创建超过一天
         if time_diff > datetime.timedelta(days=1):
             await download_osu(set_id, map_id)
