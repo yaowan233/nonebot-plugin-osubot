@@ -6,13 +6,14 @@ from datetime import datetime, timedelta
 
 from PIL import ImageDraw, UnidentifiedImageError
 
+from ..pp import cal_pp
 from ..utils import GMN
 from ..api import osu_api
 from ..schema import NewScore
 from ..schema.score import Mod
 from ..database import UserData
 from ..mods import get_mods_list
-from ..file import map_path, get_pfm_img
+from ..file import map_path, get_pfm_img, download_osu
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
@@ -104,8 +105,10 @@ async def draw_pfm(
         )
         for i in score_ls_filtered
     ]
+    task2 = [download_osu(i.beatmapset.id, i.beatmap_id) for i in score_ls_filtered if not (map_path / f"{i.beatmapset.id}" / f"{i.beatmap_id}.osu").exists()]
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
+    await asyncio.gather(*task2)
     bplist_len = len(score_ls_filtered)
     im = Image.new("RGBA", (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
     if project in ("prlist", "relist"):
@@ -179,7 +182,9 @@ async def draw_pfm(
         difficulty = bp.beatmap.version
         if len(difficulty) > 30:
             difficulty = difficulty[:27] + "..."
-        difficulty = f"{bp.beatmap.difficulty_rating}★ | {difficulty}"
+        osu = map_path / f"{bp.beatmapset.id}" / f"{bp.beatmap_id}.osu"
+        pp_info = cal_pp(bp, str(osu.absolute()))
+        difficulty = f"{pp_info.difficulty.stars:.2f}★ | {difficulty}"
         draw.text(
             (210 + offset, 168 + h_num),
             difficulty,
