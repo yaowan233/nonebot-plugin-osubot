@@ -1,3 +1,4 @@
+import asyncio
 import re
 import random
 from pathlib import Path
@@ -57,14 +58,15 @@ async def download_tmp_osu(map_id):
 async def download_osu(set_id, map_id):
     url = [f"https://osu.ppy.sh/osu/{map_id}", f"https://api.osu.direct/osu/{map_id}"]
     logger.info(f"开始下载谱面: <{map_id}>")
-    if req := await get_first_response(url):
-        filename = f"{map_id}.osu"
-        filepath = map_path / str(set_id) / filename
-        with open(filepath, "wb") as f:
-            f.write(req)
-        return filepath
-    else:
-        raise Exception("下载出错，请稍后再试")
+    async with asyncio.Semaphore(5):
+        if req := await get_first_response(url):
+            filename = f"{map_id}.osu"
+            filepath = map_path / str(set_id) / filename
+            with open(filepath, "wb") as f:
+                f.write(req)
+            return filepath
+        else:
+            raise Exception("下载出错，请稍后再试")
 
 
 async def get_projectimg(url: str) -> BytesIO:
@@ -88,7 +90,8 @@ async def get_pfm_img(url: str, cache_path: Path) -> BytesIO:
     if cache_path.exists():
         with cache_path.open("rb") as f:
             return BytesIO(f.read())
-    req = await safe_async_get(url)
+    async with asyncio.Semaphore(5):
+        req = await safe_async_get(url)
     if not req or req.status_code >= 400:
         return BytesIO()
     image_data = req.content
