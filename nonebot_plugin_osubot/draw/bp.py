@@ -13,9 +13,9 @@ from ..schema import NewScore
 from ..schema.score import Mod
 from ..database import UserData
 from ..mods import get_mods_list
-from ..file import map_path, get_pfm_img, download_osu
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
+from ..file import map_path, get_pfm_img, download_osu
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
 
 
@@ -105,8 +105,11 @@ async def draw_pfm(
         )
         for i in score_ls_filtered
     ]
-    task2 = [download_osu(i.beatmapset.id, i.beatmap_id) for i in score_ls_filtered
-             if not (map_path / f"{i.beatmapset.id}" / f"{i.beatmap_id}.osu").exists()]
+    task2 = [
+        download_osu(i.beatmapset.id, i.beatmap_id)
+        for i in score_ls_filtered
+        if not (map_path / f"{i.beatmapset.id}" / f"{i.beatmap_id}.osu").exists()
+    ]
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     await asyncio.gather(*task2)
