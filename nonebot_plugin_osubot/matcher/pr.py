@@ -39,7 +39,7 @@ async def _recent(event: Event, state: T_State):
         if isinstance(data, str):
             await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
-            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}")
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
             if isinstance(info, str):
                 await UniMessage.text(info).finish(reply_to=True)
             else:
@@ -90,7 +90,7 @@ async def _pr(event: Event, state: T_State):
         if isinstance(data, str):
             await UniMessage.text(data).finish(reply_to=True)
         if not state["is_name"]:
-            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}")
+            info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}?key=id")
             if isinstance(info, str):
                 return info
             else:

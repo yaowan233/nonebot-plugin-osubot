@@ -71,7 +71,7 @@ async def osu_api(
     legacy_only: int = 0,
 ) -> Union[str, dict]:
     if is_name:
-        info = await get_user_info(f"{api}/users/@{uid}")
+        info = await get_user_info(f"{api}/users/{uid}?key=username")
         if isinstance(info, str):
             return info
         else:
