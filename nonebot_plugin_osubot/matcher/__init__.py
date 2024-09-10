@@ -11,6 +11,7 @@ from .history import history
 from .bind import bind, unbind
 from .map import bmap, osu_map
 from .osu_help import osu_help
+from .rank import group_pp_rank
 from .recommend import recommend
 from .url_match import url_match
 from .bp_analyze import bp_analyze
@@ -19,8 +20,6 @@ from .preview import generate_preview
 from .map_convert import change, convert, generate_full_ln
 from .update import update_pic, update_info, clear_background
 from .guess import hint, pic_hint, guess_pic, guess_audio, word_matcher, pic_word_matcher
-
-# from .rank import group_pp_rank
 
 __all__ = [
     "guess_audio",
@@ -57,4 +56,5 @@ __all__ = [
     "generate_full_ln",
     "match",
     "rating",
+    "group_pp_rank",
 ]
