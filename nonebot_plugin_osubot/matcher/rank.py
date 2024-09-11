@@ -49,7 +49,6 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
     draw.text((40, 10), f"{NGM[mode]}模式群内排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
     draw.text((880, 10), "pp", font=Torus_Regular_25, fill=(255, 255, 255, 255))
     draw.text((960, 10), "全球排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-    draw.text((1070, 10), "国内排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
     for index, (info, icon) in enumerate(zip(info_ls, icon_ls)):
         if info.pp < 100:
             continue
@@ -88,12 +87,6 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
         draw.text(
             (980, 70 + 82 * index),
             f"{info.g_rank}",
-            font=Torus_Regular_25,
-            fill=(255, 255, 255, 255),
-        )
-        draw.text(
-            (1090, 70 + 82 * index),
-            f"{info.c_rank}",
             font=Torus_Regular_25,
             fill=(255, 255, 255, 255),
         )
