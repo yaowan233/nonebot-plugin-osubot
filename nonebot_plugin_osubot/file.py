@@ -21,6 +21,7 @@ api_ls = [
     "https://api.osu.direct/d/",
     "https://txy1.sayobot.cn/beatmaps/download/novideo/",
 ]
+semaphore = asyncio.Semaphore(5)
 
 if not map_path.exists():
     map_path.mkdir(parents=True, exist_ok=True)
@@ -58,7 +59,7 @@ async def download_tmp_osu(map_id):
 async def download_osu(set_id, map_id):
     url = [f"https://osu.ppy.sh/osu/{map_id}", f"https://api.osu.direct/osu/{map_id}"]
     logger.info(f"开始下载谱面: <{map_id}>")
-    async with asyncio.Semaphore(5):
+    async with semaphore:
         if req := await get_first_response(url):
             filename = f"{map_id}.osu"
             filepath = map_path / str(set_id) / filename
