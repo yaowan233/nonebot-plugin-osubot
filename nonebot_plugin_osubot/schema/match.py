@@ -20,7 +20,7 @@ class Detail(Base):
 
 class Event(Base):
     id: int
-    game: Optional[Game]
+    game: Optional[Game] = None
     detail: Detail
     timestamp: str
 

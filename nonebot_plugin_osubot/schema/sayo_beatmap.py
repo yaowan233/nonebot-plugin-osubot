@@ -56,4 +56,4 @@ class MapInfo(Base):
 
 class SayoBeatmap(Base):
     status: int
-    data: Optional[MapInfo]
+    data: Optional[MapInfo] = None

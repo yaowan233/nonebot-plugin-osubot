@@ -5,10 +5,10 @@ from .basemodel import Base
 
 class ListData(Base):
     accurate: bool
-    currentMod: Optional[list[str]]
-    currentPP: Optional[int]
-    currentScore: Optional[int]
-    currentScoreLink: Optional[str]
+    currentMod: Optional[list[str]] = None
+    currentPP: Optional[int] = None
+    currentScore: Optional[int] = None
+    currentScoreLink: Optional[str] = None
     difficulty: float
     id: str
     mapCoverUrl: str
@@ -33,4 +33,4 @@ class RecommendData(Base):
     code: int
     message: str
     success: bool
-    data: Optional[Data]
+    data: Optional[Data] = None

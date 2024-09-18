@@ -26,9 +26,9 @@ class Level(Base):
 class Variant(Base):
     mode: str
     variant: str
-    country_rank: Optional[int]
-    global_rank: Optional[int]
-    pp: Optional[float]
+    country_rank: Optional[int] = None
+    global_rank: Optional[int] = None
+    pp: Optional[float] = None
 
 
 class UserStatistics(Base):
@@ -39,15 +39,15 @@ class UserStatistics(Base):
     maximum_combo: int
     play_count: int
     play_time: int
-    pp: int
+    pp: float
     ranked_score: int
     replays_watched_by_others: int
     total_hits: int
     total_score: int
-    global_rank: Optional[int]
-    country_rank: Optional[int]
-    badges: Optional[list[Badge]]
-    variants: Optional[list[Variant]]
+    global_rank: Optional[int] = None
+    country_rank: Optional[int] = None
+    badges: Optional[list[Badge]] = None
+    variants: Optional[list[Variant]] = None
 
 
 class UserCompact(Base):
@@ -60,26 +60,26 @@ class UserCompact(Base):
     is_deleted: bool
     is_online: bool
     is_supporter: bool
-    last_visit: Optional[str]
-    profile_colour: Optional[str]
+    last_visit: Optional[str] = None
+    profile_colour: Optional[str] = None
     username: str
-    statistics: Optional[UserStatistics]
+    statistics: Optional[UserStatistics] = None
 
 
 class StatisticsRulesets(Base):
-    osu: Optional[UserStatistics]
-    taiko: Optional[UserStatistics]
-    fruits: Optional[UserStatistics]
-    mania: Optional[UserStatistics]
+    osu: Optional[UserStatistics] = None
+    taiko: Optional[UserStatistics] = None
+    fruits: Optional[UserStatistics] = None
+    mania: Optional[UserStatistics] = None
 
 
 class User(UserCompact):
-    cover_url: Optional[str]
-    has_supported: Optional[bool]
-    join_date: Optional[str]
-    location: Optional[str]
-    occupation: Optional[str]
-    playmode: Optional[Literal["fruits", "mania", "osu", "taiko"]]
-    playstyle: Optional[list[str]]
-    badges: Optional[list[Badge]]
-    statistics_rulesets: Optional[StatisticsRulesets]
+    cover_url: Optional[str] = None
+    has_supported: Optional[bool] = None
+    join_date: Optional[str] = None
+    location: Optional[str] = None
+    occupation: Optional[str] = None
+    playmode: Optional[Literal["fruits", "mania", "osu", "taiko"]] = None
+    playstyle: Optional[list[str]] = None
+    badges: Optional[list[Badge]] = None
+    statistics_rulesets: Optional[StatisticsRulesets] = None
