@@ -8,12 +8,12 @@ authors = [
 license = {text = "AGPL-3.0"}
 dependencies = [
     "nonebot2>=2.3.0",
-    "pydantic~=1.10",
+    "pydantic>=1.10.0,<3.0.0,!=2.5.0,!=2.5.1",
     "nonebot-plugin-alconna>=0.46.4",
     "nonebot-plugin-session~=0.3",
     "pillow>=9.2.0",
     "expiringdict>=1.2.2",
-    "nonebot-plugin-apscheduler~=0.4.0",
+    "nonebot-plugin-apscheduler>=0.4.0",
     "tortoise-orm>=0.20.0",
     "nonebot-plugin-tortoise-orm>=0.1.4",
     "rosu-pp-py==1.1.0",
