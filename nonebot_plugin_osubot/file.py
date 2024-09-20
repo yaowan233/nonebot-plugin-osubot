@@ -18,7 +18,7 @@ user_cache_path = Path() / "data" / "osu" / "user"
 badge_cache_path = Path() / "data" / "osu" / "badge"
 api_ls = [
     "https://api.chimu.moe/v1/download/",
-    "https://api.osu.direct/d/",
+    "https://osu.direct/api/d/",
     "https://txy1.sayobot.cn/beatmaps/download/novideo/",
 ]
 semaphore = asyncio.Semaphore(5)
@@ -57,7 +57,7 @@ async def download_tmp_osu(map_id):
 
 @auto_retry
 async def download_osu(set_id, map_id):
-    url = [f"https://osu.ppy.sh/osu/{map_id}", f"https://api.osu.direct/osu/{map_id}"]
+    url = [f"https://osu.ppy.sh/osu/{map_id}", f"https://osu.direct/api/osu/{map_id}"]
     logger.info(f"开始下载谱面: <{map_id}>")
     async with semaphore:
         if req := await get_first_response(url):
