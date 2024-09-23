@@ -20,21 +20,27 @@ from nonebot_plugin_session import SessionId, SessionIdType
 
 from ..utils import NGM
 from ..info import get_bg
-from ..file import map_path
 from .utils import split_msg
 from ..schema import NewScore
 from ..database.models import UserData
+from ..mania import generate_preview_pic
 from ..api import osu_api, safe_async_get
+from ..file import map_path, download_tmp_osu
 
 games: dict[str, NewScore] = {}
 pic_games: dict[str, NewScore] = {}
+chart_games: dict[str, NewScore] = {}
 timers: dict[str, TimerHandle] = {}
 pic_timers: dict[str, TimerHandle] = {}
+chart_timers: dict[str, TimerHandle] = {}
 hint_dic = {"pic": False, "artist": False, "creator": False}
 pic_hint_dic = {"artist": False, "creator": False, "audio": False}
+chart_hint_dic = {"pic": False, "artist": False, "creator": False, "audio": False}
 group_hint = {}
 pic_group_hint = {}
+chart_group_hint = {}
 guess_audio = on_command("音频猜歌", priority=11, block=True)
+guess_chart = on_command("谱面猜歌", priority=11, block=True)
 guess_song_cache = ExpiringDict(1000, 60 * 60 * 24)
 data_path = Path() / "data" / "osu"
 pcm_path = data_path / "out.pcm"
@@ -159,6 +165,18 @@ async def pic_stop_game(matcher: Matcher, cid: str):
         await matcher.send(msg)
 
 
+async def chart_stop_game(matcher: Matcher, cid: str):
+    chart_timers.pop(cid, None)
+    if chart_games.get(cid, None):
+        game = chart_games.pop(cid)
+        if chart_group_hint.get(cid, None):
+            chart_group_hint[cid] = None
+        msg = f"猜歌超时，游戏结束，正确答案是{game.beatmapset.title_unicode}"
+        if game.beatmapset.title_unicode != game.beatmapset.title:
+            msg += f" [{game.beatmapset.title}]"
+        await matcher.send(msg)
+
+
 def set_timeout(matcher: Matcher, cid: str, timeout: float = 300):
     timer = timers.get(cid, None)
     if timer:
@@ -177,6 +195,15 @@ def pic_set_timeout(matcher: Matcher, cid: str, timeout: float = 300):
     pic_timers[cid] = timer
 
 
+def chart_set_timeout(matcher: Matcher, cid: str, timeout: float = 300):
+    timer = chart_timers.get(cid, None)
+    if timer:
+        timer.cancel()
+    loop = asyncio.get_running_loop()
+    timer = loop.call_later(timeout, lambda: asyncio.ensure_future(chart_stop_game(matcher, cid)))
+    chart_timers[cid] = timer
+
+
 def game_running(session_id: str = SessionId(SessionIdType.GROUP)) -> bool:
     return bool(games.get(session_id, None))
 
@@ -185,10 +212,13 @@ def pic_game_running(session_id: str = SessionId(SessionIdType.GROUP)) -> bool:
     return bool(pic_games.get(session_id, None))
 
 
+def chart_game_running(session_id: str = SessionId(SessionIdType.GROUP)) -> bool:
+    return bool(chart_games.get(session_id, None))
+
+
 word_matcher = on_message(Rule(game_running), priority=12)
-
-
 pic_word_matcher = on_message(Rule(pic_game_running), priority=12)
+chart_word_matcher = on_message(Rule(chart_game_running), priority=12)
 
 
 @word_matcher.handle()
@@ -384,3 +414,120 @@ async def _(
         UniMessage.text(f"开始图片猜歌游戏，猜猜下面图片的曲名吧，该曲抽选自{selected_user} {NGM[mode]} 模式的bp")
         + UniMessage.image(raw=byt)
     ).finish()
+
+
+@guess_chart.handle(parameterless=[split_msg()])
+async def _(
+    state: T_State,
+    matcher: Matcher,
+    msg: UniMsg,
+    session_id: str = SessionId(SessionIdType.GROUP),
+):
+    binded_id = await UserData.filter(osu_mode=3).values_list("user_id", flat=True)
+    if not binded_id:
+        await guess_pic.finish("还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
+    if not guess_song_cache.get(session_id):
+        guess_song_cache[session_id] = set()
+    if msg.has(At):
+        qq = msg.get(At)[0].target
+        user_data = await UserData.get_or_none(user_id=int(qq))
+        if not user_data:
+            await UniMessage.text("该用户未绑定osu账号").finish(reply_to=True)
+        bp_info = await osu_api("bp", user_data.osu_id, "mania")
+        if not bp_info or isinstance(bp_info, str):
+            await UniMessage.text("该用户无bp记录").finish(reply_to=True)
+        bp_ls = [NewScore(**i) for i in bp_info]
+        filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
+        if not filtered_bp_ls:
+            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+        selected_score = random.choice(filtered_bp_ls)
+        selected_user = user_data.osu_name
+    elif state["para"]:
+        bp_info = await osu_api("bp", state["para"], "mania", is_name=True)
+        if not bp_info or isinstance(bp_info, str):
+            await UniMessage.text("该用户无bp记录").finish(reply_to=True)
+        bp_ls = [NewScore(**i) for i in bp_info]
+        filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
+        if not filtered_bp_ls:
+            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+        selected_score = random.choice(filtered_bp_ls)
+        selected_user = state["para"]
+    else:
+        selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
+    if not selected_score:
+        await guess_pic.finish("好像没有可以猜的歌了，今天的猜歌就到此结束吧！")
+    if chart_games.get(session_id, None):
+        await guess_pic.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
+    chart_games[session_id] = selected_score
+    chart_set_timeout(matcher, session_id)
+    osu = await download_tmp_osu(selected_score.beatmap.id)
+    byt = await generate_preview_pic(osu)
+    await (
+        UniMessage.text(f"开始谱面猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 {selected_user} 的bp")
+        + UniMessage.image(raw=byt)
+    ).finish()
+
+
+@chart_word_matcher.handle()
+async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
+    song_name = chart_games[session_id].beatmapset.title
+    song_name_unicode = chart_games[session_id].beatmapset.title_unicode
+    r1 = SequenceMatcher(None, song_name.lower(), event.get_plaintext().lower()).ratio()
+    r2 = SequenceMatcher(None, song_name_unicode.lower(), event.get_plaintext().lower()).ratio()
+    r3 = SequenceMatcher(
+        None,
+        re.sub(r"[(\[].*[)\]]", "", song_name.lower()),
+        event.get_plaintext().lower(),
+    ).ratio()
+    if r1 >= 0.5 or r2 >= 0.5 or r3 >= 0.5:
+        chart_games.pop(session_id)
+        if chart_group_hint.get(session_id, None):
+            chart_group_hint[session_id] = None
+        msg = f"恭喜猜出正确答案为{song_name_unicode}"
+        await UniMessage.text(msg).send(reply_to=True)
+
+
+chart_hint = on_command("谱面提示", priority=11, block=True, rule=Rule(chart_game_running))
+
+
+@chart_hint.handle()
+async def _(session_id: str = SessionId(SessionIdType.GROUP)):
+    score = chart_games[session_id]
+    if not chart_group_hint.get(session_id, None):
+        chart_group_hint[session_id] = chart_hint_dic.copy()
+    if all(chart_group_hint[session_id].values()):
+        await chart_hint.finish("已无更多提示，加油哦")
+    true_keys = []
+    for key, value in chart_group_hint[session_id].items():
+        if not value:
+            true_keys.append(key)
+    action = random.choice(true_keys)
+    if action == "audio":
+        chart_group_hint[session_id]["audio"] = True
+        path = map_path / f"{score.beatmapset.id}"
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+        audio_path = map_path / f"{score.beatmapset.id}" / "audio.silk"
+        if not audio_path.exists():
+            audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
+            if not audio:
+                await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
+            try:
+                await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
+            except CoderError:
+                await UniMessage.text("音频编码失败了 qaq").finish(reply_to=True)
+        with open(audio_path, "rb") as f:
+            silk_byte = f.read()
+        await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
+    if action == "artist":
+        chart_group_hint[session_id]["artist"] = True
+        msg = f"曲师为：{score.beatmapset.artist_unicode}"
+        if score.beatmapset.artist_unicode != score.beatmapset.artist:
+            msg += f" [{score.beatmapset.artist}]"
+        await chart_hint.finish(msg)
+    if action == "creator":
+        chart_group_hint[session_id]["creator"] = True
+        await chart_hint.finish(f"谱师为：{score.beatmapset.creator}")
+    if action == "pic":
+        chart_group_hint[session_id]["pic"] = True
+        await UniMessage.image(url=score.beatmapset.covers.cover).finish(reply_to=True)
