@@ -442,6 +442,7 @@ async def _(
             await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         selected_user = user_data.osu_name
+        guess_song_cache[session_id].add(selected_score.beatmapset.id)
     elif state["para"]:
         bp_info = await osu_api("bp", state["para"], "mania", is_name=True)
         if not bp_info or isinstance(bp_info, str):
@@ -452,6 +453,7 @@ async def _(
             await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         selected_user = state["para"]
+        guess_song_cache[session_id].add(selected_score.beatmapset.id)
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
     if not selected_score:
