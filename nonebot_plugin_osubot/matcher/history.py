@@ -25,7 +25,7 @@ async def _info(state: T_State):
     date_ls = [str(i.date) for i in data]
     rank_ls = [i.g_rank for i in data]
     # 使用列表推导式筛选出 rank_ls 不为 None 的索引
-    filtered_indices = [index for index, rank in enumerate(rank_ls) if rank is not None]
+    filtered_indices = [index for index, rank in enumerate(rank_ls) if rank is not None and rank != 0]
 
     # 根据筛选出的索引生成新的列表
     pp_ls = [pp_ls[i] for i in filtered_indices]
