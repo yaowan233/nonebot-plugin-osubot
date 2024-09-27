@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import jinja2
-from nonebot_plugin_htmlrender import get_new_page, template_to_pic
+from nonebot_plugin_htmlrender import get_new_page
 
 template_path = str(Path(__file__).parent / "catch_preview")
 
