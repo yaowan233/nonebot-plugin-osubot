@@ -42,8 +42,8 @@ async def get_bg(mapid: Union[str, int], setid: int = None) -> Union[str, BytesI
 
 
 async def update_bg(cover_path: Path):
-    creation_time = cover_path.stat().st_ctime
-    creation_datetime = datetime.datetime.fromtimestamp(creation_time)
-    time_diff = datetime.datetime.now() - creation_datetime
+    modified_time = cover_path.stat().st_mtime
+    modified_datetime = datetime.datetime.fromtimestamp(modified_time)
+    time_diff = datetime.datetime.now() - modified_datetime
     if time_diff > datetime.timedelta(days=1):
         cover_path.unlink()
