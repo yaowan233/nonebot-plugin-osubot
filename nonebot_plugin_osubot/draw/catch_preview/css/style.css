@@ -1,0 +1,270 @@
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    margin: 0;
+    background: #000;
+}
+
+button {
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    font: 14px sans-serif;
+}
+
+#control button::-moz-focus-inner {
+    padding: 0;
+    border: 0;
+}
+
+body>* {
+    position: fixed;
+}
+
+#speed,
+#control,
+#settingsPanel,
+#title,
+#mania {
+    background: rgba(0, 0, 0, .6);
+    display: none;
+}
+
+body.h #speed,
+body.h #control,
+body.h #settingsPanel,
+body.h #title,
+body.h #mania.e {
+    display: block;
+}
+
+#container {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#progress-container {
+    left: 66px;
+    position: absolute;
+    bottom: 0px;
+    width: calc(100% - 242px);
+    height: 12px;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    -moz-background-size: 100% 100%;
+}
+
+#play {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 50vmin;
+    text-shadow: 0 0 .05em #000;
+    opacity: 0;
+}
+
+#play.e {
+    opacity: .6;
+}
+
+#speed {
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    width: 40px;
+}
+
+#speed button:not(.e) {
+    color: #666;
+}
+
+#mania {
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 40px;
+}
+
+#settingsPanel {
+    right: 10px;
+    bottom: 50px;
+    width: 150px;
+    border: 1px solid #aaa;
+}
+
+
+#settingsPanel button {
+    margin: 2px;
+    padding: 0;
+    border: none;
+    outline: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    width: 146px;
+    height: 36px;
+    font: 14px sans-serif;
+}
+
+#openPanel {
+    top: 50%;
+    left: 30%;
+    transform: translateY(-50%);
+    width: 40%;
+    height: 50%;
+    border: 1px solid #aaa;
+}
+
+#openTitle {
+    color: #fff;
+    font: 16px sans-serif;
+    border-bottom: solid 1px #fff;
+    white-space: nowrap;
+}
+
+#openContent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow-y: auto;
+    height: calc(100% - 30px);
+    align-content: center;
+    flex-direction: column;
+}
+
+#openContent button {
+    margin: 2px;
+    padding: 0;
+    border: 1px solid #aaa;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    width: calc(100% - 4px);
+    height: 36px;
+    font: 16px sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+#fileInput {
+    display: none;
+}
+
+#folderInput {
+    display: none;
+}
+
+#settingsPanel .settingsbtn:hover,
+#settingsPanel .settingsbtn:active {
+    border: 1px solid #aaa;
+}
+
+#control {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+}
+
+input {
+    margin: 4px;
+    padding: 0;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+#playtime {
+    margin: 4px;
+    vertical-align: 10px;
+    padding-left: 10px;
+    box-sizing: border-box;
+    color: white;
+    font-size: 12px;
+}
+
+#progress {
+    width: calc(100% - 226px);
+}
+
+#volume {
+    width: 80px;
+}
+
+#title {
+    top: 0;
+    left: 0;
+    width: 100%;
+    white-space: nowrap;
+}
+
+img {
+    vertical-align: middle;
+    position: relative;
+    border: 0;
+    top: -1px;
+    padding: 0 10px;
+}
+
+a {
+    font: 14px/40px sans-serif;
+    border-bottom: 1px dashed transparent;
+    color: #fff;
+    text-decoration: none;
+}
+
+a:hover {
+    border-bottom-color: #ddd;
+}
+
+#share {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+#sharePrompt {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, .6);
+    display: none;
+}
+
+#sharePrompt button {
+    float: right;
+    background: #49f;
+}
+
+#sharePrompt input {
+    width: 100%;
+    margin: 0;
+}
+
+#fullscreen {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+#settings {
+    position: absolute;
+    top: 0;
+    right: 40;
+}
