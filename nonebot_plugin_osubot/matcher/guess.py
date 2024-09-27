@@ -19,7 +19,7 @@ from nonebot_plugin_alconna import At, UniMsg, UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
 
 from ..info import get_bg
-from ..utils import GM, NGM
+from ..utils import NGM
 from .utils import split_msg
 from ..schema import NewScore
 from ..database.models import UserData
@@ -441,7 +441,7 @@ async def _(
         user_data = await UserData.get_or_none(user_id=int(qq))
         if not user_data:
             await UniMessage.text("该用户未绑定osu账号").finish(reply_to=True)
-        bp_info = await osu_api("bp", user_data.osu_id, GM[mode])
+        bp_info = await osu_api("bp", user_data.osu_id, NGM[mode])
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         bp_ls = [NewScore(**i) for i in bp_info]
@@ -452,7 +452,7 @@ async def _(
         selected_user = user_data.osu_name
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
     elif state["para"]:
-        bp_info = await osu_api("bp", state["para"], GM[mode], is_name=True)
+        bp_info = await osu_api("bp", state["para"], NGM[mode], is_name=True)
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         bp_ls = [NewScore(**i) for i in bp_info]
