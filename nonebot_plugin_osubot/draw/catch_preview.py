@@ -15,7 +15,7 @@ async def draw_cath_preview(beatmap_id, beatmapset_id) -> bytes:
     osu = path / f"{beatmap_id}.osu"
     if not osu.exists():
         await download_osu(beatmapset_id, beatmap_id)
-    with open(osu, "r", encoding="utf-8") as f:
+    with open(osu, encoding="utf-8") as f:
         osu_file = f.read()
     template_name = "pic.html"
     template_env = jinja2.Environment(  # noqa: S701
