@@ -33,5 +33,5 @@ async def _(
             pic = await generate_preview_pic(osu)
         await UniMessage.image(raw=pic).finish(reply_to=True)
     elif data["mode"] == "fruits" or data["mode"] == "osu":
-        pic = await draw_cath_preview(int(osu_id))
+        pic = await draw_cath_preview(int(osu_id), data["beatmapset_id"])
         await UniMessage.image(raw=pic).finish(reply_to=True)

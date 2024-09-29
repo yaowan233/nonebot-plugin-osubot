@@ -8,7 +8,7 @@
     <title>ctb图片预览 网址后加#bid（-EZ/HR）</title>
 </head>
 
-<body class="h">
+<body class="h" style="margin: 0; background-color: black;">
     <img id="img"></img>
 
     <script src="js/util.js"></script>
@@ -41,37 +41,26 @@
     <script>
 
         const createImg = function () {
-            let beatmapID = {{ beatmap_id }};
             let mod = "";
-            const osuFileUrl = "https://osu.direct/api/osu/" + beatmapID;
-            !async function () {
-                const self = this;
-                const response = await fetch(osuFileUrl);
-                const osufile = await response.text();
-                if (!osufile) {
-                    document.title = "从osu官网获取谱面文件失败";
-                    return;
-                }
+            const self = this;
+            const osufile = `{{ osu_file }}`;
+            let mods = {
+                HR: false,
+                EZ: false
+            }
+            if (mod) mods[mod] = true;
 
-                let mods = {
-                    HR: false,
-                    EZ: false
-                }
-                if (mod) mods[mod] = true;
-
-                try {
-                    self.beatmap = Beatmap.parse(osufile, mods);
-                    let SCALE = 0.2;
-                    /**@type {HTMLCanvasElement} */
-                    let canvas2 = self.beatmap.draw2(SCALE);
-                    document.getElementById("img").src = canvas2.toDataURL();
-                }
-                catch (e) {
-                    console.log(e);
-                    document.title = e;
-                }
-
-            }();
+            try {
+                self.beatmap = Beatmap.parse(osufile, mods);
+                let SCALE = 0.2;
+                /**@type {HTMLCanvasElement} */
+                let canvas2 = self.beatmap.draw2(SCALE);
+                document.getElementById("img").src = canvas2.toDataURL();
+            }
+            catch (e) {
+                console.log(e);
+                document.title = e;
+            }
         }
 
         window.addEventListener('hashchange', createImg);
@@ -88,7 +77,7 @@
         // window.localStorage.setItem("ColorChange", 1);
 
         // 不显示推荐香蕉路线
-        window.localStorage.setItem("WhiteBanana", 0);
+        window.localStorage.setItem("WhiteBanana", 1);
         // 白色显示推荐香蕉路线
         // window.localStorage.setItem("WhiteBanana", 1);
 

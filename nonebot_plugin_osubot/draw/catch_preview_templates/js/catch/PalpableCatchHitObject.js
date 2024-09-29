@@ -58,6 +58,15 @@ PalpableCatchHitObject.prototype.drawCircle2 = function (position, SCALE, ctx) {
     ctx.fillStyle = this.color;
     ctx.fill();
     ctx.restore();
+    // 边缘白框
+    ctx.save();
+    ctx.beginPath();
+    ctx.shadowBlur = 0;
+    ctx.arc(position.x, position.y, this.radius * 0.9 * SCALE, -Math.PI, Math.PI);
+    ctx.lineWidth = this.radius * 0.2 * SCALE;
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+    ctx.restore();
 };
 PalpableCatchHitObject.prototype.drawBanana = function (position, ctx) {
     ctx.save();
@@ -93,8 +102,8 @@ PalpableCatchHitObject.prototype.drawDashCircle2 = function (position, SCALE, ct
     ctx.save();
     ctx.beginPath();
     ctx.shadowBlur = 0;
-    ctx.arc(position.x, position.y, this.radius * 1.2 * SCALE, -Math.PI, Math.PI);
-    ctx.lineWidth = this.radius * 0.4 * SCALE;
+    ctx.arc(position.x, position.y, this.radius * 1.3 * SCALE, -Math.PI, Math.PI);
+    ctx.lineWidth = this.radius * 0.6 * SCALE;
     ctx.strokeStyle = 'rgb(255,0,0)';
     ctx.stroke();
     ctx.restore();

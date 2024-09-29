@@ -360,10 +360,12 @@ Catch.prototype.draw2 = function (SCALE) {
 
     // 去除offset
     let offset = barLines[0];
+    // 如果第一个note在第一条红线之前，以第一个note开始
+    if (this.fullCatchObjects[0].time < offset) offset = this.fullCatchObjects[0].time;
     for (let i = 0; i < barLines.length; i++) {
         barLines[i] -= offset;
     }
-
+    
     let timingLines = [];
     for (let i = 0; i < this.TimingPoints.length; i++) {
         // 绿线在ctb无关紧要，不用加

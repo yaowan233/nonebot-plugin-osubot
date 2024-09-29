@@ -429,7 +429,7 @@ async def _(
         await UniMessage.text("由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(reply_to=True)
     else:
         mode = state["mode"]
-    if mode == 0 or mode == 1:
+    if mode == "0" or mode == "1":
         await UniMessage.text("该模式暂不支持猜歌").finish(reply_to=True)
     binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
     if not binded_id:
@@ -470,7 +470,7 @@ async def _(
         await guess_pic.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
     chart_games[session_id] = selected_score
     chart_set_timeout(matcher, session_id)
-    if mode == 3:
+    if mode == "3":
         osu = await download_tmp_osu(selected_score.beatmap.id)
         byt = await generate_preview_pic(osu)
         await (
@@ -478,7 +478,7 @@ async def _(
             + UniMessage.image(raw=byt)
         ).finish()
     else:
-        pic = await draw_cath_preview(selected_score.beatmap.id)
+        pic = await draw_cath_preview(selected_score.beatmap.id, selected_score.beatmapset.id)
         await (
             UniMessage.text(f"开始谱面猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 {selected_user} 的bp")
             + UniMessage.image(raw=pic)
