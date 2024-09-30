@@ -8,7 +8,7 @@ from ..file import map_path, download_osu
 template_path = str(Path(__file__).parent / "catch_preview_templates")
 
 
-async def draw_cath_preview(beatmap_id, beatmapset_id) -> bytes:
+async def draw_cath_preview(beatmap_id, beatmapset_id, mods) -> bytes:
     path = map_path / str(beatmapset_id)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -23,9 +23,12 @@ async def draw_cath_preview(beatmap_id, beatmapset_id) -> bytes:
         enable_async=True,
     )
     template = template_env.get_template(template_name)
+    is_hr = 1 if "HR" in mods else 0
+    is_ez = 1 if "EZ" in mods else 0
     async with get_new_page(2) as page:
         await page.goto(f"file://{template_path}")
         await page.set_content(
-            await template.render_async(beatmap_id=beatmap_id, osu_file=osu_file), wait_until="networkidle"
+            await template.render_async(beatmap_id=beatmap_id, osu_file=osu_file, is_hr=is_hr, is_ez=is_ez),
+            wait_until="networkidle",
         )
         return await page.screenshot(full_page=True, type="jpeg", quality=60, omit_background=True)

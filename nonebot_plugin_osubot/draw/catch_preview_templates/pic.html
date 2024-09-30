@@ -12,7 +12,6 @@
     <img id="img"></img>
 
     <script src="js/util.js"></script>
-
     <script src="js/beatmap/beatmap.js"></script>
     <script src="js/beatmap/timingpoint.js"></script>
     <script src="js/beatmap/hitobject.js"></script>
@@ -41,15 +40,12 @@
     <script>
 
         const createImg = function () {
-            let mod = "";
             const self = this;
             const osufile = `{{ osu_file }}`;
             let mods = {
-                HR: false,
-                EZ: false
+                HR: {{ is_hr }},
+                EZ: {{ is_ez }}
             }
-            if (mod) mods[mod] = true;
-
             try {
                 self.beatmap = Beatmap.parse(osufile, mods);
                 let SCALE = 0.2;

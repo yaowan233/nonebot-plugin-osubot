@@ -478,7 +478,8 @@ async def _(
             + UniMessage.image(raw=byt)
         ).finish()
     else:
-        pic = await draw_cath_preview(selected_score.beatmap.id, selected_score.beatmapset.id)
+        mods = [i.acronym for i in selected_score.mods]
+        pic = await draw_cath_preview(selected_score.beatmap.id, selected_score.beatmapset.id, mods)
         await (
             UniMessage.text(f"开始谱面猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 {selected_user} 的bp")
             + UniMessage.image(raw=pic)
