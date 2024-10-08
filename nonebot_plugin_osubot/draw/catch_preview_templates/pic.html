@@ -42,15 +42,18 @@
         const createImg = function () {
             const self = this;
             const osufile = `{{ osu_file }}`;
+            let SPEED = 1;
             let mods = {
                 HR: {{ is_hr }},
                 EZ: {{ is_ez }}
             }
+            if ({{ is_dt }}) SPEED *= 1.5;
+            if ({{ is_ht }}) SPEED *= 0.75;
             try {
                 self.beatmap = Beatmap.parse(osufile, mods);
                 let SCALE = 0.2;
                 /**@type {HTMLCanvasElement} */
-                let canvas2 = self.beatmap.draw2(SCALE);
+                let canvas2 = self.beatmap.draw2(SCALE, SPEED);
                 document.getElementById("img").src = canvas2.toDataURL();
             }
             catch (e) {

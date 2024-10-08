@@ -337,7 +337,12 @@ Catch.prototype.draw = function (time, ctx) {
         catchHitObject.draw(time, ctx);
     }
 };
-Catch.prototype.draw2 = function (SCALE) {
+
+/**
+ * @param {number} SCALE 缩放大小（0.2=缩放为1/5）
+ * @param {number} SPEED 播放速度 DT=1.5 HT=0.75 在ctb不影响谱面，只影响时间和BPM标注
+ */
+Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     // 初定每一列20个屏幕大小，不够换列
     let SCREENSHEIGHT = 20 * Beatmap.HEIGHT;
     // 20px黑边
@@ -398,8 +403,8 @@ Catch.prototype.draw2 = function (SCALE) {
     let width;
     let height;
     if (cols <= 1) {
-        width = Beatmap.WIDTH * SCALE;
-        height = objs.reduce((acc, cur) => Math.max(acc.y, cur.y), Number.MIN_SAFE_INTEGER) * SCALE;
+        width = Beatmap.WIDTH * SCALE + 2 * BORDER_WIDTH;
+        height = objs.reduce((acc, cur) => Math.max(acc, cur.y), Number.MIN_SAFE_INTEGER) + 2 * BORDER_HEIGHT;
     }
     else {
         width = (Beatmap.WIDTH * SCALE + 20) * cols - 20 + 2 * BORDER_WIDTH;
@@ -460,11 +465,11 @@ Catch.prototype.draw2 = function (SCALE) {
         ctx2.lineWidth = 1;
         ctx2.stroke();
         // 添加文字
-        ctx2.strokeStyle = 'white';
+        ctx2.fillStyle = 'white';
         ctx2.font = "normal 16px 'Segoe UI'";
         ctx2.textBaseline = "middle";
         ctx2.textAlign = "end";
-        ctx2.strokeText(((barLines[i] + offset) / 1000).toFixed(1), real_x_2 + 4, real_y);
+        ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
         ctx2.restore();
 
 
@@ -486,11 +491,11 @@ Catch.prototype.draw2 = function (SCALE) {
             ctx2.lineWidth = 1;
             ctx2.stroke();
             // 添加文字
-            ctx2.strokeStyle = 'white';
+            ctx2.fillStyle = 'white';
             ctx2.font = "normal 16px 'Segoe UI'";
             ctx2.textBaseline = "middle";
             ctx2.textAlign = "end";
-            ctx2.strokeText(((barLines[i] + offset) / 1000).toFixed(1), real_x_2 + 4, real_y);
+            ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
             ctx2.restore();
         }
         else if (real_x_2 < (width - 2 * BORDER_WIDTH) && real_y < (BORDER_HEIGHT + 5)) {
@@ -510,11 +515,11 @@ Catch.prototype.draw2 = function (SCALE) {
             ctx2.lineWidth = 1;
             ctx2.stroke();
             // 添加文字
-            ctx2.strokeStyle = 'white';
+            ctx2.fillStyle = 'white';
             ctx2.font = "normal 16px 'Segoe UI'";
             ctx2.textBaseline = "middle";
             ctx2.textAlign = "end";
-            ctx2.strokeText(((barLines[i] + offset) / 1000).toFixed(1), real_x_2 + 4, real_y);
+            ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
             ctx2.restore();
         }
     }
@@ -548,11 +553,11 @@ Catch.prototype.draw2 = function (SCALE) {
         ctx2.lineWidth = 2;
         ctx2.stroke();
         // 添加文字
-        ctx2.strokeStyle = 'red';
+        ctx2.fillStyle = 'red';
         ctx2.font = "normal 16px 'Segoe UI'";
         ctx2.textBaseline = "middle";
         ctx2.textAlign = "start";
-        ctx2.strokeText((timingLines[i].bpm).toFixed(0), real_x_1 - 4, real_y - 10);
+        ctx2.fillText((timingLines[i].bpm * SPEED).toFixed(0), real_x_1 - 4, real_y - 10);
         ctx2.restore();
     }
 

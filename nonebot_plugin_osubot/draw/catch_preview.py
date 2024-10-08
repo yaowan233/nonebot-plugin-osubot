@@ -25,10 +25,14 @@ async def draw_cath_preview(beatmap_id, beatmapset_id, mods) -> bytes:
     template = template_env.get_template(template_name)
     is_hr = 1 if "HR" in mods else 0
     is_ez = 1 if "EZ" in mods else 0
+    is_dt = 1 if "DT" in mods else 0
+    is_ht = 1 if "HT" in mods else 0
     async with get_new_page(2) as page:
         await page.goto(f"file://{template_path}")
         await page.set_content(
-            await template.render_async(beatmap_id=beatmap_id, osu_file=osu_file, is_hr=is_hr, is_ez=is_ez),
+            await template.render_async(
+                beatmap_id=beatmap_id, osu_file=osu_file, is_hr=is_hr, is_ez=is_ez, is_dt=is_dt, is_ht=is_ht
+            ),
             wait_until="networkidle",
         )
         return await page.screenshot(full_page=True, type="jpeg", quality=60, omit_background=True)
