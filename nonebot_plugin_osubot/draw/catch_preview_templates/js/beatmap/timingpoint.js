@@ -9,6 +9,7 @@ function TimingPoint(line)
     this.time = data[0] | 0;
     this.beatLength = +data[1];
     this.meter = (data[2] | 0) || 4;
+    this.kiai = (data[7] | 0) % 2;
 
     // this is non-inherited timingPoint
     if (this.beatLength >= 0)

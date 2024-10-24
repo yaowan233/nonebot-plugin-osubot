@@ -17,27 +17,29 @@ PalpableCatchHitObject.prototype.draw = function (time, ctx) {
         }
     }
 };
-PalpableCatchHitObject.prototype.draw2 = function (obj, SCALE, ctx, BORDER_WIDTH, BORDER_HEIGHT) {
+PalpableCatchHitObject.prototype.draw2 = function (obj, SCALE, ctx, BORDER_WIDTH, BORDER_HEIGHT, combo = null) {
     if (obj.type === "Banana") this.drawBanana2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, ctx);
     else {
         if (this.hyperDash) this.drawDashCircle2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, ctx);
         this.drawCircle2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, ctx);
     }
+    if (combo) this.drawCombo2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, combo, ctx);
 }
-PalpableCatchHitObject.prototype.predraw2 = function (SCREENSHEIGHT, SCALE, offset) {
+PalpableCatchHitObject.prototype.predraw2 = function (SCREENSHEIGHT, COLMARGIN, SCALE, offset) {
     // 去除offset
     let dt = this.time - offset;
-    let real_x = this.x;
+    let real_x = this.x + COLMARGIN / SCALE;
     let real_y = SCREENSHEIGHT - dt * Beatmap.HEIGHT / this.beatmap.approachTime;
     let colIndex = 1;
     while (real_y < 0) {
         colIndex += 1;
-        real_x = this.x + (Beatmap.WIDTH + 20 / SCALE) * (colIndex - 1);
+        real_x = this.x + Beatmap.WIDTH * (colIndex - 1) + COLMARGIN * (2 * colIndex - 1) / SCALE;
         real_y = SCREENSHEIGHT + real_y;
     }
+    // 因为屏幕宽度640，谱面宽度512，所以需要加上Padding = (Beatmap.WIDTH - Beatmap.MAX_X) / 2 = (640-512)/2 = 64
+    real_x += 64;
     // 整体缩小
     real_x *= SCALE;
-    real_x += 10;
     real_y *= SCALE;
     return { type: this.type, x: real_x, y: real_y, col: colIndex };
 }
@@ -66,6 +68,15 @@ PalpableCatchHitObject.prototype.drawCircle2 = function (position, SCALE, ctx) {
     ctx.lineWidth = this.radius * 0.2 * SCALE;
     ctx.strokeStyle = 'white';
     ctx.stroke();
+    ctx.restore();
+};
+PalpableCatchHitObject.prototype.drawCombo2 = function (position, SCALE, combo, ctx) {
+    ctx.save();
+    ctx.fillStyle = 'lightblue';
+    ctx.font = "normal 16px 'Segoe UI'";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "start";
+    ctx.fillText("x" + combo, position.x + this.radius * SCALE * 2, position.y);
     ctx.restore();
 };
 PalpableCatchHitObject.prototype.drawBanana = function (position, ctx) {

@@ -346,8 +346,10 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     // 初定每一列20个屏幕大小，不够换列
     let SCREENSHEIGHT = 20 * Beatmap.HEIGHT;
     // 20px黑边
-    const BORDER_WIDTH = 20 + 10;
+    const BORDER_WIDTH = 20;
     const BORDER_HEIGHT = 20;
+    // 每列两边留10px列边
+    const COLMARGIN = 10;
     let objs = [];
     // 分析小节线
     let barLines = [];
@@ -370,9 +372,20 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     for (let i = 0; i < barLines.length; i++) {
         barLines[i] -= offset;
     }
-    
+
     let timingLines = [];
+    let kiaiTimeSpans = [];
+    let lastKiaiStart = -1;
     for (let i = 0; i < this.TimingPoints.length; i++) {
+        if (lastKiaiStart >= 0) {
+            if (!this.TimingPoints[i].kiai) {
+                kiaiTimeSpans.push({ start: lastKiaiStart, end: this.TimingPoints[i].time - offset });
+                lastKiaiStart = -1;
+            }
+        }
+        else {
+            if (this.TimingPoints[i].kiai) lastKiaiStart = this.TimingPoints[i].time - offset;
+        }
         // 绿线在ctb无关紧要，不用加
         if (this.TimingPoints[i].parent) continue;
         timingLines.push({ time: this.TimingPoints[i].time - offset, bpm: this.TimingPoints[i].bpm });
@@ -394,45 +407,92 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
             SCREENSHEIGHT = c * mostCommonDistance;
         }
     }
+    // 每一列等于多少时间
+    let ColTimeLength = SCREENSHEIGHT * this.approachTime / Beatmap.HEIGHT;
     // 预先分析一遍，需要的长宽
     for (let i = 0; i < this.fullCatchObjects.length; i++) {
-        objs.push(this.fullCatchObjects[i].predraw2(SCREENSHEIGHT, SCALE, offset));
+        objs.push(this.fullCatchObjects[i].predraw2(SCREENSHEIGHT, COLMARGIN, SCALE, offset));
     }
     if (objs.length <= 0) return;
     let cols = objs[objs.length - 1].col;
     let width;
     let height;
     if (cols <= 1) {
-        width = Beatmap.WIDTH * SCALE + 2 * BORDER_WIDTH;
+        width = Beatmap.WIDTH * SCALE + 2 * (BORDER_WIDTH + COLMARGIN);
         height = objs.reduce((acc, cur) => Math.max(acc, cur.y), Number.MIN_SAFE_INTEGER) + 2 * BORDER_HEIGHT;
     }
     else {
-        width = (Beatmap.WIDTH * SCALE + 20) * cols - 20 + 2 * BORDER_WIDTH;
+        width = (Beatmap.WIDTH * SCALE + 2 * COLMARGIN) * cols + 2 * BORDER_WIDTH;
         height = SCREENSHEIGHT * SCALE + 2 * BORDER_HEIGHT;
     }
     let canvas2 = document.createElement('canvas');
     canvas2.width = width;
     canvas2.height = height;
     let ctx2 = canvas2.getContext('2d');
+    // 黑色背景
     ctx2.save();
-    ctx2.rect(0, 0, width, height);
     ctx2.fillStyle = "black";
-    ctx2.fill();
+    ctx2.fillRect(0, 0, width, height);
     ctx2.restore();
-    // 画分界线
+    // kiai段背景
+    // - kiai段按列分割a
+    let kiaiTimeDrawSpans = [];
+    for (let i = 0; i < kiaiTimeSpans.length; i++) {
+        let startCol = parseInt(kiaiTimeSpans[i].start / ColTimeLength);
+        let startPct = (kiaiTimeSpans[i].start % ColTimeLength) / ColTimeLength;
+        // 边缘进位
+        if (startPct >= 0.9999) {
+            startCol += 1;
+            startPct = 0;
+        }
+        let endCol = parseInt(kiaiTimeSpans[i].end / ColTimeLength);
+        let endPct = (kiaiTimeSpans[i].end % ColTimeLength) / ColTimeLength;
+        // 边缘退位
+        if (endPct <= 0.0001) {
+            endCol -= 1;
+            endPct = 1;
+        }
+        if (startCol > endCol) continue;
+        if (startCol === endCol) {
+            kiaiTimeDrawSpans.push({ col: startCol, start: startPct, end: endPct });
+        }
+        else {
+            // 开头列
+            kiaiTimeDrawSpans.push({ col: startCol, start: startPct, end: 1 });
+            // 中间列
+            for (let spanCount = 1; spanCount < (endCol - startCol); spanCount++) {
+                kiaiTimeDrawSpans.push({ col: startCol + spanCount, start: 0, end: 1 });
+            }
+            // 末尾列
+            kiaiTimeDrawSpans.push({ col: endCol, start: 0, end: endPct });
+        }
+    }
+    // - kiai段涂色
+    for (let i = 0; i < kiaiTimeDrawSpans.length; i++) {
+        let real_x_1 = BORDER_WIDTH + kiaiTimeDrawSpans[i].col * (Beatmap.WIDTH * SCALE + 2 * COLMARGIN);
+        let real_y_1 = BORDER_HEIGHT + SCREENSHEIGHT * (1 - kiaiTimeDrawSpans[i].end) * SCALE;
+        let real_y_2 = BORDER_HEIGHT + SCREENSHEIGHT * (1 - kiaiTimeDrawSpans[i].start) * SCALE;
+        ctx2.save();
+        ctx2.fillStyle = "#161616";
+        ctx2.fillRect(real_x_1, real_y_1, Beatmap.WIDTH * SCALE + 2 * COLMARGIN, real_y_2 - real_y_1);
+        ctx2.restore();
+    }
+    // 画左分界线
     ctx2.save();
     ctx2.fillStyle = "white";
-    ctx2.fillRect(BORDER_WIDTH - 11, BORDER_HEIGHT, 2, height - 2 * BORDER_HEIGHT);
+    ctx2.fillRect(BORDER_WIDTH - 1, BORDER_HEIGHT, 2, height - 2 * BORDER_HEIGHT);
     ctx2.restore();
     ctx2.save();
+    // 画右分界线
     ctx2.fillStyle = "white";
-    ctx2.fillRect(width - BORDER_WIDTH + 11, BORDER_HEIGHT, 2, height - 2 * BORDER_HEIGHT);
+    ctx2.fillRect(width - BORDER_WIDTH + 1, BORDER_HEIGHT, 2, height - 2 * BORDER_HEIGHT);
     ctx2.restore();
+    // 画中间分界线
     if (cols > 1) {
         for (let i = 1; i < cols; i++) {
             ctx2.save();
             ctx2.fillStyle = "white";
-            ctx2.fillRect((Beatmap.WIDTH + 20 / SCALE) * i * SCALE - 11 + BORDER_WIDTH, BORDER_HEIGHT, 2, height - 2 * BORDER_HEIGHT);
+            ctx2.fillRect(BORDER_WIDTH + Beatmap.WIDTH * SCALE * i + 2 * COLMARGIN * i - 1, BORDER_HEIGHT, 2, height - 2 * BORDER_HEIGHT);
             ctx2.restore();
         }
     }
@@ -444,7 +504,7 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         let colIndex = 1;
         while (real_y < 0) {
             colIndex += 1;
-            real_x_1 = (Beatmap.WIDTH + 20 / SCALE) * (colIndex - 1);
+            real_x_1 = Beatmap.WIDTH * (colIndex - 1);
             real_x_2 = real_x_1 + Beatmap.WIDTH;
             real_y = SCREENSHEIGHT + real_y;
         }
@@ -453,8 +513,8 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         real_x_2 *= SCALE;
         real_y *= SCALE;
         // 加上边缘
-        real_x_1 += BORDER_WIDTH;
-        real_x_2 += BORDER_WIDTH;
+        real_x_1 += BORDER_WIDTH + COLMARGIN * (2 * colIndex - 1);
+        real_x_2 += BORDER_WIDTH + COLMARGIN * (2 * colIndex - 1);
         real_y += BORDER_HEIGHT;
 
         ctx2.save();
@@ -474,14 +534,10 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
 
 
         //将距离上下边缘比较近的复制一份到上下一次
-        if (real_x_1 > (2 * BORDER_WIDTH) && real_y > (height - BORDER_HEIGHT - 5)) {
+        if (real_x_1 > (2 * (BORDER_WIDTH + COLMARGIN)) && real_y > (height - BORDER_HEIGHT - 5)) {
             // 靠近下边缘，在上一列的上边缘再画一条
-            real_x_1 = (Beatmap.WIDTH + 20 / SCALE) * (colIndex - 2);
-            real_x_2 = real_x_1 + Beatmap.WIDTH;
-            real_x_1 *= SCALE;
-            real_x_2 *= SCALE;
-            real_x_1 += BORDER_WIDTH;
-            real_x_2 += BORDER_WIDTH;
+            real_x_1 -= Beatmap.WIDTH * SCALE + 2 * COLMARGIN;
+            real_x_2 -= Beatmap.WIDTH * SCALE + 2 * COLMARGIN;
             real_y = BORDER_HEIGHT;
             ctx2.save();
             ctx2.beginPath();
@@ -498,14 +554,10 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
             ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
             ctx2.restore();
         }
-        else if (real_x_2 < (width - 2 * BORDER_WIDTH) && real_y < (BORDER_HEIGHT + 5)) {
+        else if (real_x_2 < (width - 2 * (BORDER_WIDTH + COLMARGIN)) && real_y < (BORDER_HEIGHT + 5)) {
             // 靠近上边缘，在下一列的下边缘再画一条
-            real_x_1 = (Beatmap.WIDTH + 20 / SCALE) * colIndex;
-            real_x_2 = real_x_1 + Beatmap.WIDTH;
-            real_x_1 *= SCALE;
-            real_x_2 *= SCALE;
-            real_x_1 += BORDER_WIDTH;
-            real_x_2 += BORDER_WIDTH;
+            real_x_1 += Beatmap.WIDTH * SCALE + 2 * COLMARGIN;
+            real_x_2 += Beatmap.WIDTH * SCALE + 2 * COLMARGIN;
             real_y = SCREENSHEIGHT * SCALE + BORDER_HEIGHT;
             ctx2.save();
             ctx2.beginPath();
@@ -532,7 +584,7 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         let colIndex = 1;
         while (real_y < 0) {
             colIndex += 1;
-            real_x_1 = (Beatmap.WIDTH + 20 / SCALE) * (colIndex - 1);
+            real_x_1 = Beatmap.WIDTH * (colIndex - 1);
             real_x_2 = real_x_1 + Beatmap.WIDTH;
             real_y = SCREENSHEIGHT + real_y;
         }
@@ -541,8 +593,8 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         real_x_2 *= SCALE;
         real_y *= SCALE;
         // 加上边缘
-        real_x_1 += BORDER_WIDTH;
-        real_x_2 += BORDER_WIDTH;
+        real_x_1 += BORDER_WIDTH + COLMARGIN * (2 * colIndex - 1);
+        real_x_2 += BORDER_WIDTH + COLMARGIN * (2 * colIndex - 1);
         real_y += BORDER_HEIGHT;
 
         ctx2.save();
@@ -561,8 +613,23 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         ctx2.restore();
     }
 
+    let combo = 0;
+    let lastCombo = 0;
+    let comboSplit = 20;
+    // 按总物件数/时间控制密度
+    let totalTime = this.fullCatchObjects[this.fullCatchObjects.length - 1].time - this.fullCatchObjects[0].time;
+    if (this.fullCatchObjects.length * 1000 / totalTime > 2) comboSplit = Math.ceil(this.fullCatchObjects.length * 1000 / totalTime) * 10;
+    // 按0.2*位数修约
+    let roundBy = Math.pow(10, comboSplit.toString().length) * 0.2;
+    comboSplit = Math.round(comboSplit / roundBy) * roundBy;
     for (let i = 0; i < this.fullCatchObjects.length; i++) {
-        this.fullCatchObjects[i].draw2(objs[i], SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
+        let showCombo = null;
+        if (objs[i].type === "Fruit" || objs[i].type === "Droplet") {
+            combo += 1;
+        }
+        if (combo > lastCombo && combo > 0 && combo % comboSplit === 0) showCombo = combo;
+        this.fullCatchObjects[i].draw2(objs[i], SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT, showCombo);
+        lastCombo = combo;
     }
     return canvas2;
 };
