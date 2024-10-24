@@ -103,18 +103,19 @@ async def sayo_api(setid: int) -> dict:
     return await api_info("mapinfo", url)
 
 
-async def get_user_info(url: str) -> Union[dict, str]:
+async def get_headers():
     token = cache.get("token")
     if not token:
         await renew_token()
         token = cache.get("token")
-    header = {"Authorization": f"Bearer {token}"}
-    req = await safe_async_get(url, headers=header)
+    return {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
+
+
+async def get_user_info(url: str) -> Union[dict, str]:
+    headers = await get_headers()
+    req = await safe_async_get(url, headers=headers)
     if not req:
         return "api请求失败，请稍后再试"
-    if req.status_code == 401:
-        await token.update_token()
-        return await get_user_info(url)
     elif req.status_code == 404:
         return "未找到该玩家，请确认玩家ID是否正确，有无多余或缺少的空格"
     elif req.status_code == 200:
@@ -124,11 +125,7 @@ async def get_user_info(url: str) -> Union[dict, str]:
 
 
 async def get_users(users: list[int]):
-    token = cache.get("token")
-    if not token:
-        await renew_token()
-        token = cache.get("token")
-    headers = {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
+    headers = await get_headers()
     if req := await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users}):
         return [User(**i) for i in req.json()["users"]]
     return []
@@ -138,11 +135,7 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
     if project == "mapinfo" or project == "PPCalc":
         headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"}
     else:
-        token = cache.get("token")
-        if not token:
-            await renew_token()
-            token = cache.get("token")
-        headers = {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
+        headers = get_headers()
     req = await safe_async_get(url, headers=headers)
     if not req:
         return "api请求失败，请稍后再试"
@@ -189,11 +182,7 @@ async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
 
 async def get_seasonal_bg() -> Optional[dict]:
     url = f"{api}/seasonal-backgrounds"
-    token = cache.get("token")
-    if not token:
-        await renew_token()
-        token = cache.get("token")
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = get_headers()
     req = await safe_async_get(url, headers=headers)
     if req.status_code != 200:
         return
