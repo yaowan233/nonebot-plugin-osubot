@@ -135,7 +135,7 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
     if project == "mapinfo" or project == "PPCalc":
         headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"}
     else:
-        headers = get_headers()
+        headers = await get_headers()
     req = await safe_async_get(url, headers=headers)
     if not req:
         return "api请求失败，请稍后再试"
@@ -182,7 +182,7 @@ async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
 
 async def get_seasonal_bg() -> Optional[dict]:
     url = f"{api}/seasonal-backgrounds"
-    headers = get_headers()
+    headers = await get_headers()
     req = await safe_async_get(url, headers=headers)
     if req.status_code != 200:
         return
