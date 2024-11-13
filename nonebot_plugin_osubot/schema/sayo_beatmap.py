@@ -42,7 +42,7 @@ class MapInfo(Base):
     creator: str
     creator_id: int
     source: str
-    last_update: str
+    last_update: int
     approved_date: int
     bpm: float
     favourite_count: int
@@ -50,7 +50,7 @@ class MapInfo(Base):
     storyboard: int
     tags: str
     language: int
-    genre: str
+    genre: int
     bid_data: list[BidData]
 
 
