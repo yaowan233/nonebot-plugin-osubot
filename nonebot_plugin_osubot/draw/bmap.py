@@ -4,25 +4,14 @@ from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageFilter, ImageEnhance
 
-from ..schema import SayoBeatmap
 from ..file import get_projectimg
-from ..api import osu_api, sayo_api
+from ..api import get_sayo_map_info
 from .utils import crop_bg, stars_diff, calc_songlen
 from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30
 
 
-async def draw_bmap_info(mapid, op: bool = False) -> Union[str, BytesIO]:
-    if op:
-        info = await osu_api("map", map_id=mapid)
-        if not info:
-            return "未查询到地图"
-        elif isinstance(info, str):
-            return info
-        mapid = info["beatmapset_id"]
-    info = await sayo_api(mapid)
-    if isinstance(info, str):
-        return info
-    sayo_info = SayoBeatmap(**info)
+async def draw_bmap_info(mapid) -> Union[str, BytesIO]:
+    sayo_info = await get_sayo_map_info(mapid)
     if sayo_info.status == -1:
         return "在sayobot未查询到该地图"
     data = sayo_info.data

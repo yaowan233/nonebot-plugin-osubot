@@ -117,7 +117,7 @@ async def draw_score(
 async def get_score_data(
     uid: int,
     user_id: str,
-    mode: str,
+    mode: Optional[str],
     mods: Optional[list[str]],
     mapid: int = 0,
     is_name: bool = False,
