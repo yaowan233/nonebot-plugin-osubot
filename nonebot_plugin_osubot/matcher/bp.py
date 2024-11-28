@@ -1,10 +1,11 @@
 from nonebot import on_command
+from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
-from nonebot.typing import T_State
-from .utils import split_msg
-from ..draw import draw_score, draw_bp
+
 from ..utils import NGM
+from .utils import split_msg
+from ..draw import draw_bp, draw_score
 
 bp = on_command("bp", priority=11, block=True)
 pfm = on_command("pfm", priority=11, block=True)
@@ -60,7 +61,7 @@ async def _pfm(event: Event, state: T_State):
         high,
         state["day"],
         state["is_name"],
-        state["query"]
+        state["query"],
     )
     if isinstance(data, str):
         await UniMessage.text(data).finish(reply_to=True)
@@ -85,7 +86,7 @@ async def _tbp(event: Event, state: T_State):
         high,
         state["day"],
         state["is_name"],
-        state["query"]
+        state["query"],
     )
     if isinstance(data, str):
         await UniMessage.text(data).finish(reply_to=True)

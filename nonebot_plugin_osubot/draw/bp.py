@@ -20,7 +20,6 @@ from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
 
-
 map_dict = {"acc": "accuracy"}
 
 
@@ -76,23 +75,22 @@ def filter_scores_with_regex(scores_with_index, conditions):
     """
     for key, operator, value in conditions:
         scores_with_index = [
-            score for score in scores_with_index
-            if matches_condition_with_regex(score, key, operator, value)
+            score for score in scores_with_index if matches_condition_with_regex(score, key, operator, value)
         ]
     return scores_with_index
 
 
 async def draw_bp(
-        project: str,
-        uid: int,
-        user_id: str,
-        mode: str,
-        mods: Optional[list],
-        low_bound: int,
-        high_bound: int,
-        day: int,
-        is_name: bool,
-        search_condition: list
+    project: str,
+    uid: int,
+    user_id: str,
+    mode: str,
+    mods: Optional[list],
+    low_bound: int,
+    high_bound: int,
+    day: int,
+    is_name: bool,
+    search_condition: list,
 ) -> Union[str, BytesIO]:
     player = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not player else player.lazer_mode
