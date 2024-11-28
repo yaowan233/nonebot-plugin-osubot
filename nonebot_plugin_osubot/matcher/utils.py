@@ -1,9 +1,8 @@
 import re
-
-from nonebot.internal.params import Depends
-from nonebot_plugin_alconna import At, UniMsg
-from nonebot.params import T_State, CommandArg
 from nonebot.internal.adapter import Event, Message
+from nonebot.internal.params import Depends
+from nonebot.params import T_State, CommandArg
+from nonebot_plugin_alconna import UniMsg, At
 
 from ..utils import mods2list
 from ..database.models import UserData
@@ -43,14 +42,13 @@ def split_msg():
                 except ValueError:
                     state["error"] = f"'{match[6]}' 不能进行数值比较"
         arg = re.sub(pattern, "", arg)
-        if state["_prefix"]["command"][0] in ("bp", "score"):
-            pattern1 = r"\d+(?=\D*$)"
-            match = re.search(pattern1, arg)
-            if match:
-                state["target"] = match.group()
-            arg = re.sub(pattern1, "", arg)
+        arg = " " + arg
+        match = re.search(r"(?<=\s)\d+(?=\D*$)", arg)
+        if match:
+            state["target"] = match.group()
+        arg = re.sub(r"\s\d+(?=\D*$)", '', arg)
         if arg:
-            state["user"] = arg
+            state["user"] = arg.strip()
             state["is_name"] = True
         if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
             state["error"] = "模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania"
@@ -58,5 +56,4 @@ def split_msg():
             state["error"] = "查询的日期应是一个正数"
         if state["user"] == 0:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
-
     return Depends(dependency)
