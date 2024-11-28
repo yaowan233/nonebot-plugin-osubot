@@ -58,7 +58,9 @@ async def _pfm(event: Event, state: T_State):
         state["mods"],
         low,
         high,
-        is_name=state["is_name"],
+        state["day"],
+        state["is_name"],
+        state["query"]
     )
     if isinstance(data, str):
         await UniMessage.text(data).finish(reply_to=True)
@@ -69,14 +71,21 @@ async def _pfm(event: Event, state: T_State):
 async def _tbp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
+    ls = state["range"].split("-")
+    low, high = int(ls[0]), int(ls[1])
+    if not 0 < low < high <= 100:
+        await UniMessage.text("仅支持查询bp1-100").finish(reply_to=True)
     data = await draw_bp(
         "tbp",
         state["user"],
         event.get_user_id(),
         NGM[state["mode"]],
-        [],
-        day=state["day"],
-        is_name=state["is_name"],
+        state["mods"],
+        low,
+        high,
+        state["day"],
+        state["is_name"],
+        state["query"]
     )
     if isinstance(data, str):
         await UniMessage.text(data).finish(reply_to=True)

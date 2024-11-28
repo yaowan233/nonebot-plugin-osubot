@@ -1,7 +1,9 @@
+import re
 import asyncio
 from io import BytesIO
 from time import mktime, strptime
 from typing import Union, Optional
+from difflib import SequenceMatcher
 from datetime import datetime, timedelta
 
 from PIL import ImageDraw, UnidentifiedImageError
@@ -19,16 +21,78 @@ from ..file import map_path, get_pfm_img, download_osu
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
 
 
+map_dict = {"acc": "accuracy"}
+
+
+def matches_condition_with_regex(score, key, operator, value):
+    """
+    匹配条件，支持正则与模糊搜索。
+    """
+    key = map_dict.get(key, key)
+    beatmap = getattr(score, "beatmap", None)
+    beatmapset = getattr(score, "beatmapset", None)
+    attr = getattr(score, key, None)
+    attr1 = getattr(beatmap, key, None)
+    attr2 = getattr(beatmapset, key, None)
+    if not bool(attr or attr1 or attr2):
+        return False
+    if not attr and attr1:
+        attr = attr1
+    if not attr and attr2:
+        attr = attr2
+    if key == "accuracy":
+        attr = float(attr) * 100
+    # 正则和模糊匹配
+    if isinstance(attr, str):
+        if operator == "=":
+            return attr.lower() == value.lower()
+        elif operator == "!=":
+            return attr.lower() != value.lower()
+        elif operator == "~":  # 正则匹配
+            return re.search(value, attr, re.IGNORECASE) is not None
+        elif operator == "~=":  # 模糊匹配
+            return SequenceMatcher(None, attr.lower(), value.lower()).ratio() >= 0.5
+
+    # 数值比较
+    elif isinstance(attr, (int, float)):
+        value = float(value)
+        if operator == ">":
+            return attr > value
+        elif operator == "<":
+            return attr < value
+        elif operator == ">=":
+            return attr >= value
+        elif operator == "<=":
+            return attr <= value
+        elif operator == "=":
+            return attr == value
+
+    return False
+
+
+def filter_scores_with_regex(scores_with_index, conditions):
+    """
+    根据动态条件过滤分数列表，支持正则与模糊搜索。
+    """
+    for key, operator, value in conditions:
+        scores_with_index = [
+            score for score in scores_with_index
+            if matches_condition_with_regex(score, key, operator, value)
+        ]
+    return scores_with_index
+
+
 async def draw_bp(
-    project: str,
-    uid: int,
-    user_id: str,
-    mode: str,
-    mods: Optional[list],
-    low_bound: int = 0,
-    high_bound: int = 0,
-    day: int = 0,
-    is_name: bool = False,
+        project: str,
+        uid: int,
+        user_id: str,
+        mode: str,
+        mods: Optional[list],
+        low_bound: int,
+        high_bound: int,
+        day: int,
+        is_name: bool,
+        search_condition: list
 ) -> Union[str, BytesIO]:
     player = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not player else player.lazer_mode
@@ -76,6 +140,10 @@ async def draw_bp(
         if not lazer_mode:
             is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
             score_info.rank = cal_legacy_rank(score_info, is_hidden)
+    if search_condition:
+        score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
+    if not score_ls_filtered:
+        return "未找到符合条件的成绩"
     msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day)
     return msg
 

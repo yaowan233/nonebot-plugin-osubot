@@ -36,7 +36,7 @@ def split_msg():
                 state["day"] = int(match[2])
             if match[3]:
                 state["range"] = match[3]
-            if match[4] and match[5] in ["=", "!=", "~", "~="]:
+            if match[4]:
                 state["query"].append((match[4], match[5], match[6]))
                 try:
                     float(match[6]) if "." in match[6] else int(match[6])
