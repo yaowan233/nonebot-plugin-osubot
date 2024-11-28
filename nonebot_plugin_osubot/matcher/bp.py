@@ -16,10 +16,10 @@ tbp = on_command("tbp", priority=11, block=True, aliases={"todaybp"})
 async def _bp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    if "-" in state["para"]:
+    if state["range"]:
         await _pfm(event, state)
         return
-    best = state["para"]
+    best = state["target"]
     if not best:
         best = "1"
     if not best.isdigit():
@@ -45,11 +45,10 @@ async def _bp(event: Event, state: T_State):
 async def _pfm(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    ls = state["para"].split("-")
-    low, high = ls[0], ls[1]
-    if not low.isdigit() or not high.isdigit():
-        await UniMessage.text('参数应为 "数字-数字"的形式!').finish(reply_to=True)
-    low, high = int(low), int(high)
+    if not state["range"]:
+        await UniMessage.text("请输入bp范围如：1-100").finish(reply_to=True)
+    ls = state["range"].split("-")
+    low, high = int(ls[0]), int(ls[1])
     if not 0 < low < high <= 100:
         await UniMessage.text("仅支持查询bp1-100").finish(reply_to=True)
     data = await draw_bp(

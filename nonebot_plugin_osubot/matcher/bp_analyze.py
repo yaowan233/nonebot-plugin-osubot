@@ -31,7 +31,7 @@ async def _(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     user = await UserData.get_or_none(user_id=event.get_user_id())
-    uid = state["para"] if state["para"] else state["user"]
+    uid = state["user"]
     bp_info = await osu_api(
         "bp",
         uid,

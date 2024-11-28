@@ -22,8 +22,8 @@ async def _recent(event: Event, state: T_State):
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = NGM[state["mode"]]
     player = await UserData.get_or_none(user_id=event.get_user_id())
-    if "-" in state["para"]:
-        ls = state["para"].split("-")
+    if state["range"]:
+        ls = state["range"].split("-")
         low, high = ls[0], ls[1]
         data = await osu_api(
             "recent",
@@ -73,8 +73,8 @@ async def _pr(event: Event, state: T_State):
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = state["mode"]
     player = await UserData.get_or_none(user_id=event.get_user_id())
-    if "-" in state["para"]:
-        ls = state["para"].split("-")
+    if state["range"]:
+        ls = state["range"].split("-")
         low, high = ls[0], ls[1]
         data = await osu_api(
             "pr",

@@ -14,13 +14,13 @@ score = on_command("score", priority=11, block=True)
 async def _score(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    if not state["para"].isdigit():
-        await UniMessage.text("请输入正确的谱面ID").finish(reply_to=True)
+    if not state["target"]:
+        await UniMessage.text("请输入谱面ID").finish(reply_to=True)
     data = await get_score_data(
         state["user"],
         event.get_user_id(),
         NGM[state["mode"]],
-        mapid=state["para"],
+        mapid=state["target"],
         mods=state["mods"],
         is_name=state["is_name"],
     )

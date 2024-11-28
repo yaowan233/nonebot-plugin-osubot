@@ -11,7 +11,7 @@ bmap = on_command("bmap", priority=11, block=True)
 
 @osu_map.handle(parameterless=[split_msg()])
 async def _map(state: T_State):
-    map_id = state["para"]
+    map_id = state["target"]
     mods = state["mods"]
     if not map_id:
         await UniMessage.text("请输入地图ID").finish(reply_to=True)
@@ -25,7 +25,7 @@ async def _map(state: T_State):
 
 @bmap.handle(parameterless=[split_msg()])
 async def _bmap(state: T_State):
-    set_id = state["para"]
+    set_id = state["target"]
     if not set_id:
         await UniMessage.text("请输入setID").finish(reply_to=True)
     if not set_id.isdigit():
