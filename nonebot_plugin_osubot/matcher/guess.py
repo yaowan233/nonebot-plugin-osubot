@@ -94,21 +94,21 @@ async def _(
         bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[group_id]]
         if not filtered_bp_ls:
-            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+            await UniMessage.text(state["target"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
         selected_user = user_data.osu_name
-    elif state["para"]:
-        bp_info = await osu_api("bp", state["para"], NGM[state["mode"]], is_name=True)
+    elif state["target"]:
+        bp_info = await osu_api("bp", state["target"], NGM[state["mode"]], is_name=True)
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[group_id]]
         if not filtered_bp_ls:
-            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+            await UniMessage.text(state["target"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
-        selected_user = state["para"]
+        selected_user = state["target"]
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
     if not selected_score:
@@ -373,21 +373,21 @@ async def _(
         bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
-            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+            await UniMessage.text(state["target"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
         selected_user = user_data.osu_name
-    elif state["para"]:
-        bp_info = await osu_api("bp", state["para"], NGM[state["mode"]], is_name=True)
+    elif state["target"]:
+        bp_info = await osu_api("bp", state["target"], NGM[state["mode"]], is_name=True)
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
-            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+            await UniMessage.text(state["target"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
-        selected_user = state["para"]
+        selected_user = state["target"]
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
     if not selected_score:
@@ -447,20 +447,20 @@ async def _(
         bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
-            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+            await UniMessage.text(state["target"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         selected_user = user_data.osu_name
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
-    elif state["para"]:
-        bp_info = await osu_api("bp", state["para"], NGM[mode], is_name=True)
+    elif state["target"]:
+        bp_info = await osu_api("bp", state["target"], NGM[mode], is_name=True)
         if not bp_info or isinstance(bp_info, str):
             await UniMessage.text("该用户无bp记录").finish(reply_to=True)
         bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
-            await UniMessage.text(state["para"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
+            await UniMessage.text(state["target"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
-        selected_user = state["para"]
+        selected_user = state["target"]
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)

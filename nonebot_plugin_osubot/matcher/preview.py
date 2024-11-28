@@ -13,7 +13,7 @@ generate_preview = on_command("预览", aliases={"preview", "完整预览"}, pri
 
 @generate_preview.handle(parameterless=[split_msg()])
 async def _(state: T_State):
-    osu_id = state["para"]
+    osu_id = state["target"]
     if not osu_id or not osu_id.isdigit():
         await UniMessage.text("请输入正确的地图mapID").finish(reply_to=True)
     data = await osu_api("map", map_id=int(osu_id))
