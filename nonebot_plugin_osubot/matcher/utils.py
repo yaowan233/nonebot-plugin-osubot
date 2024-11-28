@@ -48,7 +48,7 @@ def split_msg():
         if match:
             state["target"] = match.group()
         arg = re.sub(r"\s\d+(?=\D*$)", "", arg)
-        if arg:
+        if arg.strip():
             state["user"] = arg.strip()
             state["is_name"] = True
         if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
