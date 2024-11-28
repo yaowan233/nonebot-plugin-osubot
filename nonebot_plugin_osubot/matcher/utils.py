@@ -44,10 +44,11 @@ def split_msg():
                     state["error"] = f"'{match[6]}' 不能进行数值比较"
         arg = re.sub(pattern, "", arg)
         arg = " " + arg
-        match = re.search(r"(?<=\s)\d+(?=\D*$)", arg)
-        if match:
-            state["target"] = match.group()
-        arg = re.sub(r"\s\d+(?=\D*$)", "", arg)
+        matches = re.findall(r"(?<=\s)\d+", arg)
+        if matches:
+            last_match = matches[-1]  # 获取最后一个匹配的数字
+            state["target"] = last_match
+            arg = re.sub(r"(?<=\s)" + re.escape(last_match), "", arg)
         if arg.strip():
             state["user"] = arg.strip()
             state["is_name"] = True
