@@ -1,8 +1,9 @@
 import re
-from nonebot.internal.adapter import Event, Message
+
 from nonebot.internal.params import Depends
+from nonebot_plugin_alconna import At, UniMsg
 from nonebot.params import T_State, CommandArg
-from nonebot_plugin_alconna import UniMsg, At
+from nonebot.internal.adapter import Event, Message
 
 from ..utils import mods2list
 from ..database.models import UserData
@@ -46,7 +47,7 @@ def split_msg():
         match = re.search(r"(?<=\s)\d+(?=\D*$)", arg)
         if match:
             state["target"] = match.group()
-        arg = re.sub(r"\s\d+(?=\D*$)", '', arg)
+        arg = re.sub(r"\s\d+(?=\D*$)", "", arg)
         if arg:
             state["user"] = arg.strip()
             state["is_name"] = True
@@ -56,4 +57,5 @@ def split_msg():
             state["error"] = "查询的日期应是一个正数"
         if state["user"] == 0:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
+
     return Depends(dependency)
