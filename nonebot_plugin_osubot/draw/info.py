@@ -216,7 +216,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
     # 游玩时间
     sec = timedelta(seconds=statistics.play_time)
     d_time = datetime(1, 1, 1) + sec
-    t_time = "%dd %dh %dm %ds" % (sec.days, d_time.hour, d_time.minute, d_time.second)
+    t_time = f"{sec.days}d {d_time.hour}h {d_time.minute}m {d_time.second}s"
     draw.text((935, 1245), t_time, font=Torus_Regular_40, anchor="rt")
     # 底部时间对比
     if day != 0 and user:

@@ -1,8 +1,9 @@
 import re
-from nonebot.internal.adapter import Event, Message
+
 from nonebot.internal.params import Depends
+from nonebot_plugin_alconna import At, UniMsg
 from nonebot.params import T_State, CommandArg
-from nonebot_plugin_alconna import UniMsg, At
+from nonebot.internal.adapter import Event, Message
 
 from ..utils import mods2list
 from ..database.models import UserData
@@ -32,24 +33,24 @@ def split_msg():
             if match[1]:
                 state["mods"] = mods2list(match[1])
             if match[2]:
-                state["day"] = match[2]
+                state["day"] = int(match[2])
             if match[3]:
                 state["range"] = match[3]
             if match[4] and match[5] in ["=", "!=", "~", "~="]:
                 state["query"].append((match[4], match[5], match[6]))
                 try:
-                    float(match[6]) if '.' in match[6] else int(match[6])
+                    float(match[6]) if "." in match[6] else int(match[6])
                 except ValueError:
                     state["error"] = f"'{match[6]}' 不能进行数值比较"
-        arg = re.sub(pattern, '', arg)
-        if state["_prefix"]["command"][0] in ("bp", "score"):
-            pattern1 = r'\d+(?=\D*$)'
-            match = re.search(pattern1, arg)
-            if match:
-                state["target"] = match.group()
-            arg = re.sub(pattern1, '', arg)
-        if arg:
-            state["user"] = arg
+        arg = re.sub(pattern, "", arg)
+        arg = " " + arg
+        matches = re.findall(r"(?<=\s)\d+", arg)
+        if matches:
+            last_match = matches[-1]  # 获取最后一个匹配的数字
+            state["target"] = last_match
+            arg = re.sub(r"(?<=\s)" + re.escape(last_match), "", arg)
+        if arg.strip():
+            state["user"] = arg.strip()
             state["is_name"] = True
         if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
             state["error"] = "模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania"
@@ -57,4 +58,5 @@ def split_msg():
             state["error"] = "查询的日期应是一个正数"
         if state["user"] == 0:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
+
     return Depends(dependency)
