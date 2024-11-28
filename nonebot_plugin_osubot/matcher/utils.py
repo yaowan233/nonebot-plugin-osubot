@@ -33,7 +33,7 @@ def split_msg():
             if match[1]:
                 state["mods"] = mods2list(match[1])
             if match[2]:
-                state["day"] = match[2]
+                state["day"] = int(match[2])
             if match[3]:
                 state["range"] = match[3]
             if match[4] and match[5] in ["=", "!=", "~", "~="]:
