@@ -114,19 +114,18 @@ async def draw_bp(
     if not bp_info:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     user = bp_info[0]["user"]["username"]
-    if project == "bp":
-        if mods:
-            mods_ls = get_mods_list(score_ls, mods)
-            if low_bound > len(mods_ls):
-                return f'未找到开启 {"|".join(mods)} Mods的成绩'
-            if high_bound > len(mods_ls):
-                mods_ls = mods_ls[low_bound - 1 :]
-            else:
-                mods_ls = mods_ls[low_bound - 1 : high_bound]
-            score_ls_filtered = [score_ls[i] for i in mods_ls]
+    if mods:
+        mods_ls = get_mods_list(score_ls, mods)
+        if low_bound > len(mods_ls):
+            return f'未找到开启 {"|".join(mods)} Mods的成绩'
+        if high_bound > len(mods_ls):
+            mods_ls = mods_ls[low_bound - 1:]
         else:
-            score_ls_filtered = score_ls[low_bound - 1 : high_bound]
+            mods_ls = mods_ls[low_bound - 1: high_bound]
+        score_ls_filtered = [score_ls[i] for i in mods_ls]
     else:
+        score_ls_filtered = score_ls[low_bound - 1: high_bound]
+    if project == "tbp":
         ls = []
         for i, score in enumerate(score_ls):
             now = datetime.now() - timedelta(days=day + 1)
