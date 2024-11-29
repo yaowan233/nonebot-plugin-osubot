@@ -8,7 +8,11 @@ from nonebot.internal.adapter import Event, Message
 from ..utils import mods2list
 from ..database.models import UserData
 
-pattern = r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|(\w+)\s*([><=~]+)\s*(\w+)|[＆&]\s*(\w+)"
+pattern = (
+    r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
+    r"title\s*([=~]+)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*([><=~]+)\s*[\w\.]+|$))|"
+    r"(\w+)\s*([><=~]+)\s*([\w\.]+)"
+)
 
 
 def split_msg():
@@ -36,12 +40,15 @@ def split_msg():
                 state["day"] = int(match[2])
             if match[3]:
                 state["range"] = match[3]
-            if match[4]:
-                state["query"].append((match[4], match[5], match[6]))
-                try:
-                    float(match[6]) if "." in match[6] else int(match[6])
-                except ValueError:
-                    state["error"] = f"'{match[6]}' 不能进行数值比较"
+            if match[6]:
+                state["query"].append(("title", match[5], match[6]))
+            if match[8]:
+                state["query"].append((match[8], match[9], match[10]))
+                if match[9] in [">", "<", ">=", "<="]:
+                    try:
+                        float(match[10]) if "." in match[10] else int(match[10])
+                    except ValueError:
+                        state["error"] = f"'{match[10]}' 不能进行数值比较"
         arg = re.sub(pattern, "", arg)
         arg = " " + arg
         matches = re.findall(r"(?<=\s)\d+", arg)

@@ -20,8 +20,14 @@ from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
 
-
-map_dict = {"acc": "accuracy"}
+map_dict = {
+    "mapper": "creator",
+    "length": "total_length",
+    "acc": "accuracy",
+    "hp": "drain",
+    "star": "difficulty_rating",
+    "combo": "max_combo",
+}
 
 
 def matches_condition_with_regex(score, key, operator, value):
@@ -31,15 +37,19 @@ def matches_condition_with_regex(score, key, operator, value):
     key = map_dict.get(key, key)
     beatmap = getattr(score, "beatmap", None)
     beatmapset = getattr(score, "beatmapset", None)
+    statistics = getattr(score, "statistics", None)
     attr = getattr(score, key, None)
     attr1 = getattr(beatmap, key, None)
     attr2 = getattr(beatmapset, key, None)
-    if not bool(attr or attr1 or attr2):
+    attr3 = getattr(statistics, key, None)
+    if not bool(attr or attr1 or attr2 or attr3):
         return False
     if not attr and attr1:
         attr = attr1
     if not attr and attr2:
         attr = attr2
+    if not attr and attr3:
+        attr = attr3
     if key == "accuracy":
         attr = float(attr) * 100
     # 正则和模糊匹配
@@ -76,23 +86,22 @@ def filter_scores_with_regex(scores_with_index, conditions):
     """
     for key, operator, value in conditions:
         scores_with_index = [
-            score for score in scores_with_index
-            if matches_condition_with_regex(score, key, operator, value)
+            score for score in scores_with_index if matches_condition_with_regex(score, key, operator, value)
         ]
     return scores_with_index
 
 
 async def draw_bp(
-        project: str,
-        uid: int,
-        user_id: str,
-        mode: str,
-        mods: Optional[list],
-        low_bound: int,
-        high_bound: int,
-        day: int,
-        is_name: bool,
-        search_condition: list
+    project: str,
+    uid: int,
+    user_id: str,
+    mode: str,
+    mods: Optional[list],
+    low_bound: int,
+    high_bound: int,
+    day: int,
+    is_name: bool,
+    search_condition: list,
 ) -> Union[str, BytesIO]:
     player = await UserData.get_or_none(user_id=user_id)
     lazer_mode = True if not player else player.lazer_mode
@@ -105,19 +114,18 @@ async def draw_bp(
     if not bp_info:
         return f"未查询到在 {GMN[mode]} 的游玩记录"
     user = bp_info[0]["user"]["username"]
-    if project == "bp":
-        if mods:
-            mods_ls = get_mods_list(score_ls, mods)
-            if low_bound > len(mods_ls):
-                return f'未找到开启 {"|".join(mods)} Mods的成绩'
-            if high_bound > len(mods_ls):
-                mods_ls = mods_ls[low_bound - 1 :]
-            else:
-                mods_ls = mods_ls[low_bound - 1 : high_bound]
-            score_ls_filtered = [score_ls[i] for i in mods_ls]
+    if mods:
+        mods_ls = get_mods_list(score_ls, mods)
+        if low_bound > len(mods_ls):
+            return f'未找到开启 {"|".join(mods)} Mods的成绩'
+        if high_bound > len(mods_ls):
+            mods_ls = mods_ls[low_bound - 1 :]
         else:
-            score_ls_filtered = score_ls[low_bound - 1 : high_bound]
+            mods_ls = mods_ls[low_bound - 1 : high_bound]
+        score_ls_filtered = [score_ls[i] for i in mods_ls]
     else:
+        score_ls_filtered = score_ls[low_bound - 1 : high_bound]
+    if project == "tbp":
         ls = []
         for i, score in enumerate(score_ls):
             now = datetime.now() - timedelta(days=day + 1)
