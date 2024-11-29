@@ -20,7 +20,14 @@ from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
 from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
 
-map_dict = {"acc": "accuracy"}
+map_dict = {
+    "mapper": "creator",
+    "length": "total_length",
+    "acc": "accuracy",
+    "hp": "drain",
+    "star": "difficulty_rating",
+    "combo": "max_combo",
+}
 
 
 def matches_condition_with_regex(score, key, operator, value):
@@ -30,15 +37,19 @@ def matches_condition_with_regex(score, key, operator, value):
     key = map_dict.get(key, key)
     beatmap = getattr(score, "beatmap", None)
     beatmapset = getattr(score, "beatmapset", None)
+    statistics = getattr(score, "statistics", None)
     attr = getattr(score, key, None)
     attr1 = getattr(beatmap, key, None)
     attr2 = getattr(beatmapset, key, None)
-    if not bool(attr or attr1 or attr2):
+    attr3 = getattr(statistics, key, None)
+    if not bool(attr or attr1 or attr2 or attr3):
         return False
     if not attr and attr1:
         attr = attr1
     if not attr and attr2:
         attr = attr2
+    if not attr and attr3:
+        attr = attr3
     if key == "accuracy":
         attr = float(attr) * 100
     # 正则和模糊匹配
