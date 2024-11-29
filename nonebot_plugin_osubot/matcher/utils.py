@@ -8,9 +8,11 @@ from nonebot.internal.adapter import Event, Message
 from ..utils import mods2list
 from ..database.models import UserData
 
-pattern = (r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
-           r"title\s*=\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*([><=~]+)\s*[\w\.]+|$))|"
-           r"(\w+)\s*([><=~]+)\s*([\w\.]+)")
+pattern = (
+    r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
+    r"title\s*=\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*([><=~]+)\s*[\w\.]+|$))|"
+    r"(\w+)\s*([><=~]+)\s*([\w\.]+)"
+)
 
 
 def split_msg():
@@ -39,7 +41,7 @@ def split_msg():
             if match[3]:
                 state["range"] = match[3]
             if match[5]:
-                state["query"].append(('title', '=', match[5]))
+                state["query"].append(("title", "=", match[5]))
             if match[8]:
                 state["query"].append((match[8], match[9], match[10]))
                 if match[9] in [">", "<", ">=", "<="]:
