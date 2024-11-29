@@ -42,13 +42,13 @@ def split_msg():
                 state["range"] = match[3]
             if match[5]:
                 state["query"].append(("title", "=", match[5]))
-            if match[8]:
-                state["query"].append((match[8], match[9], match[10]))
-                if match[9] in [">", "<", ">=", "<="]:
+            if match[7]:
+                state["query"].append((match[7], match[8], match[9]))
+                if match[8] in [">", "<", ">=", "<="]:
                     try:
-                        float(match[10]) if "." in match[10] else int(match[10])
+                        float(match[9]) if "." in match[9] else int(match[9])
                     except ValueError:
-                        state["error"] = f"'{match[10]}' 不能进行数值比较"
+                        state["error"] = f"'{match[9]}' 不能进行数值比较"
         arg = re.sub(pattern, "", arg)
         arg = " " + arg
         matches = re.findall(r"(?<=\s)\d+", arg)
