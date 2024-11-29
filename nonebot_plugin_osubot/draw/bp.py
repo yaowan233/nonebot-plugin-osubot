@@ -119,12 +119,12 @@ async def draw_bp(
         if low_bound > len(mods_ls):
             return f'未找到开启 {"|".join(mods)} Mods的成绩'
         if high_bound > len(mods_ls):
-            mods_ls = mods_ls[low_bound - 1:]
+            mods_ls = mods_ls[low_bound - 1 :]
         else:
-            mods_ls = mods_ls[low_bound - 1: high_bound]
+            mods_ls = mods_ls[low_bound - 1 : high_bound]
         score_ls_filtered = [score_ls[i] for i in mods_ls]
     else:
-        score_ls_filtered = score_ls[low_bound - 1: high_bound]
+        score_ls_filtered = score_ls[low_bound - 1 : high_bound]
     if project == "tbp":
         ls = []
         for i, score in enumerate(score_ls):
