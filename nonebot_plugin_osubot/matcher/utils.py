@@ -8,7 +8,7 @@ from nonebot.internal.adapter import Event, Message
 from ..utils import mods2list
 from ..database.models import UserData
 
-pattern = r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|(\w+)\s*([><=~]+)\s*(\w+)|[＆&]\s*(\w+)"
+pattern = r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|(\w+)\s*([><=~]+)\s*([\w\.]+)|[＆&]\s*(\w+)"
 
 
 def split_msg():
