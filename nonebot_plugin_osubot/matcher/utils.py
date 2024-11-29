@@ -38,9 +38,9 @@ def split_msg():
                 state["range"] = match[3]
             if match[4]:
                 state["query"].append((match[4], match[5], match[6]))
-                if match[5] in ['>', '<', '>=', '<=']:
+                if match[5] in [">", "<", ">=", "<="]:
                     try:
-                        float(match[6]) if '.' in match[6] else int(match[6])
+                        float(match[6]) if "." in match[6] else int(match[6])
                     except ValueError:
                         state["error"] = f"'{match[6]}' 不能进行数值比较"
         arg = re.sub(pattern, "", arg)
