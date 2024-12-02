@@ -5,6 +5,7 @@ from nonebot_plugin_alconna import UniMessage
 from ..api import osu_api
 from .utils import split_msg
 from ..file import download_tmp_osu
+from ..exceptions import NetworkError
 from ..mania import generate_preview_pic
 from ..draw.catch_preview import draw_cath_preview
 
@@ -16,11 +17,10 @@ async def _(state: T_State):
     osu_id = state["target"]
     if not osu_id or not osu_id.isdigit():
         await UniMessage.text("请输入正确的地图mapID").finish(reply_to=True)
-    data = await osu_api("map", map_id=int(osu_id))
-    if not data:
-        await UniMessage.text("未查询到该地图").finish(reply_to=True)
-    if isinstance(data, str):
-        await UniMessage.text(data).finish(reply_to=True)
+    try:
+        data = await osu_api("map", map_id=int(osu_id))
+    except NetworkError as e:
+        await UniMessage.text(f"查找map_id:{osu_id} 信息时 {str(e)}").finish(reply_to=True)
     if state["mode"] == "3":
         osu = await download_tmp_osu(osu_id)
         if state["_prefix"]["command"][0] == "完整预览":

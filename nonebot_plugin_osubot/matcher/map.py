@@ -3,6 +3,7 @@ from nonebot.typing import T_State
 from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
+from ..exceptions import NetworkError
 from ..draw import draw_map_info, draw_bmap_info
 
 osu_map = on_command("map", priority=11, block=True)
@@ -15,11 +16,10 @@ async def _map(state: T_State):
     mods = state["mods"]
     if not map_id:
         await UniMessage.text("请输入地图ID").finish(reply_to=True)
-    elif not map_id.isdigit():
-        await UniMessage.text("请输入正确的地图ID").finish(reply_to=True)
-    m = await draw_map_info(map_id, mods)
-    if isinstance(m, str):
-        await UniMessage.text(m).finish(reply_to=True)
+    try:
+        m = await draw_map_info(map_id, mods)
+    except NetworkError as e:
+        await UniMessage.text(f"在查找地图mapid:{state['target']} mod:{state['mods']}时 {str(e)}").finish(reply_to=True)
     await UniMessage.image(raw=m).finish(reply_to=True)
 
 
@@ -30,7 +30,8 @@ async def _bmap(state: T_State):
         await UniMessage.text("请输入setID").finish(reply_to=True)
     if not set_id.isdigit():
         await UniMessage.text("请输入正确的setID").finish(reply_to=True)
-    m = await draw_bmap_info(set_id)
-    if isinstance(m, str):
-        await UniMessage.text(m).finish(reply_to=True)
+    try:
+        m = await draw_bmap_info(set_id)
+    except NetworkError as e:
+        await UniMessage.text(f"在查找地图setid:{state['target']} mod:{state['mods']}时 {str(e)}").finish(reply_to=True)
     await UniMessage.image(raw=m).finish(reply_to=True)

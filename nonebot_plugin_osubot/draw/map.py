@@ -1,5 +1,4 @@
 from io import BytesIO
-from typing import Union
 from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageEnhance
@@ -27,12 +26,8 @@ from .static import (
 )
 
 
-async def draw_map_info(mapid: int, mods: list[str]) -> Union[str, BytesIO]:
+async def draw_map_info(mapid: int, mods: list[str]) -> BytesIO:
     info = await osu_api("map", map_id=mapid)
-    if not info:
-        return "未查询到该地图信息"
-    if isinstance(info, str):
-        return info
     mapinfo = Beatmap(**info)
     original_mapinfo = mapinfo.copy()
     mods = [Mod(acronym=mod) for mod in mods]

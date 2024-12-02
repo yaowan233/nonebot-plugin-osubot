@@ -1,6 +1,6 @@
 import random
 from io import BytesIO
-from typing import Union, Optional
+from typing import Optional
 from urllib.parse import urlencode
 
 from nonebot.log import logger
@@ -10,6 +10,7 @@ from httpx import Response, AsyncClient
 
 from .config import Config
 from .network import auto_retry
+from .exceptions import NetworkError
 from .schema import User, SayoBeatmap, RecommendData
 from .network.first_response import get_first_response
 
@@ -76,13 +77,10 @@ async def osu_api(
     offset: int = 0,
     limit: int = 5,
     legacy_only: int = 0,
-) -> Union[str, dict]:
+) -> dict:
     # 获取用户 ID
     if is_name:
         uid = await get_uid_by_name(uid)
-        if isinstance(uid, str):
-            return uid
-
     base_url = f"{api}/users/{uid}"
     query_params = {"limit": limit, "offset": offset, "legacy_only": legacy_only}
 
@@ -112,7 +110,7 @@ async def osu_api(
     return await api_info(project, url)
 
 
-async def api_info(project: str, url: str) -> Union[dict, str]:
+async def api_info(project: str, url: str) -> dict:
     headers = (
         {"user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) Chrome/78.0.3904.108"}
         if project in ["mapinfo", "PPCalc"]
@@ -130,23 +128,23 @@ async def api_info(project: str, url: str) -> Union[dict, str]:
     return await make_request(url, headers, error_messages.get(project, "API请求失败，请联系管理员或稍后再尝试"))
 
 
-async def make_request(url: str, headers: dict, error_message: str) -> Union[dict, str]:
+async def make_request(url: str, headers: dict, error_message: str) -> dict:
     req = await safe_async_get(url, headers=headers)
     if not req:
-        return "api请求失败，请稍后再试"
+        raise NetworkError("多次api请求失败，请稍后再试")
     if req.status_code == 404:
-        return error_message
+        raise NetworkError(error_message)
     elif req.status_code == 200:
         return req.json()
-    return "API请求失败，请联系管理员"
+    raise NetworkError(f"出现了未意料的响应码 {req.status_code}")
 
 
-async def get_uid_by_name(uid: int) -> Union[int, str]:
+async def get_uid_by_name(uid: int) -> int:
     info = await get_user_info(f"{api}/users/@{uid}")
-    return info["id"] if isinstance(info, dict) else info
+    return info["id"]
 
 
-async def get_user_info(url: str) -> Union[dict, str]:
+async def get_user_info(url: str) -> dict:
     return await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID是否正确")
 
 

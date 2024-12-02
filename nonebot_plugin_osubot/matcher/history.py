@@ -18,6 +18,8 @@ async def _info(state: T_State):
         await UniMessage.text(state["error"]).finish(reply_to=True)
     data = InfoData.filter(osu_id=state["user"], osu_mode=state["mode"])
     user = await UserData.filter(osu_id=state["user"]).first()
+    if not user:
+        await UniMessage.text(f"没有{state['user']}的数据哦").finish(reply_to=True)
     if state["day"] > 0:
         data = data.filter(date__gte=datetime.date.today() - datetime.timedelta(days=state["day"]))
     data = await data.order_by("date").all()
