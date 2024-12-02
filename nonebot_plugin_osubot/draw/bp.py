@@ -27,7 +27,7 @@ map_dict = {
     "hp": "drain",
     "star": "difficulty_rating",
     "combo": "max_combo",
-    "keys": "cs"
+    "keys": "cs",
 }
 
 
