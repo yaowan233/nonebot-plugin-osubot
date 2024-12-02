@@ -72,6 +72,8 @@ async def _pfm(event: Event, state: T_State):
 async def _tbp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
+    if not state["range"]:
+        state["range"] = "1-100"
     ls = state["range"].split("-")
     low, high = int(ls[0]), int(ls[1])
     if not 0 < low < high <= 100:
