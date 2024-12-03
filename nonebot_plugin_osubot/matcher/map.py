@@ -28,8 +28,6 @@ async def _bmap(state: T_State):
     set_id = state["target"]
     if not set_id:
         await UniMessage.text("请输入setID").finish(reply_to=True)
-    if not set_id.isdigit():
-        await UniMessage.text("请输入正确的setID").finish(reply_to=True)
     try:
         m = await draw_bmap_info(set_id)
     except NetworkError as e:
