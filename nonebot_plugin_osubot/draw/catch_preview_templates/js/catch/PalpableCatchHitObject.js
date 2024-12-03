@@ -41,7 +41,7 @@ PalpableCatchHitObject.prototype.predraw2 = function (SCREENSHEIGHT, COLMARGIN, 
     // 整体缩小
     real_x *= SCALE;
     real_y *= SCALE;
-    return { type: this.type, x: real_x, y: real_y, col: colIndex };
+    return { time: this.time, type: this.type, x: real_x, y: real_y, col: colIndex };
 }
 PalpableCatchHitObject.prototype.drawCircle = function (position, ctx) {
     ctx.save();

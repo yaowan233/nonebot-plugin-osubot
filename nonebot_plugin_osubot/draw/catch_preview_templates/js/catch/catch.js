@@ -411,7 +411,9 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     let ColTimeLength = SCREENSHEIGHT * this.approachTime / Beatmap.HEIGHT;
     // 预先分析一遍，需要的长宽
     for (let i = 0; i < this.fullCatchObjects.length; i++) {
-        objs.push(this.fullCatchObjects[i].predraw2(SCREENSHEIGHT, COLMARGIN, SCALE, offset));
+        let _obj = this.fullCatchObjects[i].predraw2(SCREENSHEIGHT, COLMARGIN, SCALE, offset);
+        _obj.index = i;
+        objs.push(_obj);
     }
     if (objs.length <= 0) return;
     let cols = objs[objs.length - 1].col;
@@ -497,6 +499,7 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         }
     }
     // 画小节线
+    let extraBarTimes = [];
     for (let i = 0; i < barLines.length; i++) {
         let real_x_1 = 0;
         let real_x_2 = Beatmap.WIDTH;
@@ -517,6 +520,8 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         real_x_2 += BORDER_WIDTH + COLMARGIN * (2 * colIndex - 1);
         real_y += BORDER_HEIGHT;
 
+        let _barTime = (barLines[i] + offset) / SPEED / 1000;
+
         ctx2.save();
         ctx2.beginPath();
         ctx2.moveTo(real_x_1, real_y);
@@ -529,7 +534,7 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         ctx2.font = "normal 16px 'Segoe UI'";
         ctx2.textBaseline = "middle";
         ctx2.textAlign = "end";
-        ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
+        ctx2.fillText(_barTime.toFixed(1), real_x_2 + 4, real_y);
         ctx2.restore();
 
 
@@ -551,8 +556,9 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
             ctx2.font = "normal 16px 'Segoe UI'";
             ctx2.textBaseline = "middle";
             ctx2.textAlign = "end";
-            ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
+            ctx2.fillText(_barTime.toFixed(1), real_x_2 + 4, real_y);
             ctx2.restore();
+            extraBarTimes.push(_barTime);
         }
         else if (real_x_2 < (width - 2 * (BORDER_WIDTH + COLMARGIN)) && real_y < (BORDER_HEIGHT + 5)) {
             // 靠近上边缘，在下一列的下边缘再画一条
@@ -571,8 +577,9 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
             ctx2.font = "normal 16px 'Segoe UI'";
             ctx2.textBaseline = "middle";
             ctx2.textAlign = "end";
-            ctx2.fillText(((barLines[i] + offset) / SPEED / 1000).toFixed(1), real_x_2 + 4, real_y);
+            ctx2.fillText(_barTime.toFixed(1), real_x_2 + 4, real_y);
             ctx2.restore();
+            extraBarTimes.push(_barTime);
         }
     }
 
@@ -631,6 +638,23 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         this.fullCatchObjects[i].draw2(objs[i], SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT, showCombo);
         lastCombo = combo;
     }
+
+    // 如果物件里有小节线上的，重画物件
+    extraBarTimes = Array.from(new Set(extraBarTimes));
+    const EDGE_OFFSET = 20;
+    extraBarTimes.map((_barTime) => {
+        let _objs = objs.filter((obj) => Math.abs(obj.time - _barTime * 1000) < EDGE_OFFSET);
+        _objs.map((_obj) => {
+            if (_obj.y > SCREENSHEIGHT * SCALE - 5) {
+                // note靠近下边缘，在上一列的上边缘再画一个
+                this.fullCatchObjects[_obj.index].draw2({time: _obj.time, type: _obj.type, x: _obj.x - (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: 0, col: _obj.col - 1}, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
+            }
+            else if (_obj.y < 5) {
+                // note靠近上边缘，在下一列的下边缘再画一个
+                this.fullCatchObjects[_obj.index].draw2({time: _obj.time, type: _obj.type, x: _obj.x + (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: SCREENSHEIGHT * SCALE, col: _obj.col + 1}, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
+            }
+        });
+    });
     return canvas2;
 };
 
