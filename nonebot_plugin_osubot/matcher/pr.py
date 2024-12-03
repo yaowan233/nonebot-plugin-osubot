@@ -38,9 +38,10 @@ async def _recent(event: Event, state: T_State):
             )
         except NetworkError as e:
             lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+            mods = f" mod:{state['mods']}" if state['mods'] else ""
             await UniMessage.text(
-                f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
-                f" {lazer_mode} mod:{state['mods']} 最近{state['range']}成绩时 {str(e)}"
+                f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
+                f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
         if not state["is_name"]:
             info = await get_user_info(f"https://osu.ppy.sh/api/v2/users/{state['user']}")
@@ -69,9 +70,10 @@ async def _recent(event: Event, state: T_State):
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+        mods = f" mod:{state['mods']}" if state['mods'] else ""
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
-            f" {lazer_mode} mod:{state['mods']} 最近第{state['day']}个成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
+            f" {lazer_mode}{mods} 最近第{state['day']}个成绩时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
 
@@ -97,9 +99,10 @@ async def _pr(event: Event, state: T_State):
             )
         except NetworkError as e:
             lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+            mods = f" mod:{state['mods']}" if state['mods'] else ""
             await UniMessage.text(
-                f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
-                f" {lazer_mode} mod:{state['mods']} 最近{state['range']}成绩时 {str(e)}"
+                f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
+                f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
         if not state["is_name"]:
             try:
@@ -129,8 +132,9 @@ async def _pr(event: Event, state: T_State):
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+        mods = f" mod:{state['mods']}" if state['mods'] else ""
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
-            f" {lazer_mode} mod:{state['mods']} 最近第{state['day']}个成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
+            f" {lazer_mode}{mods} 最近第{state['day']}个成绩时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)

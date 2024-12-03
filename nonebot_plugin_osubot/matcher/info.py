@@ -18,6 +18,6 @@ async def _info(state: T_State):
         data = await draw_info(state["user"], NGM[state["mode"]], state["day"], state["is_name"])
     except NetworkError as e:
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式 {state['day']}日内 成绩时{str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 {state['day']}日内 成绩时{str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
