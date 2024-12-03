@@ -1,15 +1,14 @@
 import asyncio
 from io import BytesIO
-from typing import Union, Optional
+from typing import Optional
 from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence
 
-from ..utils import GMN
 from ..api import osu_api
 from ..info import get_bg
 from ..mods import get_mods_list
-from ..database.models import UserData
+from ..exceptions import NetworkError
 from ..beatmap_stats_moder import with_mods
 from ..schema import User, Beatmap, NewScore
 from ..schema.score import Mod, NewStatistics
@@ -46,15 +45,13 @@ from .static import (
 async def draw_score(
     project: str,
     uid: int,
-    user_id: str,
+    is_lazer: bool,
     mode: str,
     mods: Optional[list[str]],
     best: int = 0,
     mapid: int = 0,
     is_name: bool = False,
-) -> Union[str, BytesIO]:
-    user = await UserData.get_or_none(user_id=user_id)
-    lazer_mode = True if not user else user.lazer_mode
+) -> BytesIO:
     task0 = asyncio.create_task(
         osu_api(
             project,
@@ -63,26 +60,22 @@ async def draw_score(
             mapid,
             is_name=is_name,
             limit=100,
-            legacy_only=int(not lazer_mode),
+            legacy_only=int(not is_lazer),
         )
     )
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     score_json = await task0
-    if not score_json:
-        return f"未查询到在 {GMN[mode]} 的游玩记录"
-    elif isinstance(score_json, str):
-        return score_json
-    if not lazer_mode:
+    if not is_lazer:
         score_json = [i for i in score_json if {"acronym": "CL"} in i["mods"]]
     if project in ("recent", "pr"):
         if len(score_json) <= best:
-            return f"未查询到24小时内在 {GMN[mode]} 中第{best + 1}个游玩记录"
+            raise NetworkError("未查询到游玩记录")
         score_info = NewScore(**score_json[best])
     elif project == "bp":
         score_ls = [NewScore(**i) for i in score_json]
         mods_ls = get_mods_list(score_ls, mods)
         if len(mods_ls) < best:
-            return f'未找到开启 {"|".join(mods)} Mods的第{best}个成绩'
+            raise NetworkError("未查询到游玩记录")
         score_info = NewScore(**score_json[mods_ls[best - 1]])
     else:
         raise Exception("Project Error")
@@ -95,17 +88,13 @@ async def draw_score(
     if not osu.exists():
         await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
     info_json = await task1
-    if isinstance(info_json, str):
-        return info_json
     info = User(**info_json)
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
-    if isinstance(map_json, str):
-        return map_json
     # 判断是否开启lazer模式
-    score_info = cal_score_info(lazer_mode, score_info)
+    score_info = cal_score_info(is_lazer, score_info)
     return await draw_score_pic(
         score_info,
         info,
@@ -116,12 +105,12 @@ async def draw_score(
 
 async def get_score_data(
     uid: int,
-    user_id: str,
+    is_lazer: bool,
     mode: Optional[str],
     mods: Optional[list[str]],
     mapid: int = 0,
     is_name: bool = False,
-):
+) -> BytesIO:
     grank = ""
     if mods:
         task0 = asyncio.create_task(osu_api("score", uid, mode, mapid, is_name=is_name))
@@ -130,23 +119,17 @@ async def get_score_data(
     task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
     task2 = asyncio.create_task(osu_api("map", map_id=mapid))
     score_json = await task0
-    if not score_json:
-        return f"未查询到在 {GMN[mode]} 的游玩记录"
-    elif isinstance(score_json, str):
-        return score_json
     if not mods:
         grank = score_json.get("position", "")
         score_ls = [NewScore(**score_json["score"])]
     else:
         score_ls = [NewScore(**i) for i in score_json["scores"]]
-    user = await UserData.get_or_none(user_id=user_id)
-    lazer_mode = True if not user else user.lazer_mode
-    if not lazer_mode:
+    if not is_lazer:
         score_ls = [i for i in score_ls if Mod(acronym="CL") in i.mods]
         for i in score_ls:
             i.mods.remove(Mod(acronym="CL"))
     if not score_ls:
-        return f"未查询到在 {GMN[mode]} 的游玩记录"
+        raise NetworkError("未查询到游玩记录")
     if mods:
         for score in score_ls:
             if mods == "NM" and not score.mods:
@@ -162,12 +145,10 @@ async def get_score_data(
                     score_info = score
                     break
             else:
-                return f'未找到开启 {"|".join(mods)} Mods的成绩'
+                raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
     else:
         score_info = score_ls[0]
     map_json = await task2
-    if isinstance(map_json, str):
-        return map_json
     path = map_path / str(map_json["beatmapset_id"])
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -180,7 +161,7 @@ async def get_score_data(
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
-    score_info = cal_score_info(lazer_mode, score_info)
+    score_info = cal_score_info(is_lazer, score_info)
     return await draw_score_pic(
         score_info,
         info,

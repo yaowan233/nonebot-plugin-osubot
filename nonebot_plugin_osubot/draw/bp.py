@@ -9,12 +9,11 @@ from datetime import datetime, timedelta
 from PIL import ImageDraw, UnidentifiedImageError
 
 from ..pp import cal_pp
-from ..utils import GMN
 from ..api import osu_api
 from ..schema import NewScore
 from ..schema.score import Mod
-from ..database import UserData
 from ..mods import get_mods_list
+from ..exceptions import NetworkError
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
@@ -95,7 +94,7 @@ def filter_scores_with_regex(scores_with_index, conditions):
 async def draw_bp(
     project: str,
     uid: int,
-    user_id: str,
+    is_lazer: bool,
     mode: str,
     mods: Optional[list],
     low_bound: int,
@@ -103,22 +102,16 @@ async def draw_bp(
     day: int,
     is_name: bool,
     search_condition: list,
-) -> Union[str, BytesIO]:
-    player = await UserData.get_or_none(user_id=user_id)
-    lazer_mode = True if not player else player.lazer_mode
-    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not lazer_mode))
-    if isinstance(bp_info, str):
-        return bp_info
+) -> BytesIO:
+    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not is_lazer))
     score_ls = [NewScore(**i) for i in bp_info]
-    if not lazer_mode:
+    if not is_lazer:
         score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
-    if not bp_info:
-        return f"未查询到在 {GMN[mode]} 的游玩记录"
     user = bp_info[0]["user"]["username"]
     if mods:
         mods_ls = get_mods_list(score_ls, mods)
         if low_bound > len(mods_ls):
-            return f'未找到开启 {"|".join(mods)} Mods的成绩'
+            raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
         if high_bound > len(mods_ls):
             mods_ls = mods_ls[low_bound - 1 :]
         else:
@@ -137,22 +130,22 @@ async def draw_bp(
                 ls.append(i)
         score_ls_filtered = [score_ls[i] for i in ls]
         if not score_ls_filtered:
-            return f"近{day + 1}日内在 {GMN[mode]} 没有新增的BP成绩"
+            raise NetworkError("未查询到游玩记录")
     for score_info in score_ls_filtered:
         # 判断是否开启lazer模式
-        if lazer_mode:
+        if is_lazer:
             score_info.legacy_total_score = score_info.total_score
-        if not player.lazer_mode and Mod(acronym="CL") in score_info.mods:
+        if not is_lazer and Mod(acronym="CL") in score_info.mods:
             score_info.mods.remove(Mod(acronym="CL"))
-        if score_info.ruleset_id == 3 and not lazer_mode:
+        if score_info.ruleset_id == 3 and not is_lazer:
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        if not lazer_mode:
+        if not is_lazer:
             is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
             score_info.rank = cal_legacy_rank(score_info, is_hidden)
     if search_condition:
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
-        return "未找到符合条件的成绩"
+        raise NetworkError("未查询到游玩记录")
     msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day)
     return msg
 

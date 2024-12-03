@@ -7,6 +7,7 @@ from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
 from ..schema import User
 from ..utils import FGM, GMN
+from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..api import osu_api, get_random_bg
 from .utils import info_calc, draw_fillet, update_icon, open_user_icon
@@ -29,14 +30,12 @@ from .static import (
 )
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union[str, BytesIO]:
+async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> BytesIO:
     info_json = await osu_api("info", uid, mode, is_name=is_name)
-    if isinstance(info_json, str):
-        return info_json
     info = User(**info_json)
     statistics = info.statistics
     if statistics.play_count == 0:
-        return f"此玩家尚未游玩过{GMN[mode]}模式"
+        raise NetworkError(f"此玩家尚未游玩过{GMN[mode]}模式")
     # 对比
     user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by("-date").first()
     if user:
@@ -83,7 +82,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
             bg = Image.open(bg_path)
         except UnidentifiedImageError:
             bg_path.unlink()
-            return "自定义背景图片读取错误，请重新上传！"
+            raise NetworkError("自定义背景图片读取错误，请重新上传！")
     else:
         bg = await get_random_bg()
         if bg:
@@ -145,7 +144,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Union
                 badges_img = Image.open(badges_path).convert("RGBA").resize((86, 40))
             except UnidentifiedImageError:
                 badges_path.unlink()
-                return "图片下载错误，请重试！"
+                raise NetworkError("badges图片下载错误，请重试！")
             im.alpha_composite(badges_img, (length, height))
     # 地区
     country_bg = Image.open(country).convert("RGBA").resize((80, 54))

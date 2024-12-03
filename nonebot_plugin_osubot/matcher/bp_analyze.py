@@ -10,6 +10,7 @@ from .utils import split_msg
 from ..schema import NewScore
 from ..database import UserData
 from ..api import osu_api, get_users
+from ..exceptions import NetworkError
 from ..draw.score import cal_score_info
 from ..draw.echarts import draw_bpa_plot
 
@@ -32,17 +33,19 @@ async def _(event: Event, state: T_State):
         await UniMessage.text(state["error"]).finish(reply_to=True)
     user = await UserData.get_or_none(user_id=event.get_user_id())
     uid = state["user"]
-    bp_info = await osu_api(
-        "bp",
-        uid,
-        NGM[state["mode"]],
-        is_name=state["is_name"],
-        legacy_only=int(not user.lazer_mode),
-    )
-    if not bp_info:
-        await UniMessage.text(f'未查询到 {user.osu_name} 在 {NGM[state["mode"]]} 的游玩记录').finish(reply_to=True)
-    if isinstance(bp_info, str):
-        await UniMessage.text(bp_info).finish(reply_to=True)
+    lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+    try:
+        bp_info = await osu_api(
+            "bp",
+            uid,
+            NGM[state["mode"]],
+            is_name=state["is_name"],
+            legacy_only=int(not user.lazer_mode),
+        )
+    except NetworkError as e:
+        await UniMessage.text(
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式" f" {lazer_mode}时 {str(e)}"
+        ).finish(reply_to=True)
     score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:
         for mod in score.mods:

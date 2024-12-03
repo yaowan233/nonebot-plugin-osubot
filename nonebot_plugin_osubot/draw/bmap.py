@@ -1,19 +1,19 @@
 from io import BytesIO
-from typing import Union
 from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageFilter, ImageEnhance
 
 from ..file import get_projectimg
 from ..api import get_sayo_map_info
+from ..exceptions import NetworkError
 from .utils import crop_bg, stars_diff, calc_songlen
 from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30
 
 
-async def draw_bmap_info(mapid) -> Union[str, BytesIO]:
+async def draw_bmap_info(mapid) -> BytesIO:
     sayo_info = await get_sayo_map_info(mapid)
     if sayo_info.status == -1:
-        return "在sayobot未查询到该地图"
+        raise NetworkError("在sayobot未查询到该地图")
     data = sayo_info.data
 
     coverurl = f"https://assets.ppy.sh/beatmaps/{mapid}/covers/cover@2x.jpg"

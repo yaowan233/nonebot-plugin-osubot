@@ -23,12 +23,14 @@ def split_msg():
         user_data = await UserData.get_or_none(user_id=qq)
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
+        state["username"] = user_data.osu_name
         state["mods"] = []
         state["range"] = None
         state["day"] = 0
         state["is_name"] = False
         state["query"] = []
         state["target"] = None
+        state["is_lazer"] = True if not user_data else user_data.lazer_mode
         arg = arg.extract_plain_text().strip()
         matches = re.findall(pattern, arg)
         for match in matches:
@@ -58,6 +60,7 @@ def split_msg():
             arg = re.sub(r"(?<=\s)" + re.escape(last_match), "", arg)
         if arg.strip():
             state["user"] = arg.strip()
+            state["username"] = arg.strip()
             state["is_name"] = True
         if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
             state["error"] = "模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania"
