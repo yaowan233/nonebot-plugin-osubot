@@ -41,8 +41,7 @@ async def _bp(state: T_State):
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f" bp{best} {lazer_mode}{mods}时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式" f" bp{best} {lazer_mode}{mods}时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
 
