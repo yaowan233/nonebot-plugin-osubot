@@ -19,7 +19,7 @@ async def _map(state: T_State):
     try:
         m = await draw_map_info(map_id, mods)
     except NetworkError as e:
-        mods = f" mod:{state['mods']}" if state['mods'] else ""
+        mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图mapid:{state['target']}{mods}时 {str(e)}").finish(reply_to=True)
     await UniMessage.image(raw=m).finish(reply_to=True)
 
@@ -32,6 +32,6 @@ async def _bmap(state: T_State):
     try:
         m = await draw_bmap_info(set_id)
     except NetworkError as e:
-        mods = f" mod:{state['mods']}" if state['mods'] else ""
+        mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图setid:{state['target']}{mods}时 {str(e)}").finish(reply_to=True)
     await UniMessage.image(raw=m).finish(reply_to=True)
