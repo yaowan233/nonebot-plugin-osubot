@@ -44,7 +44,7 @@ async def _(event: Event, state: T_State):
         )
     except NetworkError as e:
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式" f" {lazer_mode}时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式" f" {lazer_mode}时 {str(e)}"
         ).finish(reply_to=True)
     score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:

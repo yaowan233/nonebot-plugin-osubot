@@ -93,7 +93,7 @@ async def _(
         try:
             bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])
         except NetworkError as e:
-            await UniMessage.text(f"在查找用户：{state['user']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
+            await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
         bp_ls = [NewScore(**i) for i in bp_info]
@@ -107,7 +107,7 @@ async def _(
         try:
             bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=True)
         except NetworkError as e:
-            await UniMessage.text(f"在查找用户：{state['user']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
+            await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
         bp_ls = [NewScore(**i) for i in bp_info]
@@ -378,7 +378,7 @@ async def _(
         try:
             bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])
         except NetworkError as e:
-            await UniMessage.text(f"在查找用户：{state['user']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
+            await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
         bp_ls = [NewScore(**i) for i in bp_info]
@@ -392,7 +392,7 @@ async def _(
         try:
             bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=True)
         except NetworkError as e:
-            await UniMessage.text(f"在查找用户：{state['user']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
+            await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
         bp_ls = [NewScore(**i) for i in bp_info]
@@ -459,7 +459,7 @@ async def _(
         try:
             bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])
         except NetworkError as e:
-            await UniMessage.text(f"在查找用户：{state['user']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
+            await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
         bp_ls = [NewScore(**i) for i in bp_info]
@@ -473,7 +473,7 @@ async def _(
         try:
             bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=True)
         except NetworkError as e:
-            await UniMessage.text(f"在查找用户：{state['user']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
+            await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
         bp_ls = [NewScore(**i) for i in bp_info]

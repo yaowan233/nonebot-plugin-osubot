@@ -40,7 +40,7 @@ async def _bp(state: T_State):
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
             f" bp{best} {lazer_mode} mod:{state['mods']}时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
@@ -71,9 +71,10 @@ async def _pfm(state: T_State):
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+        mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
-            f" bp{state['range']} {lazer_mode} mod:{state['mods']}时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
+            f" bp{state['range']} {lazer_mode}{mods}时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
 
@@ -103,8 +104,9 @@ async def _tbp(state: T_State):
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
+        mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['user']} {NGM[state['mode']]}模式"
-            f"{lazer_mode} mod:{state['mods']} {state['day']}日内最佳成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
+            f"{lazer_mode}{mods} {state['day']}日内最佳成绩时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
