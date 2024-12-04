@@ -23,7 +23,7 @@ def split_msg():
         user_data = await UserData.get_or_none(user_id=qq)
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
-        state["username"] = user_data.osu_name
+        state["username"] = user_data.osu_name if user_data else ""
         state["mods"] = []
         state["range"] = None
         state["day"] = 0
