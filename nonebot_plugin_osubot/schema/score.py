@@ -3,8 +3,8 @@ from typing import Literal, Optional
 from pydantic.fields import Field
 
 from .basemodel import Base
-from .user import UserCompact
 from .beatmap import Beatmap, Beatmapset
+from .user import UserCompact
 
 
 class Statistics(Base):
@@ -44,6 +44,7 @@ class BeatmapUserScore(Base):
 
 class NewStatistics(Base):
     great: Optional[int] = Field(default=0)
+    slider_tail_hit: Optional[int] = Field(default=0)
     large_tick_hit: Optional[int] = Field(default=0)
     small_tick_hit: Optional[int] = Field(default=0)
     small_tick_miss: Optional[int] = Field(default=0)
@@ -54,17 +55,9 @@ class NewStatistics(Base):
     perfect: Optional[int] = Field(default=0)
 
 
-class Settings(Base):
-    speed_change: Optional[float] = None
-    circle_size: Optional[float] = None
-    approach_rate: Optional[float] = None
-    overall_difficulty: Optional[float] = None
-    drain_rate: Optional[float] = None
-
-
 class Mod(Base):
     acronym: str
-    settings: Optional[Settings] = None
+    settings: Optional[dict] = None
 
 
 class NewScore(Base):
