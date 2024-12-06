@@ -17,7 +17,7 @@ from ..exceptions import NetworkError
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
-from .static import BgImg, Image, BgImg1, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25, osufile
+from .static import BgImg, Image, BgImg1, ModsDict, RankDict, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25
 
 map_dict = {
     "mapper": "creator",
@@ -234,12 +234,9 @@ async def draw_pfm(
         # mods
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
-                mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
-                try:
-                    mods_img = Image.open(mods_bg).convert("RGBA")
+                if s_mods.acronym in ModsDict:
+                    mods_img = ModsDict[s_mods.acronym].convert("RGBA")
                     im.alpha_composite(mods_img, (210 + offset + 50 * mods_num, 192 + h_num))
-                except FileNotFoundError:
-                    pass
             if (bp.rank == "X" or bp.rank == "S") and (
                 Mod(acronym="HD") in bp.mods or Mod(acronym="FL") in bp.mods or Mod(acronym="FI") in bp.mods
             ):
@@ -286,8 +283,7 @@ async def draw_pfm(
         )
 
         # rank
-        rank_img = osufile / "ranking" / f"ranking-{bp.rank}.png"
-        rank_bg = Image.open(rank_img).convert("RGBA").resize((60, 30))
+        rank_bg = RankDict[f"ranking-{bp.rank}"].resize((60, 30))
         im.alpha_composite(rank_bg, (621 + offset, 120 + h_num))
 
         # mapid
