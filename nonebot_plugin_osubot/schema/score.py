@@ -3,8 +3,8 @@ from typing import Literal, Optional
 from pydantic.fields import Field
 
 from .basemodel import Base
-from .beatmap import Beatmap, Beatmapset
 from .user import UserCompact
+from .beatmap import Beatmap, Beatmapset
 
 
 class Statistics(Base):
