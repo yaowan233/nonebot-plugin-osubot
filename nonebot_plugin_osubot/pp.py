@@ -1,8 +1,11 @@
 import math
+import importlib.metadata
 
 from rosu_pp_py import Beatmap, Strains, GameMode, Performance, PerformanceAttributes
 
 from .schema import NewScore
+
+is_v2 = importlib.metadata.version("pydantic").startswith("2")
 
 
 def cal_pp(score: NewScore, path: str, is_lazer: bool) -> PerformanceAttributes:
@@ -20,7 +23,7 @@ def cal_pp(score: NewScore, path: str, is_lazer: bool) -> PerformanceAttributes:
         small_tick_hits=score.statistics.small_tick_hit,
         large_tick_hits=score.statistics.large_tick_hit,
         slider_end_hits=score.statistics.slider_tail_hit,
-        mods=[mod.model_dump() for mod in score.mods],
+        mods=[mod.model_dump() for mod in score.mods] if is_v2 else [mod.dict() for mod in score.mods],
         lazer=cal_lazer(score, is_lazer),
     )
     return c.calculate(beatmap)
@@ -41,11 +44,15 @@ def get_if_pp_ss_pp(score: NewScore, path: str, is_lazer: bool) -> tuple:
         n50=score.statistics.meh,
         n100=n100,
         n300=n300,
-        mods=[mod.model_dump() for mod in score.mods],
+        mods=[mod.model_dump() for mod in score.mods] if is_v2 else [mod.dict() for mod in score.mods],
         lazer=cal_lazer(score, is_lazer),
     )
     if_pp = c.calculate(beatmap).pp
-    c = Performance(accuracy=100, mods=[mod.model_dump() for mod in score.mods], lazer=is_lazer)
+    c = Performance(
+        accuracy=100,
+        mods=[mod.model_dump() for mod in score.mods] if is_v2 else [mod.dict() for mod in score.mods],
+        lazer=is_lazer,
+    )
     ss_pp = c.calculate(beatmap).pp
     if math.isnan(if_pp):
         return "nan", "nan"
