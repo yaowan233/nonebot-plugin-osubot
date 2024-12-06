@@ -1,5 +1,7 @@
 import math
-from rosu_pp_py import Beatmap, Performance, PerformanceAttributes, GameMode, Strains
+
+from rosu_pp_py import Beatmap, Strains, GameMode, Performance, PerformanceAttributes
+
 from .schema import NewScore
 
 
@@ -19,7 +21,7 @@ def cal_pp(score: NewScore, path: str, is_lazer: bool) -> PerformanceAttributes:
         large_tick_hits=score.statistics.large_tick_hit,
         slider_end_hits=score.statistics.slider_tail_hit,
         mods=[mod.model_dump() for mod in score.mods],
-        lazer=cal_lazer(score, is_lazer)
+        lazer=cal_lazer(score, is_lazer),
     )
     return c.calculate(beatmap)
 
@@ -28,12 +30,7 @@ def get_if_pp_ss_pp(score: NewScore, path: str, is_lazer: bool) -> tuple:
     beatmap = Beatmap(path=path)
     convert_mode(score, beatmap)
     total = beatmap.n_objects
-    passed = (
-        score.statistics.great
-        + score.statistics.miss
-        + score.statistics.ok
-        + score.statistics.meh
-    )
+    passed = score.statistics.great + score.statistics.miss + score.statistics.ok + score.statistics.meh
     n300 = score.statistics.great + total - passed
     count_hits = total - score.statistics.miss
     ratio = 1 - n300 / count_hits
@@ -45,7 +42,7 @@ def get_if_pp_ss_pp(score: NewScore, path: str, is_lazer: bool) -> tuple:
         n100=n100,
         n300=n300,
         mods=[mod.model_dump() for mod in score.mods],
-        lazer=cal_lazer(score, is_lazer)
+        lazer=cal_lazer(score, is_lazer),
     )
     if_pp = c.calculate(beatmap).pp
     c = Performance(accuracy=100, mods=[mod.model_dump() for mod in score.mods], lazer=is_lazer)
