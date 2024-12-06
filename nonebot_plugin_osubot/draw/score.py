@@ -100,6 +100,7 @@ async def draw_score(
         info,
         map_json,
         "",
+        is_lazer,
     )
 
 
@@ -167,10 +168,11 @@ async def get_score_data(
         info,
         map_json,
         grank,
+        is_lazer,
     )
 
 
-async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO:
+async def draw_score_pic(score_info: NewScore, info, map_json, grank, is_lazer) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
@@ -179,9 +181,9 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank) -> BytesIO
         path.mkdir(parents=True, exist_ok=True)
     # pp
     osu = path / f"{mapinfo.id}.osu"
-    pp_info = cal_pp(score_info, str(osu.absolute()))
-    original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0)
-    if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
+    pp_info = cal_pp(score_info, str(osu.absolute()), is_lazer)
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0, is_lazer)
+    if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()), is_lazer)
     # 新建图片
     im = Image.new("RGBA", (1500, 720))
     draw = ImageDraw.Draw(im)
