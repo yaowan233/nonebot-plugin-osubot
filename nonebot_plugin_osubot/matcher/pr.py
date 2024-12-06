@@ -54,7 +54,7 @@ async def _recent(event: Event, state: T_State):
             score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
         for score_info in score_ls:
             cal_score_info(player.lazer_mode, score_info)
-        pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode)
+        pic = await draw_pfm("relist", state["user"], score_ls, score_ls, mode, is_lazer=player.lazer_mode)
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
         state["day"] = 1
@@ -116,7 +116,7 @@ async def _pr(event: Event, state: T_State):
             score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
         for score_info in score_ls:
             cal_score_info(player.lazer_mode, score_info)
-        pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode])
+        pic = await draw_pfm("prlist", state["user"], score_ls, score_ls, NGM[mode], is_lazer=player.lazer_mode)
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
         state["day"] = 1

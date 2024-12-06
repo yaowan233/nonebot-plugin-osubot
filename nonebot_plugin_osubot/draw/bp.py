@@ -146,7 +146,7 @@ async def draw_bp(
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day)
+    msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day, is_lazer)
     return msg
 
 
@@ -159,6 +159,7 @@ async def draw_pfm(
     low_bound: int = 0,
     high_bound: int = 0,
     day: int = 0,
+    is_lazer: bool = True,
 ) -> Union[str, BytesIO]:
     task0 = [
         get_pfm_img(
@@ -257,7 +258,7 @@ async def draw_pfm(
         if len(difficulty) > 30:
             difficulty = difficulty[:27] + "..."
         osu = map_path / f"{bp.beatmapset.id}" / f"{bp.beatmap_id}.osu"
-        pp_info = cal_pp(bp, str(osu.absolute()))
+        pp_info = cal_pp(bp, str(osu.absolute()), is_lazer)
         difficulty = f"{pp_info.difficulty.stars:.2f}★ | {difficulty}"
         draw.text(
             (210 + offset, 168 + h_num),
