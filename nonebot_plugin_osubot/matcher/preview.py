@@ -33,6 +33,6 @@ async def _(state: T_State):
         pic = await draw_cath_preview(int(osu_id), data["beatmapset_id"], state["mods"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     elif not (0 <= int(state["mode"]) <= 3):
-        await UniMessage.text(f"模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania").finish()
+        await UniMessage.text("模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania").finish()
     else:
         await UniMessage.text(f"{NGM[state['mode']]}模式暂不支持预览").finish()
