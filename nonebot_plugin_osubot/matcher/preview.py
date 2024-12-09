@@ -2,13 +2,13 @@ from nonebot import on_command
 from nonebot.typing import T_State
 from nonebot_plugin_alconna import UniMessage
 
+from ..utils import NGM
 from ..api import osu_api
 from .utils import split_msg
 from ..file import download_tmp_osu
 from ..exceptions import NetworkError
 from ..mania import generate_preview_pic
 from ..draw.catch_preview import draw_cath_preview
-from ..utils import NGM
 
 generate_preview = on_command("预览", aliases={"preview", "完整预览"}, priority=11, block=True)
 
