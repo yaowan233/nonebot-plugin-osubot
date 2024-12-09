@@ -20,6 +20,7 @@ api_ls = [
     "https://api.chimu.moe/v1/download/",
     "https://osu.direct/api/d/",
     "https://txy1.sayobot.cn/beatmaps/download/novideo/",
+    "https://catboy.best/d/",
 ]
 semaphore = asyncio.Semaphore(5)
 
