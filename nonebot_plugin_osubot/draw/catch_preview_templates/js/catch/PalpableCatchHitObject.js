@@ -6,6 +6,7 @@ function PalpableCatchHitObject(data, beatmap) {
     this.color = data.color;
     this.radius = data.radius;
     this.hyperDash = false;
+    this.XDistToNext = [1, 1, 1];
 }
 PalpableCatchHitObject.prototype.draw = function (time, ctx) {
     var dt = this.time - time;
@@ -71,6 +72,12 @@ PalpableCatchHitObject.prototype.drawCircle2 = function (position, SCALE, ctx) {
     ctx.restore();
 };
 PalpableCatchHitObject.prototype.drawCombo2 = function (position, SCALE, combo, ctx) {
+    // 用一块黑色遮挡
+    ctx.save();
+    ctx.fillStyle = "black";
+    ctx.fillRect(position.x + this.radius * SCALE * 2, position.y - 8, (combo.toString().length + 1) * 8, 14);
+    ctx.restore();
+
     ctx.save();
     ctx.fillStyle = 'lightblue';
     ctx.font = "normal 16px 'Segoe UI'";

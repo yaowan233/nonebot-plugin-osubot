@@ -263,6 +263,22 @@ function Catch(osu, mods) {
         let thisDirection = nextObject.x > currentObject.x ? 1 : -1;
         let timeToNext = nextObject.time - currentObject.time - 1000 / 60 / 4; // 1/4th of a frame of grace time, taken from osu-stable
         let distanceToNext = Math.abs(nextObject.x - currentObject.x) - (lastDirection == thisDirection ? lastExcess : this.halfCatcherWidth);
+        let nextTimingPoint = this.timingPointAt(nextObject.time);
+        // 与editor相同
+        currentObject.XDistToNext[0] = Math.abs(nextObject.x - currentObject.x) / (this.SliderMultiplier * 100) / ((nextObject.time - currentObject.time) / nextTimingPoint.beatLength);
+        if (currentObject.XDistToNext[0] > 0.01) {
+            currentObject.XDistToNext[0] = (currentObject.XDistToNext[0] !== Infinity) ? parseFloat(currentObject.XDistToNext[0].toFixed(2)) : null;
+            // 排除SVM（绿线）影响
+            currentObject.XDistToNext[1] = currentObject.XDistToNext[0] * nextTimingPoint.sliderVelocity;
+            currentObject.XDistToNext[1] = (currentObject.XDistToNext[1] !== Infinity) ? parseFloat(currentObject.XDistToNext[1].toFixed(2)) : null;
+            // 排除SVM和BaseSV影响
+            //currentObject.XDistToNext[2] = currentObject.XDistToNext[1] * this.SliderMultiplier;
+            currentObject.XDistToNext[2] = Math.abs(nextObject.x - currentObject.x) / (timeToNext * this.BASE_WALK_SPEED);
+            currentObject.XDistToNext[2] = (currentObject.XDistToNext[2] !== Infinity) ? parseFloat(currentObject.XDistToNext[2].toFixed(2)) : null;
+        }
+        else {
+            currentObject.XDistToNext = [null, null, null];
+        }
         let distanceToHyper = timeToNext * this.BASE_DASH_SPEED - distanceToNext;
 
         if (distanceToHyper < 0) {
@@ -341,8 +357,9 @@ Catch.prototype.draw = function (time, ctx) {
 /**
  * @param {number} SCALE 缩放大小（0.2=缩放为1/5）
  * @param {number} SPEED 播放速度 DT=1.5 HT=0.75 在ctb不影响谱面，只影响时间和BPM标注
+ * @param {{showDistance: boolean, distanceStart: number, distanceEnd: number, distanceType: number}} params 其他参数
  */
-Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
+Catch.prototype.draw2 = function (SCALE, SPEED = 1, params = {}) {
     // 初定每一列20个屏幕大小，不够换列
     let SCREENSHEIGHT = 20 * Beatmap.HEIGHT;
     // 20px黑边
@@ -376,6 +393,7 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     let timingLines = [];
     let kiaiTimeSpans = [];
     let lastKiaiStart = -1;
+    let lastSV = 1;
     for (let i = 0; i < this.TimingPoints.length; i++) {
         if (lastKiaiStart >= 0) {
             if (!this.TimingPoints[i].kiai) {
@@ -386,9 +404,25 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         else {
             if (this.TimingPoints[i].kiai) lastKiaiStart = this.TimingPoints[i].time - offset;
         }
-        // 绿线在ctb无关紧要，不用加
-        if (this.TimingPoints[i].parent) continue;
-        timingLines.push({ time: this.TimingPoints[i].time - offset, bpm: this.TimingPoints[i].bpm });
+        // 绿线在ctb无关紧要，正常模式不用加，标注距离时只加变化的
+        if (params.showDistance) {
+            if (this.TimingPoints[i].parent) {
+                if (Math.abs(this.TimingPoints[i].sliderVelocity - lastSV) < 0.001) {
+                    lastSV = this.TimingPoints[i].sliderVelocity;
+                    continue;
+                }
+                else {
+                    lastSV = this.TimingPoints[i].sliderVelocity;
+                    timingLines.push({ time: this.TimingPoints[i].time - offset, sv: this.TimingPoints[i].sliderVelocity });
+                    continue;
+                }
+            }
+            else timingLines.push({ time: this.TimingPoints[i].time - offset, bpm: this.TimingPoints[i].bpm });
+        }
+        else {
+            if (this.TimingPoints[i].parent) continue;
+            timingLines.push({ time: this.TimingPoints[i].time - offset, bpm: this.TimingPoints[i].bpm });
+        }
     }
     // 计算小节线普遍间隔
     let barLineDeltas = [];
@@ -608,15 +642,25 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
         ctx2.beginPath();
         ctx2.moveTo(real_x_1, real_y);
         ctx2.lineTo(real_x_2, real_y);
-        ctx2.strokeStyle = 'red';
+        if (timingLines[i].bpm) ctx2.strokeStyle = 'red';
+        else if (timingLines[i].sv) ctx2.strokeStyle = 'lightgreen';
         ctx2.lineWidth = 2;
         ctx2.stroke();
         // 添加文字
-        ctx2.fillStyle = 'red';
-        ctx2.font = "normal 16px 'Segoe UI'";
-        ctx2.textBaseline = "middle";
-        ctx2.textAlign = "start";
-        ctx2.fillText((timingLines[i].bpm * SPEED).toFixed(0), real_x_1 - 4, real_y - 10);
+        if (timingLines[i].bpm) {
+            ctx2.fillStyle = 'red';
+            ctx2.font = "normal 16px 'Segoe UI'";
+            ctx2.textBaseline = "middle";
+            ctx2.textAlign = "start";
+            ctx2.fillText((timingLines[i].bpm * SPEED).toFixed(0), real_x_1 - 4, real_y - 10);
+        }
+        else if (timingLines[i].sv && params.distanceType <= 0) {
+            ctx2.fillStyle = 'lightgreen';
+            ctx2.font = "normal 16px 'Segoe UI'";
+            ctx2.textBaseline = "middle";
+            ctx2.textAlign = "start";
+            ctx2.fillText("x" + parseFloat(timingLines[i].sv.toFixed(2)), real_x_1 - 4, real_y - 10);
+        }
         ctx2.restore();
     }
 
@@ -626,15 +670,24 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     // 按总物件数/时间控制密度
     let totalTime = this.fullCatchObjects[this.fullCatchObjects.length - 1].time - this.fullCatchObjects[0].time;
     if (this.fullCatchObjects.length * 1000 / totalTime > 2) comboSplit = Math.ceil(this.fullCatchObjects.length * 1000 / totalTime) * 10;
-    // 按0.2*位数修约
-    let roundBy = Math.pow(10, comboSplit.toString().length) * 0.2;
+    // 按0.5*位数修约
+    let roundBy = Math.pow(10, comboSplit.toString().length) * 0.5;
     comboSplit = Math.round(comboSplit / roundBy) * roundBy;
     for (let i = 0; i < this.fullCatchObjects.length; i++) {
         let showCombo = null;
         if (objs[i].type === "Fruit" || objs[i].type === "Droplet") {
             combo += 1;
         }
-        if (combo > lastCombo && combo > 0 && combo % comboSplit === 0) showCombo = combo;
+        // 借用combo位显示距离，省事！
+        if (params.showDistance) {
+            if (objs[i].type === "Fruit" || objs[i].type === "Droplet") {
+                let distanceType = params.distanceType;
+                if (this.fullCatchObjects[i].XDistToNext[distanceType] >= params.distanceStart && this.fullCatchObjects[i].XDistToNext[distanceType] <= params.distanceEnd)
+                    showCombo = this.fullCatchObjects[i].XDistToNext[distanceType];
+            }
+        }
+
+        else if (combo > lastCombo && combo > 0 && combo % comboSplit === 0) showCombo = combo;
         this.fullCatchObjects[i].draw2(objs[i], SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT, showCombo);
         lastCombo = combo;
     }
@@ -645,13 +698,18 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1) {
     extraBarTimes.map((_barTime) => {
         let _objs = objs.filter((obj) => Math.abs(obj.time - _barTime * 1000) < EDGE_OFFSET);
         _objs.map((_obj) => {
+            let distanceType = params.distanceType;
+            let _dist = this.fullCatchObjects[_obj.index].XDistToNext[distanceType];
+            if (_dist < params.distanceStart || _dist > params.distanceEnd) _dist = null;
             if (_obj.y > SCREENSHEIGHT * SCALE - 5) {
                 // note靠近下边缘，在上一列的上边缘再画一个
-                this.fullCatchObjects[_obj.index].draw2({time: _obj.time, type: _obj.type, x: _obj.x - (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: 0, col: _obj.col - 1}, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
+                if (params.showDistance) this.fullCatchObjects[_obj.index].draw2({ time: _obj.time, type: _obj.type, x: _obj.x - (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: 0, col: _obj.col - 1 }, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT, _dist);
+                else this.fullCatchObjects[_obj.index].draw2({ time: _obj.time, type: _obj.type, x: _obj.x - (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: 0, col: _obj.col - 1 }, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
             }
             else if (_obj.y < 5) {
                 // note靠近上边缘，在下一列的下边缘再画一个
-                this.fullCatchObjects[_obj.index].draw2({time: _obj.time, type: _obj.type, x: _obj.x + (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: SCREENSHEIGHT * SCALE, col: _obj.col + 1}, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
+                if (params.showDistance) this.fullCatchObjects[_obj.index].draw2({ time: _obj.time, type: _obj.type, x: _obj.x + (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: SCREENSHEIGHT * SCALE, col: _obj.col + 1 }, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT, _dist);
+                else this.fullCatchObjects[_obj.index].draw2({ time: _obj.time, type: _obj.type, x: _obj.x + (Beatmap.WIDTH * SCALE + 2 * COLMARGIN), y: SCREENSHEIGHT * SCALE, col: _obj.col + 1 }, SCALE, ctx2, BORDER_WIDTH, BORDER_HEIGHT);
             }
         });
     });
