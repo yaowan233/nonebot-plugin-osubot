@@ -58,7 +58,11 @@ async def download_tmp_osu(map_id):
 
 @auto_retry
 async def download_osu(set_id, map_id):
-    url = [f"https://osu.ppy.sh/osu/{map_id}", f"https://osu.direct/api/osu/{map_id}"]
+    url = [
+        f"https://osu.ppy.sh/osu/{map_id}",
+        f"https://osu.direct/api/osu/{map_id}",
+        f"https://catboy.best/osu/{map_id}",
+    ]
     logger.info(f"开始下载谱面: <{map_id}>")
     async with semaphore:
         if req := await get_first_response(url):
