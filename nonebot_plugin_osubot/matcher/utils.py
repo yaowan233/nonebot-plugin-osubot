@@ -9,7 +9,7 @@ from ..utils import mods2list
 from ..database.models import UserData
 
 pattern = (
-    r"[:：]\s*(\d+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
+    r"[:：]\s*(\w+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
     r"title\s*([=~]+)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*([><=~]+)\s*[\w\.]+|$))|"
     r"(\w+)\s*([><=~]+)\s*([\w\.]+)"
 )
