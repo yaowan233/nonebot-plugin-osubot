@@ -9,6 +9,7 @@ from ..api import osu_api
 from ..info import get_bg
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
+from .bp import filter_scores_with_regex
 from ..beatmap_stats_moder import with_mods
 from ..schema import User, Beatmap, NewScore
 from ..schema.score import Mod, NewStatistics
@@ -48,6 +49,7 @@ async def draw_score(
     is_lazer: bool,
     mode: str,
     mods: Optional[list[str]],
+    search_condition: list,
     best: int = 0,
     mapid: int = 0,
     is_name: bool = False,
@@ -73,6 +75,8 @@ async def draw_score(
         score_info = NewScore(**score_json[best])
     elif project == "bp":
         score_ls = [NewScore(**i) for i in score_json]
+        if search_condition:
+            score_ls = filter_scores_with_regex(score_ls, search_condition)
         mods_ls = get_mods_list(score_ls, mods)
         if len(mods_ls) < best:
             raise NetworkError("未查询到游玩记录")

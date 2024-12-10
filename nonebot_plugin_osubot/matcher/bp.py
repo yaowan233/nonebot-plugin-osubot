@@ -33,8 +33,9 @@ async def _bp(state: T_State):
             state["user"],
             state["is_lazer"],
             NGM[state["mode"]],
+            state["mods"],
+            state["query"],
             best=best,
-            mods=state["mods"],
             is_name=state["is_name"],
         )
     except NetworkError as e:

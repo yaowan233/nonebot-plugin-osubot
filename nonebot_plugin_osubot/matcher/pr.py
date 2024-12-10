@@ -65,6 +65,7 @@ async def _recent(event: Event, state: T_State):
             state["is_lazer"],
             mode,
             [],
+            [],
             state["day"] - 1,
             is_name=state["is_name"],
         )
@@ -126,6 +127,7 @@ async def _pr(event: Event, state: T_State):
             state["user"],
             state["is_lazer"],
             NGM[mode],
+            [],
             [],
             state["day"] - 1,
             is_name=state["is_name"],
