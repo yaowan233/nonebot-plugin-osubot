@@ -105,7 +105,7 @@ async def _(
         selected_user = user_data.osu_name
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=True)
+            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=state["is_name"])
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
@@ -116,7 +116,7 @@ async def _(
             await UniMessage.text(state["user"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
-        selected_user = state["user"]
+        selected_user = state["username"]
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, group_id)
     if not selected_score:
@@ -401,7 +401,7 @@ async def _(
             await UniMessage.text(state["user"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
-        selected_user = state["user"]
+        selected_user = state["username"]
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
     if not selected_score:
@@ -481,7 +481,7 @@ async def _(
         if not filtered_bp_ls:
             await UniMessage.text(state["user"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
         selected_score = random.choice(filtered_bp_ls)
-        selected_user = state["user"]
+        selected_user = state["username"]
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
     else:
         selected_score, selected_user = await get_random_beatmap_set(binded_id, session_id)
