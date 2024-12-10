@@ -17,5 +17,5 @@ async def _url(bid: tuple = RegexGroup()):
     try:
         m = await draw_map_info(beatmap_id, [], True)
     except Exception:
-        ...  # ignore
+        return
     await (UniMessage.image(raw=m) + "\n" + url_total).finish(reply_to=True)
