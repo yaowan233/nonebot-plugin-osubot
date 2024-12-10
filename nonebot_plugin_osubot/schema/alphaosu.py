@@ -6,7 +6,7 @@ from .basemodel import Base
 class ListData(Base):
     accurate: bool
     currentMod: Optional[list[str]] = None
-    currentPP: Optional[int] = None
+    currentPP: Optional[float] = None
     currentScore: Optional[int] = None
     currentScoreLink: Optional[str] = None
     difficulty: float
