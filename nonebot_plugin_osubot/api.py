@@ -28,14 +28,14 @@ bg_url = plugin_config.info_bg
 
 @auto_retry
 async def safe_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
-    async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
+    async with AsyncClient(proxy=proxy, follow_redirects=True) as client:
         req = await client.get(url, headers=headers, params=params)
     return req
 
 
 @auto_retry
 async def safe_async_post(url, headers=None, data=None, json=None) -> Response:
-    async with AsyncClient(proxies=proxy) as client:
+    async with AsyncClient(proxy=proxy) as client:
         req = await client.post(url, headers=headers, data=data, json=json)
     return req
 
