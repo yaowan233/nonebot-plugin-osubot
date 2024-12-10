@@ -18,7 +18,7 @@ async def fetch_url(client: AsyncClient, url):
 
 
 async def get_first_response(urls: list[str]):
-    async with AsyncClient(proxies=proxy, follow_redirects=True) as client:
+    async with AsyncClient(proxy=proxy, follow_redirects=True) as client:
         tasks = [asyncio.create_task(fetch_url(client, url)) for url in urls]
         while tasks:
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
