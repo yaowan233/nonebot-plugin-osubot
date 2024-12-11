@@ -9,9 +9,9 @@ from PIL import ImageDraw, UnidentifiedImageError
 
 from ..pp import cal_pp
 from ..api import get_user_best
-from ..schema.score import Mod, UnifiedScore
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
+from ..schema.score import Mod, UnifiedScore
 from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
@@ -101,7 +101,7 @@ async def draw_bp(
     is_name: bool,
     search_condition: list,
     username: str,
-    source: str
+    source: str,
 ) -> BytesIO:
     scores = await get_user_best(uid, mode, is_name=is_name, source=source, legacy_only=not is_lazer)
     if not is_lazer:
@@ -136,7 +136,7 @@ async def draw_bp(
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, username, scores, score_ls_filtered, mode, is_lazer , low_bound, high_bound, day)
+    msg = await draw_pfm(project, username, scores, score_ls_filtered, mode, is_lazer, low_bound, high_bound, day)
     return msg
 
 

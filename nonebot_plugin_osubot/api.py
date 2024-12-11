@@ -1,23 +1,23 @@
 import random
-from datetime import datetime, timedelta
 from io import BytesIO
-from typing import Optional, Union
+from typing import Union, Optional
 from urllib.parse import urlencode
+from datetime import datetime, timedelta
 
 from nonebot.log import logger
 from expiringdict import ExpiringDict
 from nonebot import get_plugin_config
 from httpx import Response, AsyncClient
 
+from .utils import FGM
 from .config import Config
 from .mods import get_mods
 from .network import auto_retry
 from .exceptions import NetworkError
-from .schema import User, SayoBeatmap, RecommendData, NewScore
-from .network.first_response import get_first_response
 from .schema.ppysb import ScoresResponse
-from .schema.score import UnifiedScore, UnifiedBeatmap, NewStatistics
-from .utils import FGM
+from .network.first_response import get_first_response
+from .schema import User, NewScore, SayoBeatmap, RecommendData
+from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap
 
 api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"
@@ -73,7 +73,9 @@ async def get_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
 
 
-async def get_user_best(uid: Union[int, str], mode: str, source: str = "osu", legacy_only: bool = 0, is_name: bool = 0) -> list[UnifiedScore]:
+async def get_user_best(
+    uid: Union[int, str], mode: str, source: str = "osu", legacy_only: bool = 0, is_name: bool = 0
+) -> list[UnifiedScore]:
     if source == "osu":
         if is_name:
             uid = await get_uid_by_name(uid)
@@ -81,19 +83,35 @@ async def get_user_best(uid: Union[int, str], mode: str, source: str = "osu", le
         data = await make_request(url, await get_headers(), "未找到该玩家BP")
         scores = [NewScore(**i) for i in data]
         unified_scores = [
-            UnifiedScore(mods=i.mods, ruleset_id=i.ruleset_id, rank=i.rank, accuracy=i.accuracy * 100,
-                         total_score=i.total_score,
-                         ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-                         max_combo=i.max_combo,
-                         statistics=i.statistics,
-                         legacy_total_score=i.legacy_total_score,
-                         beatmap=UnifiedBeatmap(id=i.beatmap_id, set_id=i.beatmapset.id, artist=i.beatmapset.artist,
-                                                title=i.beatmapset.title, version=i.beatmap.version,
-                                                creator=i.beatmapset.creator, total_length=i.beatmap.total_length,
-                                                mode=i.beatmap.mode_int, bpm=i.beatmap.bpm,
-                                                cs=i.beatmap.cs, ar=i.beatmap.ar, hp=i.beatmap.drain,
-                                                od=i.beatmap.accuracy,
-                                                stars=i.beatmap.difficulty_rating)) for i in scores]
+            UnifiedScore(
+                mods=i.mods,
+                ruleset_id=i.ruleset_id,
+                rank=i.rank,
+                accuracy=i.accuracy * 100,
+                total_score=i.total_score,
+                ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+                max_combo=i.max_combo,
+                statistics=i.statistics,
+                legacy_total_score=i.legacy_total_score,
+                beatmap=UnifiedBeatmap(
+                    id=i.beatmap_id,
+                    set_id=i.beatmapset.id,
+                    artist=i.beatmapset.artist,
+                    title=i.beatmapset.title,
+                    version=i.beatmap.version,
+                    creator=i.beatmapset.creator,
+                    total_length=i.beatmap.total_length,
+                    mode=i.beatmap.mode_int,
+                    bpm=i.beatmap.bpm,
+                    cs=i.beatmap.cs,
+                    ar=i.beatmap.ar,
+                    hp=i.beatmap.drain,
+                    od=i.beatmap.accuracy,
+                    stars=i.beatmap.difficulty_rating,
+                ),
+            )
+            for i in scores
+        ]
         return unified_scores
 
     elif source == "ppysb":
@@ -102,15 +120,42 @@ async def get_user_best(uid: Union[int, str], mode: str, source: str = "osu", le
         url = f"https://api.ppy.sb/v1/get_player_scores?scope=best&id={uid}&mode={FGM[mode]}&limit=100"
         data = await make_request(url, {}, "未找到该玩家BP")
         data = ScoresResponse(**data)
-        return [UnifiedScore(mods=get_mods(i.mods), ruleset_id=i.mode, rank=i.grade, accuracy=i.acc / 100, total_score=i.score,
-                             ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S"), max_combo=i.max_combo,
-                             statistics=NewStatistics(miss=i.nmiss, perfect=i.ngeki, good=i.nkatu, meh=i.n50, ok=i.n100, great=i.n300, ),
-                             beatmap=UnifiedBeatmap(id=i.beatmap.id, set_id=i.beatmap.set_id, artist=i.beatmap.artist,
-                                                    title=i.beatmap.title, version=i.beatmap.version, creator=i.beatmap.creator,
-                                                    total_length=i.beatmap.total_length, mode=i.beatmap.mode, bpm=i.beatmap.bpm,
-                                                    cs=i.beatmap.cs, ar=i.beatmap.ar, hp=i.beatmap.hp,
-                                                    od=i.beatmap.od, stars=i.beatmap.diff
-                                                    )) for i in data.scores]
+        return [
+            UnifiedScore(
+                mods=get_mods(i.mods),
+                ruleset_id=i.mode,
+                rank=i.grade,
+                accuracy=i.acc / 100,
+                total_score=i.score,
+                ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S"),
+                max_combo=i.max_combo,
+                statistics=NewStatistics(
+                    miss=i.nmiss,
+                    perfect=i.ngeki,
+                    good=i.nkatu,
+                    meh=i.n50,
+                    ok=i.n100,
+                    great=i.n300,
+                ),
+                beatmap=UnifiedBeatmap(
+                    id=i.beatmap.id,
+                    set_id=i.beatmap.set_id,
+                    artist=i.beatmap.artist,
+                    title=i.beatmap.title,
+                    version=i.beatmap.version,
+                    creator=i.beatmap.creator,
+                    total_length=i.beatmap.total_length,
+                    mode=i.beatmap.mode,
+                    bpm=i.beatmap.bpm,
+                    cs=i.beatmap.cs,
+                    ar=i.beatmap.ar,
+                    hp=i.beatmap.hp,
+                    od=i.beatmap.od,
+                    stars=i.beatmap.diff,
+                ),
+            )
+            for i in data.scores
+        ]
 
 
 async def osu_api(
