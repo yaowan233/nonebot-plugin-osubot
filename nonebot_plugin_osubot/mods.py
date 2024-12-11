@@ -38,6 +38,13 @@ mods_dic = {
 }
 
 
+def get_mods(mods: int) -> list[Mod]:
+    dic = mods_dic.copy()
+    dic.pop("CL")
+    dic.pop("NO")
+    return [Mod(acronym=mod) for mod, bit in dic.items() if mods & bit]
+
+
 def get_mods_list(score_ls: list[NewScore], mods: list[str]) -> list[int]:
     if not mods:
         return list(range(len(score_ls)))

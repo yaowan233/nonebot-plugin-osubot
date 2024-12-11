@@ -42,6 +42,9 @@ def split_msg():
                 state["day"] = int(match[2])
             if match[3]:
                 state["range"] = match[3]
+            if match[4]:
+                source = {'sb': 'ppysb', 'ppysb': 'ppysb'}
+                state["source"] = source.get(match[4], 'osu')
             if match[6]:
                 state["query"].append(("title", match[5], match[6]))
             if match[8]:

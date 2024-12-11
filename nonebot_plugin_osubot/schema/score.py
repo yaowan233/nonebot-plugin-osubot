@@ -1,3 +1,4 @@
+import datetime
 from typing import Literal, Optional
 
 from pydantic.fields import Field
@@ -95,3 +96,34 @@ class NewScore(Base):
     rank_country: Optional[int] = None
     rank_global: Optional[int] = None
     user: Optional[UserCompact] = None
+
+
+class UnifiedBeatmap(Base):
+    id: int
+    set_id: int
+    artist: str
+    title: str
+    version: str
+    creator: str
+    total_length: int
+    mode: int
+    bpm: float
+    cs: float
+    od: float
+    ar: float
+    hp: float
+    stars: float
+
+
+class UnifiedScore(Base):
+    mods: list[Mod]
+    ruleset_id: int
+    rank: str
+    accuracy: float
+    total_score: int
+    legacy_total_score: Optional[int] = None
+    ended_at: datetime.datetime
+    max_combo: int
+    statistics: NewStatistics
+    beatmap: UnifiedBeatmap
+
