@@ -1,8 +1,6 @@
-import re
 import asyncio
 from io import BytesIO
 from typing import Union, Optional
-from difflib import SequenceMatcher
 from datetime import datetime, timedelta
 
 from PIL import ImageDraw, UnidentifiedImageError
@@ -12,81 +10,10 @@ from ..api import get_user_best
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
 from ..schema.score import Mod, UnifiedScore
-from .utils import draw_fillet, draw_fillet2
 from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
+from .utils import draw_fillet, draw_fillet2, filter_scores_with_regex
 from .static import BgImg, Image, BgImg1, ModsDict, RankDict, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25
-
-map_dict = {
-    "mapper": "creator",
-    "length": "total_length",
-    "acc": "accuracy",
-    "hp": "drain",
-    "star": "difficulty_rating",
-    "combo": "max_combo",
-    "keys": "cs",
-}
-
-
-def matches_condition_with_regex(score, key, operator, value):
-    """
-    匹配条件，支持正则与模糊搜索。
-    """
-    key = map_dict.get(key, key)
-    beatmap = getattr(score, "beatmap", None)
-    beatmapset = getattr(score, "beatmapset", None)
-    statistics = getattr(score, "statistics", None)
-    attr = getattr(score, key, None)
-    attr1 = getattr(beatmap, key, None)
-    attr2 = getattr(beatmapset, key, None)
-    attr3 = getattr(statistics, key, None)
-    if not bool(attr or attr1 or attr2 or attr3):
-        return False
-    if not attr and attr1:
-        attr = attr1
-    if not attr and attr2:
-        attr = attr2
-    if not attr and attr3:
-        attr = attr3
-    if key == "accuracy":
-        attr = float(attr) * 100
-    # 正则和模糊匹配
-    if isinstance(attr, str):
-        if operator == "=":
-            return attr.lower() == value.lower()
-        elif operator == "!=":
-            return attr.lower() != value.lower()
-        elif operator == "~":  # 正则匹配
-            return re.search(value, attr, re.IGNORECASE) is not None
-        elif operator == "~=":  # 模糊匹配
-            return SequenceMatcher(None, attr.lower(), value.lower()).ratio() >= 0.5
-
-    # 数值比较
-    elif isinstance(attr, (int, float)):
-        value = float(value)
-        if operator == ">":
-            return attr > value
-        elif operator == "<":
-            return attr < value
-        elif operator == ">=":
-            return attr >= value
-        elif operator == "<=":
-            return attr <= value
-        elif operator == "=":
-            return attr == value
-
-    return False
-
-
-def filter_scores_with_regex(scores_with_index, conditions):
-    """
-    根据动态条件过滤分数列表，支持正则与模糊搜索。
-    """
-    for key, operator, value in conditions:
-        scores_with_index = [
-            score for score in scores_with_index if matches_condition_with_regex(score, key, operator, value)
-        ]
-    return scores_with_index
 
 
 async def draw_bp(

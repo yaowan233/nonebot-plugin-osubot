@@ -9,7 +9,6 @@ from ..api import osu_api
 from ..info import get_bg
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
-from .bp import filter_scores_with_regex
 from ..beatmap_stats_moder import with_mods
 from ..schema import User, Beatmap, NewScore
 from ..schema.score import Mod, NewStatistics
@@ -26,6 +25,7 @@ from .utils import (
     calc_songlen,
     get_modeimage,
     open_user_icon,
+    filter_scores_with_regex,
 )
 from .static import (
     Image,

@@ -1,8 +1,10 @@
 import os
+import re
 import random
 import datetime
 from io import BytesIO
 from typing import Union, Optional
+from difflib import SequenceMatcher
 
 from matplotlib.figure import Figure
 from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
@@ -320,3 +322,75 @@ def draw_rounded_rectangle(
     draw.rectangle(
         [top_left[0], top_left[1] + corner_radius, bottom_right[0], bottom_right[1] - corner_radius], fill=fill
     )
+
+
+map_dict = {
+    "mapper": "creator",
+    "length": "total_length",
+    "acc": "accuracy",
+    "hp": "drain",
+    "star": "difficulty_rating",
+    "combo": "max_combo",
+    "keys": "cs",
+}
+
+
+def matches_condition_with_regex(score, key, operator, value):
+    """
+    匹配条件，支持正则与模糊搜索。
+    """
+    key = map_dict.get(key, key)
+    beatmap = getattr(score, "beatmap", None)
+    beatmapset = getattr(score, "beatmapset", None)
+    statistics = getattr(score, "statistics", None)
+    attr = getattr(score, key, None)
+    attr1 = getattr(beatmap, key, None)
+    attr2 = getattr(beatmapset, key, None)
+    attr3 = getattr(statistics, key, None)
+    if not bool(attr or attr1 or attr2 or attr3):
+        return False
+    if not attr and attr1:
+        attr = attr1
+    if not attr and attr2:
+        attr = attr2
+    if not attr and attr3:
+        attr = attr3
+    if key == "accuracy":
+        attr = float(attr) * 100
+    # 正则和模糊匹配
+    if isinstance(attr, str):
+        if operator == "=":
+            return attr.lower() == value.lower()
+        elif operator == "!=":
+            return attr.lower() != value.lower()
+        elif operator == "~":  # 正则匹配
+            return re.search(value, attr, re.IGNORECASE) is not None
+        elif operator == "~=":  # 模糊匹配
+            return SequenceMatcher(None, attr.lower(), value.lower()).ratio() >= 0.5
+
+    # 数值比较
+    elif isinstance(attr, (int, float)):
+        value = float(value)
+        if operator == ">":
+            return attr > value
+        elif operator == "<":
+            return attr < value
+        elif operator == ">=":
+            return attr >= value
+        elif operator == "<=":
+            return attr <= value
+        elif operator == "=":
+            return attr == value
+
+    return False
+
+
+def filter_scores_with_regex(scores_with_index, conditions):
+    """
+    根据动态条件过滤分数列表，支持正则与模糊搜索。
+    """
+    for key, operator, value in conditions:
+        scores_with_index = [
+            score for score in scores_with_index if matches_condition_with_regex(score, key, operator, value)
+        ]
+    return scores_with_index
