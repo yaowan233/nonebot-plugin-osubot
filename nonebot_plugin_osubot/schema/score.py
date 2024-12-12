@@ -126,3 +126,4 @@ class UnifiedScore(Base):
     max_combo: int
     statistics: NewStatistics
     beatmap: UnifiedBeatmap
+    passed: bool

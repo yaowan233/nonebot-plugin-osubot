@@ -93,6 +93,7 @@ async def get_user_best(
                 max_combo=i.max_combo,
                 statistics=i.statistics,
                 legacy_total_score=i.legacy_total_score,
+                passed=i.passed,
                 beatmap=UnifiedBeatmap(
                     id=i.beatmap_id,
                     set_id=i.beatmapset.id,
@@ -129,6 +130,7 @@ async def get_user_best(
                 total_score=i.score,
                 ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S"),
                 max_combo=i.max_combo,
+                passed=True,
                 statistics=NewStatistics(
                     miss=i.nmiss,
                     perfect=i.ngeki,
