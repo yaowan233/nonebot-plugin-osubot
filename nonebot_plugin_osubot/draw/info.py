@@ -30,7 +30,7 @@ from .static import (
 )
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> BytesIO:
+async def draw_info(uid: Union[int, str], mode: str, day: int, is_name: bool, source: str) -> BytesIO:
     info_json = await osu_api("info", uid, mode, is_name=is_name)
     info = User(**info_json)
     statistics = info.statistics
@@ -230,7 +230,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Bytes
         draw.text((380, 1305), current_time, font=Torus_Regular_25, anchor="la")
     # 头像
     gif_frames = []
-    user_icon = await open_user_icon(info)
+    user_icon = await open_user_icon(info, source)
     _ = asyncio.create_task(update_icon(info))
     if not getattr(user_icon, "is_animated", False):
         icon_bg = user_icon.convert("RGBA").resize((300, 300))

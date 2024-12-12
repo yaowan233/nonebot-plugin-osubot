@@ -49,3 +49,29 @@ class Score(BaseModel):
 class ScoresResponse(BaseModel):
     status: str
     scores: list[Score]
+
+
+class Info(BaseModel):
+    id: int
+    name: str
+    safe_name: str
+    priv: int
+    country: str
+    silence_end: int
+    donor_end: int
+    creation_time: int
+    latest_activity: int
+    clan_id: int
+    clan_priv: int
+    preferred_mode: int
+    play_style: int
+
+
+class Player(BaseModel):
+    info: Info
+    stats: dict
+
+
+class InfoResponse(BaseModel):
+    status: str
+    player: Player

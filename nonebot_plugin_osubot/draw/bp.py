@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from PIL import ImageDraw, UnidentifiedImageError
 
 from ..pp import cal_pp
-from ..api import get_user_best
 from ..mods import get_mods_list
+from ..api import get_user_scores
 from ..exceptions import NetworkError
 from ..schema.score import Mod, UnifiedScore
 from .score import cal_legacy_acc, cal_legacy_rank
@@ -30,7 +30,7 @@ async def draw_bp(
     username: str,
     source: str,
 ) -> BytesIO:
-    scores = await get_user_best(uid, mode, is_name=is_name, source=source, legacy_only=not is_lazer)
+    scores = await get_user_scores(uid, mode, "best", is_name=is_name, source=source, legacy_only=not is_lazer)
     if not is_lazer:
         scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
     if mods:

@@ -1,19 +1,19 @@
 import asyncio
 from io import BytesIO
 from typing import Optional
-from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence
 
-from ..api import osu_api
 from ..info import get_bg
 from ..mods import get_mods_list
+from ..schema.user import UnifedUser
 from ..exceptions import NetworkError
 from ..beatmap_stats_moder import with_mods
 from ..schema import User, Beatmap, NewScore
-from ..schema.score import Mod, NewStatistics
 from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
 from ..file import map_path, download_osu, user_cache_path
+from ..schema.score import Mod, UnifiedScore, NewStatistics
+from ..api import osu_api, get_user_scores, get_user_info_data
 from .utils import (
     crop_bg,
     draw_acc,
@@ -50,62 +50,49 @@ async def draw_score(
     mode: str,
     mods: Optional[list[str]],
     search_condition: list,
+    source: str = "osu",
     best: int = 0,
-    mapid: int = 0,
     is_name: bool = False,
 ) -> BytesIO:
-    task0 = asyncio.create_task(
-        osu_api(
-            project,
-            uid,
-            mode,
-            mapid,
-            is_name=is_name,
-            limit=100,
-            legacy_only=int(not is_lazer),
-        )
-    )
-    task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
-    score_json = await task0
+    task1 = asyncio.create_task(get_user_info_data(uid, mode, source, is_name=is_name))
+    if project == "bp":
+        scores = await get_user_scores(uid, mode, "best", is_name=is_name, source=source, legacy_only=not is_lazer)
+
+    else:
+        scores = await get_user_scores(uid, mode, "recent", is_name=is_name, source=source, legacy_only=not is_lazer)
+    if not scores:
+        raise NetworkError("未查询到游玩记录")
     if not is_lazer:
-        score_json = [i for i in score_json if {"acronym": "CL"} in i["mods"]]
+        scores = [i for i in scores if Mod(acronym="CL") in i["mods"]]
     if project in ("recent", "pr"):
-        if len(score_json) <= best:
+        if len(scores) <= best:
             raise NetworkError("未查询到游玩记录")
-        score_info = NewScore(**score_json[best])
+        score = scores[best]
     elif project == "bp":
-        score_ls = [NewScore(**i) for i in score_json]
         if search_condition:
-            score_ls = filter_scores_with_regex(score_ls, search_condition)
-        mods_ls = get_mods_list(score_ls, mods)
+            scores = filter_scores_with_regex(scores, search_condition)
+        mods_ls = get_mods_list(scores, mods)
         if len(mods_ls) < best:
             raise NetworkError("未查询到游玩记录")
-        score_info = NewScore(**score_json[mods_ls[best - 1]])
+        score = scores[mods_ls[best - 1]]
     else:
         raise Exception("Project Error")
     # 从官网获取信息
-    path = map_path / str(score_info.beatmap.beatmapset_id)
+    path = map_path / str(score.beatmap.set_id)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
-    osu = path / f"{score_info.beatmap.id}.osu"
-    task2 = asyncio.create_task(osu_api("map", map_id=score_info.beatmap.id))
+    osu = path / f"{score.beatmap.id}.osu"
+    task2 = asyncio.create_task(osu_api("map", map_id=score.beatmap.id))
     if not osu.exists():
-        await download_osu(score_info.beatmap.beatmapset_id, score_info.beatmap.id)
-    info_json = await task1
-    info = User(**info_json)
+        await download_osu(score.beatmap.set_id, score.beatmap.id)
+    info = await task1
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     # 判断是否开启lazer模式
-    score_info = cal_score_info(is_lazer, score_info)
-    return await draw_score_pic(
-        score_info,
-        info,
-        map_json,
-        "",
-        is_lazer,
-    )
+    score_info = cal_score_info(is_lazer, score)
+    return await draw_score_pic(score_info, info, map_json, "", is_lazer, source)
 
 
 async def get_score_data(
@@ -167,16 +154,10 @@ async def get_score_data(
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     score_info = cal_score_info(is_lazer, score_info)
-    return await draw_score_pic(
-        score_info,
-        info,
-        map_json,
-        grank,
-        is_lazer,
-    )
+    return await draw_score_pic(score_info, info, map_json, grank, is_lazer, "osu")
 
 
-async def draw_score_pic(score_info: NewScore, info, map_json, grank, is_lazer) -> BytesIO:
+async def draw_score_pic(score_info: UnifiedScore, info: UnifedUser, map_json, grank, is_lazer, source) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
@@ -392,9 +373,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank, is_lazer) 
     )
     # 时间
     draw.text((498, 341), "达成时间:", font=Torus_SemiBold_20, anchor="lm")
-    old_time = datetime.strptime(score_info.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-    new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
-    draw.text((630, 341), new_time, font=Torus_SemiBold_20, anchor="lm")
+    draw.text((630, 341), score_info.ended_at.strftime("%Y-%m-%d %H:%M:%S"), font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
     draw.text((583, 410), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="mm")
     # 左下玩家名
@@ -569,7 +548,7 @@ async def draw_score_pic(score_info: NewScore, info, map_json, grank, is_lazer) 
             font=Torus_Regular_30,
             anchor="mm",
         )
-    user_icon = await open_user_icon(info)
+    user_icon = await open_user_icon(info, source)
     _ = asyncio.create_task(update_map(mapinfo.beatmapset_id, mapinfo.id))
     _ = asyncio.create_task(update_icon(info))
     gif_frames = []
