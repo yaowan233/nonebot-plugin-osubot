@@ -63,7 +63,7 @@ async def draw_bp(
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, username, scores, score_ls_filtered, mode, is_lazer, low_bound, high_bound, day)
+    msg = await draw_pfm(project, username, scores, score_ls_filtered, mode, low_bound, high_bound, day, is_lazer)
     return msg
 
 
