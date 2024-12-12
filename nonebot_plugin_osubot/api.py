@@ -133,7 +133,7 @@ async def get_user_scores(
                 rank=i.grade,
                 accuracy=i.acc / 100,
                 total_score=i.score,
-                ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S"),
+                ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
                 max_combo=i.max_combo,
                 passed=True,
                 statistics=NewStatistics(
