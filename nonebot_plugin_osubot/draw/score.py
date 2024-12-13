@@ -141,23 +141,23 @@ async def get_score_data(
     if not score_ls:
         raise NetworkError("未查询到游玩记录")
     if mods:
-        for score in score_ls:
-            if mods == "NM" and not score.mods:
-                score_info = score
+        for i in score_ls:
+            if mods == "NM" and not i.mods:
+                score = i
                 break
-            if score.mods == [Mod(acronym=i) for i in mods]:
-                score_info = score
+            if i.mods == [Mod(acronym=j) for j in mods]:
+                score = i
                 break
         else:
             score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
-            for score in score_ls:
-                if set(mods).issubset(i.acronym for i in score.mods):
-                    score_info = score
+            for i in score_ls:
+                if set(mods).issubset(mod.acronym for mod in i.mods):
+                    score = i
                     break
             else:
                 raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
     else:
-        score_info = score_ls[0]
+        score = score_ls[0]
     map_json = await task2
     path = map_path / str(map_json["beatmapset_id"])
     if not path.exists():
