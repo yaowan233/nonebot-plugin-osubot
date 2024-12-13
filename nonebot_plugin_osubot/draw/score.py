@@ -108,8 +108,8 @@ async def draw_score(
     map_json = await task2
     # 判断是否开启lazer模式
     if source == "osu":
-        score_info = cal_score_info(is_lazer, score)
-    return await draw_score_pic(score_info, info, map_json, "", is_lazer, source)
+        score = cal_score_info(is_lazer, score)
+    return await draw_score_pic(score, info, map_json, "", is_lazer, source)
 
 
 async def get_score_data(
@@ -172,8 +172,8 @@ async def get_score_data(
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     if source == "osu":
-        score_info = cal_score_info(is_lazer, score)
-    return await draw_score_pic(score_info, info, map_json, grank, is_lazer, "osu")
+        score = cal_score_info(is_lazer, score)
+    return await draw_score_pic(score, info, map_json, grank, is_lazer, "osu")
 
 
 async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, is_lazer, source) -> BytesIO:
