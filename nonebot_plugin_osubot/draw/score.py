@@ -613,12 +613,16 @@ def cal_legacy_acc(statistics: NewStatistics) -> float:
     if num == 0:
         return 1
     return (
-        statistics.perfect * 300
-        + statistics.great * 300
-        + statistics.good * 200
-        + statistics.ok * 100
-        + statistics.meh * 50
-    ) / (num * 300)
+        (
+            statistics.perfect * 300
+            + statistics.great * 300
+            + statistics.good * 200
+            + statistics.ok * 100
+            + statistics.meh * 50
+        )
+        / (num * 300)
+        * 100
+    )
 
 
 def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
@@ -646,25 +650,25 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
         return "XH" if is_hidden else "X"
 
     if score_info.ruleset_id == 3:
-        if score_info.accuracy >= 0.95:
+        if score_info.accuracy >= 95:
             return "SH" if is_hidden else "S"
-        elif score_info.accuracy >= 0.9:
+        elif score_info.accuracy >= 90:
             return "A"
-        elif score_info.accuracy >= 0.8:
+        elif score_info.accuracy >= 80:
             return "B"
-        elif score_info.accuracy >= 0.7:
+        elif score_info.accuracy >= 70:
             return "C"
         else:
             return "D"
 
     elif score_info.ruleset_id == 2:
-        if score_info.accuracy >= 0.98:
+        if score_info.accuracy >= 98:
             return "SH" if is_hidden else "S"
-        elif score_info.accuracy >= 0.94:
+        elif score_info.accuracy >= 94:
             return "A"
-        elif score_info.accuracy >= 0.9:
+        elif score_info.accuracy >= 90:
             return "B"
-        elif score_info.accuracy >= 0.85:
+        elif score_info.accuracy >= 85:
             return "C"
         else:
             return "D"

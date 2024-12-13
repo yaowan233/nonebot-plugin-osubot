@@ -89,7 +89,7 @@ async def get_user_scores(
             uid = await get_uid_by_name(uid)
         url = (
             f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={limit}&legacy_only={legacy_only}"
-            f"&offset={offset}&include_fails={include_failed}"
+            f"&offset={offset}&include_fails={int(include_failed)}"
         )
         data = await make_request(url, await get_headers(), "未找到该玩家BP")
         scores = [NewScore(**i) for i in data]
@@ -129,7 +129,7 @@ async def get_user_scores(
     elif source == "ppysb":
         if is_name:
             uid = await get_ppysb_uid(uid)
-        url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={include_failed}"
+        url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={int(include_failed)}"
         data = await make_request(url, {}, "未找到该玩家BP")
         data = ScoresResponse(**data)
         return [
