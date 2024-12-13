@@ -360,7 +360,7 @@ def matches_condition_with_regex(score, key, operator, value):
     if not attr and attr3:
         attr = attr3
     if key == "accuracy":
-        attr = float(attr) * 100
+        attr = float(attr)
     # 正则和模糊匹配
     if isinstance(attr, str):
         if operator == "=":

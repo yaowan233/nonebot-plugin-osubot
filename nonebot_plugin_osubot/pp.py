@@ -12,7 +12,7 @@ def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> PerformanceAttribu
     beatmap = Beatmap(path=path)
     convert_mode(score, beatmap)
     c = Performance(
-        accuracy=score.accuracy * 100,
+        accuracy=score.accuracy,
         n_katu=score.statistics.good,
         n_geki=score.statistics.perfect,
         combo=score.max_combo,

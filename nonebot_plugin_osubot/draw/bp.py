@@ -191,7 +191,7 @@ async def draw_pfm(
         # acc
         draw.text(
             (680 + offset, 210 + h_num),
-            f"{bp.accuracy * 100:.2f}%",
+            f"{bp.accuracy:.2f}%",
             font=Torus_SemiBold_25,
             anchor="rm",
             fill=(238, 171, 0, 255),
