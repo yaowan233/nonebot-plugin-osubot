@@ -85,7 +85,7 @@ class User(UserCompact):
     statistics_rulesets: Optional[StatisticsRulesets] = None
 
 
-class UnifedUser(Base):
+class UnifiedUser(Base):
     avatar_url: str
     country_code: str
     id: int

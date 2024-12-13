@@ -18,7 +18,7 @@ from .network.first_response import get_first_response
 from .schema.ppysb import InfoResponse, ScoresResponse
 from .schema import User, NewScore, SayoBeatmap, RecommendData
 from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap
-from .schema.user import Level, UnifedUser, GradeCounts, UserStatistics
+from .schema.user import Level, GradeCounts, UnifiedUser, UserStatistics
 
 api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"
@@ -171,13 +171,13 @@ async def get_user_scores(
         ]
 
 
-async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu", is_name: bool = 0) -> UnifedUser:
+async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu", is_name: bool = 0) -> UnifiedUser:
     if source == "osu":
         if is_name:
             uid = await get_uid_by_name(uid)
         url = f"{api}/users/{uid}/{mode}"
         data = await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID")
-        return UnifedUser(**data)
+        return UnifiedUser(**data)
 
     elif source == "ppysb":
         if is_name:
@@ -186,7 +186,7 @@ async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu
             url = f"https://api.ppy.sb/v1/get_player_info?scope=all&id={uid}"
         data = await make_request(url, {}, "未找到该玩家，请确认玩家ID")
         data = InfoResponse(**data)
-        info_data = UnifedUser(
+        info_data = UnifiedUser(
             avatar_url=f"https://a.ppy.sb/{data.player.info.id}",
             country_code=data.player.info.country,
             id=data.player.info.id,

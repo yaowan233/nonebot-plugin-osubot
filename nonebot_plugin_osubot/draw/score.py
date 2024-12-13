@@ -6,8 +6,8 @@ from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence
 
 from ..info import get_bg
 from ..mods import get_mods_list
-from ..schema.user import UnifedUser
 from ..exceptions import NetworkError
+from ..schema.user import UnifiedUser
 from ..beatmap_stats_moder import with_mods
 from ..schema import User, Beatmap, NewScore
 from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
@@ -107,7 +107,8 @@ async def draw_score(
         user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     # 判断是否开启lazer模式
-    score_info = cal_score_info(is_lazer, score)
+    if source == "osu":
+        score_info = cal_score_info(is_lazer, score)
     return await draw_score_pic(score_info, info, map_json, "", is_lazer, source)
 
 
@@ -118,6 +119,7 @@ async def get_score_data(
     mods: Optional[list[str]],
     mapid: int = 0,
     is_name: bool = False,
+    source: str = "osu",
 ) -> BytesIO:
     grank = ""
     if mods:
@@ -169,11 +171,12 @@ async def get_score_data(
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
-    score_info = cal_score_info(is_lazer, score_info)
+    if source == "osu":
+        score_info = cal_score_info(is_lazer, score)
     return await draw_score_pic(score_info, info, map_json, grank, is_lazer, "osu")
 
 
-async def draw_score_pic(score_info: UnifiedScore, info: UnifedUser, map_json, grank, is_lazer, source) -> BytesIO:
+async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, is_lazer, source) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)

@@ -9,7 +9,8 @@ from difflib import SequenceMatcher
 from matplotlib.figure import Figure
 from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
 
-from ..schema import User, SeasonalBackgrounds
+from ..schema.user import UnifiedUser
+from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
 from .static import Path, Image, Stars, ColorArr, np, osufile
 from ..file import map_path, download_osu, get_projectimg, user_cache_path
@@ -225,7 +226,7 @@ def calc_songlen(length: int) -> str:
     return music_len
 
 
-async def open_user_icon(info: User, source) -> Image:
+async def open_user_icon(info: UnifiedUser, source) -> Image:
     path = user_cache_path / str(info.id)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -252,7 +253,7 @@ def is_close(n1, n2) -> bool:
     return False
 
 
-async def update_icon(info: User):
+async def update_icon(info: UnifiedUser):
     path = user_cache_path / str(info.id)
     for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
