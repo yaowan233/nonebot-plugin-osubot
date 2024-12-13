@@ -91,4 +91,5 @@ class UnifedUser(Base):
     id: int
     username: str
     is_supporter: bool
+    badges: Optional[list[Badge]] = None
     statistics: Optional[UserStatistics] = None
