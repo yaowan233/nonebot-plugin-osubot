@@ -80,11 +80,15 @@ async def get_user_scores(
     source: str = "osu",
     legacy_only: bool = 0,
     is_name: bool = 0,
+    include_failed: bool = True,
+    offset: int = 0,
+    limit: int = 100,
 ) -> list[UnifiedScore]:
     if source == "osu":
         if is_name:
             uid = await get_uid_by_name(uid)
-        url = f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit=100&legacy_only={legacy_only}"
+        url = (f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={limit}&legacy_only={legacy_only}"
+               f"&offset={offset}&include_fails={include_failed}")
         data = await make_request(url, await get_headers(), "未找到该玩家BP")
         scores = [NewScore(**i) for i in data]
         unified_scores = [
@@ -123,7 +127,7 @@ async def get_user_scores(
     elif source == "ppysb":
         if is_name:
             uid = await get_ppysb_uid(uid)
-        url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit=100"
+        url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={include_failed}"
         data = await make_request(url, {}, "未找到该玩家BP")
         data = ScoresResponse(**data)
         return [
@@ -131,7 +135,7 @@ async def get_user_scores(
                 mods=get_mods(i.mods),
                 ruleset_id=i.mode,
                 rank=i.grade,
-                accuracy=i.acc / 100,
+                accuracy=i.acc,
                 total_score=i.score,
                 ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
                 max_combo=i.max_combo,

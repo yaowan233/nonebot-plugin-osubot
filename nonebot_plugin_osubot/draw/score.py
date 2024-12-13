@@ -51,23 +51,39 @@ async def draw_score(
     mods: Optional[list[str]],
     search_condition: list,
     source: str = "osu",
-    best: int = 0,
+    best: int = 1,
     is_name: bool = False,
 ) -> BytesIO:
     task1 = asyncio.create_task(get_user_info_data(uid, mode, source, is_name=is_name))
     if project == "bp":
-        scores = await get_user_scores(uid, mode, "best", is_name=is_name, source=source, legacy_only=not is_lazer)
+        scores = await get_user_scores(
+            uid, mode, "best", is_name=is_name, source=source, legacy_only=not is_lazer, limit=best
+        )
 
     else:
-        scores = await get_user_scores(uid, mode, "recent", is_name=is_name, source=source, legacy_only=not is_lazer)
+        if project == "pr":
+            scores = await get_user_scores(
+                uid,
+                mode,
+                "recent",
+                is_name=is_name,
+                source=source,
+                legacy_only=not is_lazer,
+                include_failed=False,
+                limit=best,
+            )
+        else:
+            scores = await get_user_scores(
+                uid, mode, "recent", is_name=is_name, source=source, legacy_only=not is_lazer, limit=best
+            )
     if not scores:
         raise NetworkError("未查询到游玩记录")
     if not is_lazer:
-        scores = [i for i in scores if Mod(acronym="CL") in i["mods"]]
+        scores = [i for i in scores if Mod(acronym="CL") in i.mods]
     if project in ("recent", "pr"):
-        if len(scores) <= best:
+        if len(scores) < best:
             raise NetworkError("未查询到游玩记录")
-        score = scores[best]
+        score = scores[best - 1]
     elif project == "bp":
         if search_condition:
             scores = filter_scores_with_regex(scores, search_condition)
@@ -394,7 +410,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifedUser, map_json, g
         draw.text((960, 645), f"{pp_info.pp_accuracy:.0f}", font=Torus_Regular_30, anchor="mm")
         draw.text(
             (1157, 550),
-            f"{score_info.accuracy * 100:.2f}%",
+            f"{score_info.accuracy:.2f}%",
             font=Torus_Regular_30,
             anchor="mm",
         )
@@ -431,7 +447,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifedUser, map_json, g
     elif score_info.ruleset_id == 1:
         draw.text(
             (1118, 550),
-            f"{score_info.accuracy * 100:.2f}%",
+            f"{score_info.accuracy:.2f}%",
             font=Torus_Regular_30,
             anchor="mm",
         )
@@ -458,7 +474,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifedUser, map_json, g
     elif score_info.ruleset_id == 2:
         draw.text(
             (1083, 550),
-            f"{score_info.accuracy * 100:.2f}%",
+            f"{score_info.accuracy:.2f}%",
             font=Torus_Regular_30,
             anchor="mm",
         )
@@ -506,7 +522,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifedUser, map_json, g
         )
         draw.text(
             (1002, 550),
-            f"{score_info.accuracy * 100:.2f}%",
+            f"{score_info.accuracy:.2f}%",
             font=Torus_Regular_30,
             anchor="mm",
         )
@@ -605,7 +621,7 @@ def cal_legacy_acc(statistics: NewStatistics) -> float:
     ) / (num * 300)
 
 
-def cal_legacy_rank(score_info: NewScore, is_hidden: bool):
+def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
     if not score_info.passed:
         return "F"
     great = score_info.statistics.great or 0
@@ -681,7 +697,7 @@ def cal_legacy_rank(score_info: NewScore, is_hidden: bool):
         return "N/A"
 
 
-def cal_score_info(is_lazer: bool, score_info: NewScore) -> NewScore:
+def cal_score_info(is_lazer: bool, score_info: UnifiedScore) -> UnifiedScore:
     if is_lazer:
         score_info.legacy_total_score = score_info.total_score
     if not is_lazer and Mod(acronym="CL") in score_info.mods:

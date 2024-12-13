@@ -5,11 +5,10 @@ from datetime import date, datetime, timedelta
 
 from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
-from ..schema import User
 from ..utils import FGM, GMN
 from ..exceptions import NetworkError
 from ..database.models import InfoData
-from ..api import osu_api, get_random_bg
+from ..api import get_random_bg, get_user_info_data
 from .utils import info_calc, draw_fillet, update_icon, open_user_icon
 from ..file import user_cache_path, badge_cache_path, make_badge_cache_file
 from .static import (
@@ -31,8 +30,7 @@ from .static import (
 
 
 async def draw_info(uid: Union[int, str], mode: str, day: int, is_name: bool, source: str) -> BytesIO:
-    info_json = await osu_api("info", uid, mode, is_name=is_name)
-    info = User(**info_json)
+    info = await get_user_info_data(uid, mode, source, is_name)
     statistics = info.statistics
     if statistics.play_count == 0:
         raise NetworkError(f"此玩家尚未游玩过{GMN[mode]}模式")

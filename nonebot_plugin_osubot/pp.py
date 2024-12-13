@@ -3,12 +3,12 @@ import importlib.metadata
 
 from rosu_pp_py import Beatmap, Strains, GameMode, Performance, PerformanceAttributes
 
-from .schema import NewScore
+from .schema.score import UnifiedScore
 
 is_v2 = importlib.metadata.version("pydantic").startswith("2")
 
 
-def cal_pp(score: NewScore, path: str, is_lazer: bool) -> PerformanceAttributes:
+def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> PerformanceAttributes:
     beatmap = Beatmap(path=path)
     convert_mode(score, beatmap)
     c = Performance(
@@ -29,7 +29,7 @@ def cal_pp(score: NewScore, path: str, is_lazer: bool) -> PerformanceAttributes:
     return c.calculate(beatmap)
 
 
-def get_if_pp_ss_pp(score: NewScore, path: str, is_lazer: bool) -> tuple:
+def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
     beatmap = Beatmap(path=path)
     convert_mode(score, beatmap)
     total = beatmap.n_objects
@@ -73,7 +73,7 @@ def get_strains(path: str, mods: int) -> Strains:
     return strains
 
 
-def convert_mode(score: NewScore, beatmap: Beatmap):
+def convert_mode(score: UnifiedScore, beatmap: Beatmap):
     if score.ruleset_id == 0:
         mode = GameMode.Osu
     elif score.ruleset_id == 1:
@@ -85,5 +85,5 @@ def convert_mode(score: NewScore, beatmap: Beatmap):
     beatmap.convert(mode)
 
 
-def cal_lazer(score: NewScore, is_lazer: bool):
+def cal_lazer(score: UnifiedScore, is_lazer: bool):
     return is_lazer and not any(mod.acronym == "CL" for mod in score.mods)

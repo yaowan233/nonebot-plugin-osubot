@@ -82,7 +82,6 @@ def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: 
 
 
 def draw_acc(img: Image, acc: float, mode: int):
-    acc *= 100
     size = [acc, 100 - acc]
     if mode == 0:
         insize = [60, 20, 7, 7, 5, 1]

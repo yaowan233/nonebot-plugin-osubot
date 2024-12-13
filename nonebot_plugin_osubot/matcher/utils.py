@@ -28,6 +28,7 @@ def split_msg():
         state["range"] = None
         state["day"] = 0
         state["is_name"] = False
+        state["source"] = "osu"
         state["query"] = []
         state["target"] = None
         state["is_lazer"] = True if not user_data else user_data.lazer_mode

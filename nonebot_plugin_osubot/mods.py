@@ -1,5 +1,4 @@
-from .schema import NewScore
-from .schema.score import Mod
+from .schema.score import Mod, UnifiedScore
 
 mods_dic = {
     "CL": 0,
@@ -45,7 +44,7 @@ def get_mods(mods: int) -> list[Mod]:
     return [Mod(acronym=mod) for mod, bit in dic.items() if mods & bit] + [Mod(acronym="CL")]
 
 
-def get_mods_list(score_ls: list[NewScore], mods: list[str]) -> list[int]:
+def get_mods_list(score_ls: list[UnifiedScore], mods: list[str]) -> list[int]:
     if not mods:
         return list(range(len(score_ls)))
     mods_index_ls = []
