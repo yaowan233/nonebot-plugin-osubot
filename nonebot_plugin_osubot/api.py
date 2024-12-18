@@ -88,7 +88,7 @@ async def get_user_scores(
         if is_name:
             uid = await get_uid_by_name(uid)
         url = (
-            f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={limit}&legacy_only={legacy_only}"
+            f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={limit}&legacy_only={int(legacy_only)}"
             f"&offset={offset}&include_fails={int(include_failed)}"
         )
         data = await make_request(url, await get_headers(), "未找到该玩家BP")
