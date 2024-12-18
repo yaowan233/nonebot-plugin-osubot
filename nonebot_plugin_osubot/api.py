@@ -81,7 +81,7 @@ async def osu_api(
     # 获取用户 ID
     if is_name:
         uid = await get_uid_by_name(uid)
-    base_url = f"{api}/users/{uid}"
+    base_url = f"{api}/users/@{uid}"
     query_params = {"limit": limit, "offset": offset, "legacy_only": legacy_only}
 
     if project == "recent":

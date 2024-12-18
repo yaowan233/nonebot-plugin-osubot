@@ -7,6 +7,7 @@ from nonebot.internal.adapter import Event, Message
 
 from ..database import UserData
 from ..info import bind_user_info
+from ..exceptions import NetworkError
 
 bind = on_command("bind", priority=11, block=True)
 unbind = on_command("unbind", priority=11, block=True)
@@ -21,7 +22,10 @@ async def _bind(event: Event, name: Message = CommandArg()):
     async with lock:
         if user := await UserData.get_or_none(user_id=event.get_user_id()):
             await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/unbind").finish(reply_to=True)
-        msg = await bind_user_info("bind", name, event.get_user_id(), True)
+        try:
+            msg = await bind_user_info("bind", name, event.get_user_id(), True)
+        except NetworkError:
+            await UniMessage.text(f"绑定失败，找不到叫 {name} 的人哦").finish(reply_to=True)
     await UniMessage.text(msg).finish(reply_to=True)
 
 
