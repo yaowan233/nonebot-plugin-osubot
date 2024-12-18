@@ -39,7 +39,6 @@ async def _(event: Event, state: T_State):
             "bp",
             uid,
             NGM[state["mode"]],
-            is_name=state["is_name"],
             legacy_only=int(not user.lazer_mode),
         )
     except NetworkError as e:

@@ -37,7 +37,6 @@ async def _bp(state: T_State):
             state["query"],
             state["source"],
             best=best,
-            is_name=state["is_name"],
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
@@ -68,7 +67,6 @@ async def _pfm(state: T_State):
             low,
             high,
             state["day"],
-            state["is_name"],
             state["query"],
             state["username"],
             state["source"],
@@ -103,7 +101,6 @@ async def _tbp(state: T_State):
             low,
             high,
             state["day"],
-            state["is_name"],
             state["query"],
             state["username"],
             state["source"],

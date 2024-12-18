@@ -8,12 +8,12 @@ from ..info import get_bg
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
+from ..schema import Beatmap, NewScore
 from ..beatmap_stats_moder import with_mods
-from ..schema import User, Beatmap, NewScore
 from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
 from ..file import map_path, download_osu, user_cache_path
 from ..schema.score import Mod, UnifiedScore, NewStatistics
-from ..api import osu_api, get_user_scores, get_user_info_data
+from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores, convert_to_unified_score
 from .utils import (
     crop_bg,
     draw_acc,
@@ -52,13 +52,10 @@ async def draw_score(
     search_condition: list,
     source: str = "osu",
     best: int = 1,
-    is_name: bool = False,
 ) -> BytesIO:
-    task1 = asyncio.create_task(get_user_info_data(uid, mode, source, is_name=is_name))
+    task1 = asyncio.create_task(get_user_info_data(uid, mode, source))
     if project == "bp":
-        scores = await get_user_scores(
-            uid, mode, "best", is_name=is_name, source=source, legacy_only=not is_lazer, limit=best
-        )
+        scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer, limit=best)
 
     else:
         if project == "pr":
@@ -66,16 +63,13 @@ async def draw_score(
                 uid,
                 mode,
                 "recent",
-                is_name=is_name,
                 source=source,
                 legacy_only=not is_lazer,
                 include_failed=False,
                 limit=best,
             )
         else:
-            scores = await get_user_scores(
-                uid, mode, "recent", is_name=is_name, source=source, legacy_only=not is_lazer, limit=best
-            )
+            scores = await get_user_scores(uid, mode, "recent", source=source, legacy_only=not is_lazer, limit=best)
     if not scores:
         raise NetworkError("未查询到游玩记录")
     if not is_lazer:
@@ -118,22 +112,23 @@ async def get_score_data(
     mode: Optional[str],
     mods: Optional[list[str]],
     mapid: int = 0,
-    is_name: bool = False,
     source: str = "osu",
 ) -> BytesIO:
     grank = ""
-    if mods:
-        task0 = asyncio.create_task(osu_api("score", uid, mode, mapid, is_name=is_name))
+    task = asyncio.create_task(get_user_info_data(uid, mode, source))
+    map_json = await osu_api("map", map_id=mapid)
+    if source == "osu":
+        if mods:
+            score_json = await osu_api("score", uid, mode, mapid)
+            score_ls = [NewScore(**i) for i in score_json["scores"]]
+            score_ls = convert_to_unified_score(score_ls)
+        else:
+            score_json = await osu_api("best_score", uid, mode, mapid)
+            grank = score_json.get("position", "")
+            score_ls = [NewScore(**score_json["score"])]
+            score_ls = convert_to_unified_score(score_ls)
     else:
-        task0 = asyncio.create_task(osu_api("best_score", uid, mode, mapid, is_name=is_name))
-    task1 = asyncio.create_task(osu_api("info", uid, mode, is_name=is_name))
-    task2 = asyncio.create_task(osu_api("map", map_id=mapid))
-    score_json = await task0
-    if not mods:
-        grank = score_json.get("position", "")
-        score_ls = [NewScore(**score_json["score"])]
-    else:
-        score_ls = [NewScore(**i) for i in score_json["scores"]]
+        score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
     if not is_lazer:
         score_ls = [i for i in score_ls if Mod(acronym="CL") in i.mods]
         for i in score_ls:
@@ -142,14 +137,14 @@ async def get_score_data(
         raise NetworkError("未查询到游玩记录")
     if mods:
         for i in score_ls:
-            if mods == "NM" and not i.mods:
+            if mods == ["NM"] and not i.mods:
                 score = i
                 break
             if i.mods == [Mod(acronym=j) for j in mods]:
                 score = i
                 break
         else:
-            score_ls.sort(key=lambda x: x.legacy_total_score, reverse=True)
+            score_ls.sort(key=lambda x: x.total_score, reverse=True)
             for i in score_ls:
                 if set(mods).issubset(mod.acronym for mod in i.mods):
                     score = i
@@ -157,23 +152,22 @@ async def get_score_data(
             else:
                 raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
     else:
+        score_ls.sort(key=lambda x: x.total_score, reverse=True)
         score = score_ls[0]
-    map_json = await task2
     path = map_path / str(map_json["beatmapset_id"])
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(map_json["beatmapset_id"], mapid)
-    info_json = await task1
-    info = User(**info_json)
+    info = await task
     user_path = user_cache_path / str(info.id)
     if not user_path.exists():
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score)
-    return await draw_score_pic(score, info, map_json, grank, is_lazer, "osu")
+    return await draw_score_pic(score, info, map_json, grank, is_lazer, source)
 
 
 async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, is_lazer, source) -> BytesIO:

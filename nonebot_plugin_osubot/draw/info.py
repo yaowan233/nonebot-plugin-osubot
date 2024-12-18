@@ -29,8 +29,8 @@ from .static import (
 )
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, is_name: bool, source: str) -> BytesIO:
-    info = await get_user_info_data(uid, mode, source, is_name)
+async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> BytesIO:
+    info = await get_user_info_data(uid, mode, source)
     statistics = info.statistics
     if statistics.play_count == 0:
         raise NetworkError(f"此玩家尚未游玩过{GMN[mode]}模式")

@@ -21,9 +21,9 @@ async def _score(state: T_State):
             state["user"],
             state["is_lazer"],
             NGM[state["mode"]],
-            mapid=state["target"],
-            mods=state["mods"],
-            is_name=state["is_name"],
+            state["mods"],
+            state["target"],
+            state["source"],
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"

@@ -6,6 +6,8 @@ from nonebot.params import T_State, CommandArg
 from nonebot.internal.adapter import Event, Message
 
 from ..utils import mods2list
+from ..api import get_uid_by_name
+from ..exceptions import NetworkError
 from ..database.models import UserData
 
 pattern = (
@@ -27,7 +29,6 @@ def split_msg():
         state["mods"] = []
         state["range"] = None
         state["day"] = 0
-        state["is_name"] = False
         state["source"] = "osu"
         state["query"] = []
         state["target"] = None
@@ -63,9 +64,12 @@ def split_msg():
             state["target"] = last_match
             arg = re.sub(r"(?<=\s)\d+(?=\s|$)", "", arg)
         if arg.strip():
-            state["user"] = arg.strip()
             state["username"] = arg.strip()
-            state["is_name"] = True
+            try:
+                user = await get_uid_by_name(arg.strip(), state["source"])
+                state["user"] = user
+            except NetworkError:
+                state["error"] = f"没有找到用户: {arg.strip()}"
         if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
             state["error"] = "模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania"
         if isinstance(state["day"], str) and (not state["day"].isdigit() or int(state["day"]) < 0):

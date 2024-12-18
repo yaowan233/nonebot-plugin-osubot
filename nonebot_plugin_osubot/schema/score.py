@@ -125,5 +125,5 @@ class UnifiedScore(Base):
     ended_at: datetime.datetime
     max_combo: int
     statistics: NewStatistics
-    beatmap: UnifiedBeatmap
+    beatmap: Optional[UnifiedBeatmap] = None
     passed: bool

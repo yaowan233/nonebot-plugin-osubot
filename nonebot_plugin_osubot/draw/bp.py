@@ -25,12 +25,11 @@ async def draw_bp(
     low_bound: int,
     high_bound: int,
     day: int,
-    is_name: bool,
     search_condition: list,
     username: str,
     source: str,
 ) -> BytesIO:
-    scores = await get_user_scores(uid, mode, "best", is_name=is_name, source=source, legacy_only=not is_lazer)
+    scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
     if not is_lazer:
         scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
     if mods:

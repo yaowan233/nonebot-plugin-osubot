@@ -105,7 +105,7 @@ async def _(
         selected_user = user_data.osu_name
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=state["is_name"])
+            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]])
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
@@ -390,7 +390,7 @@ async def _(
         selected_user = user_data.osu_name
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=state["is_name"])
+            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]])
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
@@ -471,7 +471,7 @@ async def _(
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]], is_name=state["is_name"])
+            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]])
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True

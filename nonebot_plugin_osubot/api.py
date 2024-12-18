@@ -15,9 +15,9 @@ from .mods import get_mods
 from .network import auto_retry
 from .exceptions import NetworkError
 from .network.first_response import get_first_response
-from .schema.ppysb import InfoResponse, ScoresResponse
 from .schema import User, NewScore, SayoBeatmap, RecommendData
 from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap
+from .schema.ppysb import InfoResponse, ScoresResponse, V2ScoresResponse
 from .schema.user import Level, GradeCounts, UnifiedUser, UserStatistics
 
 api = "https://osu.ppy.sh/api/v2"
@@ -79,56 +79,21 @@ async def get_user_scores(
     scope: str = Literal["recent", "best"],
     source: str = "osu",
     legacy_only: bool = 0,
-    is_name: bool = 0,
     include_failed: bool = True,
     offset: int = 0,
     limit: int = 100,
 ) -> list[UnifiedScore]:
     if source == "osu":
-        if is_name:
-            uid = await get_uid_by_name(uid)
         url = (
             f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={limit}&legacy_only={int(legacy_only)}"
             f"&offset={offset}&include_fails={int(include_failed)}"
         )
         data = await make_request(url, await get_headers(), "未找到该玩家BP")
         scores = [NewScore(**i) for i in data]
-        unified_scores = [
-            UnifiedScore(
-                mods=i.mods,
-                ruleset_id=i.ruleset_id,
-                rank=i.rank,
-                accuracy=i.accuracy * 100,
-                total_score=i.total_score,
-                ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-                max_combo=i.max_combo,
-                statistics=i.statistics,
-                legacy_total_score=i.legacy_total_score,
-                passed=i.passed,
-                beatmap=UnifiedBeatmap(
-                    id=i.beatmap_id,
-                    set_id=i.beatmapset.id,
-                    artist=i.beatmapset.artist,
-                    title=i.beatmapset.title,
-                    version=i.beatmap.version,
-                    creator=i.beatmapset.creator,
-                    total_length=i.beatmap.total_length,
-                    mode=i.beatmap.mode_int,
-                    bpm=i.beatmap.bpm,
-                    cs=i.beatmap.cs,
-                    ar=i.beatmap.ar,
-                    hp=i.beatmap.drain,
-                    od=i.beatmap.accuracy,
-                    stars=i.beatmap.difficulty_rating,
-                ),
-            )
-            for i in scores
-        ]
+        unified_scores = convert_to_unified_score(scores)
         return unified_scores
 
     elif source == "ppysb":
-        if is_name:
-            uid = await get_ppysb_uid(uid)
         url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={int(include_failed)}"
         data = await make_request(url, {}, "未找到该玩家BP")
         data = ScoresResponse(**data)
@@ -171,19 +136,48 @@ async def get_user_scores(
         ]
 
 
-async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu", is_name: bool = 0) -> UnifiedUser:
+def convert_to_unified_score(data: list[NewScore]) -> list[UnifiedScore]:
+    return [
+        UnifiedScore(
+            mods=i.mods,
+            ruleset_id=i.ruleset_id,
+            rank=i.rank,
+            accuracy=i.accuracy * 100,
+            total_score=i.total_score,
+            ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+            max_combo=i.max_combo,
+            statistics=i.statistics,
+            legacy_total_score=i.legacy_total_score,
+            passed=i.passed,
+            beatmap=UnifiedBeatmap(
+                id=i.beatmap_id,
+                set_id=i.beatmapset.id,
+                artist=i.beatmapset.artist,
+                title=i.beatmapset.title,
+                version=i.beatmap.version,
+                creator=i.beatmapset.creator,
+                total_length=i.beatmap.total_length,
+                mode=i.beatmap.mode_int,
+                bpm=i.beatmap.bpm,
+                cs=i.beatmap.cs,
+                ar=i.beatmap.ar,
+                hp=i.beatmap.drain,
+                od=i.beatmap.accuracy,
+                stars=i.beatmap.difficulty_rating,
+            ),
+        )
+        for i in data
+    ]
+
+
+async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu") -> UnifiedUser:
     if source == "osu":
-        if is_name:
-            uid = await get_uid_by_name(uid)
         url = f"{api}/users/{uid}/{mode}"
         data = await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID")
         return UnifiedUser(**data)
 
     elif source == "ppysb":
-        if is_name:
-            url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={uid}"
-        else:
-            url = f"https://api.ppy.sb/v1/get_player_info?scope=all&id={uid}"
+        url = f"https://api.ppy.sb/v1/get_player_info?scope=all&id={uid}"
         data = await make_request(url, {}, "未找到该玩家，请确认玩家ID")
         data = InfoResponse(**data)
         info_data = UnifiedUser(
@@ -229,19 +223,44 @@ def parse_statistics(data: InfoResponse, mode):
     )
 
 
+async def get_ppysb_map_scores(map_md5: str, uid: Union[int, str], mode: str):
+    url = f"https://api.ppy.sb/v2/scores?user_id={uid}&mode={FGM[mode]}&map_md5={map_md5}"
+    data = await make_request(url, {}, "未找到该玩家成绩")
+    data = V2ScoresResponse(**data)
+    return [
+        UnifiedScore(
+            mods=get_mods(i.mods),
+            ruleset_id=i.mode,
+            rank=i.grade,
+            accuracy=i.acc,
+            total_score=i.score,
+            ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+            max_combo=i.max_combo,
+            passed=True,
+            statistics=NewStatistics(
+                miss=i.nmiss,
+                perfect=i.ngeki,
+                good=i.nkatu,
+                meh=i.n50,
+                ok=i.n100,
+                great=i.n300,
+            ),
+            beatmap=None,
+        )
+        for i in data.data
+    ]
+
+
 async def osu_api(
     project: str,
     uid: int = 0,
     mode: str = None,
     map_id: int = 0,
-    is_name: bool = False,
     offset: int = 0,
     limit: int = 5,
     legacy_only: int = 0,
 ) -> dict:
     # 获取用户 ID
-    if is_name:
-        uid = await get_uid_by_name(uid)
     base_url = f"{api}/users/{uid}"
     query_params = {"limit": limit, "offset": offset, "legacy_only": legacy_only}
 
@@ -300,9 +319,14 @@ async def make_request(url: str, headers: dict, error_message: str) -> dict:
     raise NetworkError(f"出现了未意料的响应码 {req.status_code}")
 
 
-async def get_uid_by_name(uid: str) -> int:
-    info = await get_user_info(f"{api}/users/@{uid}")
-    return info["id"]
+async def get_uid_by_name(name: str, source: str) -> int:
+    if source == "osu":
+        info = await get_user_info(f"{api}/users/@{name}")
+        return info["id"]
+    else:
+        url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={name}"
+        data = await make_request(url, {}, "未找到该玩家，请确认玩家ID是否正确")
+        return data["player"]["info"]["id"]
 
 
 async def get_ppysb_uid(name: str) -> int:

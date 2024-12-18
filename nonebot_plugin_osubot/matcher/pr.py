@@ -32,7 +32,6 @@ async def _recent(event: Event, state: T_State):
                 "recent",
                 state["source"],
                 not player.lazer_mode,
-                state["is_name"],
                 True,
                 int(low) - 1,
                 high,
@@ -62,7 +61,6 @@ async def _recent(event: Event, state: T_State):
             [],
             state["source"],
             state["day"],
-            is_name=state["is_name"],
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
@@ -90,7 +88,6 @@ async def _pr(event: Event, state: T_State):
                 "recent",
                 state["source"],
                 not player.lazer_mode,
-                state["is_name"],
                 False,
                 int(low) - 1,
                 high,
@@ -120,7 +117,6 @@ async def _pr(event: Event, state: T_State):
             [],
             state["source"],
             state["day"],
-            is_name=state["is_name"],
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
