@@ -90,7 +90,37 @@ async def get_user_scores(
         )
         data = await make_request(url, await get_headers(), "未找到该玩家BP")
         scores = [NewScore(**i) for i in data]
-        unified_scores = convert_to_unified_score(scores)
+        unified_scores = [
+            UnifiedScore(
+                mods=i.mods,
+                ruleset_id=i.ruleset_id,
+                rank=i.rank,
+                accuracy=i.accuracy * 100,
+                total_score=i.total_score,
+                ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+                max_combo=i.max_combo,
+                statistics=i.statistics,
+                legacy_total_score=i.legacy_total_score,
+                passed=i.passed,
+                beatmap=UnifiedBeatmap(
+                    id=i.beatmap_id,
+                    set_id=i.beatmapset.id,
+                    artist=i.beatmapset.artist,
+                    title=i.beatmapset.title,
+                    version=i.beatmap.version,
+                    creator=i.beatmapset.creator,
+                    total_length=i.beatmap.total_length,
+                    mode=i.beatmap.mode_int,
+                    bpm=i.beatmap.bpm,
+                    cs=i.beatmap.cs,
+                    ar=i.beatmap.ar,
+                    hp=i.beatmap.drain,
+                    od=i.beatmap.accuracy,
+                    stars=i.beatmap.difficulty_rating,
+                ),
+            )
+            for i in scores
+        ]
         return unified_scores
 
     elif source == "ppysb":
@@ -134,40 +164,6 @@ async def get_user_scores(
             )
             for i in data.scores
         ]
-
-
-def convert_to_unified_score(data: list[NewScore]) -> list[UnifiedScore]:
-    return [
-        UnifiedScore(
-            mods=i.mods,
-            ruleset_id=i.ruleset_id,
-            rank=i.rank,
-            accuracy=i.accuracy * 100,
-            total_score=i.total_score,
-            ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-            max_combo=i.max_combo,
-            statistics=i.statistics,
-            legacy_total_score=i.legacy_total_score,
-            passed=i.passed,
-            beatmap=UnifiedBeatmap(
-                id=i.beatmap_id,
-                set_id=i.beatmapset.id,
-                artist=i.beatmapset.artist,
-                title=i.beatmapset.title,
-                version=i.beatmap.version,
-                creator=i.beatmapset.creator,
-                total_length=i.beatmap.total_length,
-                mode=i.beatmap.mode_int,
-                bpm=i.beatmap.bpm,
-                cs=i.beatmap.cs,
-                ar=i.beatmap.ar,
-                hp=i.beatmap.drain,
-                od=i.beatmap.accuracy,
-                stars=i.beatmap.difficulty_rating,
-            ),
-        )
-        for i in data
-    ]
 
 
 async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu") -> UnifiedUser:

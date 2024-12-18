@@ -1,6 +1,7 @@
 import asyncio
 from io import BytesIO
 from typing import Optional
+from datetime import datetime, timedelta
 
 from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence
 
@@ -13,7 +14,7 @@ from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
 from ..file import map_path, download_osu, user_cache_path
 from ..schema.score import Mod, UnifiedScore, NewStatistics
-from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores, convert_to_unified_score
+from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
 from .utils import (
     crop_bg,
     draw_acc,
@@ -121,12 +122,25 @@ async def get_score_data(
         if mods:
             score_json = await osu_api("score", uid, mode, mapid)
             score_ls = [NewScore(**i) for i in score_json["scores"]]
-            score_ls = convert_to_unified_score(score_ls)
         else:
             score_json = await osu_api("best_score", uid, mode, mapid)
             grank = score_json.get("position", "")
             score_ls = [NewScore(**score_json["score"])]
-            score_ls = convert_to_unified_score(score_ls)
+        score_ls = [
+            UnifiedScore(
+                mods=i.mods,
+                ruleset_id=i.ruleset_id,
+                rank=i.rank,
+                accuracy=i.accuracy * 100,
+                total_score=i.total_score,
+                ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+                max_combo=i.max_combo,
+                statistics=i.statistics,
+                legacy_total_score=i.legacy_total_score,
+                passed=i.passed,
+            )
+            for i in score_ls
+        ]
     else:
         score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
     if not is_lazer:
