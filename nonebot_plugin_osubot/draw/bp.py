@@ -1,17 +1,15 @@
 import asyncio
 from io import BytesIO
-from time import mktime, strptime
 from typing import Union, Optional
 from datetime import datetime, timedelta
 
 from PIL import ImageDraw, UnidentifiedImageError
 
 from ..pp import cal_pp
-from ..api import osu_api
-from ..schema import NewScore
-from ..schema.score import Mod
 from ..mods import get_mods_list
+from ..api import get_user_scores
 from ..exceptions import NetworkError
+from ..schema.score import Mod, UnifiedScore
 from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
 from .utils import draw_fillet, draw_fillet2, filter_scores_with_regex
@@ -27,35 +25,26 @@ async def draw_bp(
     low_bound: int,
     high_bound: int,
     day: int,
-    is_name: bool,
     search_condition: list,
+    username: str,
+    source: str,
 ) -> BytesIO:
-    bp_info = await osu_api("bp", uid, mode, is_name=is_name, legacy_only=int(not is_lazer))
-    score_ls = [NewScore(**i) for i in bp_info]
+    scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
     if not is_lazer:
-        score_ls = [i for i in score_ls if any(mod.acronym == "CL" for mod in i.mods)]
-    user = bp_info[0]["user"]["username"]
+        scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
     if mods:
-        mods_ls = get_mods_list(score_ls, mods)
+        mods_ls = get_mods_list(scores, mods)
         if low_bound > len(mods_ls):
             raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
         if high_bound > len(mods_ls):
             mods_ls = mods_ls[low_bound - 1 :]
         else:
             mods_ls = mods_ls[low_bound - 1 : high_bound]
-        score_ls_filtered = [score_ls[i] for i in mods_ls]
+        score_ls_filtered = [scores[i] for i in mods_ls]
     else:
-        score_ls_filtered = score_ls[low_bound - 1 : high_bound]
+        score_ls_filtered = scores[low_bound - 1 : high_bound]
     if project == "tbp":
-        ls = []
-        for i, score in enumerate(score_ls):
-            now = datetime.now() - timedelta(days=day + 1)
-            today_stamp = mktime(strptime(str(now), "%Y-%m-%d %H:%M:%S.%f"))
-            playtime = datetime.strptime(score.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8)
-            play_stamp = mktime(strptime(str(playtime), "%Y-%m-%d %H:%M:%S"))
-            if play_stamp > today_stamp:
-                ls.append(i)
-        score_ls_filtered = [score_ls[i] for i in ls]
+        score_ls_filtered = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day + 1)]
         if not score_ls_filtered:
             raise NetworkError("未查询到游玩记录")
     for score_info in score_ls_filtered:
@@ -73,15 +62,15 @@ async def draw_bp(
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, user, score_ls, score_ls_filtered, mode, low_bound, high_bound, day, is_lazer)
+    msg = await draw_pfm(project, username, scores, score_ls_filtered, mode, low_bound, high_bound, day, is_lazer)
     return msg
 
 
 async def draw_pfm(
     project: str,
     user: str,
-    score_ls: list[NewScore],
-    score_ls_filtered: list[NewScore],
+    score_ls: list[UnifiedScore],
+    score_ls_filtered: list[UnifiedScore],
     mode: str,
     low_bound: int = 0,
     high_bound: int = 0,
@@ -90,23 +79,23 @@ async def draw_pfm(
 ) -> Union[str, BytesIO]:
     task0 = [
         get_pfm_img(
-            f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/list.jpg",
-            map_path / f"{i.beatmapset.id}" / "list.jpg",
+            f"https://assets.ppy.sh/beatmaps/{i.beatmap.set_id}/covers/list.jpg",
+            map_path / f"{i.beatmap.set_id}" / "list.jpg",
         )
         for i in score_ls_filtered
     ]
 
     task1 = [
         get_pfm_img(
-            f"https://assets.ppy.sh/beatmaps/{i.beatmapset.id}/covers/cover.jpg",
-            map_path / f"{i.beatmapset.id}" / "cover.jpg",
+            f"https://assets.ppy.sh/beatmaps/{i.beatmap.set_id}/covers/cover.jpg",
+            map_path / f"{i.beatmap.set_id}" / "cover.jpg",
         )
         for i in score_ls_filtered
     ]
     task2 = [
-        download_osu(i.beatmapset.id, i.beatmap_id)
+        download_osu(i.beatmap.set_id, i.beatmap.id)
         for i in score_ls_filtered
-        if not (map_path / f"{i.beatmapset.id}" / f"{i.beatmap_id}.osu").exists()
+        if not (map_path / f"{i.beatmap.set_id}" / f"{i.beatmap.id}.osu").exists()
     ]
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
@@ -170,18 +159,16 @@ async def draw_pfm(
                 bp.rank += "H"
 
         # 曲名&作曲
-        metadata = f"{bp.beatmapset.title} | by {bp.beatmapset.artist}"
+        metadata = f"{bp.beatmap.title} | by {bp.beatmap.artist}"
         if len(metadata) > 30:
             metadata = metadata[:27] + "..."
         draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm")
 
         # 地图版本&时间
-        old_time = datetime.strptime(bp.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-        new_time = (old_time + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
         difficulty = bp.beatmap.version
         if len(difficulty) > 30:
             difficulty = difficulty[:27] + "..."
-        osu = map_path / f"{bp.beatmapset.id}" / f"{bp.beatmap_id}.osu"
+        osu = map_path / f"{bp.beatmap.set_id}" / f"{bp.beatmap.id}.osu"
         pp_info = cal_pp(bp, str(osu.absolute()), is_lazer)
         difficulty = f"{pp_info.difficulty.stars:.2f}★ | {difficulty}"
         draw.text(
@@ -195,7 +182,7 @@ async def draw_pfm(
         # 达成时间
         draw.text(
             (210 + offset, 245 + h_num),
-            f"{new_time}",
+            f"{bp.ended_at.strftime('%Y-%m-%dT%H:%M:%S')}",
             font=Torus_Regular_20,
             anchor="lm",
         )
@@ -203,7 +190,7 @@ async def draw_pfm(
         # acc
         draw.text(
             (680 + offset, 210 + h_num),
-            f"{bp.accuracy * 100:.2f}%",
+            f"{bp.accuracy:.2f}%",
             font=Torus_SemiBold_25,
             anchor="rm",
             fill=(238, 171, 0, 255),

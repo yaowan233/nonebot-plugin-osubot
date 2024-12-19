@@ -5,11 +5,10 @@ from datetime import date, datetime, timedelta
 
 from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
 
-from ..schema import User
 from ..utils import FGM, GMN
 from ..exceptions import NetworkError
 from ..database.models import InfoData
-from ..api import osu_api, get_random_bg
+from ..api import get_random_bg, get_user_info_data
 from .utils import info_calc, draw_fillet, update_icon, open_user_icon
 from ..file import user_cache_path, badge_cache_path, make_badge_cache_file
 from .static import (
@@ -30,9 +29,8 @@ from .static import (
 )
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> BytesIO:
-    info_json = await osu_api("info", uid, mode, is_name=is_name)
-    info = User(**info_json)
+async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> BytesIO:
+    info = await get_user_info_data(uid, mode, source)
     statistics = info.statistics
     if statistics.play_count == 0:
         raise NetworkError(f"此玩家尚未游玩过{GMN[mode]}模式")
@@ -230,7 +228,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, is_name) -> Bytes
         draw.text((380, 1305), current_time, font=Torus_Regular_25, anchor="la")
     # 头像
     gif_frames = []
-    user_icon = await open_user_icon(info)
+    user_icon = await open_user_icon(info, source)
     _ = asyncio.create_task(update_icon(info))
     if not getattr(user_icon, "is_animated", False):
         icon_bg = user_icon.convert("RGBA").resize((300, 300))

@@ -14,7 +14,7 @@ class UserData(Model):
     """osu 用户名"""
     osu_mode: int = fields.IntField()
     """osu 模式"""
-    lazer_mode: bool = fields.BooleanField(default=True, null=True)
+    lazer_mode: bool = fields.BooleanField(default=False, null=True)
     """是否启用lazer模式"""
 
     class Meta:
@@ -46,3 +46,14 @@ class InfoData(Model):
     class Meta:
         table = "Info"
         indexes = ("id",)
+
+
+class SbUserData(Model):
+    id: int = fields.IntField(pk=True, generated=True, auto_increment=True)
+    """自增主键"""
+    user_id: str = fields.TextField()
+    """用户id"""
+    osu_id: int = fields.IntField()
+    """osu id"""
+    osu_name: str = fields.TextField()
+    """osu 用户名"""

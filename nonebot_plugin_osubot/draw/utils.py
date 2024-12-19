@@ -9,7 +9,8 @@ from difflib import SequenceMatcher
 from matplotlib.figure import Figure
 from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
 
-from ..schema import User, SeasonalBackgrounds
+from ..schema.user import UnifiedUser
+from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
 from .static import Path, Image, Stars, ColorArr, np, osufile
 from ..file import map_path, download_osu, get_projectimg, user_cache_path
@@ -82,7 +83,6 @@ def info_calc(n1: Optional[float], n2: Optional[float], rank: bool = False, pp: 
 
 
 def draw_acc(img: Image, acc: float, mode: int):
-    acc *= 100
     size = [acc, 100 - acc]
     if mode == 0:
         insize = [60, 20, 7, 7, 5, 1]
@@ -226,7 +226,7 @@ def calc_songlen(length: int) -> str:
     return music_len
 
 
-async def open_user_icon(info: User) -> Image:
+async def open_user_icon(info: UnifiedUser, source) -> Image:
     path = user_cache_path / str(info.id)
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
@@ -237,8 +237,12 @@ async def open_user_icon(info: User) -> Image:
             break
     else:
         user_icon = await get_projectimg(info.avatar_url)
-        with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
-            f.write(user_icon.getvalue())
+        if source == "ppysb":
+            with open(path / "sb_icon.png", "wb") as f:
+                f.write(user_icon.getvalue())
+        else:
+            with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
+                f.write(user_icon.getvalue())
         img = Image.open(user_icon)
     return img
 
@@ -249,7 +253,7 @@ def is_close(n1, n2) -> bool:
     return False
 
 
-async def update_icon(info: User):
+async def update_icon(info: UnifiedUser):
     path = user_cache_path / str(info.id)
     for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
@@ -356,7 +360,7 @@ def matches_condition_with_regex(score, key, operator, value):
     if not attr and attr3:
         attr = attr3
     if key == "accuracy":
-        attr = float(attr) * 100
+        attr = float(attr)
     # 正则和模糊匹配
     if isinstance(attr, str):
         if operator == "=":

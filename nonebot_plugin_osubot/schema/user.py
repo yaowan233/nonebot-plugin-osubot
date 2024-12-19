@@ -83,3 +83,13 @@ class User(UserCompact):
     playstyle: Optional[list[str]] = None
     badges: Optional[list[Badge]] = None
     statistics_rulesets: Optional[StatisticsRulesets] = None
+
+
+class UnifiedUser(Base):
+    avatar_url: str
+    country_code: str
+    id: int
+    username: str
+    is_supporter: bool
+    badges: Optional[list[Badge]] = None
+    statistics: Optional[UserStatistics] = None

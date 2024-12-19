@@ -1,8 +1,8 @@
 from typing import Optional
 
 from .utils import GM
-from .schema.score import Mod
-from .schema import Beatmap, NewScore
+from .schema import Beatmap
+from .schema.score import Mod, UnifiedScore
 
 OD0_MS = 80
 OD10_MS = 20
@@ -38,7 +38,7 @@ def modify_od(base_od, speed_mul, multiplier):
     return od
 
 
-def with_mods(mapinfo: Beatmap, scoreinfo: Optional[NewScore], mods: list[Mod]):
+def with_mods(mapinfo: Beatmap, scoreinfo: Optional[UnifiedScore], mods: list[Mod]):
     speed_mul = 1
     od_ar_hp_multiplier = 1
     mode = GM[scoreinfo.ruleset_id] if scoreinfo else mapinfo.mode
