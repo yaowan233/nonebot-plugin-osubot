@@ -39,7 +39,7 @@ async def _(event: Event, name: Message = CommandArg()):
         await UniMessage.text("请在指令后输入您的 osuid").finish(reply_to=True)
     async with lock:
         if user := await SbUserData.get_or_none(user_id=event.get_user_id()):
-            await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/unbind").finish(reply_to=True)
+            await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/sbunbind").finish(reply_to=True)
         uid = await get_uid_by_name(name, "ppysb")
         await SbUserData.create(user_id=event.get_user_id(), osu_id=uid, osu_name=name)
     await UniMessage.text(f"成功绑定 ppysb 服务器用户： {name}").finish(reply_to=True)
