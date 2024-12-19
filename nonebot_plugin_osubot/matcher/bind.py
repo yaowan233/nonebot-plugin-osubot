@@ -7,8 +7,8 @@ from nonebot.internal.adapter import Event, Message
 
 from ..api import get_uid_by_name
 from ..info import bind_user_info
-from ..database import UserData, SbUserData
 from ..exceptions import NetworkError
+from ..database import UserData, SbUserData
 
 bind = on_command("bind", priority=11, block=True)
 unbind = on_command("unbind", priority=11, block=True)
