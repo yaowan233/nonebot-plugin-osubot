@@ -26,7 +26,7 @@ async def _bind(event: Event, name: Message = CommandArg()):
         if user := await UserData.get_or_none(user_id=event.get_user_id()):
             await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/unbind").finish(reply_to=True)
         try:
-            msg = await bind_user_info("bind", name, event.get_user_id(), True)
+            msg = await bind_user_info("bind", name, event.get_user_id())
         except NetworkError:
             await UniMessage.text(f"绑定失败，找不到叫 {name} 的人哦").finish(reply_to=True)
     await UniMessage.text(msg).finish(reply_to=True)
