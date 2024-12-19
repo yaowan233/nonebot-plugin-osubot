@@ -259,7 +259,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.ruleset_id)
     # 地区
-    country = osufile / "flags" / f"{info.country_code}.png"
+    country = osufile / "flags" / f"{info.country_code.upper()}.png"
     country_bg = Image.open(country).convert("RGBA").resize((66, 45))
     im.alpha_composite(country_bg, (250, 577))
     # supporter
