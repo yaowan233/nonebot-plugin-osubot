@@ -8,7 +8,7 @@ from nonebot.internal.adapter import Event, Message
 from ..utils import mods2list
 from ..api import get_uid_by_name
 from ..exceptions import NetworkError
-from ..database.models import UserData
+from ..database import UserData, SbUserData
 
 pattern = (
     r"[:：]\s*(\w+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
@@ -69,12 +69,19 @@ def split_msg():
                 user = await get_uid_by_name(arg.strip(), state["source"])
                 state["user"] = user
             except NetworkError:
-                state["error"] = f"没有找到用户: {arg.strip()}"
+                state["error"] = f"在 {state['source']} 服务器没有找到用户: {arg.strip()}"
         if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
             state["error"] = "模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania"
         if isinstance(state["day"], str) and (not state["day"].isdigit() or int(state["day"]) < 0):
             state["error"] = "查询的日期应是一个正数"
         if state["user"] == 0:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
+        if state["source"] == "ppysb" and not arg.strip():
+            sb_user_data = await SbUserData.get_or_none(user_id=qq)
+            if sb_user_data:
+                state["user"] = sb_user_data.osu_id if user_data else 0
+                state["username"] = sb_user_data.osu_name if user_data else ""
+            else:
+                state["error"] = "该账号尚未绑定sb 服务器，请输入 /sbbind 用户名 绑定账号"
 
     return Depends(dependency)
