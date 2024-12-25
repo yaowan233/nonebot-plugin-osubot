@@ -40,6 +40,7 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
     new100s = int(ratio * score.statistics.miss)
     n300 += score.statistics.miss - new100s
     n100 = new100s + score.statistics.ok
+    n300 = max(n300, 0)  # 确保n300不会为负数 只有在 std 需要计算正确的 ifpp
     c = Performance(
         n50=score.statistics.meh,
         n100=n100,
