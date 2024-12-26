@@ -76,7 +76,7 @@ async def _recent(event: Event, state: T_State):
 async def _pr(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    mode = state["mode"]
+    mode = NGM[state["mode"]]
     player = await UserData.get_or_none(user_id=event.get_user_id())
     if state["range"]:
         ls = state["range"].split("-")
@@ -103,7 +103,7 @@ async def _pr(event: Event, state: T_State):
             scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
         for score_info in scores:
             cal_score_info(player.lazer_mode, score_info)
-        pic = await draw_pfm("prlist", state["username"], scores, scores, NGM[mode], is_lazer=player.lazer_mode)
+        pic = await draw_pfm("prlist", state["username"], scores, scores, mode, is_lazer=player.lazer_mode)
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
         state["day"] = 1
@@ -112,7 +112,7 @@ async def _pr(event: Event, state: T_State):
             "pr",
             state["user"],
             state["is_lazer"],
-            NGM[mode],
+            mode,
             [],
             [],
             state["source"],
