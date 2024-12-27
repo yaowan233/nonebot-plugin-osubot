@@ -144,6 +144,8 @@ async def get_user_scores(
                     meh=i.n50,
                     ok=i.n100,
                     great=i.n300,
+                    large_tick_hit=i.n100,
+                    small_tick_miss=i.nkatu,
                 ),
                 beatmap=UnifiedBeatmap(
                     id=i.beatmap.id,
