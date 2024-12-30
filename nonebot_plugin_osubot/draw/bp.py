@@ -157,6 +157,7 @@ async def draw_pfm(
             font=Torus_SemiBold_25,
             anchor="lm",
         )
+
         # 用户名
         draw.text(
             (115, 25),
