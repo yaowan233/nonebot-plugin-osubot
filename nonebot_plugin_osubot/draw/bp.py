@@ -62,7 +62,7 @@ async def draw_bp(
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, uid, scores, score_ls_filtered, mode, low_bound, high_bound, day, is_lazer)
+    msg = await draw_pfm(project, uid, scores, score_ls_filtered, mode, source, low_bound, high_bound, day, is_lazer)
     return msg
 
 
@@ -72,6 +72,7 @@ async def draw_pfm(
     score_ls: list[UnifiedScore],
     score_ls_filtered: list[UnifiedScore],
     mode: str,
+    source: str,
     low_bound: int = 0,
     high_bound: int = 0,
     day: int = 0,
