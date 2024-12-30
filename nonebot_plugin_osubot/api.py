@@ -242,6 +242,8 @@ async def get_ppysb_map_scores(map_md5: str, uid: Union[int, str], mode: str):
                 meh=i.n50,
                 ok=i.n100,
                 great=i.n300,
+                large_tick_hit=i.n100,
+                small_tick_miss=i.nkatu,
             ),
             beatmap=None,
         )
