@@ -100,6 +100,8 @@ async def draw_pfm(
     task3 = asyncio.create_task(get_user_info_data(uid, mode, source))
     info = await task3
     user_path = user_cache_path / str(info.id)
+    if not user_path.exists():
+        user_path.mkdir(parents=True, exist_ok=True)
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     await asyncio.gather(*task2)
