@@ -11,7 +11,7 @@ from ..api import get_user_scores, get_user_info_data
 from ..exceptions import NetworkError
 from ..schema.score import Mod, UnifiedScore
 from .score import cal_legacy_acc, cal_legacy_rank
-from ..file import map_path, get_pfm_img, download_osu, user_cache_path
+from ..file import map_path, get_pfm_img, download_osu
 from .utils import draw_fillet, draw_fillet2, open_user_icon, filter_scores_with_regex
 from .static import BgImg, Image, BgImg1, ModsDict, RankDict, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25
 
@@ -100,9 +100,6 @@ async def draw_pfm(
     ]
     task3 = asyncio.create_task(get_user_info_data(uid, mode, source))
     info = await task3
-    user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     await asyncio.gather(*task2)
