@@ -127,6 +127,8 @@ async def get_user_scores(
         url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={int(include_failed)}"
         data = await make_request(url, {}, "未找到该玩家BP")
         data = ScoresResponse(**data)
+        # 手动 offset
+        filtered_scores = data.scores[offset:]
         return [
             UnifiedScore(
                 mods=get_mods(i.mods),
@@ -164,7 +166,7 @@ async def get_user_scores(
                     stars=i.beatmap.diff,
                 ),
             )
-            for i in data.scores
+            for i in filtered_scores
         ]
 
 
