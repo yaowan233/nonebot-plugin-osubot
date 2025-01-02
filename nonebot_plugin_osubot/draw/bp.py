@@ -7,12 +7,12 @@ from PIL import ImageDraw, UnidentifiedImageError
 
 from ..pp import cal_pp
 from ..mods import get_mods_list
-from ..api import get_user_scores
+from ..api import get_user_scores, get_user_info_data
 from ..exceptions import NetworkError
 from ..schema.score import Mod, UnifiedScore
 from .score import cal_legacy_acc, cal_legacy_rank
 from ..file import map_path, get_pfm_img, download_osu
-from .utils import draw_fillet, draw_fillet2, filter_scores_with_regex
+from .utils import draw_fillet, draw_fillet2, open_user_icon, filter_scores_with_regex
 from .static import BgImg, Image, BgImg1, ModsDict, RankDict, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25
 
 
@@ -26,7 +26,6 @@ async def draw_bp(
     high_bound: int,
     day: int,
     search_condition: list,
-    username: str,
     source: str,
 ) -> BytesIO:
     scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
@@ -62,16 +61,17 @@ async def draw_bp(
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, username, scores, score_ls_filtered, mode, low_bound, high_bound, day, is_lazer)
+    msg = await draw_pfm(project, uid, scores, score_ls_filtered, mode, source, low_bound, high_bound, day, is_lazer)
     return msg
 
 
 async def draw_pfm(
     project: str,
-    user: str,
+    uid: int,
     score_ls: list[UnifiedScore],
     score_ls_filtered: list[UnifiedScore],
     mode: str,
+    source: str,
     low_bound: int = 0,
     high_bound: int = 0,
     day: int = 0,
@@ -97,6 +97,7 @@ async def draw_pfm(
         for i in score_ls_filtered
         if not (map_path / f"{i.beatmap.set_id}" / f"{i.beatmap.id}.osu").exists()
     ]
+    info = await get_user_info_data(uid, mode, source)
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     await asyncio.gather(*task2)
@@ -110,14 +111,14 @@ async def draw_pfm(
     f_div = Image.new("RGBA", (1450, 2), (255, 255, 255, 255)).convert("RGBA")
     im.alpha_composite(f_div, (0, 100))
     if project == "bp":
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
+        uinfo = f"{mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
     elif project == "prlist":
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内上传成绩"
+        uinfo = f"{mode.capitalize()} 模式 | 近24h内上传成绩"
     elif project == "relist":
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近24h内（含死亡）上传成绩"
+        uinfo = f"{mode.capitalize()} 模式 | 近24h内（含死亡）上传成绩"
     else:
-        uinfo = f"玩家：{user} | {mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
-    draw.text((1388, 50), uinfo, font=Torus_SemiBold_25, anchor="rm")
+        uinfo = f"{mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
+    draw.text((1388, 80), uinfo, font=Torus_SemiBold_25, anchor="rm")
     for num, bp in enumerate(score_ls_filtered):
         h_num = 177 * (num // 2)  # 每两个数据换行
         offset = 695 * (num % 2)  # 数据在右边时的偏移量
@@ -146,6 +147,29 @@ async def draw_pfm(
             im.alpha_composite(bg_imag, (45 + offset, 114 + h_num))
         except UnidentifiedImageError:
             ...
+
+        # 地区排名和地区
+        draw.text(
+            (115, 70),
+            f"{info.country_code} #{info.statistics.country_rank}",
+            font=Torus_SemiBold_25,
+            anchor="lm",
+        )
+
+        # 用户名
+        draw.text(
+            (115, 25),
+            f"{info.username}",
+            font=Torus_SemiBold_25,
+            anchor="lm",
+        )
+
+        # 头像
+        user_icon = await open_user_icon(info, source)
+        icon_bg = user_icon.convert("RGBA").resize((75, 75))
+        icon_img = draw_fillet(icon_bg, 15)
+        im.alpha_composite(icon_img, (30, 10))
+        user_icon.close()
 
         # mods
         if bp.mods:
