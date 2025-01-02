@@ -68,7 +68,6 @@ async def _pfm(state: T_State):
             high,
             state["day"],
             state["query"],
-            state["username"],
             state["source"],
         )
     except NetworkError as e:
@@ -102,7 +101,6 @@ async def _tbp(state: T_State):
             high,
             state["day"],
             state["query"],
-            state["username"],
             state["source"],
         )
     except NetworkError as e:

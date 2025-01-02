@@ -26,7 +26,6 @@ async def draw_bp(
     high_bound: int,
     day: int,
     search_condition: list,
-    username: str,
     source: str,
 ) -> BytesIO:
     scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
@@ -98,8 +97,7 @@ async def draw_pfm(
         for i in score_ls_filtered
         if not (map_path / f"{i.beatmap.set_id}" / f"{i.beatmap.id}.osu").exists()
     ]
-    task3 = asyncio.create_task(get_user_info_data(uid, mode, source))
-    info = await task3
+    info = await get_user_info_data(uid, mode, source)
     bg_ls = await asyncio.gather(*task0)
     large_banner_ls = await asyncio.gather(*task1)
     await asyncio.gather(*task2)
