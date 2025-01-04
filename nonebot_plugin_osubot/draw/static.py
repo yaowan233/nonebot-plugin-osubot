@@ -66,6 +66,6 @@ __cmap = mcolors.LinearSegmentedColormap.from_list(
 )
 __norm = mpl.colors.Normalize(vmin=0, vmax=9)
 ColorArr = mpl.cm.ScalarMappable(norm=__norm, cmap=__cmap).to_rgba(np.linspace(0, 9, 900), bytes=True)
-IconLs = ["\ue800", "\ue803", "\ue801", "\ue802"]
+IconLs = ["\ue800", "\ue803", "\ue801", "\ue802", "\ue800", "\ue803", "\ue801"]
 ModsDict = {file.stem: Image.open(file).convert("RGBA") for file in (osufile / "mods").glob("*.png")}
 RankDict = {file.stem: Image.open(file).convert("RGBA") for file in (osufile / "ranking").glob("*.png")}
