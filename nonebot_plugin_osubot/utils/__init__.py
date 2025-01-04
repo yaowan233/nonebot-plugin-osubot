@@ -1,4 +1,4 @@
-GM = {0: "osu", 1: "taiko", 2: "fruits", 3: "mania", 4: "osu", 5: "taiko", 6: "fruits", 7: "mania"}
+GM = {0: "osu", 1: "taiko", 2: "fruits", 3: "mania", 4: "osu", 5: "taiko", 6: "fruits"}
 NGM = {
     "0": "osu",
     "1": "taiko",
@@ -7,7 +7,6 @@ NGM = {
     "4": "rxosu",
     "5": "rxtaiko",
     "6": "rxfruits",
-    "7": "rxmania",
 }
 GMN = {
     "osu": "Std",
@@ -17,9 +16,8 @@ GMN = {
     "rxosu": "RX Std",
     "rxtaiko": "RX Taiko",
     "rxfruits": "RX Ctb",
-    "rxmania": "RX Mania",
 }
-FGM = {"osu": 0, "taiko": 1, "fruits": 2, "mania": 3, "rxosu": 4, "rxtaiko": 5, "rxfruits": 6, "rxmania": 7}
+FGM = {"osu": 0, "taiko": 1, "fruits": 2, "mania": 3, "rxosu": 4, "rxtaiko": 5, "rxfruits": 6}
 
 
 def mods2list(args: str) -> list:
