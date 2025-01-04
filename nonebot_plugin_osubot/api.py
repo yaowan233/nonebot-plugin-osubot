@@ -195,6 +195,12 @@ async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu
             info_data.statistics = parse_statistics(data, "2")
         if mode == "mania":
             info_data.statistics = parse_statistics(data, "3")
+        if mode == "rxosu":
+            info_data.statistics = parse_statistics(data, "4")
+        if mode == "rxtaiko":
+            info_data.statistics = parse_statistics(data, "5")
+        if mode == "rxfruits":
+            info_data.statistics = parse_statistics(data, "6")
         return info_data
 
 
