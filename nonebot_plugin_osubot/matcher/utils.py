@@ -70,8 +70,12 @@ def split_msg():
                 state["user"] = user
             except NetworkError:
                 state["error"] = f"在 {state['source']} 服务器没有找到用户: {arg.strip()}"
-        if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
-            state["error"] = "模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania"
+        if state["source"] == "ppysb":
+            if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 6):
+                state["error"] = "模式应为0-6！\n0: std\n1: taiko\n2: ctb\n3: mania\n4-6: SB服 RX 模式"
+        else:
+            if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
+                state["error"] = "模式应为0-3！\n0: std\n1: taiko\n2: ctb\n3: mania"
         if isinstance(state["day"], str) and (not state["day"].isdigit() or int(state["day"]) < 0):
             state["error"] = "查询的日期应是一个正数"
         if state["user"] == 0:
