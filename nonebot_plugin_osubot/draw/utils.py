@@ -208,11 +208,11 @@ def stars_diff(stars: float):
 
 
 def get_modeimage(mode: int) -> Path:
-    if mode == 0:
+    if mode == 0 or mode == 4:
         img = "pfm_std.png"
-    elif mode == 1:
+    elif mode == 1 or mode == 5:
         img = "pfm_taiko.png"
-    elif mode == 2:
+    elif mode == 2 or mode == 6:
         img = "pfm_ctb.png"
     else:
         img = "pfm_mania.png"
