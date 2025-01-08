@@ -75,11 +75,11 @@ def get_strains(path: str, mods: int) -> Strains:
 
 
 def convert_mode(score: UnifiedScore, beatmap: Beatmap):
-    if score.ruleset_id == 0 or score.ruleset_id == 4:
+    if score.ruleset_id in {0, 4, 8}:
         mode = GameMode.Osu
-    elif score.ruleset_id == 1 or score.ruleset_id == 5:
+    elif score.ruleset_id in {1, 5}:
         mode = GameMode.Taiko
-    elif score.ruleset_id == 2 or score.ruleset_id == 6:
+    elif score.ruleset_id in {2, 6}:
         mode = GameMode.Catch
     else:
         mode = GameMode.Mania
