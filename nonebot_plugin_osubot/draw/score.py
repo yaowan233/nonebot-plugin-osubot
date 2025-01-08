@@ -412,7 +412,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         font=Torus_SemiBold_25,
         anchor="lm",
     )
-    if score_info.ruleset_id == 0:
+    if score_info.ruleset_id in {0, 4, 8}:
         draw.text((720, 550), ss_pp, font=Torus_Regular_30, anchor="mm")
         draw.text((840, 550), if_pp, font=Torus_Regular_30, anchor="mm")
         draw.text((960, 550), f"{pp_info.pp:.0f}", font=Torus_Regular_30, anchor="mm")
@@ -455,7 +455,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
             font=Torus_Regular_30,
             anchor="mm",
         )
-    elif score_info.ruleset_id == 1:
+    elif score_info.ruleset_id in {1, 5}:
         draw.text(
             (1118, 550),
             f"{score_info.accuracy:.2f}%",
@@ -482,7 +482,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
             font=Torus_Regular_30,
             anchor="mm",
         )
-    elif score_info.ruleset_id == 2:
+    elif score_info.ruleset_id in {2, 6}:
         draw.text(
             (1083, 550),
             f"{score_info.accuracy:.2f}%",
@@ -644,9 +644,9 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
     meh = score_info.statistics.meh or 0
     ok = score_info.statistics.ok or 0
 
-    if score_info.ruleset_id == 0:
+    if score_info.ruleset_id in {0, 4, 8}:
         max_combo = great + ok + meh + miss
-    elif score_info.ruleset_id == 1:
+    elif score_info.ruleset_id in {1, 5}:
         max_combo = great + ok + miss
     else:
         max_combo = score_info.max_combo
@@ -672,7 +672,7 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
         else:
             return "D"
 
-    elif score_info.ruleset_id == 2:
+    elif score_info.ruleset_id in {2, 6}:
         if score_info.accuracy >= 98:
             return "SH" if is_hidden else "S"
         elif score_info.accuracy >= 94:
@@ -684,7 +684,7 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
         else:
             return "D"
 
-    elif score_info.ruleset_id == 1:
+    elif score_info.ruleset_id in {1, 5}:
         if great >= max_combo_90 and miss == 0:
             return "SH" if is_hidden else "S"
         elif (great >= max_combo_80 and miss == 0) or great >= max_combo_90:
@@ -696,7 +696,7 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
         else:
             return "D"
 
-    elif score_info.ruleset_id == 0:
+    elif score_info.ruleset_id in {0, 4, 8}:
         if great >= max_combo_90 and meh <= max_combo_1_percent and miss == 0:
             return "SH" if is_hidden else "S"
         elif (great >= max_combo_80 and miss == 0) or great >= max_combo_90:
