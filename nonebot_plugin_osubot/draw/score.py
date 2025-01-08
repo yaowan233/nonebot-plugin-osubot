@@ -482,7 +482,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
             font=Torus_Regular_30,
             anchor="mm",
         )
-    elif score_info.ruleset_id in {3, 6}:
+    elif score_info.ruleset_id in {2, 6}:
         draw.text(
             (1083, 550),
             f"{score_info.accuracy:.2f}%",
