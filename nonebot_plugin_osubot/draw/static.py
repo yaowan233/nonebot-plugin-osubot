@@ -6,6 +6,8 @@ from PIL import Image, ImageFont
 import matplotlib.colors as mcolors
 
 osufile = Path(__file__).parent.parent / "osufile"
+Torus_Regular_8 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 8)
+Torus_Regular_15 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 15)
 Torus_Regular_20 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 20)
 Torus_Regular_25 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 25)
 Torus_Regular_30 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 30)
