@@ -72,7 +72,9 @@ def split_msg():
                 state["error"] = f"在 {state['source']} 服务器没有找到用户: {arg.strip()}"
         if state["source"] == "ppysb":
             if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 6 or int(state["mode"]) == 8):
-                state["error"] = "模式应为0-8(没有7)！\n0: std\n1: taiko\n2: ctb\n3: mania\n4-6: SB服 RX 模式\n8: SB服 AP 模式"
+                state["error"] = (
+                    "模式应为0-8(没有7)！\n0: std\n1: taiko\n2: ctb\n3: mania\n4-6: SB服 RX 模式\n8: SB服 AP 模式"
+                )
         else:
             if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
                 state["error"] = "模式应为0-3！\n0: std\n1: taiko\n2: ctb\n3: mania"
