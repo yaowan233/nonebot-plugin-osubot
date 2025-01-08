@@ -48,7 +48,7 @@ def map_to_image(map_data) -> BytesIO:
         fill="#FFF",
     )
     draw.text((LEFT_MARGIN, 90), "by " + map_data.creator, font=semi_font, fill="#CCC")
-    draw.text((LEFT_MARGIN, 135), "HP = " + str(map_data.hp) + "\tOD = " + str(map_data.od), font=reg_font, fill="#AAA")
+    draw.text((LEFT_MARGIN, 135), "HP = " + str(map_data.hp) + " OD = " + str(map_data.od), font=reg_font, fill="#AAA")
 
     max_meter = 0
     timing_sections = []  # (start, beat_ms, meter, [list of hit_object])
