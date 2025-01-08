@@ -9,6 +9,7 @@ from ..file import download_tmp_osu
 from ..exceptions import NetworkError
 from ..mania import generate_preview_pic
 from ..draw.catch_preview import draw_cath_preview
+from ..draw.taiko_preview import parse_map, map_to_image
 
 generate_preview = on_command("预览", aliases={"preview", "完整预览"}, priority=11, block=True)
 
@@ -31,6 +32,11 @@ async def _(state: T_State):
         await UniMessage.image(raw=pic).finish(reply_to=True)
     elif state["mode"] == "2":
         pic = await draw_cath_preview(int(osu_id), data["beatmapset_id"], state["mods"])
+        await UniMessage.image(raw=pic).finish(reply_to=True)
+    elif state["mode"] == "1":
+        osu = await download_tmp_osu(osu_id)
+        beatmap = parse_map(osu)
+        pic = map_to_image(beatmap)
         await UniMessage.image(raw=pic).finish(reply_to=True)
     elif not (0 <= int(state["mode"]) <= 3):
         await UniMessage.text("模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania").finish()
