@@ -200,11 +200,14 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     im = Image.new("RGBA", (1500, 720))
     draw = ImageDraw.Draw(im)
     # 获取cover并裁剪，高斯，降低亮度
-    bg = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
-    cover_crop = await crop_bg((1500, 720), bg)
-    cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
-    cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
-    im.alpha_composite(cover_img, (0, 0))
+    try:
+        bg = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
+        cover_crop = await crop_bg((1500, 720), bg)
+        cover_gb = cover_crop.filter(ImageFilter.GaussianBlur(3))
+        cover_img = ImageEnhance.Brightness(cover_gb).enhance(2 / 4.0)
+        im.alpha_composite(cover_img, (0, 0))
+    except NetworkError:
+        ...
     # 获取成绩背景做底图
     bg = get_modeimage(score_info.ruleset_id)
     recent_bg = Image.open(bg).convert("RGBA")
