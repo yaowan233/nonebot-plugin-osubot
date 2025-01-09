@@ -7,13 +7,11 @@ from asyncio import TimerHandle
 from difflib import SequenceMatcher
 
 from PIL import Image
-from graiax import silkcoder
 from nonebot.log import logger
 from nonebot.params import T_State
 from nonebot.matcher import Matcher
 from expiringdict import ExpiringDict
 from nonebot import on_command, on_message
-from graiax.silkcoder.utils import CoderError
 from nonebot.internal.rule import Rule, Event
 from nonebot_plugin_alconna import At, UniMsg, UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
@@ -132,22 +130,10 @@ async def _(
     path = map_path / f"{selected_score.beatmapset.id}"
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
-    audio_path = path / "audio.silk"
-    if not audio_path.exists():
-        audio = await safe_async_get(f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3")
-        if not audio:
-            await UniMessage.text("音频下载失败了 qaq " + f"本次猜歌名为: {selected_score.beatmapset.title}").finish(
-                reply_to=True
-            )
-        try:
-            await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
-        except CoderError:
-            await UniMessage.text("音频编码失败了 qaq " + f"本次猜歌名为: {selected_score.beatmapset.title}").finish(
-                reply_to=True
-            )
-    with open(audio_path, "rb") as f:
-        silk_byte = f.read()
-    await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
+    audio = await safe_async_get(f"https://b.ppy.sh/preview/{selected_score.beatmapset.id}.mp3")
+    if not audio:
+        await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
+    await UniMessage.audio(raw=audio.read()).finish()
 
 
 async def stop_game(matcher: Matcher, cid: str):
@@ -327,18 +313,10 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
         path = map_path / f"{score.beatmapset.id}"
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
-        audio_path = map_path / f"{score.beatmapset.id}" / "audio.silk"
-        if not audio_path.exists():
-            audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
-            if not audio:
-                await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
-            try:
-                await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
-            except CoderError:
-                await UniMessage.text("音频编码失败了 qaq").finish(reply_to=True)
-        with open(audio_path, "rb") as f:
-            silk_byte = f.read()
-        await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
+        audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
+        if not audio:
+            await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
+        await UniMessage.audio(raw=audio.read()).finish()
     if action == "artist":
         pic_group_hint[session_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
@@ -546,18 +524,10 @@ async def _(session_id: str = SessionId(SessionIdType.GROUP)):
         path = map_path / f"{score.beatmapset.id}"
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
-        audio_path = map_path / f"{score.beatmapset.id}" / "audio.silk"
-        if not audio_path.exists():
-            audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
-            if not audio:
-                await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
-            try:
-                await silkcoder.async_encode(audio.read(), audio_path, ios_adaptive=True)
-            except CoderError:
-                await UniMessage.text("音频编码失败了 qaq").finish(reply_to=True)
-        with open(audio_path, "rb") as f:
-            silk_byte = f.read()
-        await UniMessage.audio(raw=silk_byte, name="audio.silk", mimetype="silk").finish()
+        audio = await safe_async_get(f"https://b.ppy.sh/preview/{score.beatmapset.id}.mp3")
+        if not audio:
+            await UniMessage.text("音频下载失败了 qaq ").finish(reply_to=True)
+        await UniMessage.audio(raw=audio.read()).finish()
     if action == "artist":
         chart_group_hint[session_id]["artist"] = True
         msg = f"曲师为：{score.beatmapset.artist_unicode}"
