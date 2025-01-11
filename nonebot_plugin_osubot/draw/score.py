@@ -120,10 +120,10 @@ async def get_score_data(
     map_json = await osu_api("map", map_id=mapid)
     if source == "osu":
         if mods:
-            score_json = await osu_api("score", uid, mode, mapid)
+            score_json = await osu_api("score", uid, mode, mapid, legacy_only=int(not is_lazer))
             score_ls = [NewScore(**i) for i in score_json["scores"]]
         else:
-            score_json = await osu_api("best_score", uid, mode, mapid)
+            score_json = await osu_api("best_score", uid, mode, mapid, legacy_only=int(not is_lazer))
             grank = score_json.get("position", "")
             score_ls = [NewScore(**score_json["score"])]
         score_ls = [
