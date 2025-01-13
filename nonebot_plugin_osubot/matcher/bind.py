@@ -40,7 +40,10 @@ async def _(event: Event, name: Message = CommandArg()):
     async with lock:
         if user := await SbUserData.get_or_none(user_id=event.get_user_id()):
             await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/sbunbind").finish(reply_to=True)
-        uid = await get_uid_by_name(name, "ppysb")
+        try:
+            uid = await get_uid_by_name(name, "ppysb")
+        except NetworkError:
+            await UniMessage.text(f"绑定失败，找不到叫 {name} 的人哦").finish(reply_to=True)
         await SbUserData.create(user_id=event.get_user_id(), osu_id=uid, osu_name=name)
     await UniMessage.text(f"成功绑定 ppysb 服务器用户： {name}").finish(reply_to=True)
 
