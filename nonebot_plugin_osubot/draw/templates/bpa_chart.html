@@ -66,11 +66,11 @@
               alignTicks: true,
               axisLabel: {
                   formatter: function (value, index) {
-                      const date = new Date(value * 1000);
-                      const minute = date.getMinutes();
-                      const seconds = date.getSeconds();
+                      const totalSeconds = Math.floor(value);
+                      const minute = Math.floor(totalSeconds / 60);
+                      const seconds = totalSeconds % 60;
                       if (seconds.toString().length === 1)
-                          return minute + ':' + '0' + seconds;
+                          return minute + ':0' + seconds;
                       return minute + ':' + seconds;
                     }
                 }
