@@ -152,8 +152,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
 
         draw.text(
             (350 + x_offset, 341 + base_y),
-            f"Total Score: {score_to_3digit(player_stats.total_score)}"
-            f" ({score_to_3digit(player_stats.average_score)})",
+            f"Total Score: {score_to_3digit(player_stats.total_score)} ({score_to_3digit(player_stats.average_score)})",
             font=Torus_SemiBold_20,
             fill="#bbbbbb",
             anchor="lm",
