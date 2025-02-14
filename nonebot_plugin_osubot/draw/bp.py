@@ -34,7 +34,7 @@ async def draw_bp(
     if mods:
         mods_ls = get_mods_list(scores, mods)
         if low_bound > len(mods_ls):
-            raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
+            raise NetworkError(f"未找到开启 {'|'.join(mods)} Mods的成绩")
         if high_bound > len(mods_ls):
             mods_ls = mods_ls[low_bound - 1 :]
         else:

@@ -43,7 +43,7 @@ async def _(event: Event, state: T_State):
         )
     except NetworkError as e:
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式" f" {lazer_mode}时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 {lazer_mode}时 {str(e)}"
         ).finish(reply_to=True)
     score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:
@@ -106,6 +106,6 @@ async def _(event: Event, state: T_State):
         mapper_pp_data.append({"name": user_dic.get(mapper, ""), "value": round(pp, 2)})
     if len(mapper_pp_data) > 20:
         mapper_pp_data = mapper_pp_data[:20]
-    name = f'{score_ls[0].user.username} {NGM[state["mode"]]} 模式 '
+    name = f"{score_ls[0].user.username} {NGM[state['mode']]} 模式 "
     byt = await draw_bpa_plot(name, pp_ls, length_ls, pp_data, mapper_pp_data)
     await UniMessage.image(raw=byt).finish(reply_to=True)

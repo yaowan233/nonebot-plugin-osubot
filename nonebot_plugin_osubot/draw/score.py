@@ -164,7 +164,7 @@ async def get_score_data(
                     score = i
                     break
             else:
-                raise NetworkError(f'未找到开启 {"|".join(mods)} Mods的成绩')
+                raise NetworkError(f"未找到开启 {'|'.join(mods)} Mods的成绩")
     else:
         score_ls.sort(key=lambda x: x.total_score, reverse=True)
         score = score_ls[0]
@@ -527,7 +527,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         draw.text(
             (1002, 580),
             (
-                f"{score_info.statistics.perfect / score_info.statistics.great :.1f}:1"
+                f"{score_info.statistics.perfect / score_info.statistics.great:.1f}:1"
                 if (score_info.statistics.great or 0) != 0
                 else "∞:1"
             ),

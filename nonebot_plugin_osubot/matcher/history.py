@@ -33,5 +33,5 @@ async def _info(state: T_State):
     pp_ls = [pp_ls[i] for i in filtered_indices]
     date_ls = [date_ls[i] for i in filtered_indices]
     rank_ls = [rank_ls[i] for i in filtered_indices]
-    byt = await draw_history_plot(pp_ls, date_ls, rank_ls, f'{user.osu_name} {NGM[state["mode"]]} pp/rank history')
+    byt = await draw_history_plot(pp_ls, date_ls, rank_ls, f"{user.osu_name} {NGM[state['mode']]} pp/rank history")
     await UniMessage.image(raw=byt).finish(reply_to=True)
