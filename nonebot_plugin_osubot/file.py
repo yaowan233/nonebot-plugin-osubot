@@ -16,6 +16,7 @@ osufile = Path(__file__).parent / "osufile"
 map_path = Path() / "data" / "osu" / "map"
 user_cache_path = Path() / "data" / "osu" / "user"
 badge_cache_path = Path() / "data" / "osu" / "badge"
+team_cache_path = Path() / "data" / "osu" / "team"
 api_ls = [
     "https://api.chimu.moe/v1/download/",
     "https://osu.direct/api/d/",

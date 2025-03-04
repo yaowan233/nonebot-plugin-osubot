@@ -3,7 +3,7 @@ from io import BytesIO
 from typing import Optional
 from datetime import datetime, timedelta
 
-from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence
+from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence, UnidentifiedImageError
 
 from ..info import get_bg
 from ..mods import get_mods_list
@@ -12,9 +12,9 @@ from ..schema.user import UnifiedUser
 from ..schema import Beatmap, NewScore
 from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
-from ..file import map_path, download_osu, user_cache_path
 from ..schema.score import Mod, UnifiedScore, NewStatistics
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
+from ..file import map_path, download_osu, get_projectimg, team_cache_path, user_cache_path
 from .utils import (
     crop_bg,
     draw_acc,
@@ -32,7 +32,6 @@ from .static import (
     Image,
     IconLs,
     Venera_75,
-    SupporterBg,
     Torus_Regular_20,
     Torus_Regular_30,
     Torus_Regular_75,
@@ -265,9 +264,22 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     country = osufile / "flags" / f"{info.country_code}.png"
     country_bg = Image.open(country).convert("RGBA").resize((66, 45))
     im.alpha_composite(country_bg, (250, 577))
+    if info.team and info.team.flag_url:
+        team_path = team_cache_path / f"{info.team.id}.png"
+        if not team_path.exists():
+            team_img = await get_projectimg(info.team.flag_url)
+            team_img = Image.open(team_img).convert("RGBA")
+            team_img.save(team_path)
+        try:
+            team_img = Image.open(team_path).convert("RGBA").resize((80, 40))
+            im.alpha_composite(team_img, (250, 640))
+        except UnidentifiedImageError:
+            team_path.unlink()
+            raise NetworkError("team 图片下载错误，请重试！")
+        draw.text((340, 660), info.team.name, font=Torus_Regular_20, anchor="lt")
     # supporter
-    if info.is_supporter:
-        im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
+    # if info.is_supporter:
+    #     im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     # 处理mania转谱cs
     if score_info.ruleset_id == 3 and mapinfo.mode == 0:
         temp_accuracy = mapinfo.accuracy

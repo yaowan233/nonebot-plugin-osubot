@@ -7,10 +7,10 @@ from PIL import ImageDraw, UnidentifiedImageError
 
 from ..pp import cal_pp
 from ..mods import get_mods_list
-from ..api import get_user_scores, get_user_info_data
 from ..exceptions import NetworkError
 from ..schema.score import Mod, UnifiedScore
 from .score import cal_legacy_acc, cal_legacy_rank
+from ..api import get_user_scores, get_user_info_data
 from ..file import map_path, get_pfm_img, download_osu
 from .utils import draw_fillet, draw_fillet2, open_user_icon, filter_scores_with_regex
 from .static import BgImg, Image, BgImg1, ModsDict, RankDict, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25

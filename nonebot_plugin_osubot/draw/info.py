@@ -10,14 +10,13 @@ from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..api import get_random_bg, get_user_info_data
 from .utils import info_calc, draw_fillet, update_icon, open_user_icon
-from ..file import user_cache_path, badge_cache_path, make_badge_cache_file
+from ..file import get_projectimg, team_cache_path, user_cache_path, badge_cache_path, make_badge_cache_file
 from .static import (
     Image,
     InfoImg,
     ExpLeftBg,
     ExpRightBg,
     ExpCenterBg,
-    SupporterBg,
     Torus_Regular_20,
     Torus_Regular_25,
     Torus_Regular_30,
@@ -142,14 +141,27 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
                 badges_img = Image.open(badges_path).convert("RGBA").resize((86, 40))
             except UnidentifiedImageError:
                 badges_path.unlink()
-                raise NetworkError("badges图片下载错误，请重试！")
+                raise NetworkError("badges 图片下载错误，请重试！")
             im.alpha_composite(badges_img, (length, height))
     # 地区
     country_bg = Image.open(country).convert("RGBA").resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
+    if info.team and info.team.flag_url:
+        team_path = team_cache_path / f"{info.team.id}.png"
+        if not team_path.exists():
+            team_img = await get_projectimg(info.team.flag_url)
+            team_img = Image.open(team_img).convert("RGBA")
+            team_img.save(team_path)
+        try:
+            team_img = Image.open(team_path).convert("RGBA").resize((108, 54))
+            im.alpha_composite(team_img, (400, 280))
+        except UnidentifiedImageError:
+            team_path.unlink()
+            raise NetworkError("team 图片下载错误，请重试！")
+        draw.text((515, 300), info.team.name, font=Torus_Regular_30, anchor="lt")
     # supporter
-    if info.is_supporter:
-        im.alpha_composite(SupporterBg.resize((54, 54)), (400, 280))
+    # if info.is_supporter:
+    # im.alpha_composite(SupporterBg.resize((54, 54)), (400, 280))
     # 经验
     if statistics.level.progress != 0:
         im.alpha_composite(ExpLeftBg, (50, 646))
