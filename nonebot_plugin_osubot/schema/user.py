@@ -85,6 +85,13 @@ class User(UserCompact):
     statistics_rulesets: Optional[StatisticsRulesets] = None
 
 
+class Team(Base):
+    flag_url: str
+    id: int
+    name: str
+    short_name: str
+
+
 class UnifiedUser(Base):
     avatar_url: str
     country_code: str
@@ -93,3 +100,4 @@ class UnifiedUser(Base):
     is_supporter: bool
     badges: Optional[list[Badge]] = None
     statistics: Optional[UserStatistics] = None
+    team: Optional[Team] = None
