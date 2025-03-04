@@ -31,6 +31,8 @@ if not user_cache_path.exists():
     user_cache_path.mkdir(parents=True, exist_ok=True)
 if not badge_cache_path.exists():
     badge_cache_path.mkdir(parents=True, exist_ok=True)
+if not team_cache_path.exists():
+    team_cache_path.mkdir(parents=True, exist_ok=True)
 
 
 async def download_map(setid: int) -> Optional[Path]:
