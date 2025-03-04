@@ -86,7 +86,7 @@ class User(UserCompact):
 
 
 class Team(Base):
-    flag_url: str
+    flag_url: Optional[str] = None
     id: int
     name: str
     short_name: str
