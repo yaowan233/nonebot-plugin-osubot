@@ -60,7 +60,7 @@ async def _(msg: Message = CommandArg()):
     words = re.sub(style_regex, "", words)
     words = re.sub(r"<[^>]+>", "", words)
     if medal_data["PackID"]:
-        words += f'\nhttps://osu.ppy.sh/beatmaps/packs/{medal_data["PackID"].rstrip(",,,")}'
+        words += f"\nhttps://osu.ppy.sh/beatmaps/packs/{medal_data['PackID'].rstrip(',,,')}"
     await (UniMessage.image(url=medal_data["Link"]) + words).send(reply_to=True)
     if medal_data["beatmaps"]:
         msg = UniMessage()
@@ -68,7 +68,7 @@ async def _(msg: Message = CommandArg()):
             medal_data["beatmaps"] = medal_data["beatmaps"][:5]
         for beatmap in medal_data["beatmaps"]:
             msg += (
-                f'{beatmap["SongTitle"]} [{beatmap["DifficultyName"]}]\n{beatmap["Difficulty"]}⭐\n'
-                + f'https://osu.ppy.sh/b/{beatmap["BeatmapID"]}'
+                f"{beatmap['SongTitle']} [{beatmap['DifficultyName']}]\n{beatmap['Difficulty']}⭐\n"
+                + f"https://osu.ppy.sh/b/{beatmap['BeatmapID']}"
             )
         await msg.send()
