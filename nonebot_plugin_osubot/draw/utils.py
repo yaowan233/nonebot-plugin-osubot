@@ -13,7 +13,7 @@ from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
 from .static import Path, Image, Stars, ColorArr, np, osufile
-from ..file import map_path, download_osu, get_projectimg, user_cache_path
+from ..file import map_path, download_osu, get_projectimg, user_cache_path, team_cache_path
 
 
 def draw_fillet(img, radii):
@@ -267,6 +267,18 @@ async def update_icon(info: UnifiedUser):
                 user_icon = await get_projectimg(info.avatar_url)
                 with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
                     f.write(user_icon.getvalue())
+
+    team_path = team_cache_path / f"{info.team.id}.png"
+    if team_path.exists():
+        modified_time = team_path.stat().st_mtime
+        modified_datetime = datetime.datetime.fromtimestamp(modified_time)
+        time_diff = datetime.datetime.now() - modified_datetime
+        # 判断文件是否创建超过一天
+        if time_diff > datetime.timedelta(days=1):
+            team_path.unlink()
+            team_icon = await get_projectimg(info.team.flag_url)
+            with open(team_path, "wb") as f:
+                f.write(team_icon.getvalue())
 
 
 async def update_map(set_id, map_id):
