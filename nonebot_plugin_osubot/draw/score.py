@@ -398,9 +398,15 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         anchor="lm",
     )
     # 谱面版本，mapper
+    mapper = (
+        f"{mapinfo.version} | 谱师: {', '.join(owner.username for owner in mapinfo.owners)}"
+        if mapinfo.owners
+        else f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}"
+    )
+    
     draw.text(
         (225, 90),
-        f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}",
+        mapper,
         font=Torus_SemiBold_20,
         anchor="lm",
     )
