@@ -403,7 +403,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         if mapinfo.owners
         else f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}"
     )
-    
+
     draw.text(
         (225, 90),
         mapper,

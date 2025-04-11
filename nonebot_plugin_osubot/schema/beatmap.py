@@ -10,6 +10,7 @@ class Covers(Base):
     list: str
     slimcover: str
 
+
 class Gds(Base):
     id: int
     username: str
