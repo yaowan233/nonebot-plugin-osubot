@@ -398,9 +398,19 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         anchor="lm",
     )
     # 谱面版本，mapper
+    if mapinfo.owners:
+        owner_names = [owner.username for owner in mapinfo.owners]
+        if len(owner_names) > 2:
+            owners_str = ", ".join(owner_names[:2]) + ", ..."
+        else:
+            owners_str = ", ".join(owner_names)
+        mapper = f"{mapinfo.version} | 谱师: {owners_str}"
+    else:
+        mapper = f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}"
+
     draw.text(
         (225, 90),
-        f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}",
+        mapper,
         font=Torus_SemiBold_20,
         anchor="lm",
     )
