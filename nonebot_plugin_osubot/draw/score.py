@@ -26,7 +26,7 @@ from .utils import (
     calc_songlen,
     get_modeimage,
     open_user_icon,
-    filter_scores_with_regex,
+    filter_scores_with_regex, trim_text_with_ellipsis,
 )
 from .static import (
     Image,
@@ -400,13 +400,12 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # 谱面版本，mapper
     if mapinfo.owners:
         owner_names = [owner.username for owner in mapinfo.owners]
-        if len(owner_names) > 2:
-            owners_str = ", ".join(owner_names[:2]) + ", ..."
-        else:
-            owners_str = ", ".join(owner_names)
+        owners_str = ", ".join(owner_names)
         mapper = f"{mapinfo.version} | 谱师: {owners_str}"
+
     else:
         mapper = f"{mapinfo.version} | 谱师: {mapinfo.beatmapset.creator}"
+    mapper = trim_text_with_ellipsis(mapper, 1000,Torus_SemiBold_20)
 
     draw.text(
         (225, 90),
