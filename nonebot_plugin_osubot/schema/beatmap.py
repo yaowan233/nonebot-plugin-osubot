@@ -11,6 +11,11 @@ class Covers(Base):
     slimcover: str
 
 
+class Gds(Base):
+    id: int
+    username: str
+
+
 class BeatmapsetCompact(Base):
     artist: str
     artist_unicode: str
@@ -78,6 +83,7 @@ class Beatmap(BeatmapCompact):
     playcount: int
     ranked: int
     url: str
+    owners: Optional[list[Gds]] = None
 
 
 class BackgroundsAttributes(Base):
