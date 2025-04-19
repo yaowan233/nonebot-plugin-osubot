@@ -25,8 +25,8 @@ async def _bp(state: T_State):
     if not best.isdigit():
         await UniMessage.text("只能接受纯数字的bp参数").finish(reply_to=True)
     best = int(best)
-    if best <= 0 or best > 100:
-        await UniMessage.text("只允许查询bp 1-100 的成绩").finish(reply_to=True)
+    if best <= 0 or best > 200:
+        await UniMessage.text("只允许查询bp 1-200 的成绩").finish(reply_to=True)
     try:
         data = await draw_score(
             "bp",
@@ -52,11 +52,11 @@ async def _pfm(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if not state["range"]:
-        state["range"] = "1-100"
+        state["range"] = "1-200"
     ls = state["range"].split("-")
     low, high = int(ls[0]), int(ls[1])
-    if not 0 < low < high <= 100:
-        await UniMessage.text("仅支持查询bp1-100").finish(reply_to=True)
+    if not 0 < low < high <= 200:
+        await UniMessage.text("仅支持查询bp1-200").finish(reply_to=True)
     try:
         data = await draw_bp(
             "bp",
@@ -84,11 +84,11 @@ async def _tbp(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if not state["range"]:
-        state["range"] = "1-100"
+        state["range"] = "1-200"
     ls = state["range"].split("-")
     low, high = int(ls[0]), int(ls[1])
-    if not 0 < low < high <= 100:
-        await UniMessage.text("仅支持查询bp1-100").finish(reply_to=True)
+    if not 0 < low < high <= 200:
+        await UniMessage.text("仅支持查询bp1-200").finish(reply_to=True)
     try:
         data = await draw_bp(
             "tbp",
