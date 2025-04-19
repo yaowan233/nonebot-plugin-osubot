@@ -1,3 +1,4 @@
+import asyncio
 import random
 from io import BytesIO
 from urllib.parse import urlencode
@@ -73,6 +74,58 @@ async def get_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
 
 
+async def fetch_score_batch(
+    uid: Union[int, str],
+    mode: str,
+    scope: str,
+    batch_size: int,
+    offset: int,
+    legacy_only: bool,
+    include_failed: bool,
+) -> list[UnifiedScore]:
+    """并发获取单次批次数据"""
+    url = (
+        f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={batch_size}"
+        f"&offset={offset}&legacy_only={int(legacy_only)}"
+        f"&include_fails={int(include_failed)}"
+    )
+    data = await make_request(url, await get_headers(), "未找到该玩家BP")
+    if not data:
+        return []
+    scores = [NewScore(**i) for i in data]
+    return [
+        UnifiedScore(
+            mods=i.mods,
+            ruleset_id=i.ruleset_id,
+            rank=i.rank,
+            accuracy=i.accuracy * 100,
+            total_score=i.total_score,
+            ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+            max_combo=i.max_combo,
+            statistics=i.statistics,
+            legacy_total_score=i.legacy_total_score,
+            passed=i.passed,
+            beatmap=UnifiedBeatmap(
+                id=i.beatmap_id,
+                set_id=i.beatmapset.id,
+                artist=i.beatmapset.artist,
+                title=i.beatmapset.title,
+                version=i.beatmap.version,
+                creator=i.beatmapset.creator,
+                total_length=i.beatmap.total_length,
+                mode=i.beatmap.mode_int,
+                bpm=i.beatmap.bpm,
+                cs=i.beatmap.cs,
+                ar=i.beatmap.ar,
+                hp=i.beatmap.drain,
+                od=i.beatmap.accuracy,
+                stars=i.beatmap.difficulty_rating,
+            ),
+        )
+        for i in scores
+    ]
+
+
 async def get_user_scores(
     uid: Union[int, str],
     mode: str,
@@ -81,47 +134,40 @@ async def get_user_scores(
     legacy_only: bool = 0,
     include_failed: bool = True,
     offset: int = 0,
-    limit: int = 100,
+    limit: int = 200,
 ) -> list[UnifiedScore]:
     if source == "osu":
-        url = (
-            f"{api}/users/{uid}/scores/{scope}?mode={mode}&limit={limit}&legacy_only={int(legacy_only)}"
-            f"&offset={offset}&include_fails={int(include_failed)}"
-        )
-        data = await make_request(url, await get_headers(), "未找到该玩家BP")
-        scores = [NewScore(**i) for i in data]
-        unified_scores = [
-            UnifiedScore(
-                mods=i.mods,
-                ruleset_id=i.ruleset_id,
-                rank=i.rank,
-                accuracy=i.accuracy * 100,
-                total_score=i.total_score,
-                ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-                max_combo=i.max_combo,
-                statistics=i.statistics,
-                legacy_total_score=i.legacy_total_score,
-                passed=i.passed,
-                beatmap=UnifiedBeatmap(
-                    id=i.beatmap_id,
-                    set_id=i.beatmapset.id,
-                    artist=i.beatmapset.artist,
-                    title=i.beatmapset.title,
-                    version=i.beatmap.version,
-                    creator=i.beatmapset.creator,
-                    total_length=i.beatmap.total_length,
-                    mode=i.beatmap.mode_int,
-                    bpm=i.beatmap.bpm,
-                    cs=i.beatmap.cs,
-                    ar=i.beatmap.ar,
-                    hp=i.beatmap.drain,
-                    od=i.beatmap.accuracy,
-                    stars=i.beatmap.difficulty_rating,
-                ),
-            )
-            for i in scores
-        ]
-        return unified_scores
+        if limit <= 0:
+            return []
+
+        # 计算需要多少次请求
+        # 计算需要多少批次
+        batch_size = 100
+        total_batches = (limit + batch_size - 1) // batch_size  # ceiling(limit/batch_size)
+        all_scores = []
+        # 分批并发请求
+        for batch_idx in range(0, total_batches, 2):
+            current_batches = range(batch_idx, min(batch_idx + 2, total_batches))
+
+            # 生成 tasks（并发执行）
+            tasks = []
+            for batch_n in current_batches:
+                offset = batch_n * batch_size
+                actual_batch_size = min(batch_size, limit - len(all_scores) - offset)
+
+                if actual_batch_size <= 0:
+                    continue  # 已获取足够数据
+
+                task = fetch_score_batch(uid, mode, scope, actual_batch_size, offset, legacy_only, include_failed)
+                tasks.append(task)
+            # 并发请求当前批次
+            batch_results = await asyncio.gather(*tasks)
+
+            for batch_scores in batch_results:
+                all_scores.extend(batch_scores)
+                if len(all_scores) >= limit:
+                    return all_scores[:limit]  # 提前终止
+        return all_scores[:limit]
 
     elif source == "ppysb":
         url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={int(include_failed)}"

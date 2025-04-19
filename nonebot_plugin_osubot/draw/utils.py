@@ -414,13 +414,15 @@ def filter_scores_with_regex(scores_with_index, conditions):
 
 def trim_text_with_ellipsis(text, max_width, font):
     # 初始检查：空字符串或无需处理
-    if not text or font.getbbox(text) <= max_width:
+    bbox = font.getbbox(text)
+    text_width = bbox[2] - bbox[0]
+    if not text or text_width <= max_width:
         return text
     # 逐字符检查
     ellipsis_symbol = "…"
-    ellipsis_width = font.getbbox("…")
+    ellipsis_width = font.getbbox("…")[2] - font.getbbox("…")[0]
     # 确保最大宽度能至少容纳一个字符+省略号
-    if max_width < font.getbbox("A") + ellipsis_width:
+    if max_width < font.getbbox("A")[2] - font.getbbox("A")[0] + ellipsis_width:
         return ellipsis_symbol
 
     truncated_text = ""
@@ -428,7 +430,7 @@ def trim_text_with_ellipsis(text, max_width, font):
 
     for char in text:
         # 检查当前字符宽度 + 省略号宽度是否超标
-        char_width = font.getbbox(char)
+        char_width = font.getbbox(char)[2] - font.getbbox(char)[0]
         if current_width + char_width + ellipsis_width > max_width:
             break
         truncated_text += char
