@@ -12,6 +12,8 @@ function Slider(data, beatmap)
     this.repeat = data[6] | 0;
     this.pixelLength = +data[7];
 
+    this.hitSoundString = data[8] || "";
+
     var sliderTime = this.beatmap.timingPointAt(this.time).beatLength * (
             this.pixelLength / this.beatmap.SliderMultiplier
         ) / 100;

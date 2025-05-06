@@ -6,8 +6,24 @@ function PalpableCatchHitObject(data, beatmap) {
     this.color = data.color;
     this.radius = data.radius;
     this.hyperDash = false;
+    this.edge = false;
     this.XDistToNext = [1, 1, 1];
+    this.hitSound = data.hitSound || "0";
 }
+
+PalpableCatchHitObject.prototype.getHitsoundLabel = function (){
+    let hsLabels = [];
+    if (this.hitSound == null || this.hitSound == undefined || !this.hitSound) // hs = null | undifined | "" | "0"
+        return null;
+    else {
+        if (this.hitSound & 2) hsLabels.push("W");
+        if (this.hitSound & 8) hsLabels.push("C");
+        if (this.hitSound & 4) hsLabels.push("F");
+        if (hsLabels.length === 0) return null;
+        return hsLabels.join("|");
+    }
+};
+
 PalpableCatchHitObject.prototype.draw = function (time, ctx) {
     var dt = this.time - time;
     if (dt >= -this.beatmap.FALLOUT_TIME) {
@@ -24,7 +40,10 @@ PalpableCatchHitObject.prototype.draw2 = function (obj, SCALE, ctx, BORDER_WIDTH
         if (this.hyperDash) this.drawDashCircle2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, ctx);
         this.drawCircle2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, ctx);
     }
-    if (combo) this.drawCombo2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, combo, ctx);
+    if (combo) {
+        if (typeof(combo) === "number") this.drawCombo2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, "x" + combo, ctx);
+        else this.drawCombo2({ x: obj.x + BORDER_WIDTH, y: obj.y + BORDER_HEIGHT }, SCALE, combo, ctx);
+    }
 }
 PalpableCatchHitObject.prototype.predraw2 = function (SCREENSHEIGHT, COLMARGIN, SCALE, offset) {
     // 去除offset
@@ -83,7 +102,7 @@ PalpableCatchHitObject.prototype.drawCombo2 = function (position, SCALE, combo, 
     ctx.font = "normal 16px 'Segoe UI'";
     ctx.textBaseline = "middle";
     ctx.textAlign = "start";
-    ctx.fillText("x" + combo, position.x + this.radius * SCALE * 2, position.y);
+    ctx.fillText(combo, position.x + this.radius * SCALE * 2, position.y);
     ctx.restore();
 };
 PalpableCatchHitObject.prototype.drawBanana = function (position, ctx) {

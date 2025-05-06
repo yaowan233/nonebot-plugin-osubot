@@ -6,11 +6,13 @@ function JuiceStream(data, beatmap)
     this.sliderType = this.points[0];
     this.points[0] = this.position;
     for (var i = 1; i < this.points.length; i++)
-    {
+    { 
         this.points[i] = new Point(this.points[i].split(':'));
     }
     this.repeat = data[6] | 0;
     this.pixelLength = +data[7];
+
+    this.hitSounds = this.hitSoundString.split('|');
 
     this.timingPoint = this.beatmap.timingPointAt(this.time);
     this.beatLength = this.timingPoint.beatLength;
@@ -99,6 +101,7 @@ JuiceStream.prototype.generateTicks = function(spanIndex, spanStartTime, spanDur
 JuiceStream.prototype.buildNested = function() {
     this.nested = [];
 
+    let nestedIndex = 0;
     let lastEvent = null;
     for(let i = 0; i < this.events.length; i++) {
         // generate tiny droplets since the last point
@@ -151,7 +154,9 @@ JuiceStream.prototype.buildNested = function() {
                     x: this.curve.pointAt(this.events[i].pathProgress).x,
                     color: this.color,
                     radius: this.beatmap.circleRadius,
+                    hitSound: this.hitSounds[nestedIndex] || "0",
                 }, this.beatmap));
+                nestedIndex++;
                 break;
         }
     }
