@@ -170,6 +170,7 @@ async def get_user_scores(
         return all_scores[:limit]
 
     elif source == "ppysb":
+        limit = min(limit, 100)
         url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={int(include_failed)}"
         data = await make_request(url, {}, "未找到该玩家BP")
         data = ScoresResponse(**data)
