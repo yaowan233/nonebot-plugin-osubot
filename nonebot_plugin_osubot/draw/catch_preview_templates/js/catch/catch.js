@@ -673,9 +673,10 @@ Catch.prototype.draw2 = function (SCALE, SPEED = 1, params = {}) {
     // 按总物件数/时间控制密度
     let totalTime = this.fullCatchObjects[this.fullCatchObjects.length - 1].time - this.fullCatchObjects[0].time;
     if (this.fullCatchObjects.length * 1000 / totalTime > 2) comboSplit = Math.ceil(this.fullCatchObjects.length * 1000 / totalTime) * 10;
-    // 按0.5*位数修约
-    let roundBy = Math.pow(10, comboSplit.toString().length) * 0.5;
+    // 按0.5*(10^(位数-1&&最小为2))修约  60=>50  270=>250  820=>800  1434=>1500  1834=>2000
+    let roundBy = Math.pow(10, Math.max(comboSplit.toString().length - 1, 2)) * 0.5;
     comboSplit = Math.round(comboSplit / roundBy) * roundBy;
+    if (comboSplit <= 0) comboSplit = 20;
     for (let i = 0; i < this.fullCatchObjects.length; i++) {
         let showCombo = null;
         if (objs[i].type === "Fruit" || objs[i].type === "Droplet") {
