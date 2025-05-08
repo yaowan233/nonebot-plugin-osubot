@@ -250,10 +250,10 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=color,
     )
     # mods
-    if any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI"))):
-        ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
-    else:
-        ranking = ["X", "S", "A", "B", "C", "D", "F"]
+    # if any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI"))):
+        # ranking = ["XH", "SH", "A", "B", "C", "D", "F"]
+    # else:
+        # ranking = ["X", "S", "A", "B", "C", "D", "F"]
     if score_info.mods:
         for mods_num, s_mods in enumerate(score_info.mods):
             mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
