@@ -410,9 +410,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # 状态
     draw_text_with_outline(
         draw,
-        (595, 120),
+        (595, 115),
         mapinfo.status.capitalize(),
-        Torus_SemiBold_20,
+        Torus_SemiBold_15,
         anchor="mm",
         fill=(255, 255, 255, 255),
     )
