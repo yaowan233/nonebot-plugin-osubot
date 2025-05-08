@@ -292,11 +292,11 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
             team_img.save(team_path)
         try:
             team_img = Image.open(team_path).convert("RGBA").resize((80, 40))
-            im.alpha_composite(team_img, (208, 665))
+            im.alpha_composite(team_img, (208, 660))
         except UnidentifiedImageError:
             team_path.unlink()
             raise NetworkError("team 图片下载错误，请重试！")
-        draw.text((300, 680), info.team.name, font=Torus_Regular_20, anchor="lt")
+        draw.text((297, 675), info.team.name, font=Torus_Regular_20, anchor="lt")
     # supporter
     # if info.is_supporter:
     #     im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
@@ -664,7 +664,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     if not getattr(user_icon, "is_animated", False):
         icon_bg = user_icon.convert("RGBA").resize((170, 170))
         icon_img = draw_fillet(icon_bg, 15)
-        im.alpha_composite(icon_img, (20, 533))
+        im.alpha_composite(icon_img, (27, 532))
         byt = BytesIO()
         im.convert("RGB").save(byt, "jpeg")
         im.close()
@@ -677,7 +677,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         # 创建一个新的 RGBA 图片，将 PNG 图片作为背景，将当前帧添加到背景上
         rgba_frame = Image.new("RGBA", im.size, (0, 0, 0, 0))
         rgba_frame.paste(im, (0, 0), im)
-        rgba_frame.paste(gif_frame, (20, 533), gif_frame)
+        rgba_frame.paste(gif_frame, (27, 532), gif_frame)
         # 将 RGBA 图片转换为 RGB 模式，并添加到 GIF 图片中
         gif_frames.append(rgba_frame)
     gif_bytes = BytesIO()
