@@ -265,19 +265,19 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # 成绩S-F
     # rank_ok = False
     # for rank_num, i in enumerate(ranking):
-        # rank_img = osufile / "ranking" / f"ranking-{i}.png"
-        # if rank_ok:
-            # rank_b = Image.open(rank_img).convert("RGBA").resize((48, 24))
-            # rank_new = Image.new("RGBA", rank_b.size, (0, 0, 0, 0))
-            # rank_bg = Image.blend(rank_new, rank_b, 0.5)
-        # elif i != score_info.rank:
-            # rank_b = Image.open(rank_img).convert("RGBA").resize((48, 24))
-            # rank_new = Image.new("RGBA", rank_b.size, (0, 0, 0, 0))
-            # rank_bg = Image.blend(rank_new, rank_b, 0.2)
-        # else:
-            # rank_bg = Image.open(rank_img).convert("RGBA").resize((48, 24))
-            # rank_ok = True
-        # im.alpha_composite(rank_bg, (75, 163 + 39 * rank_num))
+    # rank_img = osufile / "ranking" / f"ranking-{i}.png"
+    # if rank_ok:
+    # rank_b = Image.open(rank_img).convert("RGBA").resize((48, 24))
+    # rank_new = Image.new("RGBA", rank_b.size, (0, 0, 0, 0))
+    # rank_bg = Image.blend(rank_new, rank_b, 0.5)
+    # elif i != score_info.rank:
+    # rank_b = Image.open(rank_img).convert("RGBA").resize((48, 24))
+    # rank_new = Image.new("RGBA", rank_b.size, (0, 0, 0, 0))
+    # rank_bg = Image.blend(rank_new, rank_b, 0.2)
+    # else:
+    # rank_bg = Image.open(rank_img).convert("RGBA").resize((48, 24))
+    # rank_ok = True
+    # im.alpha_composite(rank_bg, (75, 163 + 39 * rank_num))
     # 成绩+acc
     im = draw_acc(im, score_info.accuracy, score_info.ruleset_id)
     # 地区
@@ -480,7 +480,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     draw.text((883, 260), "达成时间：", font=Torus_SemiBold_20, anchor="lm")
     draw.text((985, 260), score_info.ended_at.strftime("%Y-%m-%d %H:%M:%S"), font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    draw.text((715, 300), f"全球排行：" if grank else "", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((715, 300), "全球排行：" if grank else "", font=Torus_SemiBold_20, anchor="lm")
     draw.text((817, 300), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="lm")
     # 左下玩家名
     draw.text((208, 550), info.username, font=Torus_SemiBold_30, anchor="lm")
@@ -493,7 +493,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     )
     if score_info.ruleset_id in {0, 4, 8}:
         draw.text((1066, 393), ss_pp, font=Torus_Regular_25, anchor="mm")
-        draw.text((933,393), if_pp, font=Torus_Regular_25, anchor="mm")
+        draw.text((933, 393), if_pp, font=Torus_Regular_25, anchor="mm")
         draw.text((768, 438), f"{pp_info.pp:.0f}", font=Torus_Regular_50, anchor="mm")
         draw.text((933, 482), f"{pp_info.pp_aim:.0f}", font=Torus_Regular_25, anchor="mm")
         draw.text((1066, 482), f"{pp_info.pp_speed:.0f}", font=Torus_Regular_25, anchor="mm")
