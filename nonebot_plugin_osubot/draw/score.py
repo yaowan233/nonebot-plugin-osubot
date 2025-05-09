@@ -458,7 +458,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=(255, 255, 255, 255),
     )
     # 谱面版本
-    version = trim_text_with_ellipsis(mapinfo.version, 450, Torus_SemiBold_20)
+    version = trim_text_with_ellipsis(mapinfo.version, 450, Torus_SemiBold_15)
     draw_text_with_outline(
         draw,
         (65, 80),
