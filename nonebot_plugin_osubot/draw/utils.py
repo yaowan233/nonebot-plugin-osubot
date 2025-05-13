@@ -120,8 +120,8 @@ def draw_acc(img: Image, acc: float, mode: int):
     ax.clear()
     fig.clf()
     fig.clear()
-    score_acc_img = Image.open(acc_img).convert("RGBA").resize((576, 432))
-    img.alpha_composite(score_acc_img, (25, 83))
+    score_acc_img = Image.open(acc_img).convert("RGBA").resize((384, 288))
+    img.alpha_composite(score_acc_img, (580, 35))
     return img
 
 
@@ -438,3 +438,18 @@ def trim_text_with_ellipsis(text, max_width, font):
 
     # 返回截断后的字符串 + 省略号
     return truncated_text + ellipsis_symbol if truncated_text else ellipsis_symbol
+
+
+# 字体描边函数
+def draw_text_with_outline(draw, position, text, font, anchor, fill):
+    for dx in [-1, 0, 1]:
+        for dy in [-1, 0, 1]:
+            if dx != 0 or dy != 0:
+                draw.text(
+                    (position[0] + dx, position[1] + dy),
+                    text,
+                    font=font,
+                    anchor=anchor,
+                    fill=(0, 0, 0, 255),
+                )
+    draw.text(position, text, font=font, anchor=anchor, fill=fill)
