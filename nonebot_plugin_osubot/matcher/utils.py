@@ -33,8 +33,9 @@ def split_msg():
         state["query"] = []
         state["target"] = None
         state["is_lazer"] = True if not user_data else user_data.lazer_mode
-        arg = (arg.extract_plain_text().strip().replace("＝", "=").replace("：", ":")
-               .replace("＆", "&").replace("＃", "#"))
+        arg = (
+            arg.extract_plain_text().strip().replace("＝", "=").replace("：", ":").replace("＆", "&").replace("＃", "#")
+        )
         matches = re.findall(pattern, arg)
         for match in matches:
             if match[0]:
