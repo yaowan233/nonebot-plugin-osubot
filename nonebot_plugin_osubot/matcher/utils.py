@@ -85,9 +85,9 @@ def split_msg():
         if state["source"] == "ppysb" and not arg.strip():
             sb_user_data = await SbUserData.get_or_none(user_id=qq)
             if sb_user_data:
-                state["user"] = sb_user_data.osu_id if user_data else 0
-                state["username"] = sb_user_data.osu_name if user_data else ""
+                state["user"] = sb_user_data.osu_id
+                state["username"] = sb_user_data.osu_name
             else:
-                state["error"] = "该账号尚未绑定sb 服务器，请输入 /sbbind 用户名 绑定账号"
+                state["error"] = "该账号尚未绑定 sb 服务器，请输入 /sbbind 用户名 绑定账号"
 
     return Depends(dependency)
