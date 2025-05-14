@@ -19,6 +19,7 @@ from .utils import (
     crop_bg,
     draw_acc,
     is_close,
+    star_diff,
     stars_diff,
     update_map,
     draw_fillet,
@@ -241,6 +242,14 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
+    # 难度竖条
+    star_diff = star_diff(pp_info.difficulty.stars)
+    star_img = star_diff.resize((20, 271))
+    im.alpha_composite(star_img, (0, 50))
+    if pp_info.difficulty.stars < 6.5:
+        color = (0, 0, 0, 255)
+    else:
+        color = (255, 217, 102, 255)
     # 星级
     draw.text(
         (556, 85),
@@ -417,7 +426,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=(255, 255, 255, 255),
     )
     # setid
-    draw.text((20, 25), f"Setid：{mapinfo.beatmapset_id}", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((32, 25), f"Setid：{mapinfo.beatmapset_id}", font=Torus_SemiBold_20, anchor="lm")
     # mapid
     draw.text((650, 25), f"Mapid: {mapinfo.id}", font=Torus_SemiBold_20, anchor="rm")
     # 曲名
@@ -477,11 +486,11 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         anchor="lm",
     )
     # 时间
-    draw.text((883, 260), "达成时间：", font=Torus_SemiBold_20, anchor="lm")
-    draw.text((985, 260), score_info.ended_at.strftime("%Y-%m-%d %H:%M:%S"), font=Torus_SemiBold_20, anchor="lm")
+    draw.text((883, 230), "达成时间：", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((985, 230), score_info.ended_at.strftime("%Y-%m-%d %H:%M:%S"), font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    draw.text((715, 300), "全球排行：" if grank else "", font=Torus_SemiBold_20, anchor="lm")
-    draw.text((817, 300), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="lm")
+    draw.text((883, 260), "全球排行：" if grank else "", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((985, 260), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="lm")
     # 左下玩家名
     draw.text((208, 550), info.username, font=Torus_SemiBold_30, anchor="lm")
     # 国内排名
