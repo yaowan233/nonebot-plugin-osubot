@@ -12,7 +12,7 @@ from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
 from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
-from .static import Path, Image, Stars, ColorArr, np, osufile
+from .static import Path, Image, Stars, stardiff, ColorArr, np, osufile
 from ..file import map_path, download_osu, get_projectimg, user_cache_path, team_cache_path
 
 
@@ -196,6 +196,30 @@ def stars_diff(stars: float):
     # 填充背景
     img = Image.new("RGBA", Stars.size, (r, g, b))
     img.paste(Stars, (0, 0, xx, yy), Stars)
+    # 把白色变透明
+    arr = np.array(img)
+    # 创建mask，将白色替换为True，其他颜色替换为False
+    mask = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 255)
+    # 将mask中为True的像素点的alpha通道设置为0
+    arr[:, :, 3][mask] = 0
+    # 将numpy数组转换回PIL图片
+    img = Image.fromarray(arr)
+    return img
+
+
+def star_diff(stars: float):
+    if stars < 0.1:
+        r, g, b = 170, 170, 170
+    elif stars >= 9:
+        r, g, b = 0, 0, 0
+    else:
+        # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
+        r, g, b, _a = ColorArr[int(stars * 100)]
+    # 打开底图
+    xx, yy = stardiff.size
+    # 填充背景
+    img = Image.new("RGBA", stardiff.size, (r, g, b))
+    img.paste(stardiff, (0, 0, xx, yy), stardiff)
     # 把白色变透明
     arr = np.array(img)
     # 创建mask，将白色替换为True，其他颜色替换为False
