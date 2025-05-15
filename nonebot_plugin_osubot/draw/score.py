@@ -239,8 +239,8 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     stars_img = stars_bg.resize((85, 37))
     im.alpha_composite(stars_img, (552, 67))
     # 难度竖条
-    star_diff = star_diff(pp_info.difficulty.stars)
-    star_img = star_diff.resize((20, 271))
+    star_bg = star_diff(pp_info.difficulty.stars)
+    star_img = star_bg.resize((20, 271))
     im.alpha_composite(star_img, (0, 50))
     # 星级
     if pp_info.difficulty.stars < 6.5:
