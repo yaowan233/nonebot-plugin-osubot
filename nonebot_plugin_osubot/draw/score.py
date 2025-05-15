@@ -238,19 +238,16 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     stars_bg = stars_diff(pp_info.difficulty.stars)
     stars_img = stars_bg.resize((85, 37))
     im.alpha_composite(stars_img, (552, 67))
-    if pp_info.difficulty.stars < 6.5:
-        color = (0, 0, 0, 255)
-    else:
-        color = (255, 217, 102, 255)
     # 难度竖条
     star_diff = star_diff(pp_info.difficulty.stars)
     star_img = star_diff.resize((20, 271))
     im.alpha_composite(star_img, (0, 50))
+    # 星级
     if pp_info.difficulty.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
-    # 星级
+
     draw.text(
         (556, 85),
         f"★{pp_info.difficulty.stars:.2f}",
