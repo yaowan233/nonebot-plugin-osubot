@@ -41,7 +41,7 @@
 
         const createImg = function () {
             const self = this;
-            const osufile = `{{ osu_file }}`;
+            const osufile = {{ osu_file|tojson }};
             let SPEED = 1;
             let mods = {
                 HR: {{ is_hr }},
