@@ -44,7 +44,9 @@ from .static import (
     Torus_SemiBold_25,
     Torus_SemiBold_30,
     osufile,
-    extra_30, Stardiff, Stars,
+    extra_30,
+    Stardiff,
+    Stars,
 )
 
 
