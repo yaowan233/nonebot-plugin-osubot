@@ -45,6 +45,8 @@ from .static import (
     Torus_SemiBold_30,
     osufile,
     extra_30,
+    Stardiff,
+    Stars,
 )
 
 
@@ -234,14 +236,19 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=(255, 255, 255, 255),
     )
     # 难度星星
-    stars_bg = stars_diff(pp_info.difficulty.stars)
+    stars_bg = stars_diff(pp_info.difficulty.stars, Stars)
     stars_img = stars_bg.resize((85, 37))
     im.alpha_composite(stars_img, (552, 67))
+    # 难度竖条
+    star_bg = stars_diff(pp_info.difficulty.stars, Stardiff)
+    star_img = star_bg.resize((20, 271))
+    im.alpha_composite(star_img, (0, 50))
+    # 星级
     if pp_info.difficulty.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
-    # 星级
+
     draw.text(
         (556, 85),
         f"★{pp_info.difficulty.stars:.2f}",
@@ -417,7 +424,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=(255, 255, 255, 255),
     )
     # setid
-    draw.text((20, 25), f"Setid：{mapinfo.beatmapset_id}", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((32, 25), f"Setid：{mapinfo.beatmapset_id}", font=Torus_SemiBold_20, anchor="lm")
     # mapid
     draw.text((650, 25), f"Mapid: {mapinfo.id}", font=Torus_SemiBold_20, anchor="rm")
     # 曲名
@@ -477,11 +484,11 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         anchor="lm",
     )
     # 时间
-    draw.text((883, 260), "达成时间：", font=Torus_SemiBold_20, anchor="lm")
-    draw.text((985, 260), score_info.ended_at.strftime("%Y-%m-%d %H:%M:%S"), font=Torus_SemiBold_20, anchor="lm")
+    draw.text((883, 230), "达成时间：", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((985, 230), score_info.ended_at.strftime("%Y-%m-%d %H:%M:%S"), font=Torus_SemiBold_20, anchor="lm")
     # 全球排名
-    draw.text((715, 300), "全球排行：" if grank else "", font=Torus_SemiBold_20, anchor="lm")
-    draw.text((817, 300), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="lm")
+    draw.text((883, 260), "全球排行：" if grank else "", font=Torus_SemiBold_20, anchor="lm")
+    draw.text((985, 260), f"#{grank}" if grank else "", font=Torus_SemiBold_25, anchor="lm")
     # 左下玩家名
     draw.text((208, 550), info.username, font=Torus_SemiBold_30, anchor="lm")
     # 国内排名
