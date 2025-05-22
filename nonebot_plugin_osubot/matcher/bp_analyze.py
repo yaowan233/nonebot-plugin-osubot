@@ -7,9 +7,8 @@ from nonebot_plugin_alconna import UniMessage
 
 from ..utils import NGM
 from .utils import split_msg
-from ..schema import NewScore
 from ..database import UserData
-from ..api import osu_api, get_users
+from ..api import get_user_scores
 from ..exceptions import NetworkError
 from ..draw.score import cal_score_info
 from ..draw.echarts import draw_bpa_plot
@@ -35,17 +34,11 @@ async def _(event: Event, state: T_State):
     uid = state["user"]
     lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
     try:
-        bp_info = await osu_api(
-            "bp",
-            uid,
-            NGM[state["mode"]],
-            legacy_only=int(not user.lazer_mode),
-        )
+        score_ls = await get_user_scores(uid, NGM[state["mode"]], "best", legacy_only= not state["is_lazer"])
     except NetworkError as e:
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式 {lazer_mode}时 {str(e)}"
         ).finish(reply_to=True)
-    score_ls = [NewScore(**i) for i in bp_info]
     for score in score_ls:
         for mod in score.mods:
             if mod.acronym == "DT" or mod.acronym == "NC":
@@ -96,16 +89,14 @@ async def _(event: Event, state: T_State):
         pp_data.append({"name": mod, "value": round(pp, 2)})
     mapper_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
-        mapper_pp[i.beatmap.user_id] += i.pp * 0.95**num
+        mapper_pp[i.beatmap.creator] += i.pp * 0.95**num
     mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)
     mapper_pp = mapper_pp[:9]
-    users = await get_users([i[0] for i in mapper_pp])
-    user_dic = {i.id: i.username for i in users}
     mapper_pp_data = []
     for mapper, pp in mapper_pp:
-        mapper_pp_data.append({"name": user_dic.get(mapper, ""), "value": round(pp, 2)})
+        mapper_pp_data.append({"name": mapper, "value": round(pp, 2)})
     if len(mapper_pp_data) > 20:
         mapper_pp_data = mapper_pp_data[:20]
-    name = f"{score_ls[0].user.username} {NGM[state['mode']]} 模式 "
+    name = f"{state['username']} {NGM[state['mode']]} 模式 "
     byt = await draw_bpa_plot(name, pp_ls, length_ls, pp_data, mapper_pp_data)
     await UniMessage.image(raw=byt).finish(reply_to=True)

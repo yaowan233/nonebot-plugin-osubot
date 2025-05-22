@@ -16,6 +16,7 @@ from nonebot.internal.rule import Rule, Event
 from nonebot_plugin_alconna import At, UniMsg, UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
 
+from ..schema.score import UnifiedScore
 from ..utils import NGM
 from ..info import get_bg
 from .utils import split_msg
@@ -23,7 +24,7 @@ from ..schema import NewScore
 from ..exceptions import NetworkError
 from ..database.models import UserData
 from ..mania import generate_preview_pic
-from ..api import osu_api, safe_async_get
+from ..api import safe_async_get, get_user_scores
 from ..file import map_path, download_tmp_osu
 from ..draw.catch_preview import draw_cath_preview
 
@@ -46,7 +47,7 @@ data_path = Path() / "data" / "osu"
 pcm_path = data_path / "out.pcm"
 
 
-async def get_random_beatmap_set(binded_id, group_id, ttl=10) -> (NewScore, str):
+async def get_random_beatmap_set(binded_id, group_id, ttl=10) -> (UnifiedScore, str):
     if ttl == 0:
         return
     selected_user = random.choice(binded_id)
@@ -54,10 +55,10 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10) -> (NewScore, str)
         return
     user = await UserData.filter(user_id=selected_user).first()
     try:
-        bp_info = await osu_api("bp", user.osu_id, NGM[str(user.osu_mode)])
+        bp_info = await get_user_scores(binded_id, NGM[str(user.osu_mode)], "best")
     except NetworkError:
         return await get_random_beatmap_set(binded_id, group_id, ttl - 1)
-    selected_score = random.choice([NewScore(**i) for i in bp_info])
+    selected_score = random.choice(bp_info)
     if selected_score.beatmapset.id not in guess_song_cache[group_id]:
         guess_song_cache[group_id].add(selected_score.beatmapset.id)
     else:
@@ -89,12 +90,11 @@ async def _(
         if not user_data:
             await UniMessage.text("该用户未绑定osu账号").finish(reply_to=True)
         try:
-            bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])
+            bp_ls = await get_user_scores(user_data.osu_id, NGM[state["mode"]], "best")
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
-        bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[group_id]]
         if not filtered_bp_ls:
             await UniMessage.text(state["username"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
@@ -103,12 +103,11 @@ async def _(
         selected_user = user_data.osu_name
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]])
+            bp_ls = await get_user_scores(state["user"], NGM[state["mode"]], "best")
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
-        bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[group_id]]
         if not filtered_bp_ls:
             await UniMessage.text(state["username"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
@@ -354,12 +353,11 @@ async def _(
         if not user_data:
             await UniMessage.text("该用户未绑定osu账号").finish(reply_to=True)
         try:
-            bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])
+            bp_ls = await get_user_scores(user_data.osu_id, NGM[state["mode"]], "best")
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
-        bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
             await UniMessage.text(state["username"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
@@ -368,12 +366,11 @@ async def _(
         selected_user = user_data.osu_name
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]])
+            bp_ls = await get_user_scores(state["user"], NGM[state["mode"]], "best")
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
-        bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
             await UniMessage.text(state["username"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
@@ -435,12 +432,11 @@ async def _(
         if not user_data:
             await UniMessage.text("该用户未绑定osu账号").finish(reply_to=True)
         try:
-            bp_info = await osu_api("bp", user_data.osu_id, NGM[state["mode"]])
+            bp_ls = await get_user_scores(user_data.osu_id, NGM[state["mode"]], "best")
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
-        bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
             await UniMessage.text(state["username"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
@@ -449,12 +445,11 @@ async def _(
         guess_song_cache[session_id].add(selected_score.beatmapset.id)
     elif state["user"]:
         try:
-            bp_info = await osu_api("bp", state["user"], NGM[state["mode"]])
+            bp_ls = await get_user_scores(state["user"], NGM[state["mode"]], "best")
         except NetworkError as e:
             await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式bp时 {str(e)}").finish(
                 reply_to=True
             )
-        bp_ls = [NewScore(**i) for i in bp_info]
         filtered_bp_ls = [i for i in bp_ls if i.beatmapset.id not in guess_song_cache[session_id]]
         if not filtered_bp_ls:
             await UniMessage.text(state["username"] + "的bp已经被你们猜过一遍了 －_－").finish(reply_to=True)
