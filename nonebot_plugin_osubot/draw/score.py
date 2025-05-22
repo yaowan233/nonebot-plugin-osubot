@@ -19,7 +19,6 @@ from .utils import (
     crop_bg,
     draw_acc,
     is_close,
-    star_diff,
     stars_diff,
     update_map,
     draw_fillet,
@@ -45,7 +44,7 @@ from .static import (
     Torus_SemiBold_25,
     Torus_SemiBold_30,
     osufile,
-    extra_30,
+    extra_30, Stardiff, Stars,
 )
 
 
@@ -235,11 +234,11 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=(255, 255, 255, 255),
     )
     # 难度星星
-    stars_bg = stars_diff(pp_info.difficulty.stars)
+    stars_bg = stars_diff(pp_info.difficulty.stars, Stars)
     stars_img = stars_bg.resize((85, 37))
     im.alpha_composite(stars_img, (552, 67))
     # 难度竖条
-    star_bg = star_diff(pp_info.difficulty.stars)
+    star_bg = stars_diff(pp_info.difficulty.stars, Stardiff)
     star_img = star_bg.resize((20, 271))
     im.alpha_composite(star_img, (0, 50))
     # 星级
