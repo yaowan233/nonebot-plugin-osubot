@@ -105,6 +105,7 @@ async def fetch_score_batch(
             statistics=i.statistics,
             legacy_total_score=i.legacy_total_score,
             passed=i.passed,
+            pp=i.pp,
             beatmap=UnifiedBeatmap(
                 id=i.beatmap_id,
                 set_id=i.beatmapset.id,
