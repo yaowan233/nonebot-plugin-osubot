@@ -55,7 +55,7 @@ async def get_random_beatmap_set(binded_id, group_id, ttl=10) -> (UnifiedScore, 
         return
     user = await UserData.filter(user_id=selected_user).first()
     try:
-        bp_info = await get_user_scores(binded_id, NGM[str(user.osu_mode)], "best")
+        bp_info = await get_user_scores(user.osu_id, NGM[str(user.osu_mode)], "best")
     except NetworkError:
         return await get_random_beatmap_set(binded_id, group_id, ttl - 1)
     selected_score = random.choice(bp_info)
