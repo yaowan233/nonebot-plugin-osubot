@@ -1,0 +1,5 @@
+[submodule "nonebot_plugin_osubot/draw/catch_preview_templates/js"]
+    path = nonebot_plugin_osubot/draw/catch_preview_templates/js
+    url = https://github.com/Exsper/osucatch-preview.git
+    branch = master
+    sparse-checkout = docs/jsgit submodule update --init --recursive

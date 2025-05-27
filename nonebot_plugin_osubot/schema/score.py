@@ -127,3 +127,4 @@ class UnifiedScore(Base):
     statistics: NewStatistics
     beatmap: Optional[UnifiedBeatmap] = None
     passed: bool
+    pp: Optional[float] = None

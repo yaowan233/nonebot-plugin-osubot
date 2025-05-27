@@ -21,5 +21,25 @@ Curve.parse = function(sliderType, points, pixelLength)
         }
     }
     catch(e) {}
-    return new LinearBezier(points, pixelLength, sliderType == 'L');
+    try
+    {
+        return new LinearBezier(points, pixelLength, sliderType == 'L');
+    }
+    catch(e)
+    {
+        return new SingleNoteCurve(points[0]);
+    }
 }
+
+
+
+function SingleNoteCurve(point)
+{
+    this.path = [point];
+};
+SingleNoteCurve.prototype = Object.create(Curve.prototype);
+SingleNoteCurve.prototype.constructor = SingleNoteCurve;
+SingleNoteCurve.prototype.pointAt = function(t)
+{
+    return this.path[0];
+};

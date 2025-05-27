@@ -6,13 +6,14 @@ from io import BytesIO
 from typing import Union, Optional
 from difflib import SequenceMatcher
 
+from PIL.ImageFile import ImageFile
 from matplotlib.figure import Figure
 from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
 
 from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
-from .static import Path, Image, Stars, ColorArr, np, osufile
+from .static import Path, Image, ColorArr, np, osufile
 from ..file import map_path, download_osu, get_projectimg, user_cache_path, team_cache_path
 
 
@@ -120,8 +121,8 @@ def draw_acc(img: Image, acc: float, mode: int):
     ax.clear()
     fig.clf()
     fig.clear()
-    score_acc_img = Image.open(acc_img).convert("RGBA").resize((576, 432))
-    img.alpha_composite(score_acc_img, (25, 83))
+    score_acc_img = Image.open(acc_img).convert("RGBA").resize((384, 288))
+    img.alpha_composite(score_acc_img, (580, 35))
     return img
 
 
@@ -183,7 +184,7 @@ async def crop_bg(size: tuple[int, int], path: Union[str, Path, BytesIO, Image.I
         return sf
 
 
-def stars_diff(stars: float):
+def stars_diff(stars: float, stars_bg: ImageFile):
     if stars < 0.1:
         r, g, b = 170, 170, 170
     elif stars >= 9:
@@ -192,10 +193,10 @@ def stars_diff(stars: float):
         # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
         r, g, b, _a = ColorArr[int(stars * 100)]
     # 打开底图
-    xx, yy = Stars.size
+    xx, yy = stars_bg.size
     # 填充背景
-    img = Image.new("RGBA", Stars.size, (r, g, b))
-    img.paste(Stars, (0, 0, xx, yy), Stars)
+    img = Image.new("RGBA", stars_bg.size, (r, g, b))
+    img.paste(stars_bg, (0, 0, xx, yy), stars_bg)
     # 把白色变透明
     arr = np.array(img)
     # 创建mask，将白色替换为True，其他颜色替换为False
@@ -414,13 +415,15 @@ def filter_scores_with_regex(scores_with_index, conditions):
 
 def trim_text_with_ellipsis(text, max_width, font):
     # 初始检查：空字符串或无需处理
-    if not text or font.getbbox(text) <= max_width:
+    bbox = font.getbbox(text)
+    text_width = bbox[2] - bbox[0]
+    if not text or text_width <= max_width:
         return text
     # 逐字符检查
     ellipsis_symbol = "…"
-    ellipsis_width = font.getbbox("…")
+    ellipsis_width = font.getbbox("…")[2] - font.getbbox("…")[0]
     # 确保最大宽度能至少容纳一个字符+省略号
-    if max_width < font.getbbox("A") + ellipsis_width:
+    if max_width < font.getbbox("A")[2] - font.getbbox("A")[0] + ellipsis_width:
         return ellipsis_symbol
 
     truncated_text = ""
@@ -428,7 +431,7 @@ def trim_text_with_ellipsis(text, max_width, font):
 
     for char in text:
         # 检查当前字符宽度 + 省略号宽度是否超标
-        char_width = font.getbbox(char)
+        char_width = font.getbbox(char)[2] - font.getbbox(char)[0]
         if current_width + char_width + ellipsis_width > max_width:
             break
         truncated_text += char
@@ -436,3 +439,18 @@ def trim_text_with_ellipsis(text, max_width, font):
 
     # 返回截断后的字符串 + 省略号
     return truncated_text + ellipsis_symbol if truncated_text else ellipsis_symbol
+
+
+# 字体描边函数
+def draw_text_with_outline(draw, position, text, font, anchor, fill):
+    for dx in [-1, 0, 1]:
+        for dy in [-1, 0, 1]:
+            if dx != 0 or dy != 0:
+                draw.text(
+                    (position[0] + dx, position[1] + dy),
+                    text,
+                    font=font,
+                    anchor=anchor,
+                    fill=(0, 0, 0, 255),
+                )
+    draw.text(position, text, font=font, anchor=anchor, fill=fill)

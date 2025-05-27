@@ -16,9 +16,7 @@ from nonebot.internal.rule import Rule, Event
 from nonebot_plugin_alconna import At, UniMsg, UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
 
-from ..schema.score import UnifiedScore
 from ..draw.taiko_preview import parse_map, map_to_image
-from ..schema.score import UnifiedScore
 from ..utils import NGM
 from ..info import get_bg
 from .utils import split_msg

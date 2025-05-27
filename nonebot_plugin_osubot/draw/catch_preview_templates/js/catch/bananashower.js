@@ -29,5 +29,6 @@ BananaShower.prototype.buildNested = function() {
         time += spacing;
         i++;
     }
+    this.nested[this.nested.length - 1].hitSound = this.hitSound;
     return this;
 };
