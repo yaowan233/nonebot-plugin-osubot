@@ -59,11 +59,7 @@ async def get_random_beatmap_set(binded_id, group_id) -> (UnifiedScore, str):
                 continue
             bp_info = await get_user_scores(user.osu_id, NGM[str(user.osu_mode)], "best")
             # 过滤掉已猜过的歌曲
-            unguessed_scores = [
-                (score, user.osu_name)
-                for score in bp_info
-                if score.beatmapset.id not in guessed_songs
-            ]
+            unguessed_scores = [(score, user.osu_name) for score in bp_info if score.beatmapset.id not in guessed_songs]
             available_scores.extend(unguessed_scores)
         except NetworkError:
             continue  # 跳过网络错误的用户，继续尝试其他用户
