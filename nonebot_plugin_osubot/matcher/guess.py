@@ -64,7 +64,7 @@ async def get_random_beatmap_set(binded_id, group_id) -> (UnifiedScore, str):
         except NetworkError:
             continue  # 跳过网络错误的用户，继续尝试其他用户
     if not available_scores:
-        return None  # 所有歌曲都被猜过了
+        return None, None  # 所有歌曲都被猜过了
     # 随机选择一个未猜过的成绩
     selected_score, osu_name = random.choice(available_scores)
     guess_song_cache[group_id].add(selected_score.beatmapset.id)
