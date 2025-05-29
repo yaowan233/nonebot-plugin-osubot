@@ -8,7 +8,7 @@ from nonebot_plugin_alconna import UniMessage
 from ..utils import NGM
 from .utils import split_msg
 from ..database import UserData
-from ..api import get_user_scores
+from ..api import get_user_scores, get_users
 from ..exceptions import NetworkError
 from ..draw.score import cal_score_info
 from ..draw.echarts import draw_bpa_plot
@@ -89,12 +89,14 @@ async def _(event: Event, state: T_State):
         pp_data.append({"name": mod, "value": round(pp, 2)})
     mapper_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
-        mapper_pp[i.beatmap.creator] += i.pp * 0.95**num
+        mapper_pp[i.beatmap.user_id] += i.pp * 0.95**num
     mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)
     mapper_pp = mapper_pp[:9]
+    users = await get_users([i[0] for i in mapper_pp])
+    user_dic = {i.id: i.username for i in users}
     mapper_pp_data = []
     for mapper, pp in mapper_pp:
-        mapper_pp_data.append({"name": mapper, "value": round(pp, 2)})
+        mapper_pp_data.append({"name": user_dic.get(mapper, ""), "value": round(pp, 2)})
     if len(mapper_pp_data) > 20:
         mapper_pp_data = mapper_pp_data[:20]
     name = f"{state['username']} {NGM[state['mode']]} 模式 "

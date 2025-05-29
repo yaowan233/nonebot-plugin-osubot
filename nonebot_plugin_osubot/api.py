@@ -108,6 +108,7 @@ async def fetch_score_batch(
             pp=i.pp,
             beatmap=UnifiedBeatmap(
                 id=i.beatmap_id,
+                user_id=i.beatmap.user_id,
                 set_id=i.beatmapset.id,
                 artist=i.beatmapset.artist,
                 title=i.beatmapset.title,
@@ -199,6 +200,7 @@ async def get_user_scores(
                 ),
                 beatmap=UnifiedBeatmap(
                     id=i.beatmap.id,
+                    user_id=i.beatmap.user_id,
                     set_id=i.beatmap.set_id,
                     artist=i.beatmap.artist,
                     title=i.beatmap.title,
