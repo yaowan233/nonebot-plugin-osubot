@@ -113,6 +113,7 @@ class UnifiedBeatmap(Base):
     ar: float
     hp: float
     stars: float
+    user_id: int
 
 
 class UnifiedScore(Base):
