@@ -8,8 +8,9 @@ from typing import Union, Literal, Optional
 from nonebot.log import logger
 from expiringdict import ExpiringDict
 from nonebot import get_plugin_config
-from httpx import Response, AsyncClient
+from httpx import Response
 
+from .network.manager import network_manager
 from .utils import FGM
 from .config import Config
 from .mods import get_mods
@@ -25,7 +26,6 @@ api = "https://osu.ppy.sh/api/v2"
 sayoapi = "https://api.sayobot.cn"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 plugin_config = get_plugin_config(Config)
-proxy = plugin_config.osu_proxy
 
 key = plugin_config.osu_key
 client_id = plugin_config.osu_client
@@ -34,14 +34,16 @@ bg_url = plugin_config.info_bg
 
 @auto_retry
 async def safe_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
-    async with AsyncClient(proxy=proxy, follow_redirects=True) as client:
+    client = await network_manager.get_client()
+    async with client:
         req = await client.get(url, headers=headers, params=params)
     return req
 
 
 @auto_retry
 async def safe_async_post(url, headers=None, data=None, json=None) -> Response:
-    async with AsyncClient(proxy=proxy) as client:
+    client = await network_manager.get_client()
+    async with client:
         req = await client.post(url, headers=headers, data=data, json=json)
     return req
 
