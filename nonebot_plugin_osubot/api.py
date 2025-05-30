@@ -123,6 +123,7 @@ async def fetch_score_batch(
                 od=i.beatmap.accuracy,
                 stars=i.beatmap.difficulty_rating,
             ),
+            beatmapset=i.beatmapset,
         )
         for i in scores
     ]
