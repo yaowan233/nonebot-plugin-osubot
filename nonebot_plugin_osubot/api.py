@@ -200,7 +200,6 @@ async def get_user_scores(
                 ),
                 beatmap=UnifiedBeatmap(
                     id=i.beatmap.id,
-                    user_id=i.beatmap.user_id,
                     set_id=i.beatmap.set_id,
                     artist=i.beatmap.artist,
                     title=i.beatmap.title,
