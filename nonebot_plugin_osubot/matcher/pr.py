@@ -43,8 +43,6 @@ async def _recent(event: Event, state: T_State):
                 f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
                 f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
-        if not player.lazer_mode:
-            scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
         for score in scores:
             cal_score_info(player.lazer_mode, score)
         pic = await draw_pfm("relist", state["user"], scores, scores, mode, state["source"], is_lazer=player.lazer_mode)
@@ -99,8 +97,6 @@ async def _pr(event: Event, state: T_State):
                 f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
                 f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
-        if not player.lazer_mode:
-            scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
         for score_info in scores:
             cal_score_info(player.lazer_mode, score_info)
         pic = await draw_pfm(
