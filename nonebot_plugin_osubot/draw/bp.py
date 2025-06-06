@@ -29,8 +29,6 @@ async def draw_bp(
     source: str,
 ) -> BytesIO:
     scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
-    if not is_lazer:
-        scores = [i for i in scores if any(mod.acronym == "CL" for mod in i.mods)]
     if mods:
         mods_ls = get_mods_list(scores, mods)
         if low_bound > len(mods_ls):
@@ -50,8 +48,6 @@ async def draw_bp(
         # 判断是否开启lazer模式
         if is_lazer:
             score_info.legacy_total_score = score_info.total_score
-        if not is_lazer and Mod(acronym="CL") in score_info.mods:
-            score_info.mods.remove(Mod(acronym="CL"))
         if score_info.ruleset_id == 3 and not is_lazer:
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
         if not is_lazer:

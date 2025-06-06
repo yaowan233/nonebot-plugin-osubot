@@ -79,8 +79,6 @@ async def draw_score(
             scores = await get_user_scores(uid, mode, "recent", source=source, legacy_only=not is_lazer, limit=best)
     if not scores:
         raise NetworkError("未查询到游玩记录")
-    if not is_lazer:
-        scores = [i for i in scores if Mod(acronym="CL") in i.mods]
     if project in ("recent", "pr"):
         if len(scores) < best:
             raise NetworkError("未查询到游玩记录")
@@ -149,10 +147,6 @@ async def get_score_data(
         ]
     else:
         score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
-    if not is_lazer:
-        score_ls = [i for i in score_ls if Mod(acronym="CL") in i.mods]
-        for i in score_ls:
-            i.mods.remove(Mod(acronym="CL"))
     if not score_ls:
         raise NetworkError("未查询到游玩记录")
     if mods:
@@ -804,8 +798,6 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
 def cal_score_info(is_lazer: bool, score_info: UnifiedScore) -> UnifiedScore:
     if is_lazer:
         score_info.legacy_total_score = score_info.total_score
-    if not is_lazer and Mod(acronym="CL") in score_info.mods:
-        score_info.mods = [i for i in score_info.mods if i.acronym != "CL"]
     if score_info.ruleset_id == 3 and not is_lazer:
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
     if not is_lazer:
