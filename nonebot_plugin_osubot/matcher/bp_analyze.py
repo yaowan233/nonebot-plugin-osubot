@@ -41,8 +41,8 @@ async def _(event: Event, state: T_State):
         ).finish(reply_to=True)
     for score in score_ls:
         for mod in score.mods:
-        if not state["is_lazer"] or state["source"] == "ppysb":
-            score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
+            if not state["is_lazer"] or state["source"] == "ppysb":
+                score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
             if mod.acronym == "DT" or mod.acronym == "NC":
                 score.beatmap.total_length /= 1.5
             if mod.acronym == "HT":
