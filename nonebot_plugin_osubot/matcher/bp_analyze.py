@@ -34,13 +34,15 @@ async def _(event: Event, state: T_State):
     uid = state["user"]
     lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
     try:
-        score_ls = await get_user_scores(uid, NGM[state["mode"]], "best", legacy_only=not state["is_lazer"])
+        score_ls = await get_user_scores(uid, NGM[state["mode"]], "best", state["source"], legacy_only=not state["is_lazer"])
     except NetworkError as e:
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式 {lazer_mode}时 {str(e)}"
         ).finish(reply_to=True)
     for score in score_ls:
         for mod in score.mods:
+        if not state["is_lazer"] or state["source"] == "ppysb":
+            score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
             if mod.acronym == "DT" or mod.acronym == "NC":
                 score.beatmap.total_length /= 1.5
             if mod.acronym == "HT":
