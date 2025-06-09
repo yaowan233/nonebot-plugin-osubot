@@ -23,6 +23,7 @@ from .static import (
     Torus_SemiBold_25,
     osufile,
     extra_30,
+    Stars,
 )
 
 
@@ -68,7 +69,7 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
     # 模式
     draw.text((50, 65), IconLs[FGM[mapinfo.mode]], font=extra_30, anchor="lt")
     # 难度星星
-    stars_bg = stars_diff(ss_pp_info.difficulty.stars)
+    stars_bg = stars_diff(ss_pp_info.difficulty.stars, Stars)
     stars_img = stars_bg.resize((80, 30))
     im.alpha_composite(stars_img, (90, 65))
     if ss_pp_info.difficulty.stars < 6.5:
