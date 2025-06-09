@@ -189,6 +189,7 @@ async def get_user_scores(
                 ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
                 max_combo=i.max_combo,
                 passed=True,
+                pp=i.pp,
                 statistics=NewStatistics(
                     miss=i.nmiss,
                     perfect=i.ngeki,
