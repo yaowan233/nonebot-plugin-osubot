@@ -7,7 +7,7 @@ from ..file import get_projectimg
 from ..api import get_sayo_map_info
 from ..exceptions import NetworkError
 from .utils import crop_bg, stars_diff, calc_songlen
-from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30
+from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30, Stars
 
 
 async def draw_bmap_info(mapid) -> BytesIO:
@@ -59,7 +59,7 @@ async def draw_bmap_info(mapid) -> BytesIO:
             # 难度
             draw.text((20, 320 + h_num), IconLs[cmap.mode], font=extra_30, anchor="lt")
             # 星星
-            stars_bg = stars_diff(cmap.star)
+            stars_bg = stars_diff(cmap.star, Stars)
             stars_img = stars_bg.resize((80, 30))
             im.alpha_composite(stars_img, (60, 320 + h_num))
             # diff
