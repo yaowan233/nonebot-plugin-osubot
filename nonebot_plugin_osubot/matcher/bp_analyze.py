@@ -42,9 +42,10 @@ async def _(event: Event, state: T_State):
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式 {lazer_mode}时 {str(e)}"
         ).finish(reply_to=True)
     for score in score_ls:
+        # Filter mods outside of the iteration
+        if not state["is_lazer"] or state["source"] == "ppysb":
+            score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
         for mod in score.mods:
-            if not state["is_lazer"] or state["source"] == "ppysb":
-                score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
             if mod.acronym == "DT" or mod.acronym == "NC":
                 score.beatmap.total_length /= 1.5
             if mod.acronym == "HT":
