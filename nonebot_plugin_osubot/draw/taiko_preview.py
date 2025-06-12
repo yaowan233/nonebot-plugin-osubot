@@ -41,14 +41,14 @@ def map_to_image(map_data) -> BytesIO:
     small_font = Torus_Regular_15
     tiny_font = Torus_Regular_8
 
-    draw.text(
-        (LEFT_MARGIN, 40),
-        map_data.artist + " - " + map_data.title + " [" + map_data.diff + "]",
-        font=title_font,
-        fill="#FFF",
-    )
-    draw.text((LEFT_MARGIN, 90), "by " + map_data.creator, font=semi_font, fill="#CCC")
-    draw.text((LEFT_MARGIN, 135), "HP = " + str(map_data.hp) + " OD = " + str(map_data.od), font=reg_font, fill="#AAA")
+    # draw.text(
+    #     (LEFT_MARGIN, 40),
+    #     map_data.artist + " - " + map_data.title + " [" + map_data.diff + "]",
+    #     font=title_font,
+    #     fill="#FFF",
+    # )
+    # draw.text((LEFT_MARGIN, 90), "by " + map_data.creator, font=semi_font, fill="#CCC")
+    # draw.text((LEFT_MARGIN, 135), "HP = " + str(map_data.hp) + " OD = " + str(map_data.od), font=reg_font, fill="#AAA")
 
     max_meter = 0
     timing_sections = []  # (start, beat_ms, meter, [list of hit_object])
@@ -67,7 +67,7 @@ def map_to_image(map_data) -> BytesIO:
             (map_data.timing_points[i][0], map_data.timing_points[i][1], map_data.timing_points[i][2], current_list)
         )
 
-    y_start = 200
+    y_start = 40
     max_x = 0
     max_y = 0
     bar_number = 1
