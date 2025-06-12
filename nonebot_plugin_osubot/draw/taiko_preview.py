@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from .static import Torus_Regular_8, Torus_Regular_15, Torus_Regular_20, Torus_Regular_25, Torus_Regular_30
+from .static import Torus_Regular_8, Torus_Regular_15
 
 HIT_DON = 0x00
 HIT_KAT = 0x01
@@ -35,9 +35,9 @@ def map_to_image(map_data) -> BytesIO:
     img = Image.new(mode="RGB", size=(3000, 30000), color=0x121212)
     draw = ImageDraw.Draw(img)
 
-    title_font = Torus_Regular_30
-    semi_font = Torus_Regular_25
-    reg_font = Torus_Regular_20
+    # title_font = Torus_Regular_30
+    # semi_font = Torus_Regular_25
+    # reg_font = Torus_Regular_20
     small_font = Torus_Regular_15
     tiny_font = Torus_Regular_8
 
@@ -48,7 +48,8 @@ def map_to_image(map_data) -> BytesIO:
     #     fill="#FFF",
     # )
     # draw.text((LEFT_MARGIN, 90), "by " + map_data.creator, font=semi_font, fill="#CCC")
-    # draw.text((LEFT_MARGIN, 135), "HP = " + str(map_data.hp) + " OD = " + str(map_data.od), font=reg_font, fill="#AAA")
+    # draw.text((LEFT_MARGIN, 135), "HP = " + str(map_data.hp) +
+    # " OD = " + str(map_data.od), font=reg_font, fill="#AAA")
 
     max_meter = 0
     timing_sections = []  # (start, beat_ms, meter, [list of hit_object])
