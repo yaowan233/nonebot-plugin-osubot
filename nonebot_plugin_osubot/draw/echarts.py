@@ -20,7 +20,7 @@ async def draw_bpa_plot(name, pp_ls, length_ls, mod_pp_ls, mapper_pp_ls) -> byte
     pic = await template_to_pic(
         template_path,
         template_name,
-        {"name": name, "pp_ls": pp_ls, "length_ls": length_ls, "mod_pp_ls": mod_pp_ls, "mapper_pp_ls": mapper_pp_ls},
+        {"name": name, "pp_ls": pp_ls, "length_ls": length_ls, "mod_pp_ls": mod_pp_ls, "mapper_pp_ls": mapper_pp_ls, "length": len(pp_ls)},
     )
     return pic
 
