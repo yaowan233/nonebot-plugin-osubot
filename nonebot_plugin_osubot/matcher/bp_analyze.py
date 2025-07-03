@@ -42,7 +42,6 @@ async def _(event: Event, state: T_State):
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式 {lazer_mode}时 {str(e)}"
         ).finish(reply_to=True)
     for score in score_ls:
-        # Filter mods outside of the iteration
         if not state["is_lazer"] or state["source"] == "ppysb":
             score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
         for mod in score.mods:
@@ -94,14 +93,15 @@ async def _(event: Event, state: T_State):
         pp_data.append({"name": mod, "value": round(pp, 2)})
     mapper_pp = defaultdict(int)
     for num, i in enumerate(score_ls):
-        mapper_pp[i.beatmap.user_id] += i.pp * 0.95**num
-    mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)
-    mapper_pp = mapper_pp[:9]
-    users = await get_users([i[0] for i in mapper_pp])
-    user_dic = {i.id: i.username for i in users}
-    mapper_pp_data = []
-    for mapper, pp in mapper_pp:
-        mapper_pp_data.append({"name": user_dic.get(mapper, ""), "value": round(pp, 2)})
+        key = i.beatmap.creator if state["source"] == "ppysb" else i.beatmap.user_id
+        mapper_pp[key] += i.pp * 0.95**num
+    mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)[:9]
+    if state["source"] == "ppysb":
+        mapper_pp_data = [{"name": mapper, "value": round(pp, 2)} for mapper, pp in mapper_pp]
+    else:
+        users = await get_users([i[0] for i in mapper_pp])
+        user_dic = {i.id: i.username for i in users}
+        mapper_pp_data = [{"name": user_dic.get(mapper, ""), "value": round(pp, 2)} for mapper, pp in mapper_pp]
     if len(mapper_pp_data) > 20:
         mapper_pp_data = mapper_pp_data[:20]
     name = f"{state['username']} {NGM[state['mode']]} 模式 "
