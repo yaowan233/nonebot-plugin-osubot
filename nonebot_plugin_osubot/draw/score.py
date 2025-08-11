@@ -107,7 +107,7 @@ async def draw_score(
     map_json = await task2
     # 判断是否开启lazer模式
     if source == "osu":
-        score = cal_score_info(is_lazer, score)
+        score = cal_score_info(is_lazer, score, source)
     return await draw_score_pic(score, info, map_json, "", is_lazer, source)
 
 
@@ -180,7 +180,7 @@ async def get_score_data(
         user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     if source == "osu":
-        score = cal_score_info(is_lazer, score)
+        score = cal_score_info(is_lazer, score, source)
     return await draw_score_pic(score, info, map_json, grank, is_lazer, source)
 
 
@@ -795,10 +795,10 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
         return "N/A"
 
 
-def cal_score_info(is_lazer: bool, score_info: UnifiedScore) -> UnifiedScore:
+def cal_score_info(is_lazer: bool, score_info: UnifiedScore, source: str = "osu") -> UnifiedScore:
     if is_lazer:
         score_info.legacy_total_score = score_info.total_score
-    if score_info.ruleset_id == 3 and not is_lazer:
+    if score_info.ruleset_id == 3 and not is_lazer and source != "ppysb":
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
     if not is_lazer:
         is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))

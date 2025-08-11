@@ -48,7 +48,7 @@ async def draw_bp(
         # 判断是否开启lazer模式
         if is_lazer:
             score_info.legacy_total_score = score_info.total_score
-        if score_info.ruleset_id == 3 and not is_lazer:
+        if score_info.ruleset_id == 3 and not is_lazer and source != "ppysb":
             score_info.accuracy = cal_legacy_acc(score_info.statistics)
         if not is_lazer:
             is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
