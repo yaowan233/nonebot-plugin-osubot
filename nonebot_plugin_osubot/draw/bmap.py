@@ -12,17 +12,15 @@ from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40,
 
 async def draw_bmap_info(mapid) -> BytesIO:
     sayo_info = await get_sayo_map_info(mapid)
-    if sayo_info.status == -1:
-        raise NetworkError("在sayobot未查询到该地图")
-    data = sayo_info.data
+    data = sayo_info
 
     coverurl = f"https://assets.ppy.sh/beatmaps/{mapid}/covers/cover@2x.jpg"
     cover = await get_projectimg(coverurl)
     # 新建
-    if len(data.bid_data) > 20:
+    if len(data.beatmaps) > 20:
         im_h = 400 + 102 * 20
     else:
-        im_h = 400 + 102 * (len(data.bid_data) - 1)
+        im_h = 400 + 102 * (len(data.beatmaps) - 1)
     im = Image.new("RGBA", (1200, im_h), (31, 41, 46, 255))
     draw = ImageDraw.Draw(im)
     # 背景
@@ -37,35 +35,36 @@ async def draw_bmap_info(mapid) -> BytesIO:
     # mapper
     draw.text((25, 105), f"谱面作者: {data.creator}", font=Torus_SemiBold_20, anchor="lt")
     # rank时间
-    if data.approved_date == -1:
+    if not data.ranked_date:
         approved_date = "谱面状态可能非ranked"
     else:
         datearray = datetime.utcfromtimestamp(data.approved_date)
         approved_date = (datearray + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((25, 140), f"上架时间: {approved_date}", font=Torus_SemiBold_20, anchor="lt")
     # 来源
-    draw.text((25, 175), f"Source: {data.source}", font=Torus_SemiBold_20, anchor="lt")
+    if data.source:
+        draw.text((25, 175), f"Source: {data.source}", font=Torus_SemiBold_20, anchor="lt")
     # bpm
     draw.text((1150, 105), f"BPM: {data.bpm}", font=Torus_SemiBold_20, anchor="rt")
     # 曲长
-    music_len = calc_songlen(data.bid_data[0].length)
+    music_len = calc_songlen(data.beatmaps[0].total_length)
     draw.text((1150, 140), f"length: {music_len}", font=Torus_SemiBold_20, anchor="rt")
     # Setid
     draw.text((1150, 35), f"Setid: {mapid}", font=Torus_SemiBold_20, anchor="rt")
-    gmap = sorted(data.bid_data, key=lambda k: k.star, reverse=False)
+    gmap = sorted(data.beatmaps, key=lambda k: k.difficulty_rating, reverse=False)
     for num, cmap in enumerate(gmap):
         if num < 20:
             h_num = 102 * num
             # 难度
-            draw.text((20, 320 + h_num), IconLs[cmap.mode], font=extra_30, anchor="lt")
+            draw.text((20, 320 + h_num), IconLs[cmap.mode_int], font=extra_30, anchor="lt")
             # 星星
-            stars_bg = stars_diff(cmap.star, Stars)
+            stars_bg = stars_diff(cmap.difficulty_rating, Stars)
             stars_img = stars_bg.resize((80, 30))
             im.alpha_composite(stars_img, (60, 320 + h_num))
             # diff
             im.alpha_composite(BarImg, (10, 365 + h_num))
             gc = ["CS", "HP", "OD", "AR"]
-            for index, i in enumerate((cmap.CS, cmap.HP, cmap.OD, cmap.AR)):
+            for index, i in enumerate((cmap.cs, cmap.drain, cmap.accuracy, cmap.ar)):
                 diff_len = int(200 * i / 10) if i <= 10 else 200
                 diff_bg = Image.new("RGBA", (diff_len, 12), (255, 255, 255, 255))
                 im.alpha_composite(diff_bg, (50 + 300 * index, 365 + h_num))
@@ -90,11 +89,11 @@ async def draw_bmap_info(mapid) -> BytesIO:
                         anchor="lm",
                     )
             # 难度
-            if cmap.star < 6.5:
+            if cmap.difficulty_rating < 6.5:
                 color = (0, 0, 0, 255)
             else:
                 color = (255, 217, 102, 255)
-            draw.text((65, 335 + h_num), f"★{cmap.star:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
+            draw.text((65, 335 + h_num), f"★{cmap.difficulty_rating:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
             # version
             draw.text(
                 (150, 335 + h_num),
@@ -105,14 +104,14 @@ async def draw_bmap_info(mapid) -> BytesIO:
             # mapid
             draw.text(
                 (1150, 328 + h_num),
-                f"Mapid: {cmap.bid}",
+                f"Mapid: {cmap.id}",
                 font=Torus_SemiBold_20,
                 anchor="rm",
             )
             # maxcb
             draw.text(
                 (700, 328 + h_num),
-                f"Max Combo: {cmap.maxcombo}",
+                f"Max Combo: {cmap.max_combo}",
                 font=Torus_SemiBold_20,
                 anchor="lm",
             )
