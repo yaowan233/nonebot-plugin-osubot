@@ -413,9 +413,10 @@ async def get_random_bg() -> Optional[bytes]:
     return res.content
 
 
-async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
-    res = await safe_async_get(f"https://api.sayobot.cn/v2/beatmapinfo?K={sid}&T={t}")
-    return SayoBeatmap(**res.json())
+async def get_sayo_map_info(sid) -> SayoBeatmap:
+    url = f"https://osu.ppy.sh/api/v2/beatmapsets/{sid}"
+    res = await make_request(url, await get_headers(), "未查询到该谱面集(Setid)信息")
+    return SayoBeatmap(**res)
 
 
 async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
