@@ -4,7 +4,7 @@ from .basemodel import Base
 
 
 class BidData(Base):
-    id: int
+    beatmapset_id: int
     mode_int: int
     version: str
     total_length: int

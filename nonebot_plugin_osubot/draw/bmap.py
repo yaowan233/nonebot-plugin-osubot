@@ -38,7 +38,7 @@ async def draw_bmap_info(mapid) -> BytesIO:
     if not data.ranked_date:
         approved_date = "谱面状态可能非ranked"
     else:
-        datearray = datetime.utcfromtimestamp(data.approved_date)
+        datearray = datetime.fromisoformat(data.ranked_date.replace("Z", ""))
         approved_date = (datearray + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     draw.text((25, 140), f"上架时间: {approved_date}", font=Torus_SemiBold_20, anchor="lt")
     # 来源
