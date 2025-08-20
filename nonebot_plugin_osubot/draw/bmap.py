@@ -5,7 +5,6 @@ from PIL import ImageDraw, ImageFilter, ImageEnhance
 
 from ..file import get_projectimg
 from ..api import get_sayo_map_info
-from ..exceptions import NetworkError
 from .utils import crop_bg, stars_diff, calc_songlen
 from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30, Stars
 
@@ -93,7 +92,9 @@ async def draw_bmap_info(mapid) -> BytesIO:
                 color = (0, 0, 0, 255)
             else:
                 color = (255, 217, 102, 255)
-            draw.text((65, 335 + h_num), f"★{cmap.difficulty_rating:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color)
+            draw.text(
+                (65, 335 + h_num), f"★{cmap.difficulty_rating:.2f}", font=Torus_SemiBold_20, anchor="lm", fill=color
+            )
             # version
             draw.text(
                 (150, 335 + h_num),
