@@ -221,7 +221,9 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
     # 总命中
     op, value = info_calc(statistics.total_hits, n_count)
     t_count = f"{statistics.total_hits:,}({op}{value:,})" if value != 0 else f"{statistics.total_hits:,}"
+    avg_hit = 0 if statistics.play_count == 0 else statistics.total_hits // statistics.play_count
     draw.text((935, 1175), t_count, font=Torus_Regular_40, anchor="rt")
+    draw.text((250, 945), f"(avg.{avg_hit:,})", font=Torus_Regular_25, anchor="lt")
     # 游玩时间
     sec = timedelta(seconds=statistics.play_time)
     d_time = datetime(1, 1, 1) + sec
