@@ -5,7 +5,7 @@ from nonebot_plugin_alconna import UniMessage
 from ..utils import NGM
 from ..api import osu_api
 from .utils import split_msg
-from ..file import download_tmp_osu
+from ..file import download_osu
 from ..exceptions import NetworkError
 from ..mania import generate_preview_pic
 from ..draw.catch_preview import draw_cath_preview
@@ -24,7 +24,7 @@ async def _(state: T_State):
     except NetworkError as e:
         await UniMessage.text(f"查找map_id:{osu_id} 信息时 {str(e)}").finish(reply_to=True)
     if state["mode"] == "3":
-        osu = await download_tmp_osu(osu_id)
+        osu = await download_osu(data["beatmapset_id"], int(osu_id))
         if state["_prefix"]["command"][0] == "完整预览":
             pic = await generate_preview_pic(osu, True)
         else:
@@ -34,7 +34,7 @@ async def _(state: T_State):
         pic = await draw_cath_preview(int(osu_id), data["beatmapset_id"], state["mods"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     elif state["mode"] == "1":
-        osu = await download_tmp_osu(osu_id)
+        osu = await download_osu(data["beatmapset_id"], int(osu_id))
         beatmap = parse_map(osu)
         pic = map_to_image(beatmap)
         await UniMessage.image(raw=pic).finish(reply_to=True)
