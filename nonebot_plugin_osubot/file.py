@@ -59,6 +59,7 @@ async def download_osu(set_id, map_id):
         if req := await get_first_response(url):
             filename = f"{map_id}.osu"
             filepath = map_path / str(set_id) / filename
+            filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(filepath, "wb") as f:
                 f.write(req)
             return filepath
