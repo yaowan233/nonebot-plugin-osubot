@@ -26,7 +26,7 @@ from ..exceptions import NetworkError
 from ..database.models import UserData
 from ..mania import generate_preview_pic
 from ..api import safe_async_get, get_user_scores
-from ..file import map_path, download_tmp_osu
+from ..file import map_path, download_osu
 from ..draw.catch_preview import draw_cath_preview
 
 games: dict[str, NewScore] = {}
@@ -470,10 +470,10 @@ async def _(
     chart_games[session_id] = selected_score
     chart_set_timeout(matcher, session_id)
     if mode == "3":
-        osu = await download_tmp_osu(selected_score.beatmap.id)
+        osu = await download_osu(selected_score.beatmapset.id, selected_score.beatmap.id)
         pic = await generate_preview_pic(osu)
     elif mode == "1":
-        osu = await download_tmp_osu(selected_score.beatmap.id)
+        osu = await download_osu(selected_score.beatmapset.id, selected_score.beatmap.id)
         beatmap = parse_map(osu)
         pic = map_to_image(beatmap)
     else:

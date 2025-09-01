@@ -47,18 +47,6 @@ async def download_map(setid: int) -> Optional[Path]:
     return filepath
 
 
-async def download_tmp_osu(map_id):
-    url = f"https://osu.ppy.sh/osu/{map_id}"
-    logger.info(f"开始下载谱面: <{map_id}>")
-    req = await safe_async_get(url)
-    filename = f"{map_id}.osu"
-    filepath = map_path / filename
-    chunk = req.read()
-    with open(filepath, "wb") as f:
-        f.write(chunk)
-    return filepath
-
-
 @auto_retry
 async def download_osu(set_id, map_id):
     url = [
@@ -71,6 +59,7 @@ async def download_osu(set_id, map_id):
         if req := await get_first_response(url):
             filename = f"{map_id}.osu"
             filepath = map_path / str(set_id) / filename
+            filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(filepath, "wb") as f:
                 f.write(req)
             return filepath
