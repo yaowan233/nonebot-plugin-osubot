@@ -16,7 +16,7 @@ class BidData(Base):
     count_circles: int
     count_sliders: int
     count_spinners: int
-    max_combo: int
+    max_combo: Optional[int] = None
     playcount: int
     passcount: int
 
