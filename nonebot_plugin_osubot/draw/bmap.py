@@ -112,7 +112,7 @@ async def draw_bmap_info(mapid) -> BytesIO:
             # maxcb
             draw.text(
                 (700, 328 + h_num),
-                f"Max Combo: {cmap.max_combo}",
+                f"Max Combo: {cmap.max_combo or 0}",
                 font=Torus_SemiBold_20,
                 anchor="lm",
             )
