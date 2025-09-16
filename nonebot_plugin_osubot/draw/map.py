@@ -156,8 +156,11 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
     if mods:
         for mods_num, s_mods in enumerate(mods):
             mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
-            mods_img = Image.open(mods_bg).convert("RGBA")
-            im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
+            try:
+                mods_img = Image.open(mods_bg).convert("RGBA")
+                im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
+            except FileNotFoundError:
+                pass
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
     user_icon = await get_projectimg(icon_url)
