@@ -90,14 +90,13 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
         my_zip.extractall(path)
     os.remove(osz_file)
     if options.beatmapsets:
-        for i in options.beatmapsets.beatmaps:
-            if i.id == options.map:
-                audio_file_name = i.audio
-                audio_name = audio_file_name[:-4]
-                audio_type = audio_file_name[-4:]
+        for file in path.rglob("*.osu"):
+            osu = OsuMap.read_file(str(file.absolute()))
+            if osu.beatmap_id == options.map:
+                audio_file_name = osu.audio_file_name
+                audio_name = osu.audio_file_name[:-4]
+                audio_type = osu.audio_file_name[-4:]
                 break
-        else:
-            raise Exception("小夜api有问题啊")
     if options.rate:
         if options.rate > 10:
             options.rate = 10
