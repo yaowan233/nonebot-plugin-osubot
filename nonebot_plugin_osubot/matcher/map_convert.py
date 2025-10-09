@@ -7,8 +7,9 @@ from nonebot import on_command, on_shell_command
 from nonebot.exception import ParserExit, ActionFailed
 from nonebot.params import CommandArg, ShellCommandArgv
 
-from ..api import get_sayo_map_info
+from ..api import get_beatmapsets_info, osu_api
 from ..mania import Options, convert_mania_map
+from ..schema import Beatmap
 
 parser = ArgumentParser("convert", description="变换mania谱面")
 parser.add_argument("--set", type=int, help="要转换的谱面的setid")
@@ -37,9 +38,11 @@ async def _(argv: list[str] = ShellCommandArgv()):
         return
     options = Options(**vars(args))
     if options.map:
-        sayo_map_info = await get_sayo_map_info(options.map, 1)
-        options.set = sayo_map_info.data.sid
-        options.sayo_info = sayo_map_info
+        map_data = await osu_api("map", options.map)
+        mapinfo = Beatmap(**map_data)
+        beatmapsets_info = await get_beatmapsets_info(mapinfo.beatmapset_id)
+        options.set = mapinfo.beatmapset_id
+        options.beatmapsets = beatmapsets_info
     if not options.set:
         await UniMessage.text("请提供需要转换的谱面setid").finish(reply_to=True)
     if options.nln and options.fln:
@@ -85,9 +88,11 @@ async def _(msg: Message = CommandArg()):
     args = parser.parse_args(argv)
     options = Options(**vars(args))
     if options.map:
-        sayo_map_info = await get_sayo_map_info(options.map, 1)
-        options.set = sayo_map_info.data.sid
-        options.sayo_info = sayo_map_info
+        map_data = await osu_api("map", options.map)
+        mapinfo = Beatmap(**map_data)
+        beatmapsets_info = await get_beatmapsets_info(mapinfo.beatmapset_id)
+        options.set = mapinfo.beatmapset_id
+        options.beatmapsets = beatmapsets_info
     osz_path = await convert_mania_map(options)
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)

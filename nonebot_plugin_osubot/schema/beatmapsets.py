@@ -1,5 +1,4 @@
 from typing import Optional
-
 from .basemodel import Base
 
 
@@ -21,7 +20,7 @@ class BidData(Base):
     passcount: int
 
 
-class SayoBeatmap(Base):
+class BeatmapSets(Base):
     id: int
     ranked: int
     title: str

@@ -4,15 +4,13 @@ from datetime import datetime, timedelta
 from PIL import ImageDraw, ImageFilter, ImageEnhance
 
 from ..file import get_projectimg
-from ..api import get_sayo_map_info
+from ..api import get_beatmapsets_info
 from .utils import crop_bg, stars_diff, calc_songlen
 from .static import Image, BarImg, IconLs, Torus_SemiBold_20, Torus_SemiBold_40, Torus_SemiBold_50, extra_30, Stars
 
 
 async def draw_bmap_info(mapid) -> BytesIO:
-    sayo_info = await get_sayo_map_info(mapid)
-    data = sayo_info
-
+    data = await get_beatmapsets_info(mapid)
     coverurl = f"https://assets.ppy.sh/beatmaps/{mapid}/covers/cover@2x.jpg"
     cover = await get_projectimg(coverurl)
     # 新建
