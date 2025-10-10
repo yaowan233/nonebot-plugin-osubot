@@ -2,14 +2,14 @@ import re
 from random import shuffle
 
 from nonebot import on_command
-from nonebot.log import logger
 from nonebot.typing import T_State
 from expiringdict import ExpiringDict
 from nonebot.internal.matcher import Matcher
 from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
-from ..api import get_recommend, update_recommend, get_sayo_map_info
+from ..api import get_recommend, update_recommend, osu_api
+from ..schema import Beatmap
 
 recommend = on_command("推荐", priority=11, block=True, aliases={"recommend", "推荐铺面", "推荐谱面"})
 recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
@@ -41,23 +41,18 @@ async def handle_recommend(state: T_State, matcher: type[Matcher]):
             break
     else:
         await matcher.finish("今天已经没有可以推荐的图啦，明天再来吧")
+        return None
     bid = int(re.findall("https://osu.ppy.sh/beatmaps/(.*)", recommend_map.mapLink)[0])
-    map_info = await get_sayo_map_info(bid, 1)
-    sid = map_info.data.sid
-    for i in map_info.data.bid_data:
-        if i.bid == bid:
-            bg = i.bg
-            break
-    else:
-        bg = ""
-        logger.error(f"出现问题： 有问题的是{bid}, {sid}")
+    map_data = await osu_api("map", bid)
+    map_info = Beatmap(**map_data)
+    sid = map_info.beatmapset_id
     s = (
         f"推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{''.join(recommend_map.mod)}\n"
         f"预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent * 100, 2)}%\n"
         f"{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\n"
         f"https://txy1.sayobot.cn/beatmaps/download/novideo/{sid}"
     )
-    pic_url = f"https://dl.sayobot.cn/beatmaps/files/{sid}/{bg}"
+    pic_url = f"https://osu.direct/api/media/background/{bid}"
     return pic_url, s
 
 
