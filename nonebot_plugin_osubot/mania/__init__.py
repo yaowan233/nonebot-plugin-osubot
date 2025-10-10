@@ -25,7 +25,7 @@ from reamber.algorithms.playField.parts import (
 )
 
 from ..file import download_map
-from ..schema import SayoBeatmap
+from ..schema.beatmapsets import BeatmapSets
 
 osu_path = Path() / "data" / "osu"
 if not osu_path.exists():
@@ -39,7 +39,7 @@ class Options:
     od: Optional[float]
     set: Optional[int]
     map: Optional[int] = None
-    sayo_info: Optional[SayoBeatmap] = None
+    beatmapsets: Optional[BeatmapSets] = None
     nsv: bool = False
     nln: bool = False
     fln: bool = False
@@ -89,15 +89,14 @@ async def convert_mania_map(options: Options) -> Optional[Path]:
     with ZipFile(osz_file.absolute()) as my_zip:
         my_zip.extractall(path)
     os.remove(osz_file)
-    if options.sayo_info:
-        for i in options.sayo_info.data.bid_data:
-            if i.bid == options.map:
-                audio_file_name = i.audio
-                audio_name = audio_file_name[:-4]
-                audio_type = audio_file_name[-4:]
+    if options.beatmapsets:
+        for file in path.rglob("*.osu"):
+            osu = OsuMap.read_file(str(file.absolute()))
+            if osu.beatmap_id == options.map:
+                audio_file_name = osu.audio_file_name
+                audio_name = osu.audio_file_name[:-4]
+                audio_type = osu.audio_file_name[-4:]
                 break
-        else:
-            raise Exception("小夜api有问题啊")
     if options.rate:
         if options.rate > 10:
             options.rate = 10

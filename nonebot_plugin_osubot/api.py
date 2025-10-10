@@ -11,19 +11,19 @@ from nonebot import get_plugin_config
 from httpx import Response
 
 from .network.manager import network_manager
+from .schema.beatmapsets import BeatmapSets
 from .utils import FGM
 from .config import Config
 from .mods import get_mods
 from .network import auto_retry
 from .exceptions import NetworkError
 from .network.first_response import get_first_response
-from .schema import User, NewScore, SayoBeatmap, RecommendData
+from .schema import User, NewScore, RecommendData
 from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap
 from .schema.ppysb import InfoResponse, ScoresResponse, V2ScoresResponse
 from .schema.user import Level, GradeCounts, UnifiedUser, UserStatistics
 
 api = "https://osu.ppy.sh/api/v2"
-sayoapi = "https://api.sayobot.cn"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 plugin_config = get_plugin_config(Config)
 
@@ -414,9 +414,10 @@ async def get_random_bg() -> Optional[bytes]:
     return res.content
 
 
-async def get_sayo_map_info(sid, t=0) -> SayoBeatmap:
-    res = await safe_async_get(f"https://api.sayobot.cn/v2/beatmapinfo?K={sid}&T={t}")
-    return SayoBeatmap(**res.json())
+async def get_beatmapsets_info(sid) -> BeatmapSets:
+    url = f"https://osu.ppy.sh/api/v2/beatmapsets/{sid}"
+    res = await make_request(url, await get_headers(), "未查询到该谱面集(Setid)信息")
+    return BeatmapSets(**res)
 
 
 async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
