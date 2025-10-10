@@ -3,6 +3,7 @@ import importlib.metadata
 
 from rosu_pp_py import Beatmap, Strains, GameMode, Performance, PerformanceAttributes
 
+from .exceptions import NetworkError
 from .schema.score import UnifiedScore
 
 is_v2 = importlib.metadata.version("pydantic").startswith("2")
@@ -10,6 +11,8 @@ is_v2 = importlib.metadata.version("pydantic").startswith("2")
 
 def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> PerformanceAttributes:
     beatmap = Beatmap(path=path)
+    if beatmap.is_suspicious():
+        raise NetworkError("这似乎不是一个正常谱面 OAO")
     convert_mode(score, beatmap)
     c = Performance(
         accuracy=score.accuracy,
@@ -31,6 +34,8 @@ def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> PerformanceAttribu
 
 def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
     beatmap = Beatmap(path=path)
+    if beatmap.is_suspicious():
+        return "nan", "nan"
     convert_mode(score, beatmap)
     total = beatmap.n_objects
     passed = score.statistics.great + score.statistics.miss + score.statistics.ok + score.statistics.meh
@@ -62,6 +67,8 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
 
 def get_ss_pp(path: str, mods: int, is_lazer) -> PerformanceAttributes:
     beatmap = Beatmap(path=path)
+    if beatmap.is_suspicious():
+        raise NetworkError("这似乎不是一个正常谱面 OAO")
     c = Performance(accuracy=100, mods=mods, lazer=is_lazer)
     ss_pp_info = c.calculate(beatmap)
     return ss_pp_info
