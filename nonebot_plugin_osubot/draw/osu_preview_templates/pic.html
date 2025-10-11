@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <base href="{{ base_url }}">
     <meta name="robots" content="nofollow, noindex, noarchive">
     <title>gif生成测试 网址后加#bid</title>
 </head>
@@ -53,14 +54,14 @@
     <script src="gif.js/gif.js"></script>
 
     <script>
-        const scaleValue = 0.2;
+        const scaleValue = 0.5;
         const durationValue = 10000;
         const qualityValue = 10;
         const timeSpanValue = 50;
 
         const createImg = function () {
             let preview = new Preview(scaleValue);
-            const osufile = {{ osu_file|tojson }};
+            const osufile = `{{ osu_file }}`;
             preview.load(osufile, function () {
                 let actualStartTime;
                 const previewEndTime = preview.previewTime + durationValue;
@@ -74,7 +75,7 @@
                 const actualEndTime = durationValue === -1 ? preview.endTime : Math.min(actualStartTime + durationValue, preview.endTime);
                 let gif = new GIF({
                     workers: 4,
-                    workerScript: './gif.js/gif.worker.js',
+                    workerScript: "{{ worker_data_uri }}",
                     quality: qualityValue,
                     width: preview.screen.width * scaleValue,
                     height: preview.screen.height * scaleValue,
@@ -96,18 +97,12 @@
                     currentFrame++;
                 }
                 gif.on('finished', function (blob) {
-                    const url = URL.createObjectURL(blob);
-                    const img = document.createElement('img');
-                    img.id = 'img';
-                    img.src = url;
-                    img.alt = '生成的GIF预览';
+                    document.getElementById("img").src = URL.createObjectURL(blob);
                 });
                 gif.render();
             });
         }
-
         window.addEventListener('hashchange', createImg);
-
         createImg();
     </script>
 </body>

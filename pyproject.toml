@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-osubot"
-version = "6.24.1"
+version = "6.24.2"
 description = "OSUbot in NoneBot2"
 authors = [
     {name = "yaowan233", email = "572473053@qq.com"},
