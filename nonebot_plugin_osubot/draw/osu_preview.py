@@ -40,7 +40,8 @@ async def draw_osu_preview(beatmap_id, beatmapset_id) -> bytes:
             wait_until="networkidle",
         )
         await page.wait_for_function(
-            f"() => document.querySelector('{img_selector}') && document.querySelector('{img_selector}').src.startsWith('blob:')",
+            f"() => document.querySelector('{img_selector}') &&"
+            f" document.querySelector('{img_selector}').src.startsWith('blob:')",
             timeout=60000,
         )
         blob_url = await page.locator(img_selector).get_attribute("src")
@@ -52,7 +53,7 @@ async def draw_osu_preview(beatmap_id, beatmapset_id) -> bytes:
                     return new Promise((resolve) => {
                         const reader = new FileReader();
                         reader.onloadend = () => {
-                            resolve(reader.result.split(',')[1]); 
+                            resolve(reader.result.split(',')[1]);
                         };
                         reader.readAsDataURL(blob);
                     });
