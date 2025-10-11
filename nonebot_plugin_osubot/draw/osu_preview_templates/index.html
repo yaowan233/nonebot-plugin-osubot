@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="robots" content="nofollow, noindex, noarchive">
+    <title>osu! GIF 预览生成器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #ff66aa;
+            text-shadow: 0 0 10px rgba(255, 102, 170, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .input-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .input-group label {
+            white-space: nowrap;
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 200px;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #ff66aa;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #ff3388;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .progress-container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background: linear-gradient(90deg, #ff66aa 0%, #ff3388 100%);
+            transition: width 0.3s;
+        }
+
+        #result {
+            margin-top: 30px;
+            text-align: center;
+            width: 100%;
+        }
+
+        #img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 102, 170, 0.5);
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>osu! GIF 预览生成器</h1>
+            <div class="instructions">
+                <p>输入osu!谱面ID，生成游戏预览GIF</p>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-group">
+                <label>谱面ID：</label>
+                <input type="text" value="172662" id="beatmapInput" placeholder="例如: 172662" />
+            </div>
+
+            <div class="input-group">
+                <label>缩放比例：</label>
+                <input type="text" value="0.2" id="scaleInput" placeholder="建议0.2，0.5以上生成速度显著降低" />
+            </div>
+
+            <div class="input-group">
+                <label>帧间隔(ms)：</label>
+                <input type="text" value="50" id="timeSpanInput" placeholder="建议50，最低15" />
+            </div>
+
+            <div class="input-group">
+                <label>开始时间(ms)：</label>
+                <input type="text" value="-1" id="startTimeInput" placeholder="-1表示第一个note前" />
+                <div class="checkbox-group">
+                    <input type="checkbox" id="usePreviewTimeCheckbox" checked />
+                    <label for="usePreviewTimeCheckbox">优先使用谱面预览时间</label>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>持续时间(ms)：</label>
+                <input type="text" value="-1" id="durationInput" placeholder="-1表示到结尾" />
+            </div>
+
+            <div class="input-group">
+                <label>GIF质量：</label>
+                <input type="text" value="10" id="qualityInput" placeholder="不建议修改，值越小质量越好，但是经测试区别非常小" />
+            </div>
+
+            <button id="generateBtn">生成GIF</button>
+        </div>
+
+        <div class="status" id="status">准备就绪，请输入谱面ID</div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div id="result"></div>
+
+        <div class="footer">
+            <p>使用 osu.direct API 获取谱面数据 | 基于 gif.js 生成GIF</p>
+        </div>
+    </div>
+
+    <script src="js/util.js"></script>
+
+    <script src="js/beatmap/beatmap.js"></script>
+    <script src="js/beatmap/timingpoint.js"></script>
+    <script src="js/beatmap/hitobject.js"></script>
+    <script src="js/beatmap/point.js"></script>
+    <script src="js/beatmap/scroll.js"></script>
+
+    <script src="js/standard/standard.js"></script>
+    <script src="js/standard/hitcircle.js"></script>
+    <script src="js/standard/slider.js"></script>
+    <script src="js/standard/curve/curve.js"></script>
+    <script src="js/standard/curve/equaldistancemulticurve.js"></script>
+    <script src="js/standard/curve/linearbezier.js"></script>
+    <script src="js/standard/curve/catmullcurve.js"></script>
+    <script src="js/standard/curve/curvetype.js"></script>
+    <script src="js/standard/curve/bezier2.js"></script>
+    <script src="js/standard/curve/centripetalcatmullrom.js"></script>
+    <script src="js/standard/curve/circumstancedcircle.js"></script>
+    <script src="js/standard/spinner.js"></script>
+
+    <script src="js/taiko/taiko.js"></script>
+    <script src="js/taiko/donkat.js"></script>
+    <script src="js/taiko/drumroll.js"></script>
+    <script src="js/taiko/shaker.js"></script>
+
+    <script src="js/catch/LegacyRandom.js"></script>
+    <script src="js/catch/catch.js"></script>
+    <script src="js/catch/fruit.js"></script>
+    <script src="js/catch/bananashower.js"></script>
+    <script src="js/catch/juicestream.js"></script>
+    <script src="js/catch/PalpableCatchHitObject.js"></script>
+
+    <script src="js/mania/mania.js"></script>
+    <script src="js/mania/hitnote.js"></script>
+    <script src="js/mania/holdnote.js"></script>
+
+    <script src="js/preview.js"></script>
+    <script src="gif.js/gif.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const beatmapInput = document.getElementById('beatmapInput');
+            const scaleInput = document.getElementById('scaleInput');
+            const timeSpanInput = document.getElementById('timeSpanInput');
+            const startTimeInput = document.getElementById('startTimeInput');
+            const durationInput = document.getElementById('durationInput');
+            const qualityInput = document.getElementById('qualityInput');
+            const usePreviewTimeCheckbox = document.getElementById('usePreviewTimeCheckbox');
+            const generateBtn = document.getElementById('generateBtn');
+            const status = document.getElementById('status');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const result = document.getElementById('result');
+
+            generateBtn.addEventListener('click', function () {
+                const beatmapID = beatmapInput.value.trim();
+                const scaleValue = parseFloat(scaleInput.value.trim());
+                const timeSpanValue = parseInt(timeSpanInput.value.trim());
+                const startTimeValue = parseInt(startTimeInput.value.trim());
+                const durationValue = parseInt(durationInput.value.trim());
+                const qualityValue = parseInt(qualityInput.value.trim());
+                const usePreviewTime = usePreviewTimeCheckbox.checked;
+
+                // 验证输入
+                if (isNaN(scaleValue) || scaleValue <= 0 || scaleValue > 1) {
+                    status.textContent = '请输入有效的缩放比例 (0 < 比例 ≤ 1)';
+                    status.style.color = '#ff6666';
+                    return;
+                }
+                if (!beatmapID) {
+                    status.textContent = '请输入有效的谱面ID';
+                    status.style.color = '#ff6666';
+                    return;
+                }
+                if (isNaN(timeSpanValue) || timeSpanValue < 15) {
+                    status.textContent = '请输入有效的帧间隔时间';
+                    status.style.color = '#ff6666';
+                    return;
+                }
+                if (isNaN(startTimeValue) || (startTimeValue < 0 && startTimeValue !== -1)) {
+                    status.textContent = '请输入有效的开始时间';
+                    status.style.color = '#ff6666';
+                    return;
+                }
+                if (isNaN(durationValue) || (durationValue < 0 && durationValue !== -1)) {
+                    status.textContent = '请输入有效的持续时间';
+                    status.style.color = '#ff6666';
+                    return;
+                }
+                if (isNaN(qualityValue) || qualityValue < 1 || qualityValue > 30) {
+                    status.textContent = '请输入有效的GIF质量 (1-30)';
+                    status.style.color = '#ff6666';
+                    return;
+                }
+
+                generateGIF(beatmapID, scaleValue, timeSpanValue, startTimeValue, durationValue, qualityValue, usePreviewTime);
+            });
+
+            function generateGIF(beatmapID, scaleValue, timeSpanValue, startTimeValue, durationValue, qualityValue, usePreviewTime) {
+                status.textContent = '正在获取谱面数据...';
+                status.style.color = '#fff';
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '10%';
+
+                // 清除之前的结果
+                result.innerHTML = '';
+
+                var osuFileUrl = "https://osu.direct/api/osu/" + beatmapID;
+                !async function () {
+                    var self = this;
+                    let osufile;
+                    try {
+                        const response = await fetch(osuFileUrl);
+                        osufile = await response.text();
+                    }
+                    catch (e) {
+                        console.log(e);
+                        document.title = "从osu.direct获取谱面文件失败";
+                    }
+                    if (!osufile) {
+                        return;
+                    }
+
+                    var preview = new Preview(scaleValue);
+                    preview.load(osufile, function () {
+                        status.textContent = '加载帧...';
+                        progressBar.style.width = '30%';
+
+                        // 计算实际开始时间
+                        let actualStartTime;
+
+                        if (usePreviewTime && preview.previewTime >= 0) {
+                            // 检查预览时间是否有效
+                            const previewEndTime = durationValue === -1 ? preview.endTime : preview.previewTime + durationValue;
+
+                            if (previewEndTime <= preview.endTime) {
+                                // 使用谱面预览时间
+                                actualStartTime = preview.previewTime;
+                                status.textContent += ' (使用谱面预览时间)';
+                            } else {
+                                // 预览时间加上持续时间超过谱面结束时间，使用用户指定的开始时间
+                                actualStartTime = startTimeValue === -1 ? preview.startTime : Math.max(startTimeValue, 0);
+                            }
+                        } else {
+                            // 使用用户指定的开始时间
+                            actualStartTime = startTimeValue === -1 ? preview.startTime : Math.max(startTimeValue, 0);
+                        }
+
+                        const actualEndTime = durationValue === -1 ? preview.endTime : Math.min(actualStartTime + durationValue, preview.endTime);
+
+                        var gif = new GIF({
+                            workers: 4,
+                            workerScript: './gif.js/gif.worker.js',
+                            quality: qualityValue,
+                            width: preview.screen.width * scaleValue,
+                            height: preview.screen.height * scaleValue,
+                            //transparent: "0x000000",
+                        });
+
+                        const totalFrames = Math.ceil((actualEndTime - actualStartTime) / timeSpanValue);
+                        let currentFrame = 0;
+
+                        // 添加帧
+                        while (currentFrame <= totalFrames) {
+                            const t = actualStartTime + currentFrame * timeSpanValue;
+                            preview.at(t);
+
+                            gif.addFrame(preview.ctx, {
+                                copy: true,
+                                delay: timeSpanValue
+                            });
+
+                            currentFrame++;
+                            progressBar.style.width = (30 + (currentFrame / totalFrames) * 60) + '%';
+                        }
+                        // 所有帧已添加
+                        progressBar.style.width = '95%';
+                        status.textContent = '最终处理中...';
+
+                        gif.on('finished', function (blob) {
+                            const url = URL.createObjectURL(blob);
+
+                            const img = document.createElement('img');
+                            img.id = 'img';
+                            img.src = url;
+                            img.alt = '生成的GIF预览';
+
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = url;
+                            downloadLink.download = `osu-preview-${beatmapID}.gif`;
+                            downloadLink.textContent = '下载GIF';
+                            downloadLink.className = 'download-btn';
+                            downloadLink.style.display = 'inline-block';
+                            downloadLink.style.marginTop = '15px';
+                            downloadLink.style.padding = '10px 15px';
+                            downloadLink.style.backgroundColor = '#ff66aa';
+                            downloadLink.style.color = 'white';
+                            downloadLink.style.borderRadius = '5px';
+                            downloadLink.style.textDecoration = 'none';
+
+                            result.appendChild(img);
+                            result.appendChild(document.createElement('br'));
+                            result.appendChild(downloadLink);
+
+                            progressBar.style.width = '100%';
+                            status.textContent = 'GIF生成完成！';
+
+                            //progressContainer.style.display = 'none';
+                        });
+
+                        gif.render();
+
+                    }, function (error) {
+                        status.textContent = '错误: ' + error;
+                        status.style.color = '#ff6666';
+                        progressContainer.style.display = 'none';
+                    });
+
+
+                }();
+
+
+            }
+        });
+    </script>
+</body>
+
+</html>

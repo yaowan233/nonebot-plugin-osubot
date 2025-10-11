@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="robots" content="nofollow, noindex, noarchive">
+    <title>gif生成测试 网址后加#bid</title>
+</head>
+
+
+<body class="h">
+    <img id="img"></img>
+
+    <script src="js/util.js"></script>
+
+    <script src="js/beatmap/beatmap.js"></script>
+    <script src="js/beatmap/timingpoint.js"></script>
+    <script src="js/beatmap/hitobject.js"></script>
+    <script src="js/beatmap/point.js"></script>
+    <script src="js/beatmap/scroll.js"></script>
+
+    <script src="js/standard/standard.js"></script>
+    <script src="js/standard/hitcircle.js"></script>
+    <script src="js/standard/slider.js"></script>
+    <script src="js/standard/curve/curve.js"></script>
+    <script src="js/standard/curve/equaldistancemulticurve.js"></script>
+    <script src="js/standard/curve/linearbezier.js"></script>
+    <script src="js/standard/curve/catmullcurve.js"></script>
+    <script src="js/standard/curve/curvetype.js"></script>
+    <script src="js/standard/curve/bezier2.js"></script>
+    <script src="js/standard/curve/centripetalcatmullrom.js"></script>
+    <script src="js/standard/curve/circumstancedcircle.js"></script>
+    <script src="js/standard/spinner.js"></script>
+
+    <script src="js/taiko/taiko.js"></script>
+    <script src="js/taiko/donkat.js"></script>
+    <script src="js/taiko/drumroll.js"></script>
+    <script src="js/taiko/shaker.js"></script>
+
+    <script src="js/catch/LegacyRandom.js"></script>
+    <script src="js/catch/catch.js"></script>
+    <script src="js/catch/fruit.js"></script>
+    <script src="js/catch/bananashower.js"></script>
+    <script src="js/catch/juicestream.js"></script>
+    <script src="js/catch/PalpableCatchHitObject.js"></script>
+
+    <script src="js/mania/mania.js"></script>
+    <script src="js/mania/hitnote.js"></script>
+    <script src="js/mania/holdnote.js"></script>
+
+    <script src="js/preview.js"></script>
+    <script src="gif.js/gif.js"></script>
+
+    <script>
+        const scaleValue = 0.2;
+        const durationValue = 10000;
+        const qualityValue = 10;
+        const timeSpanValue = 50;
+
+        const createImg = function () {
+            let preview = new Preview(scaleValue);
+            const osufile = {{ osu_file|tojson }};
+            preview.load(osufile, function () {
+                let actualStartTime;
+                const previewEndTime = preview.previewTime + durationValue;
+                if (previewEndTime <= preview.endTime) {
+                    // 使用谱面预览时间
+                    actualStartTime = preview.previewTime;
+                } else {
+                    // 预览时间加上持续时间超过谱面结束时间，使用用户指定的开始时间
+                    actualStartTime = preview.startTime;
+                }
+                const actualEndTime = durationValue === -1 ? preview.endTime : Math.min(actualStartTime + durationValue, preview.endTime);
+                let gif = new GIF({
+                    workers: 4,
+                    workerScript: './gif.js/gif.worker.js',
+                    quality: qualityValue,
+                    width: preview.screen.width * scaleValue,
+                    height: preview.screen.height * scaleValue,
+                    //transparent: "0x000000",
+                });
+
+                const totalFrames = Math.ceil((actualEndTime - actualStartTime) / timeSpanValue);
+                let currentFrame = 0;
+
+                // 添加帧
+                while (currentFrame <= totalFrames) {
+                    const t = actualStartTime + currentFrame * timeSpanValue;
+                    preview.at(t);
+
+                    gif.addFrame(preview.ctx, {
+                        copy: true,
+                        delay: timeSpanValue
+                    });
+                    currentFrame++;
+                }
+                gif.on('finished', function (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const img = document.createElement('img');
+                    img.id = 'img';
+                    img.src = url;
+                    img.alt = '生成的GIF预览';
+                });
+                gif.render();
+            });
+        }
+
+        window.addEventListener('hashchange', createImg);
+
+        createImg();
+    </script>
+</body>
+
+</html>
