@@ -41,7 +41,9 @@ async def _(state: T_State):
         await UniMessage.image(raw=pic).finish(reply_to=True)
     elif state["mode"] == "0":
         pic = await draw_osu_preview(int(osu_id), data["beatmapset_id"])
-        msg = UniMessage.image(raw=pic) + UniMessage.text(f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}")
+        msg = UniMessage.image(raw=pic) + UniMessage.text(
+            f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
+        )
         await msg.finish(reply_to=True)
     elif not (0 <= int(state["mode"]) <= 3):
         await UniMessage.text("模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania").finish()
