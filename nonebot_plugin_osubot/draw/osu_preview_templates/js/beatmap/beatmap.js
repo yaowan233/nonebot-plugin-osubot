@@ -89,7 +89,7 @@ function Beatmap(osu)
                 {
                     this.HitObjects.push(HitObject.parse(line, this));
                 }
-                catch (e) { console.log(e)}
+                catch (e) { console.log(e); }
                 break;
             }
         }
