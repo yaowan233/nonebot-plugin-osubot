@@ -117,7 +117,7 @@ Standard.DEFAULT_COLORS = [
     'rgb(0,202,0)',
     'rgb(18,124,255)',
     'rgb(242,24,57)',
-    'rgb(255,292,0)'
+    'rgb(255,255,0)'
 ];
 Standard.STACK_LENIENCE = 3;
 Standard.prototype.update = function(ctx)
