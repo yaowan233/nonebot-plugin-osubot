@@ -15,7 +15,7 @@ from ..file import download_map
 osudl = on_command("osudl", priority=11, block=True)
 
 
-def calculate_file_chunks(file_path: str, chunk_size: int = 1024 * 16) -> tuple[list[bytes], str, int]:
+def calculate_file_chunks(file_path: str, chunk_size: int = 1024 * 64) -> tuple[list[bytes], str, int]:
     """
     计算文件分片和 SHA256
 
@@ -84,7 +84,7 @@ async def _upload_chunk(
         )
 
 
-async def upload_file_stream_batch(bot: Bot, file_path: Path, chunk_size: int = 1024 * 16) -> str:
+async def upload_file_stream_batch(bot: Bot, file_path: Path, chunk_size: int = 1024 * 64) -> str:
     """
     一次性批量上传文件流
 
