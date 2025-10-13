@@ -428,7 +428,7 @@ async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
             f"https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}",
         ]
     )
-    return BytesIO(res)
+    return BytesIO(res.content)
 
 
 async def get_seasonal_bg() -> Optional[dict]:
