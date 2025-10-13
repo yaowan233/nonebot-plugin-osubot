@@ -127,13 +127,13 @@ async def upload_file_stream_batch(bot: Bot, file_path: Path, chunk_size: int = 
         raise e
 
     # 发送完成信号
-    logger.info(f"\n所有分片发送完成，请求文件合并...")
+    logger.info("\n所有分片发送完成，请求文件合并...")
     complete_params = {"stream_id": stream_id, "is_complete": True}
 
     response = await bot.call_api("upload_file_stream", **complete_params)
 
     if response.get("status") == "file_complete":
-        logger.info(f"✅ 文件上传成功!")
+        logger.info("✅ 文件上传成功!")
         logger.info(f"  - 文件路径: {response.get('file_path')}")
         logger.info(f"  - 文件大小: {response.get('file_size')} 字节")
         logger.info(f"  - SHA256: {response.get('sha256')}")
