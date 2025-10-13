@@ -5,6 +5,7 @@ from .getbg import getbg
 from .match import match
 from .medal import medal
 from .score import score
+from .osudl import osudl
 from .pr import pr, recent
 from .rating import rating
 from .history import history
@@ -57,4 +58,5 @@ __all__ = [
     "match",
     "rating",
     "group_pp_rank",
+    "osudl",
 ]

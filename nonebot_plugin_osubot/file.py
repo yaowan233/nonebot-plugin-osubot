@@ -1,4 +1,5 @@
 import re
+import urllib
 import random
 import asyncio
 from pathlib import Path
@@ -18,7 +19,6 @@ user_cache_path = Path() / "data" / "osu" / "user"
 badge_cache_path = Path() / "data" / "osu" / "badge"
 team_cache_path = Path() / "data" / "osu" / "team"
 api_ls = [
-    "https://api.chimu.moe/v1/download/",
     "https://osu.direct/api/d/",
     "https://txy1.sayobot.cn/beatmaps/download/novideo/",
     "https://catboy.best/d/",
@@ -35,16 +35,55 @@ if not team_cache_path.exists():
     team_cache_path.mkdir(parents=True, exist_ok=True)
 
 
+def extract_filename_from_headers(headers: dict[str, str]) -> Optional[str]:
+    """
+    从 Content-Disposition 响应头中提取文件名，并处理 URL 编码。
+
+    Args:
+        headers: 响应头字典。
+
+    Returns:
+        提取到的文件名字符串，如果失败则返回 None。
+    """
+    disposition = headers.get("content-disposition", "")
+    if not disposition:
+        return None
+
+    match_utf8 = re.search(r"filename\*=(?:utf-8''|)(.+?)(?:;|$)", disposition, re.IGNORECASE)
+
+    if match_utf8:
+        # 提取匹配到的文件名部分
+        encoded_filename = match_utf8.group(1).strip('"').strip()
+
+        try:
+            return urllib.parse.unquote(encoded_filename)
+        except Exception as e:
+            # 如果解码失败，记录错误并尝试使用原始编码
+            print(f"警告: 解码 filename* 失败: {e}. 使用原始编码.")
+            return encoded_filename
+
+    match_normal = re.search(r"filename=\"?(.+?)\"?(\s|;|$)", disposition, re.IGNORECASE)
+    if match_normal:
+        # 普通 filename 字段也可能包含 URL 编码，进行解码
+        filename = match_normal.group(1).strip('"').strip()
+        try:
+            return urllib.parse.unquote(filename)
+        except Exception:
+            return filename
+
+    return None
+
+
 async def download_map(setid: int) -> Optional[Path]:
     urls = [i + str(setid) for i in api_ls]
     logger.info(f"开始下载地图: <{setid}>")
     req = await get_first_response(urls)
-    filename = f"{setid}.osz"
+    filename = extract_filename_from_headers(req.headers)
     filepath = map_path.parent / filename
-    with open(filepath, "wb") as f:
-        f.write(req.read())
+    with open(filepath.absolute(), "wb") as f:
+        f.write(req.content)
     logger.info(f"地图: <{setid}> 下载完毕")
-    return filepath
+    return filepath.absolute()
 
 
 @auto_retry
@@ -61,7 +100,7 @@ async def download_osu(set_id, map_id):
             filepath = map_path / str(set_id) / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(filepath, "wb") as f:
-                f.write(req)
+                f.write(req.content)
             return filepath
         else:
             raise Exception("下载出错，请稍后再试")

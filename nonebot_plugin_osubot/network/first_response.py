@@ -25,6 +25,6 @@ async def get_first_response(urls: list[str]):
             for task in done:
                 response = task.result()
                 if response is not None and response.status_code == 200:
-                    return response.content
+                    return response
             tasks = [task for task in tasks if not task.done()]
         return None
