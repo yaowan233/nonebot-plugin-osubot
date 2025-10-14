@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent
 from nonebot.rule import ArgumentParser
 from nonebot.internal.adapter import Message
 from nonebot_plugin_alconna import UniMessage
@@ -10,6 +11,7 @@ from nonebot.params import CommandArg, ShellCommandArgv
 from ..api import get_beatmapsets_info, osu_api
 from ..mania import Options, convert_mania_map
 from ..schema import Beatmap
+from ..file import upload_file_stream_batch
 
 parser = ArgumentParser("convert", description="变换mania谱面")
 parser.add_argument("--set", type=int, help="要转换的谱面的setid")
@@ -67,7 +69,7 @@ change = on_command("倍速", priority=11, block=True)
 
 
 @change.handle()
-async def _(msg: Message = CommandArg()):
+async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ["--map"]
     if not args:
@@ -97,9 +99,10 @@ async def _(msg: Message = CommandArg()):
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
     file_path = osz_path.absolute()
+    server_osz_path = await upload_file_stream_batch(bot, file_path)
+
     try:
-        with open(file_path, "rb") as f:
-            await UniMessage.file(raw=f.read()).send()
+        await bot.call_api("upload_group_file", group_id=event.group_id, file=server_osz_path, name=osz_path.name)
     except ActionFailed:
         await UniMessage.text("上传文件失败，可能是群空间满或没有权限导致的").send(reply_to=True)
     finally:
@@ -113,7 +116,7 @@ generate_full_ln = on_command("反键", priority=11, block=True)
 
 
 @generate_full_ln.handle()
-async def _(msg: Message = CommandArg()):
+async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     if not args:
         await UniMessage.text("请输入需要转ln的地图setID").finish(reply_to=True)
@@ -133,9 +136,9 @@ async def _(msg: Message = CommandArg()):
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
     file_path = osz_path.absolute()
+    server_osz_path = await upload_file_stream_batch(bot, file_path)
     try:
-        with open(file_path, "rb") as f:
-            await UniMessage.file(raw=f.read()).send()
+        await bot.call_api("upload_group_file", group_id=event.group_id, file=server_osz_path, name=osz_path.name)
     except ActionFailed:
         await UniMessage.text("上传文件失败，可能是群空间满或没有权限导致的").send(reply_to=True)
     finally:
