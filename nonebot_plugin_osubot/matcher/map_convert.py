@@ -38,7 +38,7 @@ async def _(argv: list[str] = ShellCommandArgv()):
         return
     options = Options(**vars(args))
     if options.map:
-        map_data = await osu_api("map", options.map)
+        map_data = await osu_api("map", map_id=options.map)
         mapinfo = Beatmap(**map_data)
         beatmapsets_info = await get_beatmapsets_info(mapinfo.beatmapset_id)
         options.set = mapinfo.beatmapset_id
@@ -88,7 +88,7 @@ async def _(msg: Message = CommandArg()):
     args = parser.parse_args(argv)
     options = Options(**vars(args))
     if options.map:
-        map_data = await osu_api("map", options.map)
+        map_data = await osu_api("map", map_id=options.map)
         mapinfo = Beatmap(**map_data)
         beatmapsets_info = await get_beatmapsets_info(mapinfo.beatmapset_id)
         options.set = mapinfo.beatmapset_id

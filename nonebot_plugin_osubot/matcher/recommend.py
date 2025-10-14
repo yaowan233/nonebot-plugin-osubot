@@ -43,7 +43,7 @@ async def handle_recommend(state: T_State, matcher: type[Matcher]):
         await matcher.finish("今天已经没有可以推荐的图啦，明天再来吧")
         return None
     bid = int(re.findall("https://osu.ppy.sh/beatmaps/(.*)", recommend_map.mapLink)[0])
-    map_data = await osu_api("map", bid)
+    map_data = await osu_api("map", map_id=bid)
     map_info = Beatmap(**map_data)
     sid = map_info.beatmapset_id
     s = (
