@@ -28,6 +28,14 @@ async def test_info_matcher_block(app: App):
 
 
 @pytest.mark.asyncio
+async def test_info_has_handler(app: App):
+    """测试 info matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.info import info
+    
+    assert len(info.handlers) > 0, "info matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
 async def test_info_matcher_aliases(app: App):
     """测试 info matcher 别名"""
     from nonebot_plugin_osubot.matcher.info import info
@@ -58,3 +66,11 @@ async def test_mu_matcher_block(app: App):
     from nonebot_plugin_osubot.matcher.mu import mu
     
     assert mu.block == True
+
+
+@pytest.mark.asyncio
+async def test_mu_has_handler(app: App):
+    """测试 mu matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.mu import mu
+    
+    assert len(mu.handlers) > 0, "mu matcher 应该有处理器"

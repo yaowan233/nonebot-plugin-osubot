@@ -7,7 +7,7 @@
 测试文件按功能模块组织：
 
 - `conftest.py` - pytest 配置和共享 fixtures
-- `test_matchers.py` - 所有 matcher 的基本导入测试
+- `test_matchers.py` - 所有 matcher 的基本导入和处理器测试
 - `test_bind.py` - 绑定相关的 matcher 测试
 - `test_bp.py` - BP 相关的 matcher 测试
 - `test_info.py` - 信息查询相关的 matcher 测试
@@ -53,6 +53,7 @@ pytest tests/test_bind.py::test_bind_matcher_exists -v
 2. **优先级测试** - 验证 matcher 优先级为 11
 3. **阻断行为测试** - 验证 matcher 的 block 属性为 True
 4. **类型测试** - 验证 matcher 是正确的 Matcher 类型
+5. **处理器测试** - 验证 matcher 有注册的处理器（handler），确保能够处理消息不会报错
 
 ## 持续集成
 
@@ -69,10 +70,16 @@ GitHub Actions 会在以下情况自动运行测试：
 
 1. 在相应的测试文件中添加测试
 2. 如果是新的功能模块，创建新的测试文件
-3. 确保所有测试通过后再提交代码
+3. 确保添加以下测试：
+   - 导入存在性测试
+   - 优先级测试（如果适用）
+   - 阻断行为测试（如果适用）
+   - 处理器存在性测试
+4. 确保所有测试通过后再提交代码
 
 ## 注意事项
 
 - 测试使用 `nonebug` 作为测试框架
 - 测试使用 `pytest-asyncio` 支持异步测试
 - 所有测试都应该是独立的，不依赖外部状态
+- 处理器测试确保 matcher 至少有一个处理器注册，这验证了 matcher 能够响应消息而不会立即报错

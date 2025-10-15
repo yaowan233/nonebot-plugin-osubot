@@ -97,3 +97,35 @@ async def test_generate_full_ln_matcher_block(app: App):
     from nonebot_plugin_osubot.matcher.map_convert import generate_full_ln
     
     assert generate_full_ln.block == True
+
+
+@pytest.mark.asyncio
+async def test_generate_preview_has_handler(app: App):
+    """测试 generate_preview matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.preview import generate_preview
+    
+    assert len(generate_preview.handlers) > 0, "generate_preview matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_convert_has_handler(app: App):
+    """测试 convert matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.map_convert import convert
+    
+    assert len(convert.handlers) > 0, "convert matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_change_has_handler(app: App):
+    """测试 change matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.map_convert import change
+    
+    assert len(change.handlers) > 0, "change matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_generate_full_ln_has_handler(app: App):
+    """测试 generate_full_ln matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.map_convert import generate_full_ln
+    
+    assert len(generate_full_ln.handlers) > 0, "generate_full_ln matcher 应该有处理器"

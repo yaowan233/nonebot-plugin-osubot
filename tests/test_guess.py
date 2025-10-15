@@ -113,3 +113,35 @@ async def test_pic_hint_matcher_block(app: App):
     from nonebot_plugin_osubot.matcher.guess import pic_hint
     
     assert pic_hint.block == True
+
+
+@pytest.mark.asyncio
+async def test_guess_audio_has_handler(app: App):
+    """测试 guess_audio matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.guess import guess_audio
+    
+    assert len(guess_audio.handlers) > 0, "guess_audio matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_guess_pic_has_handler(app: App):
+    """测试 guess_pic matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.guess import guess_pic
+    
+    assert len(guess_pic.handlers) > 0, "guess_pic matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_hint_has_handler(app: App):
+    """测试 hint matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.guess import hint
+    
+    assert len(hint.handlers) > 0, "hint matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_pic_hint_has_handler(app: App):
+    """测试 pic_hint matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.guess import pic_hint
+    
+    assert len(pic_hint.handlers) > 0, "pic_hint matcher 应该有处理器"

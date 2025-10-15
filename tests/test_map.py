@@ -52,6 +52,22 @@ async def test_osu_map_matcher_block(app: App):
 
 
 @pytest.mark.asyncio
+async def test_bmap_has_handler(app: App):
+    """测试 bmap matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.map import bmap
+    
+    assert len(bmap.handlers) > 0, "bmap matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_osu_map_has_handler(app: App):
+    """测试 osu_map matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.map import osu_map
+    
+    assert len(osu_map.handlers) > 0, "osu_map matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
 async def test_getbg_matcher_exists(app: App):
     """测试 getbg matcher 存在"""
     from nonebot_plugin_osubot.matcher import getbg
@@ -73,3 +89,11 @@ async def test_getbg_matcher_block(app: App):
     from nonebot_plugin_osubot.matcher.getbg import getbg
     
     assert getbg.block == True
+
+
+@pytest.mark.asyncio
+async def test_getbg_has_handler(app: App):
+    """测试 getbg matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.getbg import getbg
+    
+    assert len(getbg.handlers) > 0, "getbg matcher 应该有处理器"

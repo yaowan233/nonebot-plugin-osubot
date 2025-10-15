@@ -97,3 +97,35 @@ async def test_update_mode_matcher_block(app: App):
     from nonebot_plugin_osubot.matcher.update_mode import update_mode
     
     assert update_mode.block == True
+
+
+@pytest.mark.asyncio
+async def test_update_pic_has_handler(app: App):
+    """测试 update_pic matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.update import update_pic
+    
+    assert len(update_pic.handlers) > 0, "update_pic matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_update_info_has_handler(app: App):
+    """测试 update_info matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.update import update_info
+    
+    assert len(update_info.handlers) > 0, "update_info matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_clear_background_has_handler(app: App):
+    """测试 clear_background matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.update import clear_background
+    
+    assert len(clear_background.handlers) > 0, "clear_background matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_update_mode_has_handler(app: App):
+    """测试 update_mode matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.update_mode import update_mode
+    
+    assert len(update_mode.handlers) > 0, "update_mode matcher 应该有处理器"

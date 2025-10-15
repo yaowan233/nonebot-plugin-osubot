@@ -1,4 +1,4 @@
-"""测试所有 matcher 的基本可用性"""
+"""测试所有 matcher 的基本可用性和功能"""
 import pytest
 from nonebug import App
 
@@ -45,43 +45,36 @@ async def test_matchers_import(app: App):
         generate_full_ln,
     )
 
-    # 验证所有 matcher 都已成功导入
-    assert bind is not None
-    assert unbind is not None
-    assert bp is not None
-    assert tbp is not None
-    assert getbg is not None
-    assert guess_audio is not None
-    assert guess_pic is not None
-    assert word_matcher is not None
-    assert pic_word_matcher is not None
-    assert hint is not None
-    assert pic_hint is not None
-    assert history is not None
-    assert info is not None
-    assert bmap is not None
-    assert osu_map is not None
-    assert match is not None
-    assert medal is not None
-    assert mu is not None
-    assert osu_help is not None
-    assert osudl is not None
-    assert pr is not None
-    assert recent is not None
-    assert generate_preview is not None
-    assert group_pp_rank is not None
-    assert rating is not None
-    assert recommend is not None
-    assert score is not None
-    assert update_pic is not None
-    assert update_info is not None
-    assert clear_background is not None
-    assert update_mode is not None
-    assert url_match is not None
-    assert bp_analyze is not None
-    assert convert is not None
-    assert change is not None
-    assert generate_full_ln is not None
+    # 验证所有 matcher 都已成功导入且不为 None
+    matchers = [
+        bind, unbind, bp, tbp, getbg, guess_audio, guess_pic, word_matcher,
+        pic_word_matcher, hint, pic_hint, history, info, bmap, osu_map, match,
+        medal, mu, osu_help, osudl, pr, recent, generate_preview, group_pp_rank,
+        rating, recommend, score, update_pic, update_info, clear_background,
+        update_mode, url_match, bp_analyze, convert, change, generate_full_ln,
+    ]
+    
+    for matcher in matchers:
+        assert matcher is not None, f"Matcher {matcher} is None"
+
+
+@pytest.mark.asyncio
+async def test_matchers_have_handlers(app: App):
+    """测试所有 matcher 都有处理器"""
+    from nonebot_plugin_osubot.matcher import (
+        bind, unbind, bp, tbp, getbg, info, mu, osu_help, match,
+        score, pr, recent, update_mode, recommend, medal, osudl,
+    )
+
+    # 验证 matcher 有处理器
+    test_matchers = [
+        bind, unbind, bp, tbp, getbg, info, mu, osu_help, match,
+        score, pr, recent, update_mode, recommend, medal, osudl,
+    ]
+    
+    for matcher in test_matchers:
+        assert hasattr(matcher, 'handlers'), f"Matcher {matcher} has no handlers"
+        assert len(matcher.handlers) > 0, f"Matcher {matcher} has no handlers registered"
 
 
 @pytest.mark.asyncio

@@ -49,3 +49,19 @@ async def test_unbind_matcher_block(app: App):
     from nonebot_plugin_osubot.matcher.bind import unbind
     
     assert unbind.block == True
+
+
+@pytest.mark.asyncio
+async def test_bind_has_handler(app: App):
+    """测试 bind matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.bind import bind
+    
+    assert len(bind.handlers) > 0, "bind matcher 应该有处理器"
+
+
+@pytest.mark.asyncio
+async def test_unbind_has_handler(app: App):
+    """测试 unbind matcher 有处理器"""
+    from nonebot_plugin_osubot.matcher.bind import unbind
+    
+    assert len(unbind.handlers) > 0, "unbind matcher 应该有处理器"
