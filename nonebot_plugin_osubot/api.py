@@ -3,7 +3,7 @@ import random
 from io import BytesIO
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
-from typing import Union, Literal, Optional
+from typing import Union, Literal, Optional, Any, Coroutine
 
 from nonebot.log import logger
 from expiringdict import ExpiringDict
@@ -420,7 +420,7 @@ async def get_beatmapsets_info(sid) -> BeatmapSets:
     return BeatmapSets(**res)
 
 
-async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
+async def get_map_bg(mapid, sid, bg_name) -> BytesIO | None:
     res = await get_first_response(
         [
             f"https://catboy.best/preview/background/{mapid}",
@@ -428,7 +428,9 @@ async def get_map_bg(mapid, sid, bg_name) -> BytesIO:
             f"https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}",
         ]
     )
-    return BytesIO(res.content)
+    if res:
+        return BytesIO(res.content)
+    return None
 
 
 async def get_seasonal_bg() -> Optional[dict]:
