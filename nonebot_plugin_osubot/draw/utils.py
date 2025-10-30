@@ -514,7 +514,7 @@ async def process_user_avatar_with_gif(
 
 async def handle_team_image(
     base_image: Image.Image,
-    draw_context: Optional[ImageDraw.ImageDraw],
+    draw_context: Optional["ImageDraw.Draw"],
     info,
     position: tuple[int, int],
     size: tuple[int, int],
