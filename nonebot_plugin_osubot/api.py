@@ -3,7 +3,7 @@ import random
 from io import BytesIO
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
-from typing import Union, Literal, Optional, Any, Coroutine
+from typing import Union, Literal, Optional
 
 from nonebot.log import logger
 from expiringdict import ExpiringDict
