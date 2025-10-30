@@ -97,16 +97,14 @@ async def draw_score(
         raise Exception("Project Error")
     # 从官网获取信息
     path = map_path / str(score.beatmap.set_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score.beatmap.id}.osu"
     task2 = asyncio.create_task(osu_api("map", map_id=score.beatmap.id))
     if not osu.exists():
         await download_osu(score.beatmap.set_id, score.beatmap.id)
     info = await task1
     user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
+    user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     # 判断是否开启lazer模式
     if source == "osu":
@@ -172,15 +170,13 @@ async def get_score_data(
         score_ls.sort(key=lambda x: x.total_score, reverse=True)
         score = score_ls[0]
     path = map_path / str(map_json["beatmapset_id"])
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(map_json["beatmapset_id"], mapid)
     info = await task
     user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
+    user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
@@ -192,8 +188,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(mapinfo.beatmapset_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     # pp
     osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()), is_lazer)
