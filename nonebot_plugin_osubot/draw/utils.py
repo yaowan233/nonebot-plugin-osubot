@@ -8,7 +8,7 @@ from difflib import SequenceMatcher
 
 from PIL.ImageFile import ImageFile
 from matplotlib.figure import Figure
-from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError
+from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError, ImageSequence
 
 from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
@@ -454,3 +454,155 @@ def draw_text_with_outline(draw, position, text, font, anchor, fill):
                     fill=(0, 0, 0, 255),
                 )
     draw.text(position, text, font=font, anchor=anchor, fill=fill)
+
+
+async def process_user_avatar_with_gif(
+    base_image: Image.Image,
+    user_icon: Image.Image,
+    position: tuple[int, int],
+    size: tuple[int, int],
+    corner_radius: int,
+) -> BytesIO:
+    """
+    Process user avatar (static or animated) and composite it onto the base image.
+
+    Args:
+        base_image: The base image to composite the avatar onto
+        user_icon: The user avatar image (can be animated GIF or static)
+        position: (x, y) position to place the avatar on the base image
+        size: (width, height) to resize the avatar to
+        corner_radius: Radius for rounded corners
+
+    Returns:
+        BytesIO containing the final image (JPEG for static, GIF for animated)
+    """
+    if not getattr(user_icon, "is_animated", False):
+        icon_bg = user_icon.convert("RGBA").resize(size)
+        icon_img = draw_fillet(icon_bg, corner_radius)
+        base_image.alpha_composite(icon_img, position)
+        byt = BytesIO()
+        base_image.convert("RGB").save(byt, "jpeg")
+        base_image.close()
+        user_icon.close()
+        return byt
+
+    gif_frames = []
+    for gif_frame in ImageSequence.Iterator(user_icon):
+        # 将 GIF 图片中的每一帧转换为 RGBA 模式
+        gif_frame = gif_frame.convert("RGBA").resize(size)
+        gif_frame = draw_fillet(gif_frame, corner_radius)
+        # 创建一个新的 RGBA 图片，将 PNG 图片作为背景，将当前帧添加到背景上
+        rgba_frame = Image.new("RGBA", base_image.size, (0, 0, 0, 0))
+        rgba_frame.paste(base_image, (0, 0), base_image)
+        rgba_frame.paste(gif_frame, position, gif_frame)
+        # 将 RGBA 图片转换为 RGB 模式，并添加到 GIF 图片中
+        gif_frames.append(rgba_frame)
+    gif_bytes = BytesIO()
+    # 保存 GIF 图片
+    gif_frames[0].save(
+        gif_bytes,
+        format="gif",
+        save_all=True,
+        append_images=gif_frames[1:],
+        duration=user_icon.info["duration"],
+    )
+    # 输出
+    gif_frames[0].close()
+    user_icon.close()
+    return gif_bytes
+
+
+async def handle_team_image(
+    base_image: Image.Image,
+    draw_context: Optional[ImageDraw.Draw],
+    info,
+    position: tuple[int, int],
+    size: tuple[int, int],
+    text_position: Optional[tuple[int, int]] = None,
+    text_font: Optional[object] = None,
+) -> None:
+    """
+    Download and composite team flag image onto the base image, optionally drawing team name.
+
+    Args:
+        base_image: The base image to composite the team flag onto
+        draw_context: PIL ImageDraw context for drawing text (None if no text needed)
+        info: User info object containing team information
+        position: (x, y) position to place the team flag on the base image
+        size: (width, height) to resize the team flag to
+        text_position: Optional (x, y) position to draw team name text
+        text_font: Optional font for team name text
+
+    Raises:
+        NetworkError: If team image download fails
+    """
+    from ..exceptions import NetworkError
+
+    if info.team and info.team.flag_url:
+        team_path = team_cache_path / f"{info.team.id}.png"
+        if not team_path.exists():
+            team_img = await get_projectimg(info.team.flag_url)
+            team_img = Image.open(team_img).convert("RGBA")
+            team_img.save(team_path)
+        try:
+            team_img = Image.open(team_path).convert("RGBA").resize(size)
+            base_image.alpha_composite(team_img, position)
+        except UnidentifiedImageError:
+            team_path.unlink()
+            raise NetworkError("team 图片下载错误，请重试！")
+
+        # Draw team name if text parameters are provided
+        if draw_context and text_position and text_font and info.team.name:
+            draw_context.text(text_position, info.team.name, font=text_font, anchor="lt")
+
+
+async def load_osu_file_and_setup_template(template_path: str, beatmap_id: int, beatmapset_id: int):
+    """
+    Load OSU file and setup Jinja2 template environment.
+
+    Args:
+        template_path: Path to template directory
+        beatmap_id: Beatmap ID
+        beatmapset_id: Beatmapset ID
+
+    Returns:
+        Tuple of (osu_file_content, template_object)
+    """
+    import jinja2
+
+    path = map_path / str(beatmapset_id)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+    osu = path / f"{beatmap_id}.osu"
+    if not osu.exists():
+        await download_osu(beatmapset_id, beatmap_id)
+    with open(osu, encoding="utf-8-sig") as f:
+        osu_file = f.read()
+    template_name = "pic.html"
+    template_env = jinja2.Environment(  # noqa: S701
+        loader=jinja2.FileSystemLoader(template_path),
+        enable_async=True,
+    )
+    template = template_env.get_template(template_name)
+    return osu_file, template
+
+
+def get_map_difficulty_arrays(mapinfo, original_mapinfo):
+    """
+    Extract map difficulty arrays for comparison.
+
+    Args:
+        mapinfo: Current map info with difficulty stats
+        original_mapinfo: Original map info with difficulty stats
+
+    Returns:
+        Tuple of (mapdiff, original_mapdiff) arrays with [cs, drain, accuracy, ar]
+    """
+    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar]
+    original_mapdiff = [
+        original_mapinfo.cs,
+        original_mapinfo.drain,
+        original_mapinfo.accuracy,
+        original_mapinfo.ar,
+    ]
+    return mapdiff, original_mapdiff

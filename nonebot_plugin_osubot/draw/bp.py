@@ -9,7 +9,7 @@ from ..pp import cal_pp
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
 from ..schema.score import Mod, UnifiedScore
-from .score import cal_legacy_acc, cal_legacy_rank
+from .score import cal_score_info
 from ..api import get_user_scores, get_user_info_data
 from ..file import map_path, get_pfm_img, download_osu
 from .utils import draw_fillet, draw_fillet2, open_user_icon, filter_scores_with_regex
@@ -44,15 +44,9 @@ async def draw_bp(
         score_ls_filtered = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day + 1)]
         if not score_ls_filtered:
             raise NetworkError("未查询到游玩记录")
-    for score_info in score_ls_filtered:
+    for i, score_info in enumerate(score_ls_filtered):
         # 判断是否开启lazer模式
-        if is_lazer:
-            score_info.legacy_total_score = score_info.total_score
-        if score_info.ruleset_id == 3 and not is_lazer and source != "ppysb":
-            score_info.accuracy = cal_legacy_acc(score_info.statistics)
-        if not is_lazer:
-            is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
-            score_info.rank = cal_legacy_rank(score_info, is_hidden)
+        score_ls_filtered[i] = cal_score_info(is_lazer, score_info, source)
     if search_condition:
         score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
     if not score_ls_filtered:

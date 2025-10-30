@@ -3,14 +3,14 @@ from io import BytesIO
 from typing import Union
 from datetime import date, datetime, timedelta
 
-from PIL import ImageDraw, ImageSequence, UnidentifiedImageError
+from PIL import ImageDraw, UnidentifiedImageError
 
 from ..utils import FGM, GMN
 from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..api import get_random_bg, get_user_info_data
-from .utils import info_calc, draw_fillet, update_icon, open_user_icon
-from ..file import get_projectimg, team_cache_path, user_cache_path, badge_cache_path, make_badge_cache_file
+from .utils import info_calc, update_icon, open_user_icon, handle_team_image, process_user_avatar_with_gif
+from ..file import user_cache_path, badge_cache_path, make_badge_cache_file
 from .static import (
     Image,
     InfoImg,
@@ -146,19 +146,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
     # 地区
     country_bg = Image.open(country).convert("RGBA").resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
-    if info.team and info.team.flag_url:
-        team_path = team_cache_path / f"{info.team.id}.png"
-        if not team_path.exists():
-            team_img = await get_projectimg(info.team.flag_url)
-            team_img = Image.open(team_img).convert("RGBA")
-            team_img.save(team_path)
-        try:
-            team_img = Image.open(team_path).convert("RGBA").resize((108, 54))
-            im.alpha_composite(team_img, (400, 280))
-        except UnidentifiedImageError:
-            team_path.unlink()
-            raise NetworkError("team 图片下载错误，请重试！")
-        draw.text((515, 300), info.team.name, font=Torus_Regular_30, anchor="lt")
+    await handle_team_image(im, draw, info, (400, 280), (108, 54), (515, 300), Torus_Regular_30)
     # supporter
     # if info.is_supporter:
     # im.alpha_composite(SupporterBg.resize((54, 54)), (400, 280))
@@ -241,38 +229,6 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
         current_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         draw.text((380, 1305), current_time, font=Torus_Regular_25, anchor="la")
     # 头像
-    gif_frames = []
     user_icon = await open_user_icon(info, source)
     _ = asyncio.create_task(update_icon(info))
-    if not getattr(user_icon, "is_animated", False):
-        icon_bg = user_icon.convert("RGBA").resize((300, 300))
-        icon_img = draw_fillet(icon_bg, 25)
-        im.alpha_composite(icon_img, (50, 148))
-        byt = BytesIO()
-        im.convert("RGB").save(byt, "jpeg")
-        im.close()
-        user_icon.close()
-        return byt
-    for gif_frame in ImageSequence.Iterator(user_icon):
-        # 将 GIF 图片中的每一帧转换为 RGBA 模式
-        gif_frame = gif_frame.convert("RGBA").resize((300, 300))
-        gif_frame = draw_fillet(gif_frame, 25)
-        # 创建一个新的 RGBA 图片，将 PNG 图片作为背景，将当前帧添加到背景上
-        rgba_frame = Image.new("RGBA", im.size, (0, 0, 0, 0))
-        rgba_frame.paste(im, (0, 0), im)
-        rgba_frame.paste(gif_frame, (50, 148), gif_frame)
-        # 将 RGBA 图片转换为 RGB 模式，并添加到 GIF 图片中
-        gif_frames.append(rgba_frame)
-    gif_bytes = BytesIO()
-    # 保存 GIF 图片
-    gif_frames[0].save(
-        gif_bytes,
-        format="gif",
-        save_all=True,
-        append_images=gif_frames[1:],
-        duration=user_icon.info["duration"],
-    )
-    # 输出
-    gif_frames[0].close()
-    user_icon.close()
-    return gif_bytes
+    return await process_user_avatar_with_gif(im, user_icon, (50, 148), (300, 300), 25)
