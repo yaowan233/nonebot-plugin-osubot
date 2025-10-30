@@ -262,8 +262,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         for mods_num, s_mods in enumerate(score_info.mods):
             mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
             try:
-                mods_img = Image.open(mods_bg).convert("RGBA")
-                im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
+                with Image.open(mods_bg) as mods_img:
+                    mods_img = mods_img.convert("RGBA")
+                    im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
             except FileNotFoundError:
                 pass
     # 成绩S-F
@@ -286,8 +287,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     im = draw_acc(im, score_info.accuracy, score_info.ruleset_id)
     # 地区
     country = osufile / "flags" / f"{info.country_code}.png"
-    country_bg = Image.open(country).convert("RGBA").resize((66, 45))
-    im.alpha_composite(country_bg, (208, 597))
+    with Image.open(country) as country_img:
+        country_bg = country_img.convert("RGBA").resize((66, 45))
+        im.alpha_composite(country_bg, (208, 597))
     await handle_team_image(im, draw, info, (208, 660), (80, 40), (297, 675), Torus_Regular_20)
     # supporter
     # if info.is_supporter:
