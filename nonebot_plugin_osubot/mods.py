@@ -39,7 +39,8 @@ mods_dic = {
 
 def get_mods(mods: int) -> list[Mod]:
     # Avoid copying the dictionary by iterating directly and filtering
-    return [Mod(acronym=mod) for mod, bit in mods_dic.items() if mod not in ("CL", "NO") and mods & bit] + [Mod(acronym="CL")]
+    result = [Mod(acronym=mod) for mod, bit in mods_dic.items() if mod not in ("CL", "NO") and mods & bit]
+    return result + [Mod(acronym="CL")]
 
 
 def get_mods_list(score_ls: list[UnifiedScore], mods: list[str]) -> list[int]:
