@@ -348,7 +348,8 @@ class PlayerRatingCalculation:
                 if user_info is None:
                     continue
                 if entry.user_id == user_id:
-                    average_scores.append(sum([entry.score for entry in game.scores]) / len(game.scores))
+                    # Optimize: calculate sum directly instead of creating list
+                    average_scores.append(sum(entry.score for entry in game.scores) / len(game.scores))
                     user_scores.append(entry.score)
                     number_of_games_by_user += 1
 
@@ -397,7 +398,8 @@ class PlayerRatingCalculation:
                 if entry.user_id == user_id:
                     for mod in entry.mods:
                         all_played_mods.add(mod)
-                    average_scores.append(sum([entry.score for entry in game.scores]) / len(game.scores))
+                    # Optimize: calculate sum directly instead of creating list
+                    average_scores.append(sum(entry.score for entry in game.scores) / len(game.scores))
                     user_scores.append(entry.score)
                     number_of_games_by_user += 1
             # 获取加时赛数据
@@ -454,7 +456,8 @@ class PlayerRatingCalculation:
                 if user_info is None:
                     continue
                 if entry.user_id == user_id:
-                    median_scores.append(median([entry.score for entry in game.scores]))
+                    # Optimize: calculate median directly instead of creating list
+                    median_scores.append(median(entry.score for entry in game.scores))
                     user_scores.append(entry.score)
                     number_of_games_by_user += 1
 

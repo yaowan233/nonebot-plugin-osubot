@@ -97,16 +97,14 @@ async def draw_score(
         raise Exception("Project Error")
     # 从官网获取信息
     path = map_path / str(score.beatmap.set_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score.beatmap.id}.osu"
     task2 = asyncio.create_task(osu_api("map", map_id=score.beatmap.id))
     if not osu.exists():
         await download_osu(score.beatmap.set_id, score.beatmap.id)
     info = await task1
     user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
+    user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     # 判断是否开启lazer模式
     if source == "osu":
@@ -172,15 +170,13 @@ async def get_score_data(
         score_ls.sort(key=lambda x: x.total_score, reverse=True)
         score = score_ls[0]
     path = map_path / str(map_json["beatmapset_id"])
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(map_json["beatmapset_id"], mapid)
     info = await task
     user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
+    user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
@@ -192,8 +188,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(mapinfo.beatmapset_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     # pp
     osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()), is_lazer)
@@ -262,8 +257,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         for mods_num, s_mods in enumerate(score_info.mods):
             mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
             try:
-                mods_img = Image.open(mods_bg).convert("RGBA")
-                im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
+                with Image.open(mods_bg) as mods_img:
+                    mods_img = mods_img.convert("RGBA")
+                    im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
             except FileNotFoundError:
                 pass
     # 成绩S-F
@@ -286,8 +282,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     im = draw_acc(im, score_info.accuracy, score_info.ruleset_id)
     # 地区
     country = osufile / "flags" / f"{info.country_code}.png"
-    country_bg = Image.open(country).convert("RGBA").resize((66, 45))
-    im.alpha_composite(country_bg, (208, 597))
+    with Image.open(country) as country_img:
+        country_bg = country_img.convert("RGBA").resize((66, 45))
+        im.alpha_composite(country_bg, (208, 597))
     await handle_team_image(im, draw, info, (208, 660), (80, 40), (297, 675), Torus_Regular_20)
     # supporter
     # if info.is_supporter:

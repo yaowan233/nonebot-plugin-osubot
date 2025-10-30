@@ -130,14 +130,10 @@ async def crop_bg(size: tuple[int, int], path: Union[str, Path, BytesIO, Image.I
     if not isinstance(path, Image.Image):
         try:
             bg = Image.open(path).convert("RGBA")
-        except UnidentifiedImageError:
-            os.remove(path)
-            data = await get_seasonal_bg()
-            pic = SeasonalBackgrounds(**data)
-            url = random.choice(pic.backgrounds).url
-            res = await safe_async_get(url)
-            bg = Image.open(BytesIO(res.content)).convert("RGBA")
-        except FileNotFoundError:
+        except (UnidentifiedImageError, FileNotFoundError):
+            # Refactored: combine duplicate exception handling
+            if isinstance(path, (str, Path)) and Path(path).exists():
+                os.remove(path)
             data = await get_seasonal_bg()
             pic = SeasonalBackgrounds(**data)
             url = random.choice(pic.backgrounds).url
@@ -145,8 +141,8 @@ async def crop_bg(size: tuple[int, int], path: Union[str, Path, BytesIO, Image.I
             bg = Image.open(BytesIO(res.content)).convert("RGBA")
     else:
         bg = path
-    bg_w, bg_h = bg.size[0], bg.size[1]
-    fix_w, fix_h = size[0], size[1]
+    bg_w, bg_h = bg.size
+    fix_w, fix_h = size
     # 固定比例
     fix_scale = fix_h / fix_w
     # 图片比例
@@ -229,8 +225,7 @@ def calc_songlen(length: int) -> str:
 
 async def open_user_icon(info: UnifiedUser, source) -> Image:
     path = user_cache_path / str(info.id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     for file_path in path.glob("icon*.*"):
         # 检查文件是否为图片格式
         if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
@@ -249,9 +244,7 @@ async def open_user_icon(info: UnifiedUser, source) -> Image:
 
 
 def is_close(n1, n2) -> bool:
-    if abs(n1 - n2) < 0.01:
-        return True
-    return False
+    return abs(n1 - n2) < 0.01
 
 
 async def update_icon(info: UnifiedUser):
@@ -542,11 +535,13 @@ async def handle_team_image(
         team_path = team_cache_path / f"{info.team.id}.png"
         if not team_path.exists():
             team_img = await get_projectimg(info.team.flag_url)
-            team_img = Image.open(team_img).convert("RGBA")
-            team_img.save(team_path)
+            with Image.open(team_img) as team_image:
+                team_image = team_image.convert("RGBA")
+                team_image.save(team_path)
         try:
-            team_img = Image.open(team_path).convert("RGBA").resize(size)
-            base_image.alpha_composite(team_img, position)
+            with Image.open(team_path) as team_img:
+                team_img = team_img.convert("RGBA").resize(size)
+                base_image.alpha_composite(team_img, position)
         except UnidentifiedImageError:
             team_path.unlink()
             raise NetworkError("team 图片下载错误，请重试！")
@@ -571,8 +566,7 @@ async def load_osu_file_and_setup_template(template_path: str, beatmap_id: int, 
     import jinja2
 
     path = map_path / str(beatmapset_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{beatmap_id}.osu"
     if not osu.exists():
         await download_osu(beatmapset_id, beatmap_id)

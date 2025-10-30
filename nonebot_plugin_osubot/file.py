@@ -29,14 +29,10 @@ api_ls = [
 ]
 semaphore = asyncio.Semaphore(5)
 
-if not map_path.exists():
-    map_path.mkdir(parents=True, exist_ok=True)
-if not user_cache_path.exists():
-    user_cache_path.mkdir(parents=True, exist_ok=True)
-if not badge_cache_path.exists():
-    badge_cache_path.mkdir(parents=True, exist_ok=True)
-if not team_cache_path.exists():
-    team_cache_path.mkdir(parents=True, exist_ok=True)
+map_path.mkdir(parents=True, exist_ok=True)
+user_cache_path.mkdir(parents=True, exist_ok=True)
+badge_cache_path.mkdir(parents=True, exist_ok=True)
+team_cache_path.mkdir(parents=True, exist_ok=True)
 
 
 def extract_filename_from_headers(headers: dict[str, str]) -> Optional[str]:
@@ -79,7 +75,7 @@ def extract_filename_from_headers(headers: dict[str, str]) -> Optional[str]:
 
 
 async def download_map(setid: int) -> Optional[Path]:
-    urls = [i + str(setid) for i in api_ls]
+    urls = [f"{base_url}{setid}" for base_url in api_ls]
     logger.info(f"开始下载地图: <{setid}>")
     req = await get_first_response(urls)
     filename = extract_filename_from_headers(req.headers)
@@ -126,8 +122,7 @@ async def get_projectimg(url: str) -> BytesIO:
 
 async def get_pfm_img(url: str, cache_path: Path) -> BytesIO:
     cache_dir = cache_path.parent
-    if not cache_dir.exists():
-        cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_dir.mkdir(parents=True, exist_ok=True)
     if cache_path.exists():
         with cache_path.open("rb") as f:
             return BytesIO(f.read())
@@ -164,8 +159,7 @@ async def make_badge_cache_file(badge: Badge):
 # 保存个人信息界面背景
 async def save_info_pic(user: str, byt: bytes):
     path = user_cache_path / user
-    if not path.exists():
-        path.mkdir()
+    path.mkdir(parents=True, exist_ok=True)
     with open(path / "info.png", "wb") as f:
         f.write(BytesIO(byt).getvalue())
 
