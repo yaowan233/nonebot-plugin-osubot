@@ -12,7 +12,7 @@ from ..schema import Beatmap
 from ..schema.score import Mod
 from ..beatmap_stats_moder import with_mods
 from ..file import map_path, download_osu, get_projectimg
-from .utils import crop_bg, is_close, stars_diff, draw_fillet, calc_songlen
+from .utils import crop_bg, is_close, stars_diff, draw_fillet, calc_songlen, get_map_difficulty_arrays
 from .static import (
     Image,
     MapBg,
@@ -85,13 +85,7 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
         fill=color,
     )
     # cs, ar, od, hp
-    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar]
-    original_mapdiff = [
-        original_mapinfo.cs,
-        original_mapinfo.drain,
-        original_mapinfo.accuracy,
-        original_mapinfo.ar,
-    ]
+    mapdiff, original_mapdiff = get_map_difficulty_arrays(mapinfo, original_mapinfo)
 
     for num, (original, new) in enumerate(zip(original_mapdiff, mapdiff)):
         if is_close(new, original):

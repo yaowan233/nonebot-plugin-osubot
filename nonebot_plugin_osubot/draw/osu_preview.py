@@ -1,29 +1,15 @@
 import base64
 from pathlib import Path
 
-import jinja2
 from nonebot_plugin_htmlrender import get_new_page
 
-from ..file import map_path, download_osu
+from .utils import load_osu_file_and_setup_template
 
 template_path = str(Path(__file__).parent / "osu_preview_templates")
 
 
 async def draw_osu_preview(beatmap_id, beatmapset_id) -> bytes:
-    path = map_path / str(beatmapset_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
-    osu = path / f"{beatmap_id}.osu"
-    if not osu.exists():
-        await download_osu(beatmapset_id, beatmap_id)
-    with open(osu, encoding="utf-8-sig") as f:
-        osu_file = f.read()
-    template_name = "pic.html"
-    template_env = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(template_path),
-        enable_async=True,
-    )
-    template = template_env.get_template(template_name)
+    osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
     img_selector = "img"
     base_url = Path(template_path).as_uri() + "/"
     worker_script_path = Path(template_path) / "gif.js" / "gif.worker.js"

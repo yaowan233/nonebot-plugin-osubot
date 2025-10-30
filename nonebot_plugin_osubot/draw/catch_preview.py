@@ -1,28 +1,14 @@
 from pathlib import Path
 
-import jinja2
 from nonebot_plugin_htmlrender import get_new_page
 
-from ..file import map_path, download_osu
+from .utils import load_osu_file_and_setup_template
 
 template_path = str(Path(__file__).parent / "catch_preview_templates")
 
 
 async def draw_cath_preview(beatmap_id, beatmapset_id, mods) -> bytes:
-    path = map_path / str(beatmapset_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
-    osu = path / f"{beatmap_id}.osu"
-    if not osu.exists():
-        await download_osu(beatmapset_id, beatmap_id)
-    with open(osu, encoding="utf-8-sig") as f:
-        osu_file = f.read()
-    template_name = "pic.html"
-    template_env = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(template_path),
-        enable_async=True,
-    )
-    template = template_env.get_template(template_name)
+    osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
     is_hr = 1 if "HR" in mods else 0
     is_ez = 1 if "EZ" in mods else 0
     is_dt = 1 if "DT" in mods else 0
