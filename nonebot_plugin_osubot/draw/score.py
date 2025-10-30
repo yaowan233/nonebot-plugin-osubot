@@ -288,9 +288,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     country = osufile / "flags" / f"{info.country_code}.png"
     country_bg = Image.open(country).convert("RGBA").resize((66, 45))
     im.alpha_composite(country_bg, (208, 597))
-    await handle_team_image(im, info, (208, 660), (80, 40))
-    if info.team and info.team.flag_url:
-        draw.text((297, 675), info.team.name, font=Torus_Regular_20, anchor="lt")
+    await handle_team_image(im, draw, info, (208, 660), (80, 40), (297, 675), Torus_Regular_20)
     # supporter
     # if info.is_supporter:
     #     im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))

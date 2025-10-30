@@ -146,9 +146,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
     # 地区
     country_bg = Image.open(country).convert("RGBA").resize((80, 54))
     im.alpha_composite(country_bg, (400, 394))
-    await handle_team_image(im, info, (400, 280), (108, 54))
-    if info.team and info.team.flag_url:
-        draw.text((515, 300), info.team.name, font=Torus_Regular_30, anchor="lt")
+    await handle_team_image(im, draw, info, (400, 280), (108, 54), (515, 300), Torus_Regular_30)
     # supporter
     # if info.is_supporter:
     # im.alpha_composite(SupporterBg.resize((54, 54)), (400, 280))

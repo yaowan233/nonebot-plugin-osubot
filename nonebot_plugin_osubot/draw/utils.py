@@ -514,18 +514,24 @@ async def process_user_avatar_with_gif(
 
 async def handle_team_image(
     base_image: Image.Image,
+    draw_context,
     info,
     position: tuple[int, int],
     size: tuple[int, int],
+    text_position: tuple[int, int] = None,
+    text_font=None,
 ) -> None:
     """
-    Download and composite team flag image onto the base image.
+    Download and composite team flag image onto the base image, optionally drawing team name.
 
     Args:
         base_image: The base image to composite the team flag onto
+        draw_context: PIL ImageDraw context for drawing text (None if no text needed)
         info: User info object containing team information
         position: (x, y) position to place the team flag on the base image
         size: (width, height) to resize the team flag to
+        text_position: Optional (x, y) position to draw team name text
+        text_font: Optional font for team name text
 
     Raises:
         NetworkError: If team image download fails
@@ -544,6 +550,10 @@ async def handle_team_image(
         except UnidentifiedImageError:
             team_path.unlink()
             raise NetworkError("team 图片下载错误，请重试！")
+
+        # Draw team name if text parameters are provided
+        if draw_context and text_position and text_font and info.team.name:
+            draw_context.text(text_position, info.team.name, font=text_font, anchor="lt")
 
 
 async def load_osu_file_and_setup_template(template_path: str, beatmap_id: int, beatmapset_id: int):
