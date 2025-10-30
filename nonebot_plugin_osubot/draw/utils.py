@@ -514,12 +514,12 @@ async def process_user_avatar_with_gif(
 
 async def handle_team_image(
     base_image: Image.Image,
-    draw_context,
+    draw_context: Optional[ImageDraw.ImageDraw],
     info,
     position: tuple[int, int],
     size: tuple[int, int],
-    text_position: tuple[int, int] = None,
-    text_font=None,
+    text_position: Optional[tuple[int, int]] = None,
+    text_font: Optional[object] = None,
 ) -> None:
     """
     Download and composite team flag image onto the base image, optionally drawing team name.
