@@ -407,11 +407,9 @@ async def get_users(users: list[int]):
     return [User(**i) for i in req.json()["users"]] if req else []
 
 
-async def get_random_bg() -> Optional[bytes]:
-    res = await safe_async_get(random.choice(bg_url))
-    if res.status_code != 200:
-        return None
-    return res.content
+def get_random_bg() -> str:
+    res = random.choice(bg_url)
+    return res
 
 
 async def get_beatmapsets_info(sid) -> BeatmapSets:

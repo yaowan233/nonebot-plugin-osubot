@@ -70,7 +70,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
             bg_path.unlink()
             raise NetworkError("自定义背景图片读取错误，请重新上传！")
     else:
-        bg = await get_random_bg()
+        bg = get_random_bg()
     if day != 0 and user:
         day_delta = date.today() - user.date
         time = day_delta.days
