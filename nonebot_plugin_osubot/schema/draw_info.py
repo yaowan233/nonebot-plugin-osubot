@@ -74,9 +74,9 @@ class DrawUser(BaseModel):
     mode: str  # e.g., "STD"
     badges: List[Badge] | None
     statistics: Optional[Statistics] = None
-    rank_change: Optional[str]
-    country_rank_change: Optional[str]
-    pp_change: Optional[str]
-    acc_change: Optional[str]
-    pc_change: Optional[str]
-    hits_change: Optional[str]
+    rank_change: Optional[str] = None
+    country_rank_change: Optional[str] = None
+    pp_change: Optional[str] = None
+    acc_change: Optional[str] = None
+    pc_change: Optional[str] = None
+    hits_change: Optional[str] = None
