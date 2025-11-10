@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Osu! 用户信息</title>
+    <link href="./output.css" rel="stylesheet"/>
+    <style>
+        :root {
+            --level-tier-iron: #bab3ab, #bab3ab;
+            --level-tier-bronze: #b88f7a, #855c47;
+            --level-tier-silver: #e0e0eb, #a3a3c2;
+            --level-tier-gold: #f0e4a8, #e0c952;
+            --level-tier-platinum: #a8f0ef, #52e0df;
+            --level-tier-rhodium: #d9f8d3, #a0cf96;
+            --level-tier-radiant: #97dcff, #ed82ff;
+            --level-tier-lustrous: #ffe600, #ed82ff;
+            --rank-value-default-colour: #cccccc, #999999;
+        }
+
+        body {
+            background: #1a1a2e;
+            margin: 0;
+            padding: 0;
+        }
+
+        .score-rank {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-level {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+        }
+
+        .user-level-bg {
+            position: absolute;
+            inset: 0;
+            clip-path: path(
+                    "m 25,2.7 a 9.3,9.3 0 0 1 4.7,1.2 l 11.3,6.5 a 9.3,9.3 0 0 1 4.6,8.1 v 13.0 a 9.3,9.3 0 0 1 -4.6,8.1 L 29.7,46.1 a 9.3,9.3 0 0 1 -9.3,0 L 9.1,39.6 A 9.3,9.3 0 0 1 4.4,31.5 v -13.0 A 9.3,9.3 0 0 1 9.1,10.4 L 20.4,3.9 A 9.3,9.3 0 0 1 25,2.7 M 25,0.0 A 11.9,11.9 0 0 0 19.0,1.6 L 7.7,8.1 A 12.0,12.0 0 0 0 1.7,18.5 v 13.0 a 12.0,12.0 0 0 0 6.0,10.4 l 11.3,6.5 a 12.0,12.0 0 0 0 12.0,0 l 11.3,-6.5 a 12.0,12.0 0 0 0 6.0,-10.4 v -13.0 A 12.0,12.0 0 0 0 42.3,8.1 L 31.0,1.6 A 11.9,11.9 0 0 0 25.0,0 Z"
+            );
+        }
+
+        .user-level-text {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .score-rank svg {
+            width: 32px;
+            height: 16px;
+        }
+
+        .rank-value {
+            --colour: var(--rank-value-default-colour);
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            background-image: linear-gradient(var(--colour));
+        }
+    </style>
+</head>
+<body class="">
+<div
+        id="userInfo"
+        class="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col gap-2 h-full
+               relative
+               before:content-['']
+               before:absolute
+               before:inset-0
+               before:bg-black
+               before:opacity-70
+               z-0
+               max-w-[440px]"
+        style="background-image: url({{bg}})"
+></div>
+<script>
+    function getGlobalTier(user) {
+        const rank = user.statistics?.global_rank;
+        const percent = user.statistics?.global_rank_percent;
+
+        if (rank == null || percent == null) {
+            return null;
+        }
+
+        if (rank <= 100) {
+            return 'lustrous';
+        }
+
+        return percent < 0.0005 ? 'radiant'
+            : percent < 0.0025 ? 'rhodium'
+                : percent < 0.005 ? 'platinum'
+                    : percent < 0.025 ? 'gold'
+                        : percent < 0.05 ? 'silver'
+                            : percent < 0.25 ? 'bronze'
+                                : percent < 0.5 ? 'iron'
+                                    : null;
+    }
+
+    function getRankDisplay(user) {
+        const tier = getGlobalTier(user);
+        const currentTier = tier ?? 'base';
+
+        let tierVar = '';
+        if (tier != null) {
+            tierVar = `--colour: var(--level-tier-${tier})`;
+        }
+
+        let classes = 'rank-value';
+        if (currentTier === 'base' || currentTier === 'iron') {
+            classes += ' rank-value--' + currentTier;
+        }
+
+        const rank = user.statistics?.global_rank;
+        const displayValue = rank != null ? `#${rank.toLocaleString()}` : 'N/A';
+
+        return `<div class="${classes}" style="${tierVar}">${displayValue}</div>`;
+    }
+
+    // SVG 评级图标组件
+    function getScoreRankSVG(rank) {
+        const svgs = {
+            xh: `
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 32 16" fill="none">
+<g clip-path="url(#clip0)">
+<rect width="32" height="16" rx="8" fill="#CE1C9D"/>
+<path d="M5.3393 11.4417V13.0801H13.0065C15.4769 13.0801 16.4241 12.0305 16.4241 10.5457C16.4241 8.77928 15.0929 8.12648 13.0321 7.96008L9.0001 7.64008C7.5665 7.52488 7.2337 7.26888 7.2337 6.78248C7.2337 6.19368 7.7201 5.96328 8.5777 5.96328H15.8609V4.32488H8.7441C6.9393 4.32488 5.3777 4.97768 5.3777 6.83368C5.3777 8.44648 6.5553 9.15048 8.5265 9.30408L12.7633 9.63688C14.0177 9.73928 14.5425 10.0337 14.5425 10.6225C14.5425 11.1089 14.1969 11.4417 13.1217 11.4417H5.3393ZM15.7568 11.4417V13.0801H23.424C25.8944 13.0801 26.8416 12.0305 26.8416 10.5457C26.8416 8.77928 25.5104 8.12648 23.4496 7.96008L19.4176 7.64008C17.984 7.52488 17.6512 7.26888 17.6512 6.78248C17.6512 6.19368 18.1376 5.96328 18.9952 5.96328H26.2784V4.32488H19.1616C17.3568 4.32488 15.7952 4.97768 15.7952 6.83368C15.7952 8.44648 16.9728 9.15048 18.944 9.30408L23.1808 9.63688C24.4352 9.73928 24.96 10.0337 24.96 10.6225C24.96 11.1089 24.6144 11.4417 23.5392 11.4417H15.7568Z" fill="#5E244E" fill-opacity="0.5"/>
+<mask id="mask0" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="16">
+<rect width="32" height="16" rx="8" fill="#DE31AE"/>
+</mask>
+<g mask="url(#mask0)">
+<path d="M16 -9L33.3205 21H-1.32051L16 -9Z" fill="#DE31AE"/>
+<path d="M27.5 3L33.9952 14.25H21.0048L27.5 3Z" fill="#C30B90"/>
+<path d="M7.5 -2L11.3971 4.75H3.60289L7.5 -2Z" fill="#BE0089"/>
+<path d="M9.5 13L13.3971 19.75H5.60289L9.5 13Z" fill="#BE0089"/>
+</g>
+<path d="M5.3393 11.4417V13.0801H13.0065C15.4769 13.0801 16.4241 12.0305 16.4241 10.5457C16.4241 8.77928 15.0929 8.12648 13.0321 7.96008L9.0001 7.64008C7.5665 7.52488 7.2337 7.26888 7.2337 6.78248C7.2337 6.19368 7.7201 5.96328 8.5777 5.96328H15.8609V4.32488H8.7441C6.9393 4.32488 5.3777 4.97768 5.3777 6.83368C5.3777 8.44648 6.5553 9.15048 8.5265 9.30408L12.7633 9.63688C14.0177 9.73928 14.5425 10.0337 14.5425 10.6225C14.5425 11.1089 14.1969 11.4417 13.1217 11.4417H5.3393ZM15.7568 11.4417V13.0801H23.424C25.8944 13.0801 26.8416 12.0305 26.8416 10.5457C26.8416 8.77928 25.5104 8.12648 23.4496 7.96008L19.4176 7.64008C17.984 7.52488 17.6512 7.26888 17.6512 6.78248C17.6512 6.19368 18.1376 5.96328 18.9952 5.96328H26.2784V4.32488H19.1616C17.3568 4.32488 15.7952 4.97768 15.7952 6.83368C15.7952 8.44648 16.9728 9.15048 18.944 9.30408L23.1808 9.63688C24.4352 9.73928 24.96 10.0337 24.96 10.6225C24.96 11.1089 24.6144 11.4417 23.5392 11.4417H15.7568Z" fill="#5E244E" fill-opacity="0.5"/>
+<path d="M5.3393 10.4417V12.0801H13.0065C15.4769 12.0801 16.4241 11.0305 16.4241 9.54568C16.4241 7.77928 15.0929 7.12648 13.0321 6.96008L9.0001 6.64008C7.5665 6.52488 7.2337 6.26888 7.2337 5.78248C7.2337 5.19368 7.7201 4.96328 8.5777 4.96328H15.8609V3.32488H8.7441C6.9393 3.32488 5.3777 3.97768 5.3777 5.83368C5.3777 7.44648 6.5553 8.15048 8.5265 8.30408L12.7633 8.63688C14.0177 8.73928 14.5425 9.03368 14.5425 9.62248C14.5425 10.1089 14.1969 10.4417 13.1217 10.4417H5.3393ZM15.7568 10.4417V12.0801H23.424C25.8944 12.0801 26.8416 11.0305 26.8416 9.54568C26.8416 7.77928 25.5104 7.12648 23.4496 6.96008L19.4176 6.64008C17.984 6.52488 17.6512 6.26888 17.6512 5.78248C17.6512 5.19368 18.1376 4.96328 18.9952 4.96328H26.2784V3.32488H19.1616C17.3568 3.32488 15.7952 3.97768 15.7952 5.83368C15.7952 7.44648 16.9728 8.15048 18.944 8.30408L23.1808 8.63688C24.4352 8.73928 24.96 9.03368 24.96 9.62248C24.96 10.1089 24.6144 10.4417 23.5392 10.4417H15.7568Z" fill="url(#paint0_linear)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear" x1="16" y1="2.08008" x2="16" y2="16.0001" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#AADFF0"/>
+</linearGradient>
+<clipPath id="clip0">
+<rect width="32" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>
+                `,
+            ss: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 32 16" fill="none">
+<g clip-path="url(#clip1)">
+<rect width="32" height="16" rx="8" fill="#CE1C9D"/>
+<path d="M5.3393 11.4417V13.0801H13.0065C15.4769 13.0801 16.4241 12.0305 16.4241 10.5457C16.4241 8.77928 15.0929 8.12648 13.0321 7.96008L9.0001 7.64008C7.5665 7.52488 7.2337 7.26888 7.2337 6.78248C7.2337 6.19368 7.7201 5.96328 8.5777 5.96328H15.8609V4.32488H8.7441C6.9393 4.32488 5.3777 4.97768 5.3777 6.83368C5.3777 8.44648 6.5553 9.15048 8.5265 9.30408L12.7633 9.63688C14.0177 9.73928 14.5425 10.0337 14.5425 10.6225C14.5425 11.1089 14.1969 11.4417 13.1217 11.4417H5.3393ZM15.7568 11.4417V13.0801H23.424C25.8944 13.0801 26.8416 12.0305 26.8416 10.5457C26.8416 8.77928 25.5104 8.12648 23.4496 7.96008L19.4176 7.64008C17.984 7.52488 17.6512 7.26888 17.6512 6.78248C17.6512 6.19368 18.1376 5.96328 18.9952 5.96328H26.2784V4.32488H19.1616C17.3568 4.32488 15.7952 4.97768 15.7952 6.83368C15.7952 8.44648 16.9728 9.15048 18.944 9.30408L23.1808 9.63688C24.4352 9.73928 24.96 10.0337 24.96 10.6225C24.96 11.1089 24.6144 11.4417 23.5392 11.4417H15.7568Z" fill="#5E244E" fill-opacity="0.5"/>
+<mask id="mask1" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="16">
+<rect width="32" height="16" rx="8" fill="#DE31AE"/>
+</mask>
+<g mask="url(#mask1)">
+<path d="M16 -9L33.3205 21H-1.32051L16 -9Z" fill="#DE31AE"/>
+<path d="M27.5 3L33.9952 14.25H21.0048L27.5 3Z" fill="#C30B90"/>
+<path d="M7.5 -2L11.3971 4.75H3.60289L7.5 -2Z" fill="#BE0089"/>
+<path d="M9.5 13L13.3971 19.75H5.60289L9.5 13Z" fill="#BE0089"/>
+</g>
+<path d="M5.3393 11.4417V13.0801H13.0065C15.4769 13.0801 16.4241 12.0305 16.4241 10.5457C16.4241 8.77928 15.0929 8.12648 13.0321 7.96008L9.0001 7.64008C7.5665 7.52488 7.2337 7.26888 7.2337 6.78248C7.2337 6.19368 7.7201 5.96328 8.5777 5.96328H15.8609V4.32488H8.7441C6.9393 4.32488 5.3777 4.97768 5.3777 6.83368C5.3777 8.44648 6.5553 9.15048 8.5265 9.30408L12.7633 9.63688C14.0177 9.73928 14.5425 10.0337 14.5425 10.6225C14.5425 11.1089 14.1969 11.4417 13.1217 11.4417H5.3393ZM15.7568 11.4417V13.0801H23.424C25.8944 13.0801 26.8416 12.0305 26.8416 10.5457C26.8416 8.77928 25.5104 8.12648 23.4496 7.96008L19.4176 7.64008C17.984 7.52488 17.6512 7.26888 17.6512 6.78248C17.6512 6.19368 18.1376 5.96328 18.9952 5.96328H26.2784V4.32488H19.1616C17.3568 4.32488 15.7952 4.97768 15.7952 6.83368C15.7952 8.44648 16.9728 9.15048 18.944 9.30408L23.1808 9.63688C24.4352 9.73928 24.96 10.0337 24.96 10.6225C24.96 11.1089 24.6144 11.4417 23.5392 11.4417H15.7568Z" fill="#5E244E" fill-opacity="0.5"/>
+<path d="M5.3393 10.4417V12.0801H13.0065C15.4769 12.0801 16.4241 11.0305 16.4241 9.54568C16.4241 7.77928 15.0929 7.12648 13.0321 6.96008L9.0001 6.64008C7.5665 6.52488 7.2337 6.26888 7.2337 5.78248C7.2337 5.19368 7.7201 4.96328 8.5777 4.96328H15.8609V3.32488H8.7441C6.9393 3.32488 5.3777 3.97768 5.3777 5.83368C5.3777 7.44648 6.5553 8.15048 8.5265 8.30408L12.7633 8.63688C14.0177 8.73928 14.5425 9.03368 14.5425 9.62248C14.5425 10.1089 14.1969 10.4417 13.1217 10.4417H5.3393ZM15.7568 10.4417V12.0801H23.424C25.8944 12.0801 26.8416 11.0305 26.8416 9.54568C26.8416 7.77928 25.5104 7.12648 23.4496 6.96008L19.4176 6.64008C17.984 6.52488 17.6512 6.26888 17.6512 5.78248C17.6512 5.19368 18.1376 4.96328 18.9952 4.96328H26.2784V3.32488H19.1616C17.3568 3.32488 15.7952 3.97768 15.7952 5.83368C15.7952 7.44648 16.9728 8.15048 18.944 8.30408L23.1808 8.63688C24.4352 8.73928 24.96 9.03368 24.96 9.62248C24.96 10.1089 24.6144 10.4417 23.5392 10.4417H15.7568Z" fill="#5E244E"/>
+<path d="M5.3393 10.4417V12.0801H13.0065C15.4769 12.0801 16.4241 11.0305 16.4241 9.54568C16.4241 7.77928 15.0929 7.12648 13.0321 6.96008L9.0001 6.64008C7.5665 6.52488 7.2337 6.26888 7.2337 5.78248C7.2337 5.19368 7.7201 4.96328 8.5777 4.96328H15.8609V3.32488H8.7441C6.9393 3.32488 5.3777 3.97768 5.3777 5.83368C5.3777 7.44648 6.5553 8.15048 8.5265 8.30408L12.7633 8.63688C14.0177 8.73928 14.5425 9.03368 14.5425 9.62248C14.5425 10.1089 14.1969 10.4417 13.1217 10.4417H5.3393ZM15.7568 10.4417V12.0801H23.424C25.8944 12.0801 26.8416 11.0305 26.8416 9.54568C26.8416 7.77928 25.5104 7.12648 23.4496 6.96008L19.4176 6.64008C17.984 6.52488 17.6512 6.26888 17.6512 5.78248C17.6512 5.19368 18.1376 4.96328 18.9952 4.96328H26.2784V3.32488H19.1616C17.3568 3.32488 15.7952 3.97768 15.7952 5.83368C15.7952 7.44648 16.9728 8.15048 18.944 8.30408L23.1808 8.63688C24.4352 8.73928 24.96 9.03368 24.96 9.62248C24.96 10.1089 24.6144 10.4417 23.5392 10.4417H15.7568Z" fill="url(#paint1_linear)"/>
+</g>
+<defs>
+<linearGradient id="paint1_linear" x1="16" y1="2.08008" x2="16" y2="16.0001" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFE7A8"/>
+<stop offset="1" stop-color="#FFB800"/>
+</linearGradient>
+<clipPath id="clip1">
+<rect width="32" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>`,
+            x: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 32 16" fill="none">
+<g clip-path="url(#clip2)">
+<rect width="32" height="16" rx="8" fill="#00A8B5"/>
+<path d="M10.548 11.4417V13.0801H18.2153C20.6857 13.0801 21.6329 12.0305 21.6329 10.5457C21.6329 8.77928 20.3017 8.12648 18.2409 7.96008L14.2088 7.64008C12.7752 7.52488 12.4424 7.26888 12.4424 6.78248C12.4424 6.19368 12.9288 5.96328 13.7864 5.96328H21.0697V4.32488H13.9528C12.148 4.32488 10.5864 4.97768 10.5864 6.83368C10.5864 8.44648 11.764 9.15048 13.7352 9.30408L17.9721 9.63688C19.2265 9.73928 19.7513 10.0337 19.7513 10.6225C19.7513 11.1089 19.4057 11.4417 18.3305 11.4417H10.548Z" fill="#095056" fill-opacity="0.5"/>
+<mask id="mask2" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="16">
+<rect width="32" height="16" rx="8" fill="#02B5C3"/>
+</mask>
+<g mask="url(#mask2)">
+<path d="M16 -9L33.3205 21H-1.32051L16 -9Z" fill="#02B5C3"/>
+<path d="M27.5 3L33.9952 14.25H21.0048L27.5 3Z" fill="#009DAA"/>
+<path d="M7.5 -2L11.3971 4.75H3.60289L7.5 -2Z" fill="#0096A2"/>
+<path d="M9.5 13L13.3971 19.75H5.60289L9.5 13Z" fill="#0096A2"/>
+</g>
+<path d="M10.548 11.4417V13.0801H18.2153C20.6857 13.0801 21.6329 12.0305 21.6329 10.5457C21.6329 8.77928 20.3017 8.12648 18.2409 7.96008L14.2088 7.64008C12.7752 7.52488 12.4424 7.26888 12.4424 6.78248C12.4424 6.19368 12.9288 5.96328 13.7864 5.96328H21.0697V4.32488H13.9528C12.148 4.32488 10.5864 4.97768 10.5864 6.83368C10.5864 8.44648 11.764 9.15048 13.7352 9.30408L17.9721 9.63688C19.2265 9.73928 19.7513 10.0337 19.7513 10.6225C19.7513 11.1089 19.4057 11.4417 18.3305 11.4417H10.548Z" fill="#095056" fill-opacity="0.5"/>
+<path d="M10.548 10.4417V12.0801H18.2153C20.6857 12.0801 21.6329 11.0305 21.6329 9.54568C21.6329 7.77928 20.3017 7.12648 18.2409 6.96008L14.2088 6.64008C12.7752 6.52488 12.4424 6.26888 12.4424 5.78248C12.4424 5.19368 12.9288 4.96328 13.7864 4.96328H21.0697V3.32488H13.9528C12.148 3.32488 10.5864 3.97768 10.5864 5.83368C10.5864 7.44648 11.764 8.15048 13.7352 8.30408L17.9721 8.63688C19.2265 8.73928 19.7513 9.03368 19.7513 9.62248C19.7513 10.1089 19.4057 10.4417 18.3305 10.4417H10.548Z" fill="url(#paint2_linear)"/>
+</g>
+<defs>
+<linearGradient id="paint2_linear" x1="16" y1="2.08008" x2="16" y2="16.0001" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#AADFF0"/>
+</linearGradient>
+<clipPath id="clip2">
+<rect width="32" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>`,
+            s: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 32 16" fill="none">
+<g clip-path="url(#clip3)">
+<rect width="32" height="16" rx="8" fill="#00A8B5"/>
+<path d="M10.548 11.4417V13.0801H18.2153C20.6857 13.0801 21.6329 12.0305 21.6329 10.5457C21.6329 8.77928 20.3017 8.12648 18.2409 7.96008L14.2088 7.64008C12.7752 7.52488 12.4424 7.26888 12.4424 6.78248C12.4424 6.19368 12.9288 5.96328 13.7864 5.96328H21.0697V4.32488H13.9528C12.148 4.32488 10.5864 4.97768 10.5864 6.83368C10.5864 8.44648 11.764 9.15048 13.7352 9.30408L17.9721 9.63688C19.2265 9.73928 19.7513 10.0337 19.7513 10.6225C19.7513 11.1089 19.4057 11.4417 18.3305 11.4417H10.548Z" fill="#095056" fill-opacity="0.5"/>
+<mask id="mask3" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="16">
+<rect width="32" height="16" rx="8" fill="#02B5C3"/>
+</mask>
+<g mask="url(#mask3)">
+<path d="M16 -9L33.3205 21H-1.32051L16 -9Z" fill="#02B5C3"/>
+<path d="M27.5 3L33.9952 14.25H21.0048L27.5 3Z" fill="#009DAA"/>
+<path d="M7.5 -2L11.3971 4.75H3.60289L7.5 -2Z" fill="#0096A2"/>
+<path d="M9.5 13L13.3971 19.75H5.60289L9.5 13Z" fill="#0096A2"/>
+</g>
+<path d="M10.548 11.4417V13.0801H18.2153C20.6857 13.0801 21.6329 12.0305 21.6329 10.5457C21.6329 8.77928 20.3017 8.12648 18.2409 7.96008L14.2088 7.64008C12.7752 7.52488 12.4424 7.26888 12.4424 6.78248C12.4424 6.19368 12.9288 5.96328 13.7864 5.96328H21.0697V4.32488H13.9528C12.148 4.32488 10.5864 4.97768 10.5864 6.83368C10.5864 8.44648 11.764 9.15048 13.7352 9.30408L17.9721 9.63688C19.2265 9.73928 19.7513 10.0337 19.7513 10.6225C19.7513 11.1089 19.4057 11.4417 18.3305 11.4417H10.548Z" fill="#095056" fill-opacity="0.5"/>
+<path d="M10.548 10.4417V12.0801H18.2153C20.6857 12.0801 21.6329 11.0305 21.6329 9.54568C21.6329 7.77928 20.3017 7.12648 18.2409 6.96008L14.2088 6.64008C12.7752 6.52488 12.4424 6.26888 12.4424 5.78248C12.4424 5.19368 12.9288 4.96328 13.7864 4.96328H21.0697V3.32488H13.9528C12.148 3.32488 10.5864 3.97768 10.5864 5.83368C10.5864 7.44648 11.764 8.15048 13.7352 8.30408L17.9721 8.63688C19.2265 8.73928 19.7513 9.03368 19.7513 9.62248C19.7513 10.1089 19.4057 10.4417 18.3305 10.4417H10.548Z" fill="url(#paint3_linear)"/>
+</g>
+<defs>
+<linearGradient id="paint3_linear" x1="16" y1="2.08008" x2="16" y2="16.0001" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFE7A8"/>
+<stop offset="1" stop-color="#FFB800"/>
+</linearGradient>
+<clipPath id="clip3">
+<rect width="32" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>`,
+            a: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 32 16" fill="none">
+<g clip-path="url(#clip4)">
+<rect width="32" height="16" rx="8" fill="#7CCE14"/>
+<mask id="mask4" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="16">
+<rect width="32" height="16" rx="8" fill="#88DA20"/>
+</mask>
+<g mask="url(#mask4)">
+<path d="M16 -9L33.3205 21H-1.32051L16 -9Z" fill="#88DA20"/>
+<path d="M27.5 3L33.9952 14.25H21.0048L27.5 3Z" fill="#72C904"/>
+<path d="M7.5 -2L11.3971 4.75H3.60289L7.5 -2Z" fill="#69BB00"/>
+<path d="M9.5 13L13.3971 19.75H5.60289L9.5 13Z" fill="#69BB00"/>
+</g>
+<path d="M18.5418 5.49208C18.0138 4.47208 17.4018 3.75208 15.9978 3.75208C14.5938 3.75208 13.9698 4.47208 13.4538 5.49208L10.0938 12.0801H11.9298L12.9738 10.0521H19.0218L20.0658 12.0801H21.9138L18.5418 5.49208ZM18.2298 8.52808H13.7538L15.1458 5.84008C15.3258 5.49208 15.5538 5.27608 15.9978 5.27608C16.4418 5.27608 16.6698 5.49208 16.8498 5.84008L18.2298 8.52808Z" fill="#275227"/>
+</g>
+<defs>
+<clipPath id="clip4">
+<rect width="32" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>`,
+        };
+        return svgs[rank] || "";
+    }
+
+    function getUserLevelHTML(level) {
+        const tierGradients = {
+            iron: "linear-gradient(#bab3ab, #bab3ab)",
+            bronze: "linear-gradient(#b88f7a, #855c47)",
+            silver: "linear-gradient(#e0e0eb, #a3a3c2)",
+            gold: "linear-gradient(#f0e4a8, #e0c952)",
+            platinum: "linear-gradient(#a8f0ef, #52e0df)",
+            rhodium: "linear-gradient(#d9f8d3, #a0cf96)",
+            radiant: "linear-gradient(#97dcff, #ed82ff)",
+            lustrous: "linear-gradient(#ffe600, #ed82ff)",
+        };
+
+        let tier = "iron";
+        if (level >= 110) tier = "lustrous";
+        else if (level >= 105) tier = "radiant";
+        else if (level >= 100) tier = "rhodium";
+        else if (level >= 80) tier = "platinum";
+        else if (level >= 60) tier = "gold";
+        else if (level >= 40) tier = "silver";
+        else if (level >= 20) tier = "bronze";
+
+        return `
+                <div class="user-level" title="Level ${level}">
+                    <div class="user-level-bg" style="background: ${tierGradients[tier]}"></div>
+                    <span class="user-level-text">${level}</span>
+                </div>
+            `;
+    }
+
+    // 用户数据，由Jinja2模板注入
+    const userData = {{user_json}};
+
+    function displayUserInfo(user) {
+        const userInfoDiv = document.getElementById("userInfo");
+
+        userInfoDiv.innerHTML = `
+                <div id="display" class="flex flex-col gap-2 p-2 relative z-10">
+                    <div class="flex flex-row justify-between items-center">
+                        <h2 class="text-2xl font-bold text-white">玩家信息</h2>
+                        <h2 class="text-2xl font-bold text-white">${user.mode}</h2>
+                    </div>
+                    <!-- 用户基本信息 -->
+                    <div class="flex flex-row gap-4 bg-white/20 rounded-lg p-2">
+                        <div class="max-w-[100px] flex-shrink-0">
+                            <img src="https://a.ppy.sh/${user.id}" alt="user" class="rounded-lg">
+                        </div>
+                        <div class="flex flex-col flex-grow justify-around min-w-0 text-white">
+                            <div class="text-xl truncate">${user.username}</div>
+                            ${
+            user.team
+                ? `
+                                <div class="flex flex-row items-center gap-2">
+                                    <img src="${user.team.flag_url}" alt="team" class="w-[35px]">
+                                    <p class="text-xl truncate">${user.team.name}</p>
+                                </div>
+                            `
+                : ""
+        }
+                            <div class="flex flex-row justify-between">
+                                <div class="flex flex-row text-xl gap-2 items-center">
+                                    <img src="${flagUrl(user.country_code)}" alt="country" class="w-[25px]">
+                                    <p>#${user.statistics?.country_rank || 0} ${user.country_rank_change?user.country_rank_change:""}</p>
+                                </div>
+                                ${
+            user.statistics?.variants
+                ? `
+                                    <div class="hidden sm:flex flex-col">
+                                        <div class="text-xs">
+                                            4k: ${user.statistics?.variants?.find((key) => key.variant === "4k")?.pp || 0} /
+                                            #${user.statistics?.variants?.find((key) => key.variant === "4k")?.global_rank || 0} / ${user.country_code} #${user.statistics?.variants?.find((key) => key.variant == "4k")?.country_rank || 0}
+                                        </div>
+                                        <div class="text-xs">
+                                            7k: ${user.statistics?.variants?.find((key) => key.variant === "7k")?.pp || 0} /
+                                            #${user.statistics?.variants?.find((key) => key.variant === "7k")?.global_rank || 0} / ${user.country_code} #${user.statistics?.variants?.find((key) => key.variant == "7k")?.country_rank || 0}
+                                        </div>
+                                    </div>
+                                `
+                : ""
+        }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 徽章 -->
+                    ${
+            user.badges && user.badges.length > 0
+                ? `
+                        <div class="flex flex-row bg-white/20 rounded-lg p-2 gap-2 flex-wrap">
+                            ${user.badges
+                    .map((badge) => {
+                        return `
+                                    <div>
+                                        <img src="${badge.image_url}" alt="${badge.description}" class="w-[75px]">
+                                    </div>
+                                `;
+                    })
+                    .join("")}
+                        </div>
+                    `
+                : ""
+        }
+
+                    <!-- 等级进度 -->
+                    <div class="flex flex-row bg-white/20 rounded-lg p-2 justify-between items-center gap-4 text-white">
+                        <div class="flex-grow">
+                            <div class="text-sm mb-1">等级</div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="bg-pink-400 h-2 rounded-full" style="width: ${user.statistics?.level.progress}%"></div>
+                            </div>
+                            <div class="text-xs mt-1">${user.statistics?.level.progress}%</div>
+                        </div>
+                        ${getUserLevelHTML(user.statistics?.level.current || 0)}
+                    </div>
+
+
+                    <!-- 排名和评级 -->
+                    <div class="flex flex-row bg-white/20 rounded-lg p-2 justify-between flex-wrap gap-2 text-white">
+                        <div class="flex flex-col">
+                            <div>世界排名</div>
+                            ${getRankDisplay(user)}
+                            ${user.rank_change ?
+                            `<span class="text-sm">
+                                ${user.rank_change}
+                            </span>` : ""}
+                        </div>
+                        <div class="flex flex-col">
+                            <div>PP</div>
+                            <div class="text-xl">${user.statistics?.pp.toLocaleString()}</div>
+                            ${user.pp_change ?
+                            `<span class="text-sm">
+                                ${user.pp_change}
+                            </span>` : ""}
+                        </div>
+                        <div class="flex flex-row gap-2">
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="score-rank">${getScoreRankSVG("xh")}</div>
+                                <div>${user.statistics?.grade_counts.ssh}</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="score-rank">${getScoreRankSVG("ss")}</div>
+                                <div>${user.statistics?.grade_counts.ss}</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="score-rank">${getScoreRankSVG("x")}</div>
+                                <div>${user.statistics?.grade_counts.sh}</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="score-rank">${getScoreRankSVG("s")}</div>
+                                <div>${user.statistics?.grade_counts.s}</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="score-rank">${getScoreRankSVG("a")}</div>
+                                <div>${user.statistics?.grade_counts.a}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 详细统计 -->
+                    <div class="flex flex-col gap-2 bg-white/20 rounded-lg p-2 text-white">
+                        <div class="flex flex-row justify-between">
+                            <div>Ranked 谱面总分</div>
+                            <div>${user.statistics?.ranked_score.toLocaleString()}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>准确率</div>
+                            <div>${user.statistics?.hit_accuracy.toFixed(2)}%${user.acc_change?user.acc_change:""}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>游戏次数</div>
+                            <div>${user.statistics?.play_count.toLocaleString()}${user.pc_change?user.pc_change:""}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>总分</div>
+                            <div>${user.statistics?.total_score.toLocaleString()}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>总命中次数</div>
+                            <div>${user.statistics?.total_hits.toLocaleString()}${user.hits_change?user.hits_change:""}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>游玩时间</div>
+                            <div>${formatPlayTime(user.statistics?.play_time)}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>每次游玩击打数</div>
+                            <div>${(user.statistics?.total_hits / (user.statistics?.play_count || 1)).toFixed(2)}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>最大连击</div>
+                            <div>${user.statistics?.maximum_combo.toLocaleString()}</div>
+                        </div>
+                        <div class="flex flex-row justify-between">
+                            <div>回放被观看次数</div>
+                            <div>${user.statistics?.replays_watched_by_others.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <span class="text-center text-sm text-white">${user.footer}</span>
+                </div>
+            `;
+    }
+
+    function flagUrl(countryCode) {
+        const chars = countryCode.toUpperCase().split("");
+        const hexEmojiChars = chars.map((chr) =>
+            (chr.codePointAt(0) + 127397).toString(16),
+        );
+        const baseFileName = hexEmojiChars.join("-");
+        return `https://osu.ppy.sh/assets/images/flags/${baseFileName}.svg`;
+    }
+
+    function formatPlayTime(seconds) {
+        // 检查输入，如果为 null/undefined/0，返回默认值
+        if (!seconds || seconds <= 0) {
+            return "0秒";
+        }
+        const units = [
+            { unit: "天", seconds: 86400 }, // 24 * 60 * 60
+            { unit: "小时", seconds: 3600 },
+            { unit: "分钟", seconds: 60 },
+            { unit: "秒", seconds: 1 }
+        ];
+
+        let remainingSeconds = seconds;
+        let resultParts = [];
+
+        for (const { unit, seconds } of units) {
+            const value = Math.floor(remainingSeconds / seconds);
+
+            if (value > 0) {
+                const formattedValue = (unit === "天") ? value : String(value);
+                resultParts.push(`${formattedValue}${unit}`);
+            }
+
+            remainingSeconds %= seconds;
+        }
+        return resultParts.join('');
+    }
+
+    // 页面加载时渲染用户信息
+    displayUserInfo(userData);
+</script>
+</body>
+</html>
