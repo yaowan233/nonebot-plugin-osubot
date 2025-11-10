@@ -1,23 +1,8 @@
 from typing import Optional
-from datetime import datetime
+
 from pydantic import BaseModel
 
-
-class Level(BaseModel):
-    """用户等级信息"""
-
-    current: int
-    progress: int
-
-
-class GradeCounts(BaseModel):
-    """成绩等级计数"""
-
-    ssh: int
-    ss: int
-    sh: int
-    s: int
-    a: int
+from .user import Badge, Level, GradeCounts
 
 
 class Statistics(BaseModel):
@@ -37,14 +22,6 @@ class Statistics(BaseModel):
     play_time: int
     maximum_combo: int
     replays_watched_by_others: int
-
-
-class Badge(BaseModel):
-    """用户徽章信息"""
-
-    image_url: str
-    description: str
-    awarded_at: datetime  # 自动解析 ISO 8601 格式的日期时间
 
 
 class Team(BaseModel):
