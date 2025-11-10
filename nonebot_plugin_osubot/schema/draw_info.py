@@ -53,7 +53,6 @@ class Badge(BaseModel):
 class Team(BaseModel):
     """用户战队信息 (虽然示例中是 null, 但定义结构以便后续使用)"""
 
-    # 假设 Team 结构包含以下字段，如果实际有数据，请根据实际结构调整
     name: str
     flag_url: str
 
