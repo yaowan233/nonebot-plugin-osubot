@@ -5,14 +5,17 @@ from pydantic import BaseModel
 
 # --- 内部嵌套模型 ---
 
+
 class Level(BaseModel):
     """用户等级信息"""
+
     current: int
     progress: int
 
 
 class GradeCounts(BaseModel):
     """成绩等级计数"""
+
     ssh: int
     ss: int
     sh: int
@@ -22,6 +25,7 @@ class GradeCounts(BaseModel):
 
 class Statistics(BaseModel):
     """用户统计数据"""
+
     level: Level
     global_rank: Optional[int] = None  # 全球排名
     global_rank_percent: Optional[float] = None  # 全球排名百分比
@@ -38,9 +42,9 @@ class Statistics(BaseModel):
     replays_watched_by_others: int
 
 
-
 class Badge(BaseModel):
     """用户徽章信息"""
+
     image_url: str
     description: str
     awarded_at: datetime  # 自动解析 ISO 8601 格式的日期时间
@@ -48,19 +52,21 @@ class Badge(BaseModel):
 
 class Team(BaseModel):
     """用户战队信息 (虽然示例中是 null, 但定义结构以便后续使用)"""
+
     # 假设 Team 结构包含以下字段，如果实际有数据，请根据实际结构调整
     name: str
     flag_url: str
 
     # 启用 extra="allow" 可以允许接收更多未定义的字段
     class Config:
-        extra = 'allow'
+        extra = "allow"
 
     # --- 根模型 ---
 
 
 class DrawUser(BaseModel):
     """Osu! 用户信息根模型"""
+
     id: int
     username: str
     country_code: str  # e.g., "AU"

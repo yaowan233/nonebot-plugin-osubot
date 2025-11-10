@@ -63,7 +63,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
     if bg_path.exists():
         try:
             with open(bg_path, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
 
             # 格式化为 CSS 接受的 data URI 格式
             bg = f"data:image/png;base64,{encoded_string}"
@@ -96,12 +96,22 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
     op, value = info_calc(statistics.total_hits, n_count)
     hits_change = f"({op}{value:,})" if value != 0 else None
     badges = [Badge(**i.model_dump()) for i in info.badges]
-    draw_user = DrawUser(id=info.id, username=info.username, country_code=info.country_code,
-             mode=mode.upper(), badges=badges,
-             team=info.team.model_dump() if info.team else None,
-             statistics=info.statistics.model_dump() if info.statistics else None, footer=footer,
-             rank_change=rank_change,country_rank_change=country_rank_change, pp_change=pp_change,
-             acc_change=acc_change, pc_change=pc_change,hits_change=hits_change)
+    draw_user = DrawUser(
+        id=info.id,
+        username=info.username,
+        country_code=info.country_code,
+        mode=mode.upper(),
+        badges=badges,
+        team=info.team.model_dump() if info.team else None,
+        statistics=info.statistics.model_dump() if info.statistics else None,
+        footer=footer,
+        rank_change=rank_change,
+        country_rank_change=country_rank_change,
+        pp_change=pp_change,
+        acc_change=acc_change,
+        pc_change=pc_change,
+        hits_change=hits_change,
+    )
     template_path = str(Path(__file__).parent / "info_templates")
     template_name = "index.html"
     template_env = jinja2.Environment(  # noqa: S701
@@ -111,8 +121,9 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
     template = template_env.get_template(template_name)
     async with get_new_page(2) as page:
         await page.goto(f"file://{template_path}")
-        await page.set_content(await template.render_async(user_json=draw_user.model_dump_json(), bg=bg),
-                               wait_until="networkidle")
+        await page.set_content(
+            await template.render_async(user_json=draw_user.model_dump_json(), bg=bg), wait_until="networkidle"
+        )
         elem = await page.query_selector("#display")
         assert elem
         return await elem.screenshot(type="jpeg")
