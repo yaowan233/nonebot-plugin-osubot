@@ -44,7 +44,7 @@ class DrawUser(BaseModel):
     team: Optional[Team] = None
     footer: str  # e.g., "2025/11/07 14:11:45 | 数据对比于4天前"
     mode: str  # e.g., "STD"
-    badges: list[Badge] | None
+    badges: Optional[list[Badge]] = None
     statistics: Optional[Statistics] = None
     rank_change: Optional[str] = None
     country_rank_change: Optional[str] = None
