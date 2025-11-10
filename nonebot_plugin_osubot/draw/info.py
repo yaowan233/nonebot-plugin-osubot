@@ -1,6 +1,5 @@
 import base64
 import jinja2
-from io import BytesIO
 from pathlib import Path
 from typing import Union
 from datetime import date, datetime, timedelta
