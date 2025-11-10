@@ -12,25 +12,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: Set up Python
-      uses: actions/setup-python@v1
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v7
       with:
-        python-version: "3.x"
-    - name: Install pypa/build
-      run: >-
-        python -m
-        pip install
-        build
-        --user
-    - name: Build a binary wheel and a source tarball
-      run: >-
-        python -m
-        build
-        --sdist
-        --wheel
-        --outdir dist/
-        .
-    - name: Publish distribution to PyPI
+        enable-cache: true
+        python-version: "3.12"
+        version: 'latest'
+
+    - name: Get Version
+      id: version
+      run: |
+        echo "VERSION=$(uv version --short)" >> $GITHUB_OUTPUT
+        echo "TAG_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Check Version
+      if: steps.version.outputs.VERSION != steps.version.outputs.TAG_VERSION
+      run: exit 1
+
+    - name: Build
+      run: uv build
+
+    - name: Publish a Python distribution to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Upload Release Asset
+      run: gh release upload --clobber ${{ steps.version.outputs.TAG_NAME }} dist/*.tar.gz dist/*.whl
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
