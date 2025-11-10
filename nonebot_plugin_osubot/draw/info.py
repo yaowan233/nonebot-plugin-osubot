@@ -17,7 +17,7 @@ from ..schema.draw_info import DrawUser, Badge
 from ..api import get_random_bg, get_user_info_data
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> BytesIO:
+async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> bytes:
     info = await get_user_info_data(uid, mode, source)
     statistics = info.statistics
     if statistics.play_count == 0:

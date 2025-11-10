@@ -1,9 +1,6 @@
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
-
-
-# --- 内部嵌套模型 ---
 
 
 class Level(BaseModel):
@@ -60,8 +57,6 @@ class Team(BaseModel):
     class Config:
         extra = "allow"
 
-    # --- 根模型 ---
-
 
 class DrawUser(BaseModel):
     """Osu! 用户信息根模型"""
@@ -72,7 +67,7 @@ class DrawUser(BaseModel):
     team: Optional[Team] = None
     footer: str  # e.g., "2025/11/07 14:11:45 | 数据对比于4天前"
     mode: str  # e.g., "STD"
-    badges: List[Badge] | None
+    badges: list[Badge] | None
     statistics: Optional[Statistics] = None
     rank_change: Optional[str] = None
     country_rank_change: Optional[str] = None
