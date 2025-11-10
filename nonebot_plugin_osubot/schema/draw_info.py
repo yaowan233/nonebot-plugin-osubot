@@ -51,7 +51,7 @@ class Badge(BaseModel):
 
 
 class Team(BaseModel):
-    """用户战队信息 (虽然示例中是 null, 但定义结构以便后续使用)"""
+    """用户战队信息（为绘图用途专门创建的模型，若无数据则为 null）"""
 
     name: str
     flag_url: str
