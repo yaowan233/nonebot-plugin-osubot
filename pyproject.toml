@@ -1,5 +1,5 @@
 [project]
-name = "nonebot-plugin-osubot"
+name = "nonebot_plugin_osubot"
 version = "6.26.0"
 description = "OSUbot in NoneBot2"
 authors = [
