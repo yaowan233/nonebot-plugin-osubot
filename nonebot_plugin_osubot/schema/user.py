@@ -48,6 +48,7 @@ class UserStatistics(Base):
     country_rank: Optional[int] = None
     badges: Optional[list[Badge]] = None
     variants: Optional[list[Variant]] = None
+    global_rank_percent: Optional[float] = None
 
 
 class UserCompact(Base):
