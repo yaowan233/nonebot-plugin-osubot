@@ -76,7 +76,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> B
         day_delta = date.today() - user.date
         time = day_delta.days
         footer = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-        footer += f"| 数据对比于 {time} 天前"
+        footer += f" | 数据对比于 {time} 天前"
     else:
         footer = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     op, value = info_calc(statistics.pp, n_pp, pp=True)
