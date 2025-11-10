@@ -1,0 +1,62 @@
+from .schema.score import Mod, UnifiedScore
+
+mods_dic = {
+    "CL": 0,
+    "NO": 0,
+    "NF": 1 << 0,
+    "EZ": 1 << 1,
+    "TD": 1 << 2,
+    "HD": 1 << 3,
+    "HR": 1 << 4,
+    "SD": 1 << 5,
+    "DT": 1 << 6,
+    "RX": 1 << 7,
+    "HT": 1 << 8,
+    "NC": 1 << 9,
+    "FL": 1 << 10,
+    "AT": 1 << 11,
+    "SO": 1 << 12,
+    "RX2": 1 << 13,
+    "PF": 1 << 14,
+    "4K": 1 << 15,
+    "5K": 1 << 16,
+    "6K": 1 << 17,
+    "7K": 1 << 18,
+    "8K": 1 << 19,
+    "FI": 1 << 20,
+    "RD": 1 << 21,
+    "Cinema": 1 << 22,
+    "TG": 1 << 23,
+    "9K": 1 << 24,
+    "KC": 1 << 25,
+    "1K": 1 << 26,
+    "3K": 1 << 27,
+    "2K": 1 << 28,
+    "V2": 1 << 29,
+    "MR": 1 << 30,
+}
+
+
+def get_mods(mods: int) -> list[Mod]:
+    # Avoid copying the dictionary by iterating directly and filtering
+    result = [Mod(acronym=mod) for mod, bit in mods_dic.items() if mod not in ("CL", "NO") and mods & bit]
+    return result + [Mod(acronym="CL")]
+
+
+def get_mods_list(score_ls: list[UnifiedScore], mods: list[str]) -> list[int]:
+    if not mods:
+        return list(range(len(score_ls)))
+    # Optimize: create the set once instead of on every iteration
+    mods_set = set(mods)
+    mods_index_ls = []
+    for i, score in enumerate(score_ls):
+        if score.mods and mods_set.issubset(j.acronym for j in score.mods):
+            mods_index_ls.append(i)
+    return mods_index_ls
+
+
+def calc_mods(mods: list[Mod]) -> int:
+    num = 0
+    for mod in mods:
+        num ^= mods_dic.get(mod.acronym, 0)
+    return num
