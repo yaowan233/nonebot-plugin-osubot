@@ -38,18 +38,19 @@ mods_dic = {
 
 
 def get_mods(mods: int) -> list[Mod]:
-    dic = mods_dic.copy()
-    dic.pop("CL")
-    dic.pop("NO")
-    return [Mod(acronym=mod) for mod, bit in dic.items() if mods & bit] + [Mod(acronym="CL")]
+    # Avoid copying the dictionary by iterating directly and filtering
+    result = [Mod(acronym=mod) for mod, bit in mods_dic.items() if mod not in ("CL", "NO") and mods & bit]
+    return result + [Mod(acronym="CL")]
 
 
 def get_mods_list(score_ls: list[UnifiedScore], mods: list[str]) -> list[int]:
     if not mods:
         return list(range(len(score_ls)))
+    # Optimize: create the set once instead of on every iteration
+    mods_set = set(mods)
     mods_index_ls = []
     for i, score in enumerate(score_ls):
-        if score.mods and set(mods).issubset(j.acronym for j in score.mods):
+        if score.mods and mods_set.issubset(j.acronym for j in score.mods):
             mods_index_ls.append(i)
     return mods_index_ls
 

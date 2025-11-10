@@ -3,7 +3,7 @@ from io import BytesIO
 from typing import Optional
 from datetime import datetime, timedelta
 
-from PIL import ImageDraw, ImageFilter, ImageEnhance, ImageSequence, UnidentifiedImageError
+from PIL import ImageDraw, ImageFilter, ImageEnhance
 
 from ..info import get_bg
 from ..mods import get_mods_list
@@ -14,7 +14,7 @@ from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_ss_pp, get_if_pp_ss_pp
 from ..schema.score import Mod, UnifiedScore, NewStatistics
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
-from ..file import map_path, download_osu, get_projectimg, team_cache_path, user_cache_path
+from ..file import map_path, download_osu, user_cache_path
 from .utils import (
     crop_bg,
     draw_acc,
@@ -29,6 +29,9 @@ from .utils import (
     filter_scores_with_regex,
     trim_text_with_ellipsis,
     draw_text_with_outline,
+    handle_team_image,
+    process_user_avatar_with_gif,
+    get_map_difficulty_arrays,
 )
 from .static import (
     Image,
@@ -94,16 +97,14 @@ async def draw_score(
         raise Exception("Project Error")
     # 从官网获取信息
     path = map_path / str(score.beatmap.set_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score.beatmap.id}.osu"
     task2 = asyncio.create_task(osu_api("map", map_id=score.beatmap.id))
     if not osu.exists():
         await download_osu(score.beatmap.set_id, score.beatmap.id)
     info = await task1
     user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
+    user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
     # 判断是否开启lazer模式
     if source == "osu":
@@ -169,15 +170,13 @@ async def get_score_data(
         score_ls.sort(key=lambda x: x.total_score, reverse=True)
         score = score_ls[0]
     path = map_path / str(map_json["beatmapset_id"])
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(map_json["beatmapset_id"], mapid)
     info = await task
     user_path = user_cache_path / str(info.id)
-    if not user_path.exists():
-        user_path.mkdir(parents=True, exist_ok=True)
+    user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
@@ -189,8 +188,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
     path = map_path / str(mapinfo.beatmapset_id)
-    if not path.exists():
-        path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     # pp
     osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()), is_lazer)
@@ -259,8 +257,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         for mods_num, s_mods in enumerate(score_info.mods):
             mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
             try:
-                mods_img = Image.open(mods_bg).convert("RGBA")
-                im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
+                with Image.open(mods_bg) as mods_img:
+                    mods_img = mods_img.convert("RGBA")
+                    im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
             except FileNotFoundError:
                 pass
     # 成绩S-F
@@ -283,21 +282,10 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     im = draw_acc(im, score_info.accuracy, score_info.ruleset_id)
     # 地区
     country = osufile / "flags" / f"{info.country_code}.png"
-    country_bg = Image.open(country).convert("RGBA").resize((66, 45))
-    im.alpha_composite(country_bg, (208, 597))
-    if info.team and info.team.flag_url:
-        team_path = team_cache_path / f"{info.team.id}.png"
-        if not team_path.exists():
-            team_img = await get_projectimg(info.team.flag_url)
-            team_img = Image.open(team_img).convert("RGBA")
-            team_img.save(team_path)
-        try:
-            team_img = Image.open(team_path).convert("RGBA").resize((80, 40))
-            im.alpha_composite(team_img, (208, 660))
-        except UnidentifiedImageError:
-            team_path.unlink()
-            raise NetworkError("team 图片下载错误，请重试！")
-        draw.text((297, 675), info.team.name, font=Torus_Regular_20, anchor="lt")
+    with Image.open(country) as country_img:
+        country_bg = country_img.convert("RGBA").resize((66, 45))
+        im.alpha_composite(country_bg, (208, 597))
+    await handle_team_image(im, draw, info, (208, 660), (80, 40), (297, 675), Torus_Regular_20)
     # supporter
     # if info.is_supporter:
     #     im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
@@ -320,13 +308,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
             temp_accuracy += 1
             mapinfo.cs = max(4.0, min(temp_accuracy, 7.0))
     # cs, ar, od, hp
-    mapdiff = [mapinfo.cs, mapinfo.drain, mapinfo.accuracy, mapinfo.ar]
-    original_mapdiff = [
-        original_mapinfo.cs,
-        original_mapinfo.drain,
-        original_mapinfo.accuracy,
-        original_mapinfo.ar,
-    ]
+    mapdiff, original_mapdiff = get_map_difficulty_arrays(mapinfo, original_mapinfo)
 
     for num, (orig, new) in enumerate(zip(original_mapdiff, mapdiff)):
         orig_difflen = int(400 * max(0, orig) / 10) if orig <= 10 else 400
@@ -661,39 +643,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     user_icon = await open_user_icon(info, source)
     _ = asyncio.create_task(update_map(mapinfo.beatmapset_id, mapinfo.id))
     _ = asyncio.create_task(update_icon(info))
-    gif_frames = []
-    if not getattr(user_icon, "is_animated", False):
-        icon_bg = user_icon.convert("RGBA").resize((170, 170))
-        icon_img = draw_fillet(icon_bg, 15)
-        im.alpha_composite(icon_img, (27, 532))
-        byt = BytesIO()
-        im.convert("RGB").save(byt, "jpeg")
-        im.close()
-        user_icon.close()
-        return byt
-    for gif_frame in ImageSequence.Iterator(user_icon):
-        # 将 GIF 图片中的每一帧转换为 RGBA 模式
-        gif_frame = gif_frame.convert("RGBA").resize((170, 170))
-        gif_frame = draw_fillet(gif_frame, 15)
-        # 创建一个新的 RGBA 图片，将 PNG 图片作为背景，将当前帧添加到背景上
-        rgba_frame = Image.new("RGBA", im.size, (0, 0, 0, 0))
-        rgba_frame.paste(im, (0, 0), im)
-        rgba_frame.paste(gif_frame, (27, 532), gif_frame)
-        # 将 RGBA 图片转换为 RGB 模式，并添加到 GIF 图片中
-        gif_frames.append(rgba_frame)
-    gif_bytes = BytesIO()
-    # 保存 GIF 图片
-    gif_frames[0].save(
-        gif_bytes,
-        format="gif",
-        save_all=True,
-        append_images=gif_frames[1:],
-        duration=user_icon.info["duration"],
-    )
-    # 输出
-    gif_frames[0].close()
-    user_icon.close()
-    return gif_bytes
+    return await process_user_avatar_with_gif(im, user_icon, (27, 532), (170, 170), 15)
 
 
 def cal_legacy_acc(statistics: NewStatistics) -> float:
