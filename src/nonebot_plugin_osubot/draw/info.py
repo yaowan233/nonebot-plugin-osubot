@@ -94,7 +94,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     # 总命中
     op, value = info_calc(statistics.total_hits, n_count)
     hits_change = f"({op}{value:,})" if value != 0 else None
-    badges = [Badge(**i.model_dump()) for i in info.badges]
+    badges = [Badge(**i.model_dump()) for i in info.badges] if info.badges else None
     draw_user = DrawUser(
         id=info.id,
         username=info.username,
