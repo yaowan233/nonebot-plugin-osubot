@@ -16,6 +16,8 @@ tbp = on_command("tbp", priority=11, block=True, aliases={"todaybp"})
 async def _bp(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
+    if not state["range"] and state["query"]:
+        state["range"] = "1-200"
     if state["range"]:
         await _pfm(state)
         return
