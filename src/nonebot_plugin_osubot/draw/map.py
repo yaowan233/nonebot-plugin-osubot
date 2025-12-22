@@ -7,7 +7,6 @@ from ..utils import FGM
 from ..api import osu_api
 from ..info import get_bg
 from ..pp import get_ss_pp
-from ..mods import calc_mods
 from ..schema import Beatmap
 from ..schema.score import Mod
 from ..beatmap_stats_moder import with_mods
@@ -31,8 +30,7 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
     info = await osu_api("map", map_id=mapid)
     mapinfo = Beatmap(**info)
     original_mapinfo = mapinfo.copy()
-    mods = [Mod(acronym=mod) for mod in mods]
-    mapinfo = with_mods(mapinfo, None, mods)
+    mapinfo = with_mods(mapinfo, None, [Mod(acronym=mod) for mod in mods])
     diffinfo = (
         calc_songlen(mapinfo.total_length),
         f"{mapinfo.bpm:.1f}",
@@ -46,8 +44,8 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
     osu = path / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(mapinfo.beatmapset_id, mapid)
-    ss_pp_info = get_ss_pp(str(osu.absolute()), calc_mods(mods), is_lazer)
-    original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0, is_lazer)
+    ss_pp_info = get_ss_pp(str(osu.absolute()), mods, is_lazer)
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [], is_lazer)
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
         old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
@@ -69,17 +67,17 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
     # 模式
     draw.text((50, 65), IconLs[FGM[mapinfo.mode]], font=extra_30, anchor="lt")
     # 难度星星
-    stars_bg = stars_diff(ss_pp_info.difficulty.stars, Stars)
+    stars_bg = stars_diff(ss_pp_info.stars, Stars)
     stars_img = stars_bg.resize((80, 30))
     im.alpha_composite(stars_img, (90, 65))
-    if ss_pp_info.difficulty.stars < 6.5:
+    if ss_pp_info.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
     # 星级
     draw.text(
         (100, 78),
-        f"★{ss_pp_info.difficulty.stars:.2f}",
+        f"★{ss_pp_info.stars:.2f}",
         font=Torus_SemiBold_20,
         anchor="lm",
         fill=color,
@@ -120,8 +118,8 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
             anchor="mm",
         )
     # stardiff
-    stars = ss_pp_info.difficulty.stars
-    original_stars = original_ss_pp_info.difficulty.stars
+    stars = ss_pp_info.stars
+    original_stars = original_ss_pp_info.stars
     if stars > original_stars:
         color = (198, 92, 102, 255)
         orig_color = (246, 111, 34, 255)

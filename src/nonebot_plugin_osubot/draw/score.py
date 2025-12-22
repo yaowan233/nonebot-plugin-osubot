@@ -192,7 +192,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # pp
     osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()), is_lazer)
-    original_ss_pp_info = get_ss_pp(str(osu.absolute()), 0, is_lazer)
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [], is_lazer)
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()), is_lazer)
     # 新建图片
     im = Image.new("RGBA", (1280, 720))
@@ -228,22 +228,22 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         fill=(255, 255, 255, 255),
     )
     # 难度星星
-    stars_bg = stars_diff(pp_info.difficulty.stars, Stars)
+    stars_bg = stars_diff(pp_info.stars, Stars)
     stars_img = stars_bg.resize((85, 37))
     im.alpha_composite(stars_img, (552, 67))
     # 难度竖条
-    star_bg = stars_diff(pp_info.difficulty.stars, Stardiff)
+    star_bg = stars_diff(pp_info.stars, Stardiff)
     star_img = star_bg.resize((20, 271))
     im.alpha_composite(star_img, (0, 50))
     # 星级
-    if pp_info.difficulty.stars < 6.5:
+    if pp_info.stars < 6.5:
         color = (0, 0, 0, 255)
     else:
         color = (255, 217, 102, 255)
 
     draw.text(
         (556, 85),
-        f"★{pp_info.difficulty.stars:.2f}",
+        f"★{pp_info.stars:.2f}",
         font=Torus_SemiBold_20,
         anchor="lm",
         fill=color,
@@ -348,8 +348,8 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
                 anchor="mm",
             )
     # stardiff
-    stars = pp_info.difficulty.stars
-    original_stars = original_ss_pp_info.difficulty.stars
+    stars = pp_info.stars
+    original_stars = original_ss_pp_info.stars
     if stars > original_stars:
         color = (198, 92, 102, 255)
         orig_color = (246, 111, 34, 255)
@@ -480,7 +480,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         draw.text((768, 438), f"{pp_info.pp:.0f}", font=Torus_Regular_50, anchor="mm")
         draw.text((933, 482), f"{pp_info.pp_aim:.0f}", font=Torus_Regular_25, anchor="mm")
         draw.text((1066, 482), f"{pp_info.pp_speed:.0f}", font=Torus_Regular_25, anchor="mm")
-        draw.text((1200, 482), f"{pp_info.pp_accuracy:.0f}", font=Torus_Regular_25, anchor="mm")
+        draw.text((1200, 482), f"{pp_info.pp_acc:.0f}", font=Torus_Regular_25, anchor="mm")
         draw.text(
             (768, 577),
             f"{score_info.accuracy:.2f}%",
@@ -489,7 +489,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         )
         draw.text(
             (768, 666),
-            f"{score_info.max_combo:,}/{pp_info.difficulty.max_combo}",
+            f"{score_info.max_combo:,}/{pp_info.max_combo}",
             font=Torus_Regular_25,
             anchor="mm",
         )
@@ -554,7 +554,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         )
         draw.text(
             (768, 666),
-            f"{score_info.max_combo}/{pp_info.difficulty.max_combo}",
+            f"{score_info.max_combo}/{pp_info.max_combo}",
             font=Torus_Regular_25,
             anchor="mm",
         )
