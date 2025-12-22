@@ -14,8 +14,15 @@ def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> CalculationResult:
     if beatmap.is_suspicious():
         raise NetworkError("这似乎不是一个正常谱面 OAO")
     c = OsuCalculator()
-    res = c.calculate(path, score.ruleset_id, score.mods, score.accuracy, score.max_combo,
-                      legacy_total_score=score.legacy_total_score, statistics=score.statistics)
+    res = c.calculate(
+        path,
+        score.ruleset_id,
+        score.mods,
+        score.accuracy,
+        score.max_combo,
+        legacy_total_score=score.legacy_total_score,
+        statistics=score.statistics,
+    )
     return res
 
 
@@ -36,8 +43,14 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
     score.statistics.miss = 0
     score.statistics.ok = n100
     score.statistics.great = n300
-    if_pp = c.calculate(path, score.ruleset_id, score.mods, score.accuracy,
-                      legacy_total_score=score.legacy_total_score, statistics=score.statistics).pp
+    if_pp = c.calculate(
+        path,
+        score.ruleset_id,
+        score.mods,
+        score.accuracy,
+        legacy_total_score=score.legacy_total_score,
+        statistics=score.statistics,
+    ).pp
     ss_pp = c.calculate(path, score.ruleset_id, score.mods, 100).pp
     return str(int(round(if_pp, 0))), str(int(round(ss_pp, 0)))
 
