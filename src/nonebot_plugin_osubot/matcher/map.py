@@ -17,7 +17,7 @@ async def _map(state: T_State):
     if not map_id:
         await UniMessage.text("请输入地图ID").finish(reply_to=True)
     try:
-        m = await draw_map_info(map_id, mods, state["is_lazer"])
+        m = await draw_map_info(map_id, mods)
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图mapid:{state['target']}{mods}时 {str(e)}").finish(reply_to=True)

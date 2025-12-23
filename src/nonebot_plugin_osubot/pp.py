@@ -1,15 +1,11 @@
-import importlib.metadata
-
 from rosu_pp_py import Beatmap, Strains, Performance
 from osu_tools import OsuCalculator, CalculationResult
 
 from .exceptions import NetworkError
 from .schema.score import UnifiedScore
 
-is_v2 = importlib.metadata.version("pydantic").startswith("2")
 
-
-def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> CalculationResult:
+def cal_pp(score: UnifiedScore, path: str) -> CalculationResult:
     beatmap = Beatmap(path=path)
     if beatmap.is_suspicious():
         raise NetworkError("这似乎不是一个正常谱面 OAO")
@@ -26,7 +22,7 @@ def cal_pp(score: UnifiedScore, path: str, is_lazer: bool) -> CalculationResult:
     return res
 
 
-def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
+def get_if_pp_ss_pp(score: UnifiedScore, path: str) -> tuple:
     beatmap = Beatmap(path=path)
     if beatmap.is_suspicious():
         return "nan", "nan"
@@ -55,7 +51,7 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, is_lazer: bool) -> tuple:
     return str(int(round(if_pp, 0))), str(int(round(ss_pp, 0)))
 
 
-def get_ss_pp(path: str, mods: list[str], is_lazer) -> CalculationResult:
+def get_ss_pp(path: str, mods: list[str]) -> CalculationResult:
     beatmap = Beatmap(path=path)
     if beatmap.is_suspicious():
         raise NetworkError("这似乎不是一个正常谱面 OAO")

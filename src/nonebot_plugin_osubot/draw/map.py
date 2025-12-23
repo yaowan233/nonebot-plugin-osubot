@@ -26,7 +26,7 @@ from .static import (
 )
 
 
-async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
+async def draw_map_info(mapid: int, mods: list[str]) -> BytesIO:
     info = await osu_api("map", map_id=mapid)
     mapinfo = Beatmap(**info)
     original_mapinfo = mapinfo.copy()
@@ -44,8 +44,8 @@ async def draw_map_info(mapid: int, mods: list[str], is_lazer) -> BytesIO:
     osu = path / f"{mapid}.osu"
     if not osu.exists():
         await download_osu(mapinfo.beatmapset_id, mapid)
-    ss_pp_info = get_ss_pp(str(osu.absolute()), mods, is_lazer)
-    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [], is_lazer)
+    ss_pp_info = get_ss_pp(str(osu.absolute()), mods)
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [])
     # 计算时间
     if mapinfo.beatmapset.ranked_date:
         old_time = datetime.strptime(mapinfo.beatmapset.ranked_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")

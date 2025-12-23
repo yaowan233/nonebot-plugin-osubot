@@ -109,7 +109,7 @@ async def draw_score(
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
-    return await draw_score_pic(score, info, map_json, "", is_lazer, source)
+    return await draw_score_pic(score, info, map_json, "", source)
 
 
 async def get_score_data(
@@ -180,10 +180,10 @@ async def get_score_data(
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
-    return await draw_score_pic(score, info, map_json, grank, is_lazer, source)
+    return await draw_score_pic(score, info, map_json, grank, source)
 
 
-async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, is_lazer, source) -> BytesIO:
+async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, source) -> BytesIO:
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
@@ -191,9 +191,9 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     path.mkdir(parents=True, exist_ok=True)
     # pp
     osu = path / f"{mapinfo.id}.osu"
-    pp_info = cal_pp(score_info, str(osu.absolute()), is_lazer)
-    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [], is_lazer)
-    if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()), is_lazer)
+    pp_info = cal_pp(score_info, str(osu.absolute()))
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [])
+    if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
     # 新建图片
     im = Image.new("RGBA", (1280, 720))
     draw = ImageDraw.Draw(im)
@@ -746,8 +746,6 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
 
 
 def cal_score_info(is_lazer: bool, score_info: UnifiedScore, source: str = "osu") -> UnifiedScore:
-    if is_lazer:
-        score_info.legacy_total_score = score_info.total_score
     if score_info.ruleset_id == 3 and not is_lazer and source != "ppysb":
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
     if not is_lazer:
