@@ -28,7 +28,7 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str) -> tuple:
         return "nan", "nan"
     c = OsuCalculator()
     total = beatmap.n_objects
-    score = score.model_copy()
+    score = score.model_copy(deep=True)
     passed = score.statistics.great + score.statistics.miss + score.statistics.ok + score.statistics.meh
     n300 = score.statistics.great + total - passed
     count_hits = total - score.statistics.miss
@@ -52,12 +52,12 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str) -> tuple:
     return str(int(round(if_pp, 0))), str(int(round(ss_pp, 0)))
 
 
-def get_ss_pp(path: str, mods: list[str]) -> CalculationResult:
+def get_ss_pp(path: str, ruleset_id: int, mods: list[str]) -> CalculationResult:
     beatmap = Beatmap(path=path)
     if beatmap.is_suspicious():
         raise NetworkError("这似乎不是一个正常谱面 OAO")
     c = OsuCalculator()
-    res = c.calculate(path, acc=100, mods=mods)
+    res = c.calculate(path, ruleset_id, acc=100, mods=mods)
     return res
 
 

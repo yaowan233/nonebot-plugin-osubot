@@ -192,7 +192,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # pp
     osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()))
-    original_ss_pp_info = get_ss_pp(str(osu.absolute()), [])
+    original_ss_pp_info = get_ss_pp(str(osu.absolute()), score_info.ruleset_id, [])
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()))
     # 新建图片
     im = Image.new("RGBA", (1280, 720))
