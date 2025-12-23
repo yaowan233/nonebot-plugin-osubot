@@ -28,6 +28,7 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str) -> tuple:
         return "nan", "nan"
     c = OsuCalculator()
     total = beatmap.n_objects
+    score = score.model_copy()
     passed = score.statistics.great + score.statistics.miss + score.statistics.ok + score.statistics.meh
     n300 = score.statistics.great + total - passed
     count_hits = total - score.statistics.miss
