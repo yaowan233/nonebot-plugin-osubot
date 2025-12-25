@@ -280,8 +280,12 @@ def create_word_matcher_handler(game_type: str, games_dict: dict):
     """Factory function to create word matcher handlers for different game types."""
 
     async def handler(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
-        song_name = games_dict[session_id].beatmapset.title
-        song_name_unicode = games_dict[session_id].beatmapset.title_unicode
+        game_data = games_dict.get(session_id)
+        if not game_data:
+            return
+
+        song_name = game_data.beatmapset.title
+        song_name_unicode = game_data.beatmapset.title_unicode
         user_input = event.get_plaintext().lower()
 
         # Calculate similarity ratios
