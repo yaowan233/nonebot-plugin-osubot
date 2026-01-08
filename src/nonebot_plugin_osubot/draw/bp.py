@@ -45,6 +45,10 @@ async def draw_bp(
         if not score_ls_filtered:
             raise NetworkError("未查询到游玩记录")
     for i, score_info in enumerate(score_ls_filtered):
+        if score_info.mods:
+            has_nc = any(m.acronym == "NC" for m in score_info.mods)
+            if has_nc:
+                score_info.mods = [m for m in score_info.mods if m.acronym != "DT"]
         # 判断是否开启lazer模式
         score_ls_filtered[i] = cal_score_info(is_lazer, score_info, source)
     if search_condition:
