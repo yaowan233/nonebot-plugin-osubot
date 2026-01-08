@@ -184,6 +184,10 @@ async def get_score_data(
 
 
 async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, source) -> BytesIO:
+    if score_info.mods:
+        has_nc = any(m.acronym == "NC" for m in score_info.mods)
+        if has_nc:
+            score_info.mods = [m for m in score_info.mods if m.acronym != "DT"]
     mapinfo = Beatmap(**map_json)
     original_mapinfo = mapinfo.copy()
     mapinfo = with_mods(mapinfo, score_info, score_info.mods)
