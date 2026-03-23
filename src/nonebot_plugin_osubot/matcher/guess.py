@@ -6,7 +6,6 @@ from pathlib import Path
 from asyncio import TimerHandle
 from difflib import SequenceMatcher
 
-from PIL import Image
 from nonebot.log import logger
 from nonebot.params import T_State
 from nonebot.matcher import Matcher

@@ -21,7 +21,6 @@ from .static import (
     Torus_Regular_20,
     Torus_SemiBold_20,
     Torus_SemiBold_25,
-    osufile,
     extra_30,
     Stars,
 )

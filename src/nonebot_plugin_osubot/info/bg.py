@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-from io import BytesIO
 from pathlib import Path
 from typing import Union
 

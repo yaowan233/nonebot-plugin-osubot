@@ -24,7 +24,6 @@ from .utils import (
     draw_fillet,
     update_icon,
     calc_songlen,
-    get_modeimage,
     open_user_icon,
     filter_scores_with_regex,
     trim_text_with_ellipsis,
