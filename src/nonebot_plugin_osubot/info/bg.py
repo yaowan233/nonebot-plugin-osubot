@@ -11,7 +11,7 @@ from ..exceptions import NetworkError
 from ..file import re_map, map_path, download_osu
 
 
-async def get_bg(mapid: Union[str, int], setid: int = None) -> BytesIO:
+async def get_bg(mapid: Union[str, int], setid: int = None) -> Image.Image:
     if not setid:
         info = await osu_api("map", map_id=mapid)
         setid: int = info["beatmapset_id"]
@@ -32,10 +32,8 @@ async def get_bg(mapid: Union[str, int], setid: int = None) -> BytesIO:
     except UnidentifiedImageError:
         cover_path.unlink()
         raise NetworkError("暂时无法下载背景图片＞︿＜")
-    byt = BytesIO()
-    img.save(byt, "png")
     _ = asyncio.create_task(update_bg(cover_path))
-    return byt
+    return img
 
 
 async def update_bg(cover_path: Path):

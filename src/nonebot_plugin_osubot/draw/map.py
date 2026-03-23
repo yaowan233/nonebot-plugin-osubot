@@ -17,6 +17,7 @@ from .static import (
     MapBg,
     IconLs,
     MapBg1,
+    ModsDict,
     Torus_Regular_20,
     Torus_SemiBold_20,
     Torus_SemiBold_25,
@@ -147,12 +148,8 @@ async def draw_map_info(mapid: int, mods: list[str]) -> BytesIO:
     # 绘制mods
     if mods:
         for mods_num, s_mods in enumerate(mods):
-            mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
-            try:
-                mods_img = Image.open(mods_bg).convert("RGBA")
-                im.alpha_composite(mods_img, (700 + 50 * mods_num, 295))
-            except FileNotFoundError:
-                pass
+            if s_mods.acronym in ModsDict:
+                im.alpha_composite(ModsDict[s_mods.acronym], (700 + 50 * mods_num, 295))
     # mapper
     icon_url = f"https://a.ppy.sh/{mapinfo.user_id}"
     user_icon = await get_projectimg(icon_url)

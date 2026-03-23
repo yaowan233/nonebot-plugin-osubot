@@ -419,10 +419,9 @@ async def _(
     pic_games[session_id] = selected_score
     pic_set_timeout(matcher, session_id)
     try:
-        byt = await get_bg(selected_score.beatmap.id)
+        img = await get_bg(selected_score.beatmap.id)
     except NetworkError:
         await guess_pic.finish(f"本次猜歌名为: {selected_score.beatmapset.title_unicode}" + str(NetworkError))
-    img = Image.open(byt)
     width, height = img.size
     crop_width = int(width * 0.3)
     crop_height = int(height * 0.3)

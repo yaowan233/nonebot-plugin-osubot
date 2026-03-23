@@ -36,6 +36,7 @@ from .utils import (
 from .static import (
     Image,
     IconLs,
+    ModsDict,
     Venera_60,
     Torus_Regular_15,
     Torus_Regular_20,
@@ -50,6 +51,7 @@ from .static import (
     extra_30,
     Stardiff,
     Stars,
+    ScoreModeImgs,
 )
 
 
@@ -219,9 +221,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     except NetworkError:
         ...
     # 获取成绩背景做底图
-    bg = get_modeimage(score_info.ruleset_id)
-    recent_bg = Image.open(bg).convert("RGBA")
-    im.alpha_composite(recent_bg)
+    im.alpha_composite(ScoreModeImgs[score_info.ruleset_id])
     # 模式
     draw_text_with_outline(
         draw,
@@ -259,13 +259,8 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # ranking = ["X", "S", "A", "B", "C", "D", "F"]
     if score_info.mods:
         for mods_num, s_mods in enumerate(score_info.mods):
-            mods_bg = osufile / "mods" / f"{s_mods.acronym}.png"
-            try:
-                with Image.open(mods_bg) as mods_img:
-                    mods_img = mods_img.convert("RGBA")
-                    im.alpha_composite(mods_img, (880 + 50 * mods_num, 100))
-            except FileNotFoundError:
-                pass
+            if s_mods.acronym in ModsDict:
+                im.alpha_composite(ModsDict[s_mods.acronym], (880 + 50 * mods_num, 100))
     # 成绩S-F
     # rank_ok = False
     # for rank_num, i in enumerate(ranking):

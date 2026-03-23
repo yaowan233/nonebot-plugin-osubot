@@ -73,3 +73,6 @@ ColorArr = mpl.cm.ScalarMappable(norm=__norm, cmap=__cmap).to_rgba(np.linspace(0
 IconLs = ["\ue800", "\ue803", "\ue801", "\ue802", "\ue800", "\ue803", "\ue801", "\ue802", "\ue800"]
 ModsDict = {file.stem: Image.open(file).convert("RGBA") for file in (osufile / "mods").glob("*.png")}
 RankDict = {file.stem: Image.open(file).convert("RGBA") for file in (osufile / "ranking").glob("*.png")}
+_mode_img_names = {0: "pfm_std.png", 1: "pfm_taiko.png", 2: "pfm_ctb.png", 3: "pfm_mania.png",
+                   4: "pfm_std.png", 5: "pfm_taiko.png", 6: "pfm_ctb.png", 7: "pfm_mania.png", 8: "pfm_std.png"}
+ScoreModeImgs = {mode: Image.open(osufile / name).convert("RGBA") for mode, name in _mode_img_names.items()}

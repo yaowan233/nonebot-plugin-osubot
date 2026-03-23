@@ -15,7 +15,11 @@ async def _get_bg(bg: Message = CommandArg()):
     if not bg:
         await UniMessage.text("请输入需要提取BG的地图ID").finish(reply_to=True)
     try:
-        byt = await get_bg(bg)
+        img = await get_bg(bg)
     except NetworkError as e:
         await UniMessage.text(f"获取图片时 {str(e)}").finish(reply_to=True)
+    from io import BytesIO
+
+    byt = BytesIO()
+    img.convert("RGB").save(byt, "jpeg")
     await UniMessage.image(raw=byt).finish(reply_to=True)

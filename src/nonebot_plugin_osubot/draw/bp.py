@@ -112,6 +112,9 @@ async def draw_pfm(
     else:
         uinfo = f"{mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
     draw.text((1388, 80), uinfo, font=Torus_SemiBold_25, anchor="rm")
+    user_icon = await open_user_icon(info, source)
+    icon_img = draw_fillet(user_icon.convert("RGBA").resize((75, 75)), 15)
+    user_icon.close()
     for num, bp in enumerate(score_ls_filtered):
         h_num = 177 * (num // 2)  # 每两个数据换行
         offset = 695 * (num % 2)  # 数据在右边时的偏移量
@@ -158,18 +161,13 @@ async def draw_pfm(
         )
 
         # 头像
-        user_icon = await open_user_icon(info, source)
-        icon_bg = user_icon.convert("RGBA").resize((75, 75))
-        icon_img = draw_fillet(icon_bg, 15)
         im.alpha_composite(icon_img, (30, 10))
-        user_icon.close()
 
         # mods
         if bp.mods:
             for mods_num, s_mods in enumerate(bp.mods):
                 if s_mods.acronym in ModsDict:
-                    mods_img = ModsDict[s_mods.acronym].convert("RGBA")
-                    im.alpha_composite(mods_img, (210 + offset + 50 * mods_num, 192 + h_num))
+                    im.alpha_composite(ModsDict[s_mods.acronym], (210 + offset + 50 * mods_num, 192 + h_num))
             if (bp.rank == "X" or bp.rank == "S") and (
                 Mod(acronym="HD") in bp.mods or Mod(acronym="FL") in bp.mods or Mod(acronym="FI") in bp.mods
             ):
