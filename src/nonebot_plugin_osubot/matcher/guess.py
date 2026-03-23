@@ -492,11 +492,3 @@ async def _(
 @chart_word_matcher.handle()
 async def _(event: Event, session_id: str = SessionId(SessionIdType.GROUP)):
     await create_word_matcher_handler(GameType.CHART, chart_games)(event, session_id)
-
-
-chart_hint = on_command("谱面提示", priority=11, block=True, rule=Rule(chart_game_running))
-
-
-@chart_hint.handle()
-async def _(session_id: str = SessionId(SessionIdType.GROUP)):
-    await handle_hint_generic(GameType.CHART, chart_games, session_id, chart_hint)
