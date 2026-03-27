@@ -110,12 +110,10 @@ async def get_random_beatmap_set(binded_id, group_id) -> (UnifiedScore, str):
     # 获取已猜过的歌曲集合
     guessed_songs = guess_song_cache[group_id]
     available_scores = []
-    for user_id in binded_id:
+    async with get_session() as session:
+        users = (await session.scalars(select(UserData).where(UserData.user_id.in_(binded_id)))).all()
+    for user in users:
         try:
-            async with get_session() as session:
-                user = await session.scalar(select(UserData).where(UserData.user_id == user_id))
-            if not user:
-                continue
             bp_info = await get_user_scores(user.osu_id, NGM[str(user.osu_mode)], "best")
             # 过滤掉已猜过的歌曲
             unguessed_scores = [(score, user.osu_name) for score in bp_info if score.beatmapset.id not in guessed_songs]

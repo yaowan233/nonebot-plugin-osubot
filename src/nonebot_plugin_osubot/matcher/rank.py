@@ -34,6 +34,7 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
         user_id_ls = [i.user.id for i in group_member]
     else:
         raise NotImplementedError
+
     async with get_session() as session:
         binded_id = (await session.scalars(select(UserData.osu_id).where(UserData.user_id.in_(user_id_ls)))).all()
         info_ls = (
@@ -47,58 +48,59 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
                 .order_by(InfoData.pp.desc())
             )
         ).all()
-        icon_ls = [f"https://a.ppy.sh/{info.osu_id}" for info in info_ls]
-        tasks = [get_projectimg(i) for i in icon_ls]
-        icon_ls = await asyncio.gather(*tasks)
-        draw_len = len([i for i in info_ls if i.pp >= 100])
-        img = Image.new("RGBA", (1200, 85 + 82 * draw_len), (35, 42, 34, 255))
-        draw = ImageDraw.Draw(img)
-        draw.text((40, 10), f"{NGM[mode]}模式群内排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-        draw.text((880, 10), "pp", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-        draw.text((960, 10), "全球排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-        for index, (info, icon) in enumerate(zip(info_ls, icon_ls)):
-            if info.pp < 100:
-                continue
-            draw.rounded_rectangle(
-                (20, 55 + 82 * index, 1180, 45 + 82 * (index + 1)),
-                radius=10,
-                fill=(58, 70, 57, 255),
-            )
-            icon_img = Image.open(icon).convert("RGBA").resize((63, 63))
-            icon_img = draw_fillet(icon_img, 10)
-            img.alpha_composite(icon_img, (100, 60 + 82 * index))
-            for user in group_member:
-                if await session.scalar(
-                    select(UserData).where(UserData.user_id == str(user["user_id"]), UserData.osu_id == info.osu_id)
-                ):
-                    name = user["card"] or user.get("nickname", "")
-                    break
-            else:
-                raise Exception("这不可能发生的")
-            draw.text(
-                (43, 70 + 82 * index),
-                f"#{index + 1}",
-                font=Torus_Regular_25,
-                fill=(255, 255, 255, 255),
-            )
-            draw.text(
-                (180, 70 + 82 * index),
-                name,
-                font=Torus_Regular_25,
-                fill=(166, 199, 163, 255),
-            )
-            draw.text(
-                (850, 70 + 82 * index),
-                f"{int(info.pp)}pp",
-                font=Torus_Regular_25,
-                fill=(255, 255, 255, 255),
-            )
-            draw.text(
-                (980, 70 + 82 * index),
-                f"{info.g_rank}",
-                font=Torus_Regular_25,
-                fill=(255, 255, 255, 255),
-            )
+        # osu_id -> user_id 映射，一次查完，避免渲染循环中逐行查询
+        user_data_ls = (await session.scalars(select(UserData).where(UserData.user_id.in_(user_id_ls)))).all()
+
+    # 在 session 外构建 osu_id -> 群名片 映射
+    user_id_to_name = {str(m["user_id"]): m["card"] or m.get("nickname", "") for m in group_member}
+    osu_id_to_name = {ud.osu_id: user_id_to_name.get(ud.user_id, "") for ud in user_data_ls}
+
+    # 网络 I/O 在 session 关闭后执行
+    icon_urls = [f"https://a.ppy.sh/{info.osu_id}" for info in info_ls]
+    icon_ls = await asyncio.gather(*[get_projectimg(u) for u in icon_urls])
+
+    draw_len = len([i for i in info_ls if i.pp >= 100])
+    img = Image.new("RGBA", (1200, 85 + 82 * draw_len), (35, 42, 34, 255))
+    draw = ImageDraw.Draw(img)
+    draw.text((40, 10), f"{NGM[mode]}模式群内排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
+    draw.text((880, 10), "pp", font=Torus_Regular_25, fill=(255, 255, 255, 255))
+    draw.text((960, 10), "全球排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
+    for index, (info, icon) in enumerate(zip(info_ls, icon_ls)):
+        if info.pp < 100:
+            continue
+        draw.rounded_rectangle(
+            (20, 55 + 82 * index, 1180, 45 + 82 * (index + 1)),
+            radius=10,
+            fill=(58, 70, 57, 255),
+        )
+        icon_img = Image.open(icon).convert("RGBA").resize((63, 63))
+        icon_img = draw_fillet(icon_img, 10)
+        img.alpha_composite(icon_img, (100, 60 + 82 * index))
+        name = osu_id_to_name.get(info.osu_id, "")
+        draw.text(
+            (43, 70 + 82 * index),
+            f"#{index + 1}",
+            font=Torus_Regular_25,
+            fill=(255, 255, 255, 255),
+        )
+        draw.text(
+            (180, 70 + 82 * index),
+            name,
+            font=Torus_Regular_25,
+            fill=(166, 199, 163, 255),
+        )
+        draw.text(
+            (850, 70 + 82 * index),
+            f"{int(info.pp)}pp",
+            font=Torus_Regular_25,
+            fill=(255, 255, 255, 255),
+        )
+        draw.text(
+            (980, 70 + 82 * index),
+            f"{info.g_rank}",
+            font=Torus_Regular_25,
+            fill=(255, 255, 255, 255),
+        )
 
     byt = BytesIO()
     img.save(byt, "png")

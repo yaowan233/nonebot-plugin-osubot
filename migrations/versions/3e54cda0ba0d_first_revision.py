@@ -1,4 +1,4 @@
-"""fisrt revision
+"""first revision
 
 迁移 ID: 3e54cda0ba0d
 父迁移:
