@@ -1,4 +1,5 @@
 """Tests for /bind, /unbind, /sbbind, /sbunbind commands."""
+
 import pytest
 from unittest.mock import AsyncMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -62,10 +63,12 @@ async def test_bind_already_bound(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.text("您已绑定existing_player，如需要解绑请输入/unbind"),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text("您已绑定existing_player，如需要解绑请输入/unbind"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()
@@ -125,10 +128,12 @@ async def test_bind_user_not_found(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    Message([
-                        MessageSegment.reply(1),
-                        MessageSegment.text("绑定失败，找不到叫 nobody 的人哦"),
-                    ]),
+                    Message(
+                        [
+                            MessageSegment.reply(1),
+                            MessageSegment.text("绑定失败，找不到叫 nobody 的人哦"),
+                        ]
+                    ),
                     result={"message_id": 1},
                 )
                 ctx.should_finished()

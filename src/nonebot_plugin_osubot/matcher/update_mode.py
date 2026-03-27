@@ -22,7 +22,9 @@ async def _(event: Event, mode: Message = CommandArg()):
         elif not mode:
             await UniMessage.text("请输入需要更新内容的模式").finish(reply_to=True)
         if mode.isdigit() and 0 <= int(mode) < 4:
-            await session.execute(update(UserData).where(UserData.user_id == event.get_user_id()).values(osu_mode=int(mode)))
+            await session.execute(
+                update(UserData).where(UserData.user_id == event.get_user_id()).values(osu_mode=int(mode))
+            )
             await session.commit()
             msg = f"已将默认模式更改为 {NGM[mode]}"
         else:

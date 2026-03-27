@@ -1,4 +1,5 @@
 """Tests for matcher/guess.py - GameManager 和猜歌指令。"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -14,6 +15,7 @@ UTILS_MODULE = "nonebot_plugin_osubot.matcher.utils"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_mock_score(
     title: str = "Test Song",
@@ -57,6 +59,7 @@ def text_msg(event, text: str) -> Message:
 # ---------------------------------------------------------------------------
 # GameManager 单元测试（无 nonebot 依赖）
 # ---------------------------------------------------------------------------
+
 
 def test_game_manager_set_get_pop():
     """set / get / pop / is_game_running 基本流程。"""
@@ -152,6 +155,7 @@ def test_game_manager_timer_set_get_pop():
 # guess_audio handler
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_guess_audio_no_binded_users(app: App):
     """该模式无人绑定时，回复提示并 finish。"""
@@ -190,7 +194,9 @@ async def test_guess_audio_all_songs_guessed(app: App):
 
     with patch_session(UTILS_MODULE, make_bound_utils_session()):
         with patch_session(MODULE, make_binded_id_session(["12345678"])):
-            with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(None, "今日所有歌曲都被猜过了"))):
+            with patch(
+                f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(None, "今日所有歌曲都被猜过了"))
+            ):
                 async with app.test_matcher(guess_audio) as ctx:
                     adapter = nonebot.get_adapter(OnebotV11Adapter)
                     bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -226,7 +232,9 @@ async def test_guess_audio_download_fail(app: App):
                             ctx.receive_event(bot, event)
                             ctx.should_call_send(
                                 event,
-                                text_msg(event, "开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自testuser osu 模式的bp"),
+                                text_msg(
+                                    event, "开始音频猜歌游戏，猜猜下面音频的曲名吧，该曲抽选自testuser osu 模式的bp"
+                                ),
                                 result={"message_id": 1},
                             )
                             ctx.should_call_send(
@@ -240,6 +248,7 @@ async def test_guess_audio_download_fail(app: App):
 # ---------------------------------------------------------------------------
 # guess_pic handler
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_guess_pic_no_binded_users(app: App):
@@ -279,7 +288,9 @@ async def test_guess_pic_all_songs_guessed(app: App):
 
     with patch_session(UTILS_MODULE, make_bound_utils_session()):
         with patch_session(MODULE, make_binded_id_session(["12345678"])):
-            with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(None, "今日所有歌曲都被猜过了"))):
+            with patch(
+                f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(None, "今日所有歌曲都被猜过了"))
+            ):
                 async with app.test_matcher(guess_pic) as ctx:
                     adapter = nonebot.get_adapter(OnebotV11Adapter)
                     bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -295,6 +306,7 @@ async def test_guess_pic_all_songs_guessed(app: App):
 # ---------------------------------------------------------------------------
 # guess_chart handler
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_guess_chart_mode_0_not_supported(app: App):
@@ -359,7 +371,9 @@ async def test_guess_chart_all_songs_guessed(app: App):
 
     with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=3)):
         with patch_session(MODULE, make_binded_id_session(["12345678"])):
-            with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(None, "今日所有歌曲都被猜过了"))):
+            with patch(
+                f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(None, "今日所有歌曲都被猜过了"))
+            ):
                 async with app.test_matcher(guess_chart) as ctx:
                     adapter = nonebot.get_adapter(OnebotV11Adapter)
                     bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -376,6 +390,7 @@ async def test_guess_chart_all_songs_guessed(app: App):
 # create_word_matcher_handler 逻辑测试
 # ---------------------------------------------------------------------------
 
+
 def test_create_word_matcher_handler_correct_answer():
     """相似度 >= 0.5 时，pop 游戏并标记为猜中。"""
     from nonebot_plugin_osubot.matcher.guess import create_word_matcher_handler, GameType
@@ -389,6 +404,7 @@ def test_create_word_matcher_handler_correct_answer():
     # 验证内部逻辑：相似度满足时 game 被 pop
     # handler 调用 UniMessage 需要 bot context，直接检查 games 状态
     from difflib import SequenceMatcher
+
     user_input = "conflict"
     r = SequenceMatcher(None, "conflict", user_input).ratio()
     assert r >= 0.5

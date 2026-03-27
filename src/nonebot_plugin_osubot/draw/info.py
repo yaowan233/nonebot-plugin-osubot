@@ -27,13 +27,17 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     # 对比
     async with get_session() as session:
         user = await session.scalar(
-            select(InfoData).where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode]).order_by(InfoData.date.desc())
+            select(InfoData)
+            .where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode])
+            .order_by(InfoData.date.desc())
         )
         if user:
             today_date = date.today()
             # 补全今天记录的 c_rank（批量更新接口不返回 country_rank）
             today_record = await session.scalar(
-                select(InfoData).where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode], InfoData.date == today_date)
+                select(InfoData).where(
+                    InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode], InfoData.date == today_date
+                )
             )
             if today_record and today_record.c_rank is None and statistics.country_rank is not None:
                 today_record.c_rank = statistics.country_rank
@@ -117,16 +121,18 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     op, value = info_calc(statistics.total_score, n_total_score)
     total_score_change = f"({op}{value:,})" if value != 0 and n_total_score is not None else None
     gc = statistics.grade_counts
+
     def _grade_change(cur, prev):
         if prev is None:
             return None
         op, value = info_calc(cur, prev)
         return f"({op}{value:,})" if value != 0 else None
+
     xh_change = _grade_change(gc.ssh, n_xh)
-    x_change  = _grade_change(gc.ss,  n_x)
-    sh_change = _grade_change(gc.sh,  n_sh)
-    s_change  = _grade_change(gc.s,   n_s)
-    a_change  = _grade_change(gc.a,   n_a)
+    x_change = _grade_change(gc.ss, n_x)
+    sh_change = _grade_change(gc.sh, n_sh)
+    s_change = _grade_change(gc.s, n_s)
+    a_change = _grade_change(gc.a, n_a)
     op, value = info_calc(statistics.play_time, n_play_time)
     play_time_change = f"({op}{value:,}s)" if value != 0 and n_play_time is not None else None
     cur_badge = len(info.badges) if info.badges else 0

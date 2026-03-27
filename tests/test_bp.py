@@ -1,4 +1,5 @@
 """Tests for /bp, /pfm (bplist), /tbp (todaybp) commands."""
+
 import base64
 import pytest
 from io import BytesIO
@@ -19,17 +20,21 @@ FAKE_IMG_B64 = base64.b64encode(FAKE_IMG).decode()
 
 def _img_msg(event):
     """构造带 reply 的图片消息（alconna 对 OB11 导出格式）。"""
-    return Message([
-        MessageSegment.reply(event.message_id),
-        MessageSegment.image(file=f"base64://{FAKE_IMG_B64}"),
-    ])
+    return Message(
+        [
+            MessageSegment.reply(event.message_id),
+            MessageSegment.image(file=f"base64://{FAKE_IMG_B64}"),
+        ]
+    )
 
 
 def _text_msg(event, text):
-    return Message([
-        MessageSegment.reply(event.message_id),
-        MessageSegment.text(text),
-    ])
+    return Message(
+        [
+            MessageSegment.reply(event.message_id),
+            MessageSegment.text(text),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------

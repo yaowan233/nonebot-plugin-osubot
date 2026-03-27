@@ -1,4 +1,5 @@
 """Tests for /info command matcher."""
+
 import base64
 import pytest
 from unittest.mock import AsyncMock, patch
@@ -16,17 +17,21 @@ FAKE_IMG_B64 = base64.b64encode(FAKE_IMG).decode()
 
 
 def _img_msg(event):
-    return Message([
-        MessageSegment.reply(event.message_id),
-        MessageSegment.image(file=f"base64://{FAKE_IMG_B64}"),
-    ])
+    return Message(
+        [
+            MessageSegment.reply(event.message_id),
+            MessageSegment.image(file=f"base64://{FAKE_IMG_B64}"),
+        ]
+    )
 
 
 def _text_msg(event, text):
-    return Message([
-        MessageSegment.reply(event.message_id),
-        MessageSegment.text(text),
-    ])
+    return Message(
+        [
+            MessageSegment.reply(event.message_id),
+            MessageSegment.text(text),
+        ]
+    )
 
 
 @pytest.mark.asyncio

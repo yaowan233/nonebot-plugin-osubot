@@ -1,4 +1,5 @@
 """Shared helpers for mocking SQLAlchemy async sessions."""
+
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock
 
@@ -6,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 def make_mock_session() -> AsyncMock:
     """Return a mock AsyncSession with commonly used methods pre-configured."""
     session = AsyncMock()
-    session.add = MagicMock()          # not a coroutine
+    session.add = MagicMock()  # not a coroutine
     session.commit = AsyncMock()
     session.execute = AsyncMock()
     session.scalar = AsyncMock(return_value=None)

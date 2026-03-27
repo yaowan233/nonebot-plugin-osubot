@@ -39,7 +39,11 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
         info_ls = (
             await session.scalars(
                 select(InfoData)
-                .where(InfoData.osu_id.in_(binded_id), InfoData.osu_mode == int(mode), InfoData.date == datetime.date.today())
+                .where(
+                    InfoData.osu_id.in_(binded_id),
+                    InfoData.osu_mode == int(mode),
+                    InfoData.date == datetime.date.today(),
+                )
                 .order_by(InfoData.pp.desc())
             )
         ).all()

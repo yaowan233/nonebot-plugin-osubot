@@ -1,4 +1,5 @@
 """简单 matcher 测试：mu / osu_help / history / url_match / match / rating"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -17,6 +18,7 @@ def text_msg(event, text: str) -> Message:
 # ---------------------------------------------------------------------------
 # /mu
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_mu_not_bound(app: App):
@@ -76,6 +78,7 @@ async def test_mu_success(app: App):
 # /osuhelp
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_osu_help_default(app: App):
     """/osuhelp：无参数时发送帮助图片。"""
@@ -93,7 +96,12 @@ async def test_osu_help_default(app: App):
         ctx.receive_event(bot, event)
         ctx.should_call_send(
             event,
-            Message([MessageSegment.reply(1), MessageSegment.image(file=f"base64://{__import__('base64').b64encode(img1).decode()}")]),
+            Message(
+                [
+                    MessageSegment.reply(1),
+                    MessageSegment.image(file=f"base64://{__import__('base64').b64encode(img1).decode()}"),
+                ]
+            ),
             result={"message_id": 1},
         )
         ctx.should_finished()
@@ -116,7 +124,12 @@ async def test_osu_help_detail(app: App):
         ctx.receive_event(bot, event)
         ctx.should_call_send(
             event,
-            Message([MessageSegment.reply(1), MessageSegment.image(file=f"base64://{__import__('base64').b64encode(img2).decode()}")]),
+            Message(
+                [
+                    MessageSegment.reply(1),
+                    MessageSegment.image(file=f"base64://{__import__('base64').b64encode(img2).decode()}"),
+                ]
+            ),
             result={"message_id": 1},
         )
         ctx.should_finished()
@@ -202,8 +215,14 @@ async def test_history_success(app: App):
     utils_session = make_mock_session()
     utils_session.scalar.return_value = make_mock_user(osu_id=114514, osu_name="testplayer")
 
-    info1 = MagicMock(); info1.pp = 1000.0; info1.date = "2026-01-01"; info1.g_rank = 10000
-    info2 = MagicMock(); info2.pp = 1050.0; info2.date = "2026-01-08"; info2.g_rank = 9500
+    info1 = MagicMock()
+    info1.pp = 1000.0
+    info1.date = "2026-01-01"
+    info1.g_rank = 10000
+    info2 = MagicMock()
+    info2.pp = 1050.0
+    info2.date = "2026-01-08"
+    info2.g_rank = 9500
 
     hist_session = make_mock_session()
     hist_session.scalar.return_value = make_mock_user(osu_name="testplayer")
@@ -222,10 +241,12 @@ async def test_history_success(app: App):
                     ctx.receive_event(bot, event)
                     ctx.should_call_send(
                         event,
-                        Message([
-                            MessageSegment.reply(1),
-                            MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
-                        ]),
+                        Message(
+                            [
+                                MessageSegment.reply(1),
+                                MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
+                            ]
+                        ),
                         result={"message_id": 1},
                     )
                     ctx.should_finished()
@@ -247,9 +268,7 @@ async def test_url_match_draw_fails(app: App):
         pytest.skip()
     import nonebot
 
-    event = fake_group_message_event_v11(
-        message=Message("https://osu.ppy.sh/beatmapsets/12345#osu/67890")
-    )
+    event = fake_group_message_event_v11(message=Message("https://osu.ppy.sh/beatmapsets/12345#osu/67890"))
 
     with patch(f"{URL_MODULE}.draw_map_info", new=AsyncMock(side_effect=Exception("fail"))):
         async with app.test_matcher(url_match) as ctx:
@@ -271,9 +290,7 @@ async def test_url_match_success(app: App):
 
     FAKE_IMG = b"FAKE_MAP"
 
-    event = fake_group_message_event_v11(
-        message=Message("https://osu.ppy.sh/beatmapsets/12345#osu/67890")
-    )
+    event = fake_group_message_event_v11(message=Message("https://osu.ppy.sh/beatmapsets/12345#osu/67890"))
     expected_links = "镜像站1：https://catboy.best/d/12345\n镜像站2：https://osu.direct/api/d/12345\n小夜镜像站：https://txy1.sayobot.cn/beatmaps/download/novideo/12345"
 
     with patch(f"{URL_MODULE}.draw_map_info", new=AsyncMock(return_value=FAKE_IMG)):
@@ -283,11 +300,13 @@ async def test_url_match_success(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
-                    MessageSegment.text("\n" + expected_links),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
+                        MessageSegment.text("\n" + expected_links),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()
@@ -321,10 +340,12 @@ async def test_match_success(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()
@@ -358,10 +379,12 @@ async def test_rating_success(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()

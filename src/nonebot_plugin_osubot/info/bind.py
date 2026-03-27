@@ -72,7 +72,19 @@ async def update_users_info(uids: list[int]):
                 if stats:
                     session.add(_make_info_data(user.id, stats, mode, badge_count))
                 else:
-                    session.add(InfoData(osu_id=user.id, c_rank=0, g_rank=0, pp=0, acc=0, pc=0, count=0, osu_mode=mode, date=date.today()))
+                    session.add(
+                        InfoData(
+                            osu_id=user.id,
+                            c_rank=0,
+                            g_rank=0,
+                            pp=0,
+                            acc=0,
+                            pc=0,
+                            count=0,
+                            osu_mode=mode,
+                            date=date.today(),
+                        )
+                    )
             user_info = await session.scalar(select(UserData).where(UserData.osu_id == user.id))
             if user_info and user_info.osu_name != user.username:
                 user_info.osu_name = user.username

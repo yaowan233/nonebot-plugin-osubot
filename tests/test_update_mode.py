@@ -1,4 +1,5 @@
 """Tests for /更新模式 and /切换lazer commands."""
+
 import pytest
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
 from nonebug import App
@@ -36,10 +37,12 @@ async def test_update_mode_not_bound(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号"),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()
@@ -104,10 +107,12 @@ async def test_update_mode_valid(app: App, mode_input: str, expected_name: str):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.text(f"已将默认模式更改为 {expected_name}"),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text(f"已将默认模式更改为 {expected_name}"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()
@@ -171,10 +176,12 @@ async def test_toggle_lazer_not_bound(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([
-                    MessageSegment.reply(1),
-                    MessageSegment.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号"),
-                ]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text("该账号尚未绑定，请输入 /bind 用户名 绑定账号"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()

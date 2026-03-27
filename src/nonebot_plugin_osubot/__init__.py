@@ -16,6 +16,7 @@ from .config import Config
 from .matcher import *  # noqa
 from .info import update_users_info
 from .database.models import UserData
+
 usage = "发送/osuhelp 查看帮助"
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",

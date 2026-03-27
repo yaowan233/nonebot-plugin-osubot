@@ -22,9 +22,11 @@ async def after_nonebot_init(after_nonebot_init: None):
     nonebot.load_plugin("nonebot_plugin_osubot")
 
     from nonebot_plugin_orm import init_orm
+
     await init_orm()
 
     import nonebot_plugin_orm
+
     for bind, engine in nonebot_plugin_orm._engines.items():
         metadata = nonebot_plugin_orm._metadatas.get(bind)
         if metadata is not None:

@@ -1,4 +1,5 @@
 """Tests for remaining matchers: getbg, map/bmap, medal, bp/pfm, pr, preview, recommend, update, bp_analyze"""
+
 import base64
 import pytest
 from io import BytesIO
@@ -19,10 +20,12 @@ def text_msg(event, text: str) -> Message:
 
 
 def img_msg(event, raw: bytes) -> Message:
-    return Message([
-        MessageSegment.reply(event.message_id),
-        MessageSegment.image(file=f"base64://{base64.b64encode(raw).decode()}"),
-    ])
+    return Message(
+        [
+            MessageSegment.reply(event.message_id),
+            MessageSegment.image(file=f"base64://{base64.b64encode(raw).decode()}"),
+        ]
+    )
 
 
 # ============================================================
@@ -839,7 +842,5 @@ async def test_bpa_success(app: App):
                                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                                 bot = ctx.create_bot(base=Bot, adapter=adapter)
                                 ctx.receive_event(bot, event)
-                                ctx.should_call_send(
-                                    event, img_msg(event, FAKE_BPA_IMG), result={"message_id": 1}
-                                )
+                                ctx.should_call_send(event, img_msg(event, FAKE_BPA_IMG), result={"message_id": 1})
                                 ctx.should_finished()
