@@ -174,7 +174,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     async with get_new_page(2) as page:
         await page.goto(f"file://{template_path}")
         await page.set_content(
-            await template.render_async(user_json=draw_user.model_dump_json(), bg=bg), wait_until="networkidle"
+            await template.render_async(user_json=draw_user.model_dump_json(), bg=bg), wait_until="load"
         )
         elem = await page.query_selector("#display")
         assert elem

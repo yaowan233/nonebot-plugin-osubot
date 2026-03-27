@@ -186,8 +186,9 @@ async def draw_pfm(
         if len(difficulty) > 30:
             difficulty = difficulty[:27] + "..."
         osu = map_path / f"{bp.beatmap.set_id}" / f"{bp.beatmap.id}.osu"
-        pp_info = cal_pp(bp, str(osu.absolute()))
-        difficulty = f"{pp_info.stars:.2f}★ | {difficulty}"
+        pp_info = cal_pp(bp, str(osu.absolute())) if osu.exists() else None
+        stars = pp_info.stars if pp_info else bp.beatmap.difficulty_rating
+        difficulty = f"{stars:.2f}★ | {difficulty}"
         draw.text(
             (210 + offset, 168 + h_num),
             difficulty,
@@ -228,7 +229,7 @@ async def draw_pfm(
         # pp
         draw.text(
             (645 + offset, 174 + h_num),
-            f"{pp_info.pp:.0f}",
+            f"{pp_info.pp:.0f}" if pp_info else f"{bp.pp or 0:.0f}",
             font=Torus_SemiBold_25,
             anchor="rm",
             fill=(255, 102, 171, 255),
