@@ -1,59 +1,53 @@
+from datetime import date
 from typing import Optional
 
-from tortoise import Model, fields
+from sqlalchemy import BigInteger, Boolean, Date, Float, Integer, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from nonebot_plugin_orm import Model
 
 
 class UserData(Model):
-    id: int = fields.IntField(pk=True, generated=True, auto_increment=True)
-    """自增主键"""
-    user_id: str = fields.TextField()
-    """用户id"""
-    osu_id: int = fields.IntField()
-    """osu id"""
-    osu_name: str = fields.TextField()
-    """osu 用户名"""
-    osu_mode: int = fields.IntField()
-    """osu 模式"""
-    lazer_mode: bool = fields.BooleanField(default=False, null=True)
-    """是否启用lazer模式"""
+    __tablename__ = "User"
 
-    class Meta:
-        table = "User"
-        indexes = ("user_id",)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(Text, index=True)
+    osu_id: Mapped[int] = mapped_column(Integer)
+    osu_name: Mapped[str] = mapped_column(Text)
+    osu_mode: Mapped[int] = mapped_column(Integer)
+    lazer_mode: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
 
 
 class InfoData(Model):
-    id: int = fields.IntField(pk=True, generated=True, auto_increment=True)
-    """自增主键"""
-    osu_id: int = fields.IntField()
-    """osu id"""
-    c_rank: Optional[int] = fields.IntField(null=True)
-    """国家排名"""
-    g_rank: Optional[int] = fields.IntField(null=True)
-    """世界排名"""
-    pp: float = fields.FloatField()
-    """pp"""
-    acc: float = fields.FloatField()
-    """acc"""
-    pc: int = fields.IntField()
-    """游戏次数"""
-    count: int = fields.IntField()
-    """打击note数"""
-    osu_mode: int = fields.IntField()
-    """osu 模式"""
-    date = fields.DateField()
+    __tablename__ = "Info"
 
-    class Meta:
-        table = "Info"
-        indexes = ("id",)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    osu_id: Mapped[int] = mapped_column(Integer)
+    c_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    g_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    pp: Mapped[float] = mapped_column(Float)
+    acc: Mapped[float] = mapped_column(Float)
+    pc: Mapped[int] = mapped_column(Integer)
+    count: Mapped[int] = mapped_column(Integer)
+    osu_mode: Mapped[int] = mapped_column(Integer)
+    date: Mapped[date] = mapped_column(Date)
+    ranked_score: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    total_score: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    max_combo: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    count_xh: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    count_x: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    count_sh: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    count_s: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    count_a: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    replays: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    play_time: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    badge_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
 
 class SbUserData(Model):
-    id: int = fields.IntField(pk=True, generated=True, auto_increment=True)
-    """自增主键"""
-    user_id: str = fields.TextField()
-    """用户id"""
-    osu_id: int = fields.IntField()
-    """osu id"""
-    osu_name: str = fields.TextField()
-    """osu 用户名"""
+    __tablename__ = "SbUser"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(Text, index=True)
+    osu_id: Mapped[int] = mapped_column(Integer)
+    osu_name: Mapped[str] = mapped_column(Text)

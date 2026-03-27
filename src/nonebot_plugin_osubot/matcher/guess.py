@@ -15,6 +15,9 @@ from nonebot.internal.rule import Rule, Event
 from nonebot_plugin_alconna import At, UniMsg, UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
 
+from nonebot_plugin_orm import get_session
+from sqlalchemy import select
+
 from ..draw.taiko_preview import parse_map, map_to_image
 from ..schema.score import UnifiedScore
 from ..utils import NGM
@@ -109,7 +112,8 @@ async def get_random_beatmap_set(binded_id, group_id) -> (UnifiedScore, str):
     available_scores = []
     for user_id in binded_id:
         try:
-            user = await UserData.filter(user_id=user_id).first()
+            async with get_session() as session:
+                user = await session.scalar(select(UserData).where(UserData.user_id == user_id))
             if not user:
                 continue
             bp_info = await get_user_scores(user.osu_id, NGM[str(user.osu_mode)], "best")
@@ -132,7 +136,8 @@ async def select_score_from_user(state: T_State, msg: UniMsg, session_id: str):
     Returns (selected_score, selected_user) or (None, error_msg).
     """
     mode = state.get("mode", str(random.randint(0, 3)))
-    binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
+    async with get_session() as session:
+        binded_id = (await session.scalars(select(UserData.user_id).where(UserData.osu_mode == int(mode)))).all()
 
     if not guess_song_cache.get(session_id):
         guess_song_cache[session_id] = set()
@@ -140,7 +145,8 @@ async def select_score_from_user(state: T_State, msg: UniMsg, session_id: str):
     # Handle @mention
     if msg.has(At):
         qq = msg.get(At)[0].target
-        user_data = await UserData.get_or_none(user_id=int(qq))
+        async with get_session() as session:
+            user_data = await session.scalar(select(UserData).where(UserData.user_id == str(qq)))
         if not user_data:
             return None, "该用户未绑定osu账号"
         try:
@@ -189,7 +195,8 @@ async def _(
     else:
         mode = state["mode"]
 
-    binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
+    async with get_session() as session:
+        binded_id = (await session.scalars(select(UserData.user_id).where(UserData.osu_mode == int(mode)))).all()
     if not binded_id:
         await UniMessage.text("还没有人绑定该模式的osu账号呢，绑定了再来试试吧").finish(reply_to=True)
 
@@ -400,7 +407,8 @@ async def _(
     else:
         mode = state["mode"]
 
-    binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
+    async with get_session() as session:
+        binded_id = (await session.scalars(select(UserData.user_id).where(UserData.osu_mode == int(mode)))).all()
     if not binded_id:
         await guess_pic.finish("还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
 
@@ -454,7 +462,8 @@ async def _(
     if mode == "0":
         await UniMessage.text("该模式暂不支持猜歌").finish(reply_to=True)
 
-    binded_id = await UserData.filter(osu_mode=mode).values_list("user_id", flat=True)
+    async with get_session() as session:
+        binded_id = (await session.scalars(select(UserData.user_id).where(UserData.osu_mode == int(mode)))).all()
     if not binded_id:
         await guess_pic.finish("还没有人绑定该模式的osu账号呢，绑定了再来试试吧")
 

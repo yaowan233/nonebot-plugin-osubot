@@ -5,18 +5,17 @@ from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_session")
-require("nonebot_plugin_tortoise_orm")
+require("nonebot_plugin_orm")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_waiter")
 from nonebot_plugin_apscheduler import scheduler
-from nonebot_plugin_tortoise_orm import add_model
+from nonebot_plugin_orm import get_session
+from sqlalchemy import select
 
 from .config import Config
 from .matcher import *  # noqa
 from .info import update_users_info
 from .database.models import UserData
-
-add_model("nonebot_plugin_osubot.database.models")
 usage = "发送/osuhelp 查看帮助"
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
@@ -35,7 +34,8 @@ __plugin_meta__ = PluginMetadata(
 
 @scheduler.scheduled_job("cron", hour="0", misfire_grace_time=60)
 async def update_info():
-    result = await UserData.all()
+    async with get_session() as session:
+        result = (await session.scalars(select(UserData))).all()
     if not result:
         return
     users = [i.osu_id for i in result]

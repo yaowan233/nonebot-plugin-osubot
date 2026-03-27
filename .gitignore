@@ -3,3 +3,9 @@
 __pycache__/
 *.pyc
 *.pyo
+data/
+tests/output/
+.env.*
+.*
+coverage.xml
+junit.xml

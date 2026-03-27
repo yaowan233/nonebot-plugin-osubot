@@ -4,6 +4,8 @@ from nonebot.internal.params import Depends
 from nonebot_plugin_alconna import At, UniMsg
 from nonebot.params import T_State, CommandArg
 from nonebot.internal.adapter import Event, Message
+from nonebot_plugin_orm import get_session
+from sqlalchemy import select
 
 from ..utils import mods2list
 from ..api import get_uid_by_name
@@ -22,7 +24,8 @@ def split_msg():
         qq = event.get_user_id()
         if msg.has(At):
             qq = msg.get(At)[0].target
-        user_data = await UserData.get_or_none(user_id=qq)
+        async with get_session() as session:
+            user_data = await session.scalar(select(UserData).where(UserData.user_id == qq))
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
         state["username"] = user_data.osu_name if user_data else ""
@@ -85,7 +88,8 @@ def split_msg():
         if state["user"] == 0:
             state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
         if state["source"] == "ppysb" and not arg.strip():
-            sb_user_data = await SbUserData.get_or_none(user_id=qq)
+            async with get_session() as session:
+                sb_user_data = await session.scalar(select(SbUserData).where(SbUserData.user_id == qq))
             if sb_user_data:
                 state["user"] = sb_user_data.osu_id
                 state["username"] = sb_user_data.osu_name

@@ -90,10 +90,12 @@ async def draw_pfm(
         for i in score_ls_filtered
         if not (map_path / f"{i.beatmap.set_id}" / f"{i.beatmap.id}.osu").exists()
     ]
-    info = await get_user_info_data(uid, mode, source)
-    bg_ls = await asyncio.gather(*task0)
-    large_banner_ls = await asyncio.gather(*task1)
-    await asyncio.gather(*task2)
+    (info, bg_ls, large_banner_ls, *_) = await asyncio.gather(
+        get_user_info_data(uid, mode, source),
+        asyncio.gather(*task0),
+        asyncio.gather(*task1),
+        asyncio.gather(*task2),
+    )
     bplist_len = len(score_ls_filtered)
     im = Image.new("RGBA", (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
     if project in ("prlist", "relist"):
