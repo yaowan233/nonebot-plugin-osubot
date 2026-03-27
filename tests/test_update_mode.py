@@ -78,7 +78,7 @@ async def test_update_mode_no_input(app: App):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "mode_input, expected_name",
+    ("mode_input", "expected_name"),
     [
         ("0", "osu"),
         ("1", "taiko"),

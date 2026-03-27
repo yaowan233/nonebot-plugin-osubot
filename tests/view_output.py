@@ -25,7 +25,7 @@ USERS = {
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode_name,uid,mode", [(name, uid, mode) for name, (uid, mode) in USERS.items()])
+@pytest.mark.parametrize(("mode_name", "uid", "mode"), [(name, uid, mode) for name, (uid, mode) in USERS.items()])
 async def test_bp1_real(app: App, mode_name, uid, mode):
     """bp1 真实图片输出"""
     from nonebot_plugin_osubot.draw import draw_score
@@ -48,7 +48,7 @@ async def test_bp1_real(app: App, mode_name, uid, mode):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode_name,uid,mode", [(name, uid, mode) for name, (uid, mode) in USERS.items()])
+@pytest.mark.parametrize(("mode_name", "uid", "mode"), [(name, uid, mode) for name, (uid, mode) in USERS.items()])
 async def test_pfm_real(app: App, mode_name, uid, mode):
     """pfm (bp1-20) 真实图片输出"""
     from nonebot_plugin_osubot.draw import draw_bp
@@ -73,7 +73,7 @@ async def test_pfm_real(app: App, mode_name, uid, mode):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode_name,uid,mode", [(name, uid, mode) for name, (uid, mode) in USERS.items()])
+@pytest.mark.parametrize(("mode_name", "uid", "mode"), [(name, uid, mode) for name, (uid, mode) in USERS.items()])
 async def test_info_real(app: App, mode_name, uid, mode):
     """info 真实图片输出"""
     from nonebot_plugin_osubot.draw import draw_info

@@ -399,7 +399,7 @@ def test_create_word_matcher_handler_correct_answer():
     score = make_mock_score(title="Conflict", title_unicode="Conflict")
     games["session1"] = score
 
-    handler = create_word_matcher_handler(GameType.AUDIO, games)
+    create_word_matcher_handler(GameType.AUDIO, games)
 
     # 验证内部逻辑：相似度满足时 game 被 pop
     # handler 调用 UniMessage 需要 bot context，直接检查 games 状态
@@ -419,7 +419,7 @@ def test_create_word_matcher_handler_no_game():
     from nonebot_plugin_osubot.matcher.guess import create_word_matcher_handler, GameType
 
     games: dict = {}  # 无游戏
-    handler = create_word_matcher_handler(GameType.AUDIO, games)
+    create_word_matcher_handler(GameType.AUDIO, games)
 
     # games 为空时，handler 获取不到 game_data，应提前返回
     # 通过检查函数体逻辑：game_data = games_dict.get(session_id) → None → return
