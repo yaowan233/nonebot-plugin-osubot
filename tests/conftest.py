@@ -32,3 +32,19 @@ async def after_nonebot_init(after_nonebot_init: None):
         if metadata is not None:
             async with engine.begin() as conn:
                 await conn.run_sync(metadata.create_all)
+
+    # matcher/__init__.py 做了 `from .bind import bind` 等 re-export，
+    # 导致 nonebot_plugin_osubot.matcher.bind 这个 attribute 指向 Matcher 对象
+    # 而非子模块。patch("...matcher.bind.get_session") 在 Python 3.10 里走
+    # getattr 路径，会拿到 Matcher 对象而报 AttributeError。
+    # 插件加载完毕后把所有直接子模块的 attribute 还原为模块本身。
+    import sys
+    import nonebot_plugin_osubot.matcher as _matcher_pkg
+
+    for _mod_path, _mod in list(sys.modules.items()):
+        if (
+            _mod is not None
+            and _mod_path.startswith("nonebot_plugin_osubot.matcher.")
+            and _mod_path.count(".") == 3
+        ):
+            setattr(_matcher_pkg, _mod_path.rsplit(".", 1)[1], _mod)
