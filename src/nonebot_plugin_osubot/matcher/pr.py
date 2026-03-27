@@ -7,7 +7,6 @@ from ..utils import NGM
 from .utils import split_msg
 from ..draw import draw_score
 from ..draw.bp import draw_pfm
-from ..database import UserData
 from ..api import get_user_scores
 from ..exceptions import NetworkError
 from ..draw.score import cal_score_info
@@ -21,7 +20,6 @@ async def _recent(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = NGM[state["mode"]]
-    player = await UserData.get_or_none(user_id=event.get_user_id())
     if state["range"]:
         ls = state["range"].split("-")
         low, high = ls[0], ls[1]
@@ -31,7 +29,7 @@ async def _recent(event: Event, state: T_State):
                 mode,
                 "recent",
                 state["source"],
-                not player.lazer_mode,
+                not state["is_lazer"],
                 True,
                 int(low) - 1,
                 high if state["source"] == "ppysb" else int(high) - int(low) + 1,
@@ -44,7 +42,7 @@ async def _recent(event: Event, state: T_State):
                 f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
         for score in scores:
-            cal_score_info(player.lazer_mode, score)
+            cal_score_info(state["is_lazer"], score)
         pic = await draw_pfm("relist", state["user"], scores, scores, mode, state["source"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
@@ -75,7 +73,6 @@ async def _pr(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     mode = NGM[state["mode"]]
-    player = await UserData.get_or_none(user_id=event.get_user_id())
     if state["range"]:
         ls = state["range"].split("-")
         low, high = ls[0], ls[1]
@@ -85,7 +82,7 @@ async def _pr(event: Event, state: T_State):
                 mode,
                 "recent",
                 state["source"],
-                not player.lazer_mode,
+                not state["is_lazer"],
                 False,
                 int(low) - 1,
                 high if state["source"] == "ppysb" else int(high) - int(low) + 1,
@@ -98,7 +95,7 @@ async def _pr(event: Event, state: T_State):
                 f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
         for score_info in scores:
-            cal_score_info(player.lazer_mode, score_info)
+            cal_score_info(state["is_lazer"], score_info)
         pic = await draw_pfm("prlist", state["user"], scores, scores, mode, source=state["source"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:

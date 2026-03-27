@@ -52,3 +52,12 @@ class DrawUser(BaseModel):
     acc_change: Optional[str] = None
     pc_change: Optional[str] = None
     hits_change: Optional[str] = None
+    ranked_score_change: Optional[str] = None
+    total_score_change: Optional[str] = None
+    xh_change: Optional[str] = None
+    x_change: Optional[str] = None
+    sh_change: Optional[str] = None
+    s_change: Optional[str] = None
+    a_change: Optional[str] = None
+    play_time_change: Optional[str] = None
+    badge_count_change: Optional[str] = None

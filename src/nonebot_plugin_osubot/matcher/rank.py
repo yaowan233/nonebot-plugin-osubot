@@ -7,6 +7,8 @@ from nonebot.params import T_State
 from nonebot import Bot, on_command
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_session import SessionId, SessionIdType
+from nonebot_plugin_orm import get_session
+from sqlalchemy import select
 
 from ..utils import NGM
 from .utils import split_msg
@@ -32,17 +34,31 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
         user_id_ls = [i.user.id for i in group_member]
     else:
         raise NotImplementedError
-    binded_id = await UserData.filter(user_id__in=user_id_ls).values_list("osu_id", flat=True)
-    info_ls = (
-        await InfoData.filter(osu_id__in=binded_id)
-        .filter(osu_mode=mode)
-        .filter(date=datetime.date.today())
-        .order_by("-pp")
-        .all()
-    )
-    icon_ls = [f"https://a.ppy.sh/{info.osu_id}" for info in info_ls]
-    tasks = [get_projectimg(i) for i in icon_ls]
-    icon_ls = await asyncio.gather(*tasks)
+
+    async with get_session() as session:
+        binded_id = (await session.scalars(select(UserData.osu_id).where(UserData.user_id.in_(user_id_ls)))).all()
+        info_ls = (
+            await session.scalars(
+                select(InfoData)
+                .where(
+                    InfoData.osu_id.in_(binded_id),
+                    InfoData.osu_mode == int(mode),
+                    InfoData.date == datetime.date.today(),
+                )
+                .order_by(InfoData.pp.desc())
+            )
+        ).all()
+        # osu_id -> user_id 映射，一次查完，避免渲染循环中逐行查询
+        user_data_ls = (await session.scalars(select(UserData).where(UserData.user_id.in_(user_id_ls)))).all()
+
+    # 在 session 外构建 osu_id -> 群名片 映射
+    user_id_to_name = {str(m["user_id"]): m["card"] or m.get("nickname", "") for m in group_member}
+    osu_id_to_name = {ud.osu_id: user_id_to_name.get(ud.user_id, "") for ud in user_data_ls}
+
+    # 网络 I/O 在 session 关闭后执行
+    icon_urls = [f"https://a.ppy.sh/{info.osu_id}" for info in info_ls]
+    icon_ls = await asyncio.gather(*[get_projectimg(u) for u in icon_urls])
+
     draw_len = len([i for i in info_ls if i.pp >= 100])
     img = Image.new("RGBA", (1200, 85 + 82 * draw_len), (35, 42, 34, 255))
     draw = ImageDraw.Draw(img)
@@ -60,12 +76,7 @@ async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.
         icon_img = Image.open(icon).convert("RGBA").resize((63, 63))
         icon_img = draw_fillet(icon_img, 10)
         img.alpha_composite(icon_img, (100, 60 + 82 * index))
-        for user in group_member:
-            if await UserData.filter(user_id=user["user_id"], osu_id=info.osu_id).first():
-                name = user["card"] or user.get("nickname", "")
-                break
-        else:
-            raise Exception("这不可能发生的")
+        name = osu_id_to_name.get(info.osu_id, "")
         draw.text(
             (43, 70 + 82 * index),
             f"#{index + 1}",

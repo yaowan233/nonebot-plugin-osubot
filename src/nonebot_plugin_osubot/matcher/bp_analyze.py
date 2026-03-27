@@ -5,6 +5,9 @@ from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
+from nonebot_plugin_orm import get_session
+from sqlalchemy import select
+
 from ..utils import NGM
 from .utils import split_msg
 from ..database import UserData
@@ -30,7 +33,8 @@ rank_color = {
 async def _(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    user = await UserData.get_or_none(user_id=event.get_user_id())
+    async with get_session() as session:
+        user = await session.scalar(select(UserData).where(UserData.user_id == event.get_user_id()))
     uid = state["user"]
     lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
     try:

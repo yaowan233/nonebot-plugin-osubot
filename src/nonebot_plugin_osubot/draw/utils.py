@@ -116,8 +116,8 @@ def draw_acc(img: Image, acc: float, mode: int):
         span = portion / total * 360
         d.arc(inner_box, start=angle, end=angle + span, fill=color, width=inner_w)
         angle += span
-    score_acc_img = canvas.resize((384, 288), Image.LANCZOS)
-    img.alpha_composite(score_acc_img, (580, 35))
+    score_acc_img = canvas.resize((320, 240), Image.LANCZOS)
+    img.alpha_composite(score_acc_img, (612, 59))
     return img
 
 

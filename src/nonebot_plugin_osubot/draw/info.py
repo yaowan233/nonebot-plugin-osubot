@@ -7,6 +7,9 @@ from datetime import date, datetime, timedelta
 from PIL import UnidentifiedImageError
 from nonebot_plugin_htmlrender import get_new_page
 
+from nonebot_plugin_orm import get_session
+from sqlalchemy import select
+
 from .utils import info_calc
 from ..utils import FGM, GMN
 from ..file import user_cache_path
@@ -22,41 +25,62 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     if statistics.play_count == 0:
         raise NetworkError(f"此玩家尚未游玩过{GMN[mode]}模式")
     # 对比
-    user = await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode]).order_by("-date").first()
-    if user:
-        today_date = date.today()
-        query_date = today_date - timedelta(days=day)
-        if (
-            user := await InfoData.filter(osu_id=info.id, osu_mode=FGM[mode], date__gte=query_date)
-            .order_by("date")
-            .first()
-        ):
-            n_crank, n_grank, n_pp, n_acc, n_pc, n_count = (
-                user.c_rank,
-                user.g_rank,
-                user.pp,
-                user.acc,
-                user.pc,
-                user.count,
-            )
-        else:
-            n_crank, n_grank, n_pp, n_acc, n_pc, n_count = (
-                statistics.country_rank,
-                statistics.global_rank,
-                statistics.pp,
-                statistics.hit_accuracy,
-                statistics.play_count,
-                statistics.total_hits,
-            )
-    else:
-        n_crank, n_grank, n_pp, n_acc, n_pc, n_count = (
-            statistics.country_rank,
-            statistics.global_rank,
-            statistics.pp,
-            statistics.hit_accuracy,
-            statistics.play_count,
-            statistics.total_hits,
+    async with get_session() as session:
+        user = await session.scalar(
+            select(InfoData)
+            .where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode])
+            .order_by(InfoData.date.desc())
         )
+        if user:
+            today_date = date.today()
+            # 补全今天记录的 c_rank（批量更新接口不返回 country_rank）
+            today_record = await session.scalar(
+                select(InfoData).where(
+                    InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode], InfoData.date == today_date
+                )
+            )
+            if today_record and today_record.c_rank is None and statistics.country_rank is not None:
+                today_record.c_rank = statistics.country_rank
+                await session.commit()
+            query_date = today_date - timedelta(days=day)
+            user = await session.scalar(
+                select(InfoData)
+                .where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode], InfoData.date >= query_date)
+                .order_by(InfoData.date)
+            )
+    if user:
+        n_crank = user.c_rank
+        n_grank = user.g_rank
+        n_pp = user.pp
+        n_acc = user.acc
+        n_pc = user.pc
+        n_count = user.count
+        n_ranked_score = user.ranked_score
+        n_total_score = user.total_score
+        n_xh = user.count_xh
+        n_x = user.count_x
+        n_sh = user.count_sh
+        n_s = user.count_s
+        n_a = user.count_a
+        n_play_time = user.play_time
+        n_badge_count = user.badge_count
+    else:
+        gc = statistics.grade_counts
+        n_crank = statistics.country_rank
+        n_grank = statistics.global_rank
+        n_pp = statistics.pp
+        n_acc = statistics.hit_accuracy
+        n_pc = statistics.play_count
+        n_count = statistics.total_hits
+        n_ranked_score = statistics.ranked_score
+        n_total_score = statistics.total_score
+        n_xh = gc.ssh
+        n_x = gc.ss
+        n_sh = gc.sh
+        n_s = gc.s
+        n_a = gc.a
+        n_play_time = statistics.play_time
+        n_badge_count = len(info.badges) if info.badges else 0
     # 获取背景
     bg_path = user_cache_path / str(info.id) / "info.png"
     if bg_path.exists():
@@ -90,10 +114,30 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     # 游玩次数
     op, value = info_calc(statistics.play_count, n_pc)
     pc_change = f"({op}{value:,})" if value != 0 else None
-    # 总分
-    # 总命中
     op, value = info_calc(statistics.total_hits, n_count)
     hits_change = f"({op}{value:,})" if value != 0 else None
+    op, value = info_calc(statistics.ranked_score, n_ranked_score)
+    ranked_score_change = f"({op}{value:,})" if value != 0 and n_ranked_score is not None else None
+    op, value = info_calc(statistics.total_score, n_total_score)
+    total_score_change = f"({op}{value:,})" if value != 0 and n_total_score is not None else None
+    gc = statistics.grade_counts
+
+    def _grade_change(cur, prev):
+        if prev is None:
+            return None
+        op, value = info_calc(cur, prev)
+        return f"({op}{value:,})" if value != 0 else None
+
+    xh_change = _grade_change(gc.ssh, n_xh)
+    x_change = _grade_change(gc.ss, n_x)
+    sh_change = _grade_change(gc.sh, n_sh)
+    s_change = _grade_change(gc.s, n_s)
+    a_change = _grade_change(gc.a, n_a)
+    op, value = info_calc(statistics.play_time, n_play_time)
+    play_time_change = f"({op}{value:,}s)" if value != 0 and n_play_time is not None else None
+    cur_badge = len(info.badges) if info.badges else 0
+    op, value = info_calc(cur_badge, n_badge_count)
+    badge_count_change = f"({op}{value:,})" if value != 0 and n_badge_count is not None else None
     badges = [Badge(**i.model_dump()) for i in info.badges] if info.badges else None
     draw_user = DrawUser(
         id=info.id,
@@ -110,6 +154,15 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
         acc_change=acc_change,
         pc_change=pc_change,
         hits_change=hits_change,
+        ranked_score_change=ranked_score_change,
+        total_score_change=total_score_change,
+        xh_change=xh_change,
+        x_change=x_change,
+        sh_change=sh_change,
+        s_change=s_change,
+        a_change=a_change,
+        play_time_change=play_time_change,
+        badge_count_change=badge_count_change,
     )
     template_path = str(Path(__file__).parent / "info_templates")
     template_name = "index.html"

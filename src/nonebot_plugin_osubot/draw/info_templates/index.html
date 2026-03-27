@@ -359,7 +359,7 @@
                     ${
             user.badges && user.badges.length > 0
                 ? `
-                        <div class="flex flex-row bg-white/20 rounded-lg p-2 gap-2 flex-wrap">
+                        <div class="flex flex-row bg-white/20 rounded-lg p-2 gap-2 flex-wrap items-center">
                             ${user.badges
                     .map((badge) => {
                         return `
@@ -408,23 +408,23 @@
                         <div class="flex flex-row gap-2">
                             <div class="flex flex-col items-center gap-1">
                                 <div class="score-rank">${getScoreRankSVG("xh")}</div>
-                                <div>${user.statistics?.grade_counts.ssh}</div>
+                                <div class="text-center">${user.statistics?.grade_counts.ssh}${user.xh_change?`<br>${user.xh_change}`:""}</div>
                             </div>
                             <div class="flex flex-col items-center gap-1">
                                 <div class="score-rank">${getScoreRankSVG("ss")}</div>
-                                <div>${user.statistics?.grade_counts.ss}</div>
+                                <div class="text-center">${user.statistics?.grade_counts.ss}${user.x_change?`<br>${user.x_change}`:""}</div>
                             </div>
                             <div class="flex flex-col items-center gap-1">
                                 <div class="score-rank">${getScoreRankSVG("x")}</div>
-                                <div>${user.statistics?.grade_counts.sh}</div>
+                                <div class="text-center">${user.statistics?.grade_counts.sh}${user.sh_change?`<br>${user.sh_change}`:""}</div>
                             </div>
                             <div class="flex flex-col items-center gap-1">
                                 <div class="score-rank">${getScoreRankSVG("s")}</div>
-                                <div>${user.statistics?.grade_counts.s}</div>
+                                <div class="text-center">${user.statistics?.grade_counts.s}${user.s_change?`<br>${user.s_change}`:""}</div>
                             </div>
                             <div class="flex flex-col items-center gap-1">
                                 <div class="score-rank">${getScoreRankSVG("a")}</div>
-                                <div>${user.statistics?.grade_counts.a}</div>
+                                <div class="text-center">${user.statistics?.grade_counts.a}${user.a_change?`<br>${user.a_change}`:""}</div>
                             </div>
                         </div>
                     </div>
@@ -433,7 +433,7 @@
                     <div class="flex flex-col gap-2 bg-white/20 rounded-lg p-2 text-white">
                         <div class="flex flex-row justify-between">
                             <div>Ranked 谱面总分</div>
-                            <div>${user.statistics?.ranked_score.toLocaleString()}</div>
+                            <div>${user.statistics?.ranked_score.toLocaleString()}${user.ranked_score_change?user.ranked_score_change:""}</div>
                         </div>
                         <div class="flex flex-row justify-between">
                             <div>准确率</div>
@@ -445,7 +445,7 @@
                         </div>
                         <div class="flex flex-row justify-between">
                             <div>总分</div>
-                            <div>${user.statistics?.total_score.toLocaleString()}</div>
+                            <div>${user.statistics?.total_score.toLocaleString()}${user.total_score_change?user.total_score_change:""}</div>
                         </div>
                         <div class="flex flex-row justify-between">
                             <div>总命中次数</div>
@@ -453,7 +453,7 @@
                         </div>
                         <div class="flex flex-row justify-between">
                             <div>游玩时间</div>
-                            <div>${formatPlayTime(user.statistics?.play_time)}</div>
+                            <div>${formatPlayTime(user.statistics?.play_time)}${user.play_time_change?user.play_time_change:""}</div>
                         </div>
                         <div class="flex flex-row justify-between">
                             <div>每次游玩击打数</div>
