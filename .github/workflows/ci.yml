@@ -44,6 +44,14 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Create test environment file
+        run: |
+          cat > .env.test << 'EOF'
+          DRIVER=~none
+          SQLALCHEMY_DATABASE_URL=sqlite+aiosqlite:///file::memory:?uri=true&cache=shared
+          ALEMBIC_STARTUP_CHECK=false
+          EOF
+
       - name: Run tests
         run: uv run poe test
 
@@ -80,10 +88,17 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Create test environment file
+        run: |
+          cat > .env.test << EOF
+          DRIVER=~none
+          SQLALCHEMY_DATABASE_URL=sqlite+aiosqlite:///file::memory:?uri=true&cache=shared
+          ALEMBIC_STARTUP_CHECK=false
+          OSU_CLIENT=${{ secrets.OSU_CLIENT }}
+          OSU_KEY=${{ secrets.OSU_KEY }}
+          EOF
+
       - name: Run view output tests
-        env:
-          OSU_CLIENT: ${{ secrets.OSU_CLIENT }}
-          OSU_KEY: ${{ secrets.OSU_KEY }}
         run: uv run poe view
 
       - name: Upload output images
