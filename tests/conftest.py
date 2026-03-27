@@ -42,9 +42,5 @@ async def after_nonebot_init(after_nonebot_init: None):
     import nonebot_plugin_osubot.matcher as _matcher_pkg
 
     for _mod_path, _mod in list(sys.modules.items()):
-        if (
-            _mod is not None
-            and _mod_path.startswith("nonebot_plugin_osubot.matcher.")
-            and _mod_path.count(".") == 3
-        ):
+        if _mod is not None and _mod_path.startswith("nonebot_plugin_osubot.matcher.") and _mod_path.count(".") == 3:
             setattr(_matcher_pkg, _mod_path.rsplit(".", 1)[1], _mod)
