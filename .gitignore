@@ -6,6 +6,6 @@ __pycache__/
 data/
 tests/output/
 .env.*
-.*
 coverage.xml
 junit.xml
+.coverage
