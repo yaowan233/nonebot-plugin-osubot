@@ -40,6 +40,7 @@ Repository = "https://github.com/yaowan233/nonebot-plugin-osubot"
 
 [tool.uv]
 override-dependencies = [
+    "numpy>=1.26.1,<2.0.0; python_version<'3.13'",
     "numpy>=2.1.0; python_version>='3.13'",
 ]
 
