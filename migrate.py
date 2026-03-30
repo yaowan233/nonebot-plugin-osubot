@@ -47,6 +47,7 @@ def get_db_url() -> str:
         return sys.argv[1]
     try:
         from dotenv import dotenv_values
+
         for fname in (".env", ".env.prod"):
             env = dotenv_values(fname)
             if url := env.get("SQLALCHEMY_DATABASE_URL") or env.get("DATABASE_URL"):
