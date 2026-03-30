@@ -187,7 +187,7 @@ async def draw_pfm(
             difficulty = difficulty[:27] + "..."
         osu = map_path / f"{bp.beatmap.set_id}" / f"{bp.beatmap.id}.osu"
         pp_info = cal_pp(bp, str(osu.absolute())) if osu.exists() else None
-        stars = pp_info.stars if pp_info else bp.beatmap.difficulty_rating
+        stars = pp_info.stars if pp_info else bp.beatmap.stars
         difficulty = f"{stars:.2f}★ | {difficulty}"
         draw.text(
             (210 + offset, 168 + h_num),
