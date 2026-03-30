@@ -113,33 +113,26 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     # acc
     op, value = info_calc(statistics.hit_accuracy, n_acc)
     acc_change = f"({op}{value:.2f}%)" if value != 0 else None
-    # 游玩次数
-    op, value = info_calc(statistics.play_count, n_pc)
-    pc_change = f"({op}{value:,})" if value != 0 else None
-    op, value = info_calc(statistics.total_hits, n_count)
-    hits_change = f"({op}{value:,})" if value != 0 else None
-    op, value = info_calc(statistics.ranked_score, n_ranked_score)
-    ranked_score_change = f"({op}{value:,})" if value != 0 and n_ranked_score is not None else None
-    op, value = info_calc(statistics.total_score, n_total_score)
-    total_score_change = f"({op}{value:,})" if value != 0 and n_total_score is not None else None
-    gc = statistics.grade_counts
 
-    def _grade_change(cur, prev):
+    def _fmt_change(cur, prev, fmt=",", suffix=""):
         if prev is None:
             return None
         op, value = info_calc(cur, prev)
-        return f"({op}{value:,})" if value != 0 else None
+        return f"({op}{value:{fmt}}{suffix})" if value != 0 else None
 
-    xh_change = _grade_change(gc.ssh, n_xh)
-    x_change = _grade_change(gc.ss, n_x)
-    sh_change = _grade_change(gc.sh, n_sh)
-    s_change = _grade_change(gc.s, n_s)
-    a_change = _grade_change(gc.a, n_a)
-    op, value = info_calc(statistics.play_time, n_play_time)
-    play_time_change = f"({op}{value:,}s)" if value != 0 and n_play_time is not None else None
+    pc_change = _fmt_change(statistics.play_count, n_pc)
+    hits_change = _fmt_change(statistics.total_hits, n_count)
+    ranked_score_change = _fmt_change(statistics.ranked_score, n_ranked_score)
+    total_score_change = _fmt_change(statistics.total_score, n_total_score)
+    gc = statistics.grade_counts
+    xh_change = _fmt_change(gc.ssh, n_xh)
+    x_change = _fmt_change(gc.ss, n_x)
+    sh_change = _fmt_change(gc.sh, n_sh)
+    s_change = _fmt_change(gc.s, n_s)
+    a_change = _fmt_change(gc.a, n_a)
+    play_time_change = _fmt_change(statistics.play_time, n_play_time, suffix="s")
     cur_badge = len(info.badges) if info.badges else 0
-    op, value = info_calc(cur_badge, n_badge_count)
-    badge_count_change = f"({op}{value:,})" if value != 0 and n_badge_count is not None else None
+    badge_count_change = _fmt_change(cur_badge, n_badge_count)
     badges = [Badge(**i.model_dump()) for i in info.badges] if info.badges else None
     draw_user = DrawUser(
         id=info.id,

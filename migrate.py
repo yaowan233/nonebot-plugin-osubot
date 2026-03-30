@@ -1,0 +1,121 @@
+"""
+v6 -> v7 数据库迁移脚本
+
+1. 将旧表名重命名为 nonebot-plugin-orm 的默认表名格式
+2. 为 InfoData 表补充 v7 新增列
+
+用法:
+    python migrate.py [数据库URL]
+
+数据库URL示例:
+    sqlite:///db.sqlite3
+    postgresql://user:pass@localhost/dbname
+    mysql+pymysql://user:pass@localhost/dbname
+
+不传参数时从 .env 读取 SQLALCHEMY_DATABASE_URL，否则使用默认 sqlite:///db.sqlite3
+"""
+
+import sys
+
+from sqlalchemy import BigInteger, Integer, inspect, text
+from sqlalchemy import create_engine
+
+RENAMES = {
+    "User": "nonebot_plugin_osubot_userdata",
+    "Info": "nonebot_plugin_osubot_infodata",
+    "SbUser": "nonebot_plugin_osubot_sbuserdata",
+}
+
+# InfoData 新增列: (列名, DDL类型)
+NEW_INFO_COLUMNS = [
+    ("ranked_score", BigInteger()),
+    ("total_score", BigInteger()),
+    ("max_combo", Integer()),
+    ("count_xh", Integer()),
+    ("count_x", Integer()),
+    ("count_sh", Integer()),
+    ("count_s", Integer()),
+    ("count_a", Integer()),
+    ("replays", Integer()),
+    ("play_time", Integer()),
+    ("badge_count", Integer()),
+]
+
+
+def get_db_url() -> str:
+    if len(sys.argv) > 1:
+        return sys.argv[1]
+    try:
+        from dotenv import dotenv_values
+        for fname in (".env", ".env.prod"):
+            env = dotenv_values(fname)
+            if url := env.get("SQLALCHEMY_DATABASE_URL") or env.get("DATABASE_URL"):
+                return url
+    except ImportError:
+        pass
+    return "sqlite:///db.sqlite3"
+
+
+def main():
+    url = get_db_url()
+    print(f"连接数据库: {url}")
+    engine = create_engine(url)
+    dialect = engine.dialect.name
+
+    with engine.begin() as conn:
+        insp = inspect(engine)
+        existing_tables = set(insp.get_table_names())
+
+        # 1. 重命名表
+        for old, new in RENAMES.items():
+            if old not in existing_tables:
+                print(f"跳过重命名: 表 {old!r} 不存在")
+                continue
+            if new in existing_tables:
+                print(f"跳过重命名: 表 {new!r} 已存在")
+                continue
+            if dialect == "mysql":
+                stmt = f"RENAME TABLE `{old}` TO `{new}`"
+            else:
+                stmt = f'ALTER TABLE "{old}" RENAME TO "{new}"'
+            conn.execute(text(stmt))
+            print(f"已重命名: {old!r} -> {new!r}")
+            existing_tables.discard(old)
+            existing_tables.add(new)
+
+        # 2. 为 InfoData 补充新列
+        info_table = "nonebot_plugin_osubot_infodata"
+        if info_table not in existing_tables:
+            print(f"跳过补列: 表 {info_table!r} 不存在")
+        else:
+            existing_cols = {col["name"] for col in insp.get_columns(info_table)}
+            for col_name, col_type in NEW_INFO_COLUMNS:
+                if col_name in existing_cols:
+                    print(f"跳过补列: {col_name!r} 已存在")
+                    continue
+                type_str = col_type.compile(dialect=engine.dialect)
+                if dialect == "mysql":
+                    stmt = f"ALTER TABLE `{info_table}` ADD COLUMN `{col_name}` {type_str} NULL"
+                else:
+                    stmt = f'ALTER TABLE "{info_table}" ADD COLUMN "{col_name}" {type_str}'
+                conn.execute(text(stmt))
+                print(f"已添加列: {info_table}.{col_name}")
+
+    # 写入 alembic_version，避免 `nb orm upgrade` 重复执行迁移
+    LATEST_REVISION = "68a04ea31d05"
+    with engine.begin() as conn:
+        existing_tables = set(inspect(engine).get_table_names())
+        if "alembic_version" not in existing_tables:
+            conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"))
+        current = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        if current is None:
+            conn.execute(text(f"INSERT INTO alembic_version VALUES ('{LATEST_REVISION}')"))
+            print(f"已设置 alembic_version: {LATEST_REVISION}")
+        else:
+            print(f"alembic_version 已存在: {current}，跳过")
+
+    print("迁移完成")
+
+
+if __name__ == "__main__":
+    main()

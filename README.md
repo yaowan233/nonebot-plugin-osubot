@@ -89,8 +89,29 @@ _✨ NoneBot osubot ✨_
 |:-----:|:----:|:----:|:----:|
 | OSU_CLIENT | 是 | 无 | 客户端ID |
 | OSU_KEY | 是 | 无 | 客户端密钥 |
-| tortoise_orm_db_url | 否 | sqlite://db.sqlite3 | 数据库地址 |
+| SQLALCHEMY_DATABASE_URL | 否 | sqlite+aiosqlite:///db.sqlite3 | 数据库地址 |
 | INFO_BG | 否 | ['https://example.com'] | 随机背景api地址，需要打开网页后随机获得一张图片 |
+
+## ⚠️ 从 v6 升级到 v7
+
+v7 将底层 ORM 从 tortoise-orm 迁移至 nonebot-plugin-orm，**数据库表名和结构发生了变化**，升级前需手动执行迁移脚本，否则数据将丢失。
+
+**升级步骤：**
+
+1. 停止 bot
+2. 在 bot 根目录下运行迁移脚本：
+
+```bash
+# 默认 SQLite（自动从 .env 读取数据库地址）
+python migrate.py
+
+# 或手动指定数据库地址
+python migrate.py sqlite:///db.sqlite3
+python migrate.py postgresql://user:pass@localhost/dbname
+python migrate.py mysql+pymysql://user:pass@localhost/dbname
+```
+
+3. 升级插件后重启 bot
 
 ## 🎉 使用
 ### 指令

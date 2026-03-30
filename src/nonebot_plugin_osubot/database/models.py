@@ -8,8 +8,6 @@ from nonebot_plugin_orm import Model
 
 
 class UserData(Model):
-    __tablename__ = "User"
-
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(Text, index=True)
     osu_id: Mapped[int] = mapped_column(Integer)
@@ -19,8 +17,6 @@ class UserData(Model):
 
 
 class InfoData(Model):
-    __tablename__ = "Info"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     osu_id: Mapped[int] = mapped_column(Integer)
     c_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -45,8 +41,6 @@ class InfoData(Model):
 
 
 class SbUserData(Model):
-    __tablename__ = "SbUser"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(Text, index=True)
     osu_id: Mapped[int] = mapped_column(Integer)
