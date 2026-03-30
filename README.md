@@ -89,7 +89,7 @@ _✨ NoneBot osubot ✨_
 |:-----:|:----:|:----:|:----:|
 | OSU_CLIENT | 是 | 无 | 客户端ID |
 | OSU_KEY | 是 | 无 | 客户端密钥 |
-| SQLALCHEMY_DATABASE_URL | 否 | sqlite+aiosqlite:///db.sqlite3 | 数据库地址 |
+| SQLALCHEMY_DATABASE_URL | 否 | sqlite+aiosqlite:///db.sqlite3 | 数据库地址，详见 [NoneBot 数据库配置](https://nonebot.dev/docs/best-practice/database/) |
 | INFO_BG | 否 | ['https://example.com'] | 随机背景api地址，需要打开网页后随机获得一张图片 |
 
 ## ⚠️ 从 v6 升级到 v7
