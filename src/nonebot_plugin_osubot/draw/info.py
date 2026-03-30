@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from .utils import info_calc
 from ..utils import FGM, GMN
-from ..file import user_cache_path
+from ..file import user_cache_path, get_projectimg
 from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge
@@ -94,7 +94,9 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
             bg_path.unlink()
             raise NetworkError("自定义背景图片读取错误，请重新上传！")
     else:
-        bg = get_random_bg()
+        bg_img = await get_projectimg(get_random_bg())
+        encoded_string = base64.b64encode(bg_img.getvalue()).decode("utf-8")
+        bg = f"data:image/png;base64,{encoded_string}"
     if day != 0 and user:
         day_delta = date.today() - user.date
         time = day_delta.days

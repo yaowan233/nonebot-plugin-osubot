@@ -38,6 +38,11 @@ classifiers = [
 Homepage = "https://github.com/yaowan233/nonebot-plugin-osubot"
 Repository = "https://github.com/yaowan233/nonebot-plugin-osubot"
 
+[tool.uv]
+override-dependencies = [
+    "numpy>=2.1.0; python_version>='3.13'",
+]
+
 [build-system]
 requires = ["uv_build>=0.9.2,<0.10.0"]
 build-backend = "uv_build"
