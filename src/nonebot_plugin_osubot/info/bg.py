@@ -26,10 +26,13 @@ async def get_bg(mapid: Union[str, int], setid: int = None) -> Image.Image:
         if bg := await get_map_bg(mapid, setid, cover):
             with open(cover_path, "wb") as f:
                 f.write(bg.getvalue())
+        else:
+            raise NetworkError("暂时无法下载背景图片＞︿＜")
     try:
         img = Image.open(cover_path).convert("RGBA")
-    except UnidentifiedImageError:
-        cover_path.unlink()
+    except (UnidentifiedImageError, FileNotFoundError):
+        if cover_path.exists():
+            cover_path.unlink()
         raise NetworkError("暂时无法下载背景图片＞︿＜")
     _ = asyncio.create_task(update_bg(cover_path))
     return img
