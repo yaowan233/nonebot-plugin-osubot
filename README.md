@@ -42,7 +42,7 @@ _✨ NoneBot osubot ✨_
 </details>
 
 <details>
-<summary>使用包管理器安装（推荐）</summary>
+<summary>使用包管理器安装</summary>
 在 nonebot2 项目的插件目录下, 打开命令行, 根据你使用的包管理器, 输入相应的安装命令
 
 <details>
@@ -68,21 +68,6 @@ _✨ NoneBot osubot ✨_
 
 </details>
 
-<details>
-<summary>从 github 安装</summary>
-在 nonebot2 项目的插件目录下, 打开命令行, 输入以下命令克隆此储存库
-
-    git clone https://github.com/yaowan233/nonebot-plugin-osubot.git
-
-修改[nonebot_plugin_osubot的__init__.py](https://github.com/yaowan233/nonebot-plugin-osubot/blob/a7c7098f39d92b8fe74dfe85c262397b81db721c/nonebot_plugin_osubot/__init__.py#L37)为
-  
-    add_model('src.plugins.database.models')
-  
-打开 nonebot2 项目的 `bot.py` 文件, 在其中写入
-
-    nonebot.load_plugin('src.plugins.nonebot_plugin_osubot')
-
-</details>
 
 ## ⚙️ 配置
 你需要至[OSU个人设置](https://osu.ppy.sh/home/account/edit)申请新的OAuth应用，然后将得到的客户端ID与客户端密钥填入nonebot2 项目的`.env`文件中
