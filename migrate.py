@@ -89,7 +89,47 @@ def main():
             existing_tables.discard(old)
             existing_tables.add(new)
 
-        # 2. 为 InfoData 补充新列
+        # 2. 修复索引名
+        # 删除旧索引
+        DROP_INDEXES = {
+            "nonebot_plugin_osubot_infodata": ["idx_Info_id_786c64"],
+            "nonebot_plugin_osubot_userdata": ["idx_User_user_id_93024f"],
+        }
+        # 创建新索引: (表名, 索引名, 列名)
+        ADD_INDEXES = [
+            ("nonebot_plugin_osubot_userdata", "ix_nonebot_plugin_osubot_userdata_user_id", "user_id"),
+            ("nonebot_plugin_osubot_sbuserdata", "ix_nonebot_plugin_osubot_sbuserdata_user_id", "user_id"),
+        ]
+
+        for table, indexes in DROP_INDEXES.items():
+            if table not in existing_tables:
+                continue
+            existing_indexes = {idx["name"] for idx in inspect(conn).get_indexes(table)}
+            for idx in indexes:
+                if idx not in existing_indexes:
+                    print(f"跳过删除索引: {idx!r} 不存在")
+                    continue
+                if dialect == "mysql":
+                    conn.execute(text(f"DROP INDEX `{idx}` ON `{table}`"))
+                else:
+                    conn.execute(text(f'DROP INDEX "{idx}"'))
+                print(f"已删除索引: {idx!r}")
+
+        for table, idx_name, col in ADD_INDEXES:
+            if table not in existing_tables:
+                print(f"跳过创建索引: 表 {table!r} 不存在")
+                continue
+            existing_indexes = {idx["name"] for idx in inspect(conn).get_indexes(table)}
+            if idx_name in existing_indexes:
+                print(f"跳过创建索引: {idx_name!r} 已存在")
+                continue
+            if dialect == "mysql":
+                conn.execute(text(f"CREATE INDEX `{idx_name}` ON `{table}` (`{col}`)"))
+            else:
+                conn.execute(text(f'CREATE INDEX "{idx_name}" ON "{table}" ("{col}")'))
+            print(f"已创建索引: {idx_name!r}")
+
+        # 3. 为 InfoData 补充新列
         info_table = "nonebot_plugin_osubot_infodata"
         if info_table not in existing_tables:
             print(f"跳过补列: 表 {info_table!r} 不存在")
