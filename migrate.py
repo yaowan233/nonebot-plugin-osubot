@@ -24,6 +24,7 @@ RENAMES = {
     "User": "nonebot_plugin_osubot_userdata",
     "Info": "nonebot_plugin_osubot_infodata",
     "SbUser": "nonebot_plugin_osubot_sbuserdata",
+    "sbuserdata": "nonebot_plugin_osubot_sbuserdata",
 }
 
 # InfoData 新增列: (列名, DDL类型)
@@ -59,12 +60,16 @@ def get_db_url() -> str:
 
 def main():
     url = get_db_url()
+    # 将异步驱动替换为同步驱动（migrate.py 使用同步 SQLAlchemy）
+    url = url.replace("postgresql+asyncpg://", "postgresql://")
+    url = url.replace("mysql+aiomysql://", "mysql+pymysql://")
+    url = url.replace("sqlite+aiosqlite://", "sqlite://")
     print(f"连接数据库: {url}")
     engine = create_engine(url)
     dialect = engine.dialect.name
 
     with engine.begin() as conn:
-        insp = inspect(engine)
+        insp = inspect(conn)
         existing_tables = set(insp.get_table_names())
 
         # 1. 重命名表
@@ -89,7 +94,7 @@ def main():
         if info_table not in existing_tables:
             print(f"跳过补列: 表 {info_table!r} 不存在")
         else:
-            existing_cols = {col["name"] for col in insp.get_columns(info_table)}
+            existing_cols = {col["name"] for col in inspect(conn).get_columns(info_table)}
             for col_name, col_type in NEW_INFO_COLUMNS:
                 if col_name in existing_cols:
                     print(f"跳过补列: {col_name!r} 已存在")
@@ -102,20 +107,8 @@ def main():
                 conn.execute(text(stmt))
                 print(f"已添加列: {info_table}.{col_name}")
 
-    # 写入 alembic_version，避免 `nb orm upgrade` 重复执行迁移
-    LATEST_REVISION = "68a04ea31d05"
-    with engine.begin() as conn:
-        existing_tables = set(inspect(engine).get_table_names())
-        if "alembic_version" not in existing_tables:
-            conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"))
-        current = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        if current is None:
-            conn.execute(text(f"INSERT INTO alembic_version VALUES ('{LATEST_REVISION}')"))
-            print(f"已设置 alembic_version: {LATEST_REVISION}")
-        else:
-            print(f"alembic_version 已存在: {current}，跳过")
-
-    print("迁移完成")
+    print("迁移完成，请运行以下命令标记迁移版本：")
+    print("  nb orm stamp 68a04ea31d05")
 
 
 if __name__ == "__main__":

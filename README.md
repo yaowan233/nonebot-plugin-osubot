@@ -99,7 +99,13 @@ python migrate.py postgresql://user:pass@localhost/dbname
 python migrate.py mysql+pymysql://user:pass@localhost/dbname
 ```
 
-3. 升级插件后重启 bot
+3. 标记迁移版本：
+
+```bash
+nb orm stamp 68a04ea31d05
+```
+
+4. 升级插件后重启 bot
 
 ## 🎉 使用
 ### 指令
