@@ -90,44 +90,33 @@ def main():
             existing_tables.add(new)
 
         # 2. 修复索引名
-        # 删除旧索引
-        DROP_INDEXES = {
-            "nonebot_plugin_osubot_infodata": ["idx_Info_id_786c64"],
-            "nonebot_plugin_osubot_userdata": ["idx_User_user_id_93024f"],
-        }
-        # 创建新索引: (表名, 索引名, 列名)
-        ADD_INDEXES = [
+        # 期望的索引: (表名, 索引名, 列名)
+        EXPECTED_INDEXES = [
             ("nonebot_plugin_osubot_userdata", "ix_nonebot_plugin_osubot_userdata_user_id", "user_id"),
             ("nonebot_plugin_osubot_sbuserdata", "ix_nonebot_plugin_osubot_sbuserdata_user_id", "user_id"),
         ]
 
-        for table, indexes in DROP_INDEXES.items():
+        for table, idx_name, col in EXPECTED_INDEXES:
             if table not in existing_tables:
                 continue
-            existing_indexes = {idx["name"] for idx in inspect(conn).get_indexes(table)}
+            indexes = inspect(conn).get_indexes(table)
+            expected_cols = {col}
+            # 删除列相同但名字不对的旧索引
             for idx in indexes:
-                if idx not in existing_indexes:
-                    print(f"跳过删除索引: {idx!r} 不存在")
-                    continue
+                if set(idx["column_names"]) == expected_cols and idx["name"] != idx_name:
+                    if dialect == "mysql":
+                        conn.execute(text(f"DROP INDEX `{idx['name']}` ON `{table}`"))
+                    else:
+                        conn.execute(text(f'DROP INDEX "{idx["name"]}"'))
+                    print(f"已删除旧索引: {idx['name']!r}")
+            # 创建新索引（如果不存在）
+            existing_indexes = {i["name"] for i in inspect(conn).get_indexes(table)}
+            if idx_name not in existing_indexes:
                 if dialect == "mysql":
-                    conn.execute(text(f"DROP INDEX `{idx}` ON `{table}`"))
+                    conn.execute(text(f"CREATE INDEX `{idx_name}` ON `{table}` (`{col}`)"))
                 else:
-                    conn.execute(text(f'DROP INDEX "{idx}"'))
-                print(f"已删除索引: {idx!r}")
-
-        for table, idx_name, col in ADD_INDEXES:
-            if table not in existing_tables:
-                print(f"跳过创建索引: 表 {table!r} 不存在")
-                continue
-            existing_indexes = {idx["name"] for idx in inspect(conn).get_indexes(table)}
-            if idx_name in existing_indexes:
-                print(f"跳过创建索引: {idx_name!r} 已存在")
-                continue
-            if dialect == "mysql":
-                conn.execute(text(f"CREATE INDEX `{idx_name}` ON `{table}` (`{col}`)"))
-            else:
-                conn.execute(text(f'CREATE INDEX "{idx_name}" ON "{table}" ("{col}")'))
-            print(f"已创建索引: {idx_name!r}")
+                    conn.execute(text(f'CREATE INDEX "{idx_name}" ON "{table}" ("{col}")'))
+                print(f"已创建索引: {idx_name!r}")
 
         # 3. 为 InfoData 补充新列
         info_table = "nonebot_plugin_osubot_infodata"
