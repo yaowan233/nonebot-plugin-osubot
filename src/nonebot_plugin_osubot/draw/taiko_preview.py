@@ -74,6 +74,8 @@ def map_to_image(map_data) -> BytesIO:
     bar_number = 1
 
     for i in range(len(timing_sections)):
+        if not timing_sections[i][3]:
+            continue
         if i == len(timing_sections) - 1:
             duration = timing_sections[i][3][-1][0] - timing_sections[i][0]
         else:
@@ -261,10 +263,14 @@ def parse_map(map_path: Path):
                 break
             if line == "":
                 continue
-            elif not line[0].isdigit():
+            parts = line.split(",")
+            if len(parts) < 7:
                 continue
 
-            val_list = list(map(float, line.split(",")))
+            try:
+                val_list = list(map(float, parts))
+            except ValueError:
+                continue
             if val_list[6] == 1:
                 map_data.timing_points.append((int(val_list[0]), val_list[1], int(val_list[2])))
 
