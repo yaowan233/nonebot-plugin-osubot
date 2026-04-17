@@ -1,7 +1,7 @@
 """Tests for matcher/guess.py - GameManager 和猜歌指令。"""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
 from nonebug import App
 
@@ -309,8 +309,8 @@ async def test_guess_pic_all_songs_guessed(app: App):
 
 
 @pytest.mark.asyncio
-async def test_guess_chart_mode_0_not_supported(app: App):
-    """osu 模式（mode=0）不支持谱面猜歌，回复提示并 finish。"""
+async def test_guess_chart_mode_0_supported(app: App):
+    """osu 模式（mode=0）支持谱面猜歌并发送预览图。"""
     try:
         from nonebot_plugin_osubot.matcher.guess import guess_chart
     except ImportError:
@@ -318,19 +318,19 @@ async def test_guess_chart_mode_0_not_supported(app: App):
     import nonebot
 
     event = fake_group_message_event_v11(message=Message("/谱面猜歌"))
+    score = make_mock_score()
 
     with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=0)):
         with patch_session(MODULE, make_binded_id_session(["12345678"])):
-            async with app.test_matcher(guess_chart) as ctx:
-                adapter = nonebot.get_adapter(OnebotV11Adapter)
-                bot = ctx.create_bot(base=Bot, adapter=adapter)
-                ctx.receive_event(bot, event)
-                ctx.should_call_send(
-                    event,
-                    text_msg(event, "该模式暂不支持猜歌"),
-                    result={"message_id": 1},
-                )
-                ctx.should_finished()
+            with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))):
+                with patch(f"{MODULE}.chart_set_timeout"):
+                    with patch(f"{MODULE}.draw_osu_preview", new=AsyncMock(return_value=b"img")):
+                        async with app.test_matcher(guess_chart) as ctx:
+                            adapter = nonebot.get_adapter(OnebotV11Adapter)
+                            bot = ctx.create_bot(base=Bot, adapter=adapter)
+                            ctx.should_call_send(event, ANY, result={"message_id": 1})
+                            ctx.receive_event(bot, event)
+                            ctx.should_finished()
 
 
 @pytest.mark.asyncio

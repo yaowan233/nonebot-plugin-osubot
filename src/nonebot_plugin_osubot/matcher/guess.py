@@ -29,6 +29,7 @@ from ..database.models import UserData
 from ..mania import generate_preview_pic
 from ..api import safe_async_get, get_user_scores
 from ..file import map_path, download_osu
+from ..draw.osu_preview import draw_osu_preview
 from ..draw.catch_preview import draw_cath_preview
 
 
@@ -457,9 +458,6 @@ async def _(
     else:
         mode = state["mode"]
 
-    if mode == "0":
-        await UniMessage.text("该模式暂不支持猜歌").finish(reply_to=True)
-
     async with get_session() as session:
         binded_id = (await session.scalars(select(UserData.user_id).where(UserData.osu_mode == int(mode)))).all()
     if not binded_id:
@@ -485,6 +483,8 @@ async def _(
         osu = await download_osu(selected_score.beatmapset.id, selected_score.beatmap.id)
         beatmap = parse_map(osu)
         pic = map_to_image(beatmap)
+    elif mode == "0":
+        pic = await draw_osu_preview(selected_score.beatmap.id, selected_score.beatmapset.id)
     else:
         mods = [i.acronym for i in selected_score.mods]
         pic = await draw_cath_preview(selected_score.beatmap.id, selected_score.beatmapset.id, mods)
