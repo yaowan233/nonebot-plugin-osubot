@@ -8,13 +8,13 @@ from zipfile import ZipFile
 from dataclasses import dataclass
 
 import numpy as np
-from reamber.osu.OsuHit import OsuHit
-from reamber.osu.OsuMap import OsuMap
-from reamber.algorithms.generate import full_ln
-from reamber.algorithms.playField import PlayField
-from reamber.algorithms.pattern.Pattern import Pattern
-from reamber.algorithms.pattern.combos.PtnCombo import PtnCombo
-from reamber.algorithms.playField.parts import (
+from vsrg_tools.osu.OsuHit import OsuHit
+from vsrg_tools.osu.OsuMap import OsuMap
+from vsrg_tools.algorithms.generate import full_ln
+from vsrg_tools.algorithms.playField import PlayField
+from vsrg_tools.algorithms.pattern.Pattern import Pattern
+from vsrg_tools.algorithms.pattern.combos.PtnCombo import PtnCombo
+from vsrg_tools.algorithms.playField.parts import (
     PFDrawSv,
     PFDrawBpm,
     PFDrawLines,

@@ -1445,7 +1445,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-osubot"
-version = "7.0.0"
+version = "7.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "expiringdict" },
@@ -1462,7 +1462,7 @@ dependencies = [
     { name = "osu-tools-py" },
     { name = "pillow" },
     { name = "pydantic" },
-    { name = "reamber" },
+    { name = "rhythmgame-tools" },
     { name = "rosu-pp-py" },
     { name = "typing-extensions" },
 ]
@@ -1495,7 +1495,7 @@ requires-dist = [
     { name = "osu-tools-py", specifier = ">=0.1.2" },
     { name = "pillow", specifier = ">=9.2.0" },
     { name = "pydantic", specifier = ">=1.10.0,!=2.5.0,!=2.5.1,<3.0.0" },
-    { name = "reamber", specifier = ">=0.2.1" },
+    { name = "rhythmgame-tools", specifier = ">=2.0.0" },
     { name = "rosu-pp-py", specifier = "==3.1.0" },
     { name = "typing-extensions", specifier = ">=4.11.0" },
 ]
@@ -2349,26 +2349,6 @@ wheels = [
 ]
 
 [[package]]
-name = "reamber"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "matplotlib" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
-    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-    { name = "osrparse" },
-    { name = "pandas" },
-    { name = "pillow" },
-    { name = "pyyaml" },
-    { name = "tqdm" },
-    { name = "unidecode" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/e3/a5d4db34a7017b7104d81f5b9d688b290c54908b65e90914db9d027134b5/reamber-1.0.0.tar.gz", hash = "sha256:4beb7168e37ef9297da1d317f40d959517dece1d6f558b40258ecc5b85dcf705", size = 88975, upload-time = "2024-11-08T14:00:34.053Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/e4/ce23fd46cf8ec42f1dcbfb3fde4ec3beec7971297016a3f856607a76fb8d/reamber-1.0.0-py3-none-any.whl", hash = "sha256:8660a42a1fa971a7aa1d0405485738915581d81e71c74c806a69777c1b7cde78", size = 169472, upload-time = "2024-11-08T14:00:32.795Z" },
-]
-
-[[package]]
 name = "requests"
 version = "2.33.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2381,6 +2361,26 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/34/64/8860370b167a9721e8956ae116825caff829224fbca0ca6e7bf8ddef8430/requests-2.33.0.tar.gz", hash = "sha256:c7ebc5e8b0f21837386ad0e1c8fe8b829fa5f544d8df3b2253bff14ef29d7652", size = 134232, upload-time = "2026-03-25T15:10:41.586Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/56/5d/c814546c2333ceea4ba42262d8c4d55763003e767fa169adc693bd524478/requests-2.33.0-py3-none-any.whl", hash = "sha256:3324635456fa185245e24865e810cecec7b4caf933d7eb133dcde67d48cee69b", size = 65017, upload-time = "2026-03-25T15:10:40.382Z" },
+]
+
+[[package]]
+name = "rhythmgame-tools"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "osrparse" },
+    { name = "pandas" },
+    { name = "pillow" },
+    { name = "pyyaml" },
+    { name = "tqdm" },
+    { name = "unidecode" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d2/f0/be71d034836167f5c2384d26fdce66a866786e400981676b8da8c33bca13/rhythmgame_tools-2.0.0.tar.gz", hash = "sha256:f5963f758af8da0c040bebee6feae5d80ff136d8c37cbfe5d5338134e71c72a1", size = 10491214, upload-time = "2026-04-22T12:29:09.37Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/ef/5f432858631f98445ca1c0f7494daf5edc80dab218a558558775b822c2e9/rhythmgame_tools-2.0.0-py3-none-any.whl", hash = "sha256:b85da8c010dd0517e6d10ec93d26626957c8874df8d83ed987292514bb770226", size = 172225, upload-time = "2026-04-22T12:29:07.378Z" },
 ]
 
 [[package]]
