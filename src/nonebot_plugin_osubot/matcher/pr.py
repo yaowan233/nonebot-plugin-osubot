@@ -42,7 +42,7 @@ async def _recent(event: Event, state: T_State):
                 f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
         for score in scores:
-            cal_score_info(state["is_lazer"], score)
+            cal_score_info(state["is_lazer"], score, state["source"])
         pic = await draw_pfm("relist", state["user"], scores, scores, mode, state["source"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:
@@ -95,7 +95,7 @@ async def _pr(event: Event, state: T_State):
                 f" {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
             ).finish(reply_to=True)
         for score_info in scores:
-            cal_score_info(state["is_lazer"], score_info)
+            cal_score_info(state["is_lazer"], score_info, state["source"])
         pic = await draw_pfm("prlist", state["user"], scores, scores, mode, source=state["source"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     if state["day"] == 0:

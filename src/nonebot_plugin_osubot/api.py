@@ -297,6 +297,7 @@ async def get_ppysb_map_scores(map_md5: str, uid: Union[int, str], mode: str):
             ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
             max_combo=i.max_combo,
             passed=True,
+            pp=i.pp,
             statistics=NewStatistics(
                 miss=i.nmiss,
                 perfect=i.ngeki,
