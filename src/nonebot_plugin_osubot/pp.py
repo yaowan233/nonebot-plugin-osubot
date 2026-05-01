@@ -51,7 +51,9 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, source: str = "osu") -> tupl
         return "nan", "nan"
     c = OsuCalculator()
     total = beatmap.n_objects
-    score = normalize_score_for_pp(score, source).model_copy(deep=True)
+    score = normalize_score_for_pp(score, source)
+    if not is_ppysb_relax_score(score, source):
+        score = score.model_copy(deep=True)
     passed = score.statistics.great + score.statistics.miss + score.statistics.ok + score.statistics.meh
     n300 = score.statistics.great + total - passed
     count_hits = total - score.statistics.miss

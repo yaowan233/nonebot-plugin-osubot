@@ -748,7 +748,7 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
 def cal_score_info(is_lazer: bool, score_info: UnifiedScore, source: str = "osu") -> UnifiedScore:
     if score_info.ruleset_id == 3 and not is_lazer and source != "ppysb":
         score_info.accuracy = cal_legacy_acc(score_info.statistics)
-    if not is_lazer:
+    if not is_lazer and source != "ppysb":
         is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
         score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return score_info
