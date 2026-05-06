@@ -423,9 +423,10 @@ async def get_map_bg(mapid, sid, bg_name) -> BytesIO | None:
     res = await get_first_response(
         [
             f"https://catboy.best/preview/background/{mapid}",
-            f"https://api.nerinyan.moe/bg/{mapid}",
+            f"https://osu.direct/api/media/background/{mapid}",
             f"https://dl.sayobot.cn/beatmaps/files/{sid}/{bg_name}",
-        ]
+        ],
+        timeout=10.0,
     )
     if res:
         return BytesIO(res.content)
