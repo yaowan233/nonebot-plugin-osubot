@@ -588,25 +588,32 @@ async def test_recommend_error_not_bound(app: App):
 
 
 @pytest.mark.asyncio
-async def test_recommend_unsupported_mode(app: App):
-    """/recommend taiko模式 → 回复不支持"""
+async def test_recommend_taiko_mode(app: App):
+    """/recommend taiko模式 → 正常返回推荐"""
     try:
         from nonebot_plugin_osubot.matcher.recommend import recommend
+        from nonebot_plugin_osubot.schema.alphaosu import RecommendData
     except ImportError:
         pytest.skip()
 
     session = make_mock_session()
     session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=1)  # taiko
 
+    recommend_data = RecommendData(player_id=114514, mode="taiko", recommendations=[])
+
     event = fake_group_message_event_v11(message=Message("/recommend"))
 
     with patch_session(UTILS_MODULE, session):
-        async with app.test_matcher(recommend) as ctx:
-            adapter = nonebot.get_adapter(OnebotV11Adapter)
-            bot = ctx.create_bot(base=Bot, adapter=adapter)
-            ctx.receive_event(bot, event)
-            ctx.should_call_send(event, "很抱歉，该模式暂不支持推荐", result={"message_id": 1})
-            ctx.should_finished()
+        with patch(f"{RECOMMEND_MODULE}.get_recommend", new=AsyncMock(return_value=recommend_data)):
+            async with app.test_matcher(recommend) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(
+                    event,
+                    text_msg(event, "该玩家pp过低，暂无推荐\n可以试试多打打图提升pp后再来哦"),
+                    result={"message_id": 1},
+                )
 
 
 # ============================================================

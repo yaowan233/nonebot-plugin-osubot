@@ -440,7 +440,7 @@ async def get_seasonal_bg() -> Optional[dict]:
     return req.json() if req.status_code == 200 else None
 
 
-async def get_recommend(uid, mode, key_count=None):
+async def get_recommend(uid, mode):
     mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
     mode_str = mode_map.get(str(mode), "osu")
     res = await safe_async_get(
