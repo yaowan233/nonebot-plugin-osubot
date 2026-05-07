@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 24px;
+    width: 820px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .user-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #16213e;
+    border-radius: 18px;
+    border: 1px solid #2a2a4a;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ff79c6;
+  }
+
+  .user-info {
+    flex: 1;
+  }
+
+  .username {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f8f8f2;
+  }
+
+  .user-sub {
+    font-size: 12px;
+    color: #8888aa;
+    margin-top: 2px;
+  }
+
+  .mode-badge {
+    background: #ff79c6;
+    color: #1a1a2e;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6272a4;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .card {
+    display: flex;
+    align-items: stretch;
+    background: #16213e;
+    border-radius: 18px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    border: 1px solid #2a2a4a;
+    height: 80px;
+  }
+
+  .card:nth-child(odd) {
+    background: #1a1a3a;
+  }
+
+  .rank-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #6272a4;
+  }
+
+  .cover {
+    width: 80px;
+    min-width: 80px;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+    background: #0d0d1a;
+    border-radius: 12px;
+  }
+
+  .cover-placeholder {
+    width: 80px;
+    min-width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #282850, #1a1a3a);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #444466;
+    border-radius: 12px;
+  }
+
+  .info {
+    flex: 1;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f8f8f2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 5px;
+  }
+
+  .tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .tag-stars {
+    background: #44475a;
+    color: #f1fa8c;
+  }
+
+  .tag-mapid {
+    background: #44475a;
+    color: #bd93f9;
+    font-family: monospace;
+  }
+
+  .tag-mod {
+    background: #ff79c6;
+    color: #1a1a2e;
+  }
+
+  .stats {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 10px 16px;
+    gap: 4px;
+    min-width: 140px;
+  }
+
+  .pp-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffb86c;
+    line-height: 1;
+  }
+
+  .pp-label {
+    font-size: 10px;
+    color: #6272a4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .acc-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #50fa7b;
+  }
+
+  .footer {
+    margin-top: 16px;
+    text-align: right;
+    font-size: 11px;
+    color: #44475a;
+  }
+</style>
+</head>
+<body>
+  <div class="user-bar">
+    <img class="avatar" src="{{ avatar_url }}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 font-size=%2240%22 x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22>?</text></svg>'">
+    <div class="user-info">
+      <div class="username">{{ username }}</div>
+      <div class="user-sub">共 {{ recommendations|length }} 张推荐谱面 · player #{{ player_id }}</div>
+    </div>
+    <div>
+      <span class="mode-badge">{{ mode }}</span>
+    </div>
+  </div>
+
+  <div class="section-title">推荐列表</div>
+
+  {% for item in recommendations %}
+  <div class="card">
+    <div class="rank-col">#{{ loop.index }}</div>
+    <img class="cover"
+         src="https://assets.ppy.sh/beatmaps/{{ item.beatmapset_id }}/covers/list.jpg"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+         loading="eager">
+    <div class="cover-placeholder">♪</div>
+    <div class="info">
+      <div class="title">{{ item.title }}</div>
+      <div class="tags">
+        <span class="tag tag-mapid">#{{ item.map_id }}</span>
+        <span class="tag tag-stars">⭐ {{ "%.2f"|format(item.stars) }}</span>
+        <span class="tag tag-mod">{{ item.mod_str }}</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="pp-value">{{ item.pred_pp|int }}pp</div>
+      <div class="pp-label">predicted</div>
+      <div class="acc-value">{{ "%.2f"|format(item.pred_acc) }}%</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="footer">powered by mayumi.xyz</div>
+</body>
+</html>

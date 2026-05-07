@@ -1,64 +1,41 @@
-import re
-from random import shuffle
+import asyncio
 
 from nonebot import on_command
 from nonebot.typing import T_State
-from expiringdict import ExpiringDict
-from nonebot.internal.matcher import Matcher
 from nonebot_plugin_alconna import UniMessage
 
 from .utils import split_msg
-from ..api import get_recommend, update_recommend, osu_api
-from ..schema import Beatmap
+from ..api import get_recommend
+from ..draw.recommend import draw_recommend
+from ..exceptions import NetworkError
+from ..utils import NGM
 
 recommend = on_command("推荐", priority=11, block=True, aliases={"recommend", "推荐铺面", "推荐谱面"})
-recommend_cache = ExpiringDict(1000, 60 * 60 * 12)
-
-
-async def handle_recommend(state: T_State, matcher: type[Matcher]):
-    user = state["user"]
-    mode = state["mode"]
-    mods = state["mods"]
-    if mods == ["4K"]:
-        key_count = "4"
-    elif mods == ["7K"]:
-        key_count = "7"
-    else:
-        key_count = "4,7"
-    if mode == "1" or mode == "2":
-        await matcher.finish("很抱歉，该模式暂不支持推荐")
-    if not recommend_cache.get(user):
-        recommend_cache[user] = set()
-        await update_recommend(user)
-    recommend_data = await get_recommend(user, mode, key_count)
-    if not recommend_data.data.list:
-        await matcher.finish("没有可以推荐的图哦，自己多打打喜欢玩的图吧")
-    shuffle(recommend_data.data.list)
-    for i in recommend_data.data.list:
-        if i.id not in recommend_cache[user]:
-            recommend_cache[user].add(i.id)
-            recommend_map = i
-            break
-    else:
-        await matcher.finish("今天已经没有可以推荐的图啦，明天再来吧")
-        return None
-    bid = int(re.findall("https://osu.ppy.sh/beatmaps/(.*)", recommend_map.mapLink)[0])
-    map_data = await osu_api("map", map_id=bid)
-    map_info = Beatmap(**map_data)
-    sid = map_info.beatmapset_id
-    s = (
-        f"推荐的铺面是{recommend_map.mapName} ⭐{round(recommend_map.difficulty, 2)}\n{''.join(recommend_map.mod)}\n"
-        f"预计pp为{round(recommend_map.predictPP, 2)}\n提升概率为{round(recommend_map.passPercent * 100, 2)}%\n"
-        f"{recommend_map.mapLink}\nhttps://kitsu.moe/api/d/{sid}\n"
-        f"https://txy1.sayobot.cn/beatmaps/download/novideo/{sid}"
-    )
-    pic_url = f"https://osu.direct/api/media/background/{bid}"
-    return pic_url, s
 
 
 @recommend.handle(parameterless=[split_msg()])
 async def _(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    pic_url, s = await handle_recommend(state, recommend)
-    await (UniMessage.image(url=pic_url) + s).finish(reply_to=True)
+    user = state["user"]
+    mode = state["mode"]
+    api_task = asyncio.create_task(get_recommend(user, mode))
+    done, _ = await asyncio.wait([api_task], timeout=5)
+    if not done:
+        await UniMessage.text("正在获取推荐谱面，请稍候...").send(reply_to=True)
+    try:
+        recommend_data = await api_task
+    except NetworkError as e:
+        await UniMessage.text(
+            f"在查找用户：{state['username']} {NGM[mode]}模式 stable模式下时 {str(e)}"
+        ).send(reply_to=True)
+        return
+    if not recommend_data.recommendations:
+        await UniMessage.text(
+            "该玩家pp过低，暂无推荐\n可以试试多打打图提升pp后再来哦"
+        ).send(reply_to=True)
+        return
+    username = state.get("username", str(user))
+    avatar_url = f"https://a.ppy.sh/{user}"
+    pic = await draw_recommend(recommend_data, username, avatar_url)
+    await UniMessage.image(raw=pic).send(reply_to=True)

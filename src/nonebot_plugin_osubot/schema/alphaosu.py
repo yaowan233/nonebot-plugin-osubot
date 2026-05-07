@@ -3,34 +3,20 @@ from typing import Optional
 from .basemodel import Base
 
 
-class ListData(Base):
-    accurate: bool
-    currentMod: Optional[list[str]] = None
-    currentPP: Optional[float] = None
-    currentScore: Optional[int] = None
-    currentScoreLink: Optional[str] = None
-    difficulty: float
-    id: str
-    mapCoverUrl: str
-    mapLink: str
-    mapName: str
-    mod: list[str]
-    newRecordPercent: float
-    passPercent: float
-    ppIncrement: float
-    ppIncrementExpect: float
-    predictPP: float
-
-
-class Data(Base):
-    next: int
-    prev: int
-    total: int
-    list: list[ListData]
+class RecommendItem(Base):
+    map_id: int
+    mod: int
+    mod_str: str
+    stars: float
+    pred_pp: float
+    pred_acc: float
+    final_score: float
+    title: str
+    beatmapset_id: int
 
 
 class RecommendData(Base):
-    code: int
-    message: str
-    success: bool
-    data: Optional[Data] = None
+    player_id: Optional[int] = None
+    mode: Optional[str] = None
+    recommendations: Optional[list[RecommendItem]] = None
+    detail: Optional[str] = None

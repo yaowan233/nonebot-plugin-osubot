@@ -440,28 +440,13 @@ async def get_seasonal_bg() -> Optional[dict]:
     return req.json() if req.status_code == 200 else None
 
 
-async def get_recommend(uid, mode, key_count):
-    headers = {"uid": str(uid)}
-    params = {
-        "newRecordPercent": "0.2,1",
-        "passPercent": "0.2,1",
-        "difficulty": "0,15",
-        "keyCount": key_count,
-        "gameMode": mode,
-        "rule": "4",
-        "current": "1",
-        "pageSize": "20",
-        "from": "nonebot_plugin_osubot",
-        "hidePlayed": "1",
-    }
+async def get_recommend(uid, mode, key_count=None):
+    mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
+    mode_str = mode_map.get(str(mode), "osu")
     res = await safe_async_get(
-        "https://alphaosu.keytoix.vip/api/v1/self/maps/recommend",
-        headers=headers,
-        params=params,
+        "https://mayumi.xyz/api/recommend",
+        params={"player_id": uid, "mode": mode_str},
     )
+    if res is None:
+        raise NetworkError("推荐服务繁忙，请稍后再试")
     return RecommendData(**res.json())
-
-
-async def update_recommend(uid):
-    headers = {"uid": str(uid)}
-    await safe_async_post("https://alphaosu.keytoix.vip/api/v1/self/users/synchronize", headers=headers)
