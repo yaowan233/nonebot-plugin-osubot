@@ -218,11 +218,11 @@ async def test_recommend_stress(app: App):
 
     # (player_id, osu_mode_int, label)
     cases = [
-        (3162675, 1, "taiko"),    # taiko player
-        (124493, 0, "osu"),       # mrekk
-        (4504101, 0, "osu"),      # WhiteCat
-        (7562902, 0, "osu"),      # top osu player
-        (31148838, 1, "taiko"),   # another taiko player
+        (3162675, 1, "taiko"),  # taiko player
+        (124493, 0, "osu"),  # mrekk
+        (4504101, 0, "osu"),  # WhiteCat
+        (7562902, 0, "osu"),  # top osu player
+        (31148838, 1, "taiko"),  # another taiko player
     ]
 
     results = []
@@ -237,11 +237,11 @@ async def test_recommend_stress(app: App):
             data = await api_task
             count = len(data.recommendations or [])
             t2 = time.perf_counter()
-            print(f"  [{label}] pid={pid} -> {count} 张谱面, {t2-t1:.1f}s{' (需等待)' if waited else ''}")
+            print(f"  [{label}] pid={pid} -> {count} 张谱面, {t2 - t1:.1f}s{' (需等待)' if waited else ''}")
             results.append((label, pid, count, t2 - t1, None))
         except Exception as e:
             t2 = time.perf_counter()
-            print(f"  [{label}] pid={pid} -> 失败: {type(e).__name__}: {e}, {t2-t1:.1f}s")
+            print(f"  [{label}] pid={pid} -> 失败: {type(e).__name__}: {e}, {t2 - t1:.1f}s")
             results.append((label, pid, 0, t2 - t1, str(e)))
 
     print(f"\n  [stress] 并发发送 {len(cases)} 个请求...")
@@ -252,7 +252,7 @@ async def test_recommend_stress(app: App):
     fail = sum(1 for _, _, _, _, e in results if e is not None)
     empty = sum(1 for _, _, c, _, e in results if c == 0 and e is None)
     print(f"\n  [stress] 总计: {total:.1f}s | 成功={success} | 空推荐={empty} | 失败={fail}")
-    print(f"  [stress] 明细:")
+    print("  [stress] 明细:")
     for label, pid, count, t, err in results:
         status = f"{count}张" if err is None else f"错误: {err[:40]}"
         print(f"    {label:>6}  pid={pid:>9}  {status:>20}  {t:.1f}s")
