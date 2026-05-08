@@ -31,7 +31,7 @@ async def _(state: T_State):
         )
         return
     if not recommend_data.recommendations:
-        await UniMessage.text("该玩家pp过低，暂无推荐\n可以试试多打打图提升pp后再来哦").send(reply_to=True)
+        await UniMessage.text("该玩家pp过低，已加入更新队列\n请明天再来查看推荐吧").send(reply_to=True)
         return
     username = state.get("username", str(user))
     avatar_url = f"https://a.ppy.sh/{user}"

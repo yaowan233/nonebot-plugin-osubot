@@ -18,5 +18,7 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
             "avatar_url": avatar_url,
             "recommendations": [item.model_dump() for item in data.recommendations] if data.recommendations else [],
         },
+        type="jpeg",
+        quality=60,
     )
     return pic

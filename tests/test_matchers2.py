@@ -611,7 +611,7 @@ async def test_recommend_taiko_mode(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "该玩家pp过低，暂无推荐\n可以试试多打打图提升pp后再来哦"),
+                    text_msg(event, "该玩家pp过低，已加入更新队列\n请明天再来查看推荐吧"),
                     result={"message_id": 1},
                 )
 
