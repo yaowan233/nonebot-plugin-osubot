@@ -9,6 +9,7 @@ from fake import fake_group_message_event_v11
 from utils import make_mock_session, make_mock_user, patch_session
 
 MODULE = "nonebot_plugin_osubot.matcher.bind"
+INFO_BIND_MODULE = "nonebot_plugin_osubot.info.bind"
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +138,26 @@ async def test_bind_user_not_found(app: App):
                     result={"message_id": 1},
                 )
                 ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_bind_numeric_username_uses_username_lookup():
+    """数字用户名绑定时也应使用 @username 查询，避免被 osu API 当成 uid。"""
+    from nonebot_plugin_osubot.info.bind import bind_user_info
+
+    session = make_mock_session()
+    mock_info = {"id": 114514, "username": "123456", "playmode": "osu"}
+
+    with patch_session(INFO_BIND_MODULE, session):
+        with patch(f"{INFO_BIND_MODULE}.get_user_info", new=AsyncMock(return_value=mock_info)) as mock_get_user_info:
+            with patch(f"{INFO_BIND_MODULE}.update_users_info", new=AsyncMock()) as mock_update:
+                msg = await bind_user_info("bind", "123456", "qq-user")
+
+    mock_get_user_info.assert_awaited_once_with("https://osu.ppy.sh/api/v2/users/@123456")
+    session.add.assert_called_once()
+    session.commit.assert_awaited_once()
+    mock_update.assert_awaited_once_with([114514])
+    assert msg == "成功绑定 123456\n默认模式为 osu，若更改模式至其他模式，如 mania，请输入 /更新模式 3"
 
 
 # ---------------------------------------------------------------------------

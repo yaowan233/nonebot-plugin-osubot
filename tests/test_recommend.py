@@ -88,7 +88,7 @@ async def test_recommend_not_bound(app: App):
 
 @pytest.mark.asyncio
 async def test_recommend_empty_list(app: App):
-    """/推荐 API 返回空列表 → 回复pp过低"""
+    """/推荐 API 返回空列表 → 回复暂无推荐"""
     try:
         from nonebot_plugin_osubot.matcher.recommend import recommend
         from nonebot_plugin_osubot.schema.alphaosu import RecommendData
@@ -110,14 +110,14 @@ async def test_recommend_empty_list(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "该玩家pp过低，已加入更新队列\n请明天再来查看推荐吧"),
+                    text_msg(event, "暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧"),
                     result={"message_id": 1},
                 )
 
 
 @pytest.mark.asyncio
 async def test_recommend_detail_response(app: App):
-    """/推荐 API 返回 detail（不在模型中）→ 回复pp过低"""
+    """/推荐 API 返回 detail（不在模型中）→ 回复暂无推荐"""
     try:
         from nonebot_plugin_osubot.matcher.recommend import recommend
         from nonebot_plugin_osubot.schema.alphaosu import RecommendData
@@ -139,7 +139,7 @@ async def test_recommend_detail_response(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "该玩家pp过低，已加入更新队列\n请明天再来查看推荐吧"),
+                    text_msg(event, "暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧"),
                     result={"message_id": 1},
                 )
 

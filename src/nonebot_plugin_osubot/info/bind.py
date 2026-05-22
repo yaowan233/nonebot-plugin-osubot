@@ -4,13 +4,13 @@ from nonebot.log import logger
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
-from ..utils import GM, FGM
-from ..api import osu_api, get_users
+from ..utils import FGM
+from ..api import api, get_users, get_user_info
 from ..database.models import InfoData, UserData
 
 
 async def bind_user_info(project: str, uid, qid) -> str:
-    info = await osu_api(project, uid, GM[0])
+    info = await get_user_info(f"{api}/users/@{uid}")
     if not info:
         return f'未查询到玩家"{uid}"，请检查是否有多于或缺少的空格'
     elif isinstance(info, str):
