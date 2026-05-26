@@ -10,6 +10,7 @@ from ..pp import get_ss_pp
 from ..schema import Beatmap
 from ..schema.score import Mod
 from ..beatmap_stats_moder import with_mods
+from ..exceptions import NetworkError
 from ..file import map_path, download_osu, get_projectimg
 from .utils import crop_bg, is_close, stars_diff, draw_fillet, calc_songlen, get_map_difficulty_arrays
 from .static import (
@@ -55,10 +56,13 @@ async def draw_map_info(mapid: int, mods: list[str]) -> BytesIO:
     # BG做地图
     im = Image.new("RGBA", (1200, 600))
     draw = ImageDraw.Draw(im)
-    bg = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
-    cover_crop = await crop_bg((1200, 600), bg)
-    cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
-    im.alpha_composite(cover_img)
+    try:
+        bg = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
+        cover_crop = await crop_bg((1200, 600), bg)
+        cover_img = ImageEnhance.Brightness(cover_crop).enhance(2 / 4.0)
+        im.alpha_composite(cover_img)
+    except NetworkError:
+        pass
     # 获取地图info
     if FGM[mapinfo.mode] == 3:
         im.alpha_composite(MapBg1)
