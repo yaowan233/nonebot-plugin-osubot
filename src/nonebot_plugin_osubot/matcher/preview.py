@@ -15,6 +15,10 @@ from ..draw.taiko_preview import parse_map, map_to_image
 generate_preview = on_command("预览", aliases={"preview", "完整预览"}, priority=11, block=True)
 
 
+def is_gif_preview(state: T_State) -> bool:
+    return [mod.upper() for mod in state["mods"]] == ["GI", "F"]
+
+
 @generate_preview.handle(parameterless=[split_msg()])
 async def _(state: T_State):
     osu_id = state["target"]
@@ -24,6 +28,20 @@ async def _(state: T_State):
         data = await osu_api("map", map_id=int(osu_id))
     except NetworkError as e:
         await UniMessage.text(f"查找map_id:{osu_id} 信息时 {str(e)}").finish(reply_to=True)
+    if not (0 <= int(state["mode"]) <= 3):
+        await UniMessage.text("模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania").finish()
+
+    if is_gif_preview(state):
+        pic = await draw_osu_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            state["_prefix"]["command"][0] == "完整预览",
+        )
+        msg = UniMessage.image(raw=pic) + UniMessage.text(
+            f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
+        )
+        await msg.finish(reply_to=True)
+
     if state["mode"] == "3":
         osu = await download_osu(data["beatmapset_id"], int(osu_id))
         if state["_prefix"]["command"][0] == "完整预览":
@@ -45,7 +63,5 @@ async def _(state: T_State):
             f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
         )
         await msg.finish(reply_to=True)
-    elif not (0 <= int(state["mode"]) <= 3):
-        await UniMessage.text("模式应为0-3！\n0: std\n1:taiko\n2:ctb\n3: mania").finish()
     else:
         await UniMessage.text(f"{NGM[state['mode']]}模式暂不支持预览").finish()

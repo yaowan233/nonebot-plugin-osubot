@@ -554,6 +554,39 @@ async def test_preview_network_error(app: App):
                 ctx.should_finished()
 
 
+@pytest.mark.asyncio
+async def test_preview_ctb_gif_param_uses_osu_preview_gif(app: App):
+    """/预览 <id> +gif 在 ctb 模式下使用 osu_preview GIF。"""
+    try:
+        from nonebot_plugin_osubot.matcher.preview import generate_preview
+    except ImportError:
+        pytest.skip()
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=2)
+
+    event = fake_group_message_event_v11(message=Message("/预览 12345 +gif"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{PREVIEW_MODULE}.osu_api", new=AsyncMock(return_value={"beatmapset_id": 67890})):
+            with patch(f"{PREVIEW_MODULE}.draw_osu_preview", new=AsyncMock(return_value=b"gif")) as draw:
+                async with app.test_matcher(generate_preview) as ctx:
+                    adapter = nonebot.get_adapter(OnebotV11Adapter)
+                    bot = ctx.create_bot(base=Bot, adapter=adapter)
+                    ctx.receive_event(bot, event)
+                    ctx.should_call_send(
+                        event,
+                        img_msg(event, b"gif")
+                        + MessageSegment.text(
+                            "点击预览：\nhttps://beatmap.try-z.net/?b=12345\nhttps://beatmap.try-z.net/dev/?b=12345"
+                        ),
+                        result={"message_id": 1},
+                    )
+                    ctx.should_finished()
+
+                draw.assert_awaited_once_with(12345, 67890, False)
+
+
 # ============================================================
 # recommend
 # ============================================================

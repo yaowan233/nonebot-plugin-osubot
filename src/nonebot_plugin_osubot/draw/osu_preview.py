@@ -8,7 +8,7 @@ from .utils import load_osu_file_and_setup_template
 template_path = str(Path(__file__).parent / "osu_preview_templates")
 
 
-async def draw_osu_preview(beatmap_id, beatmapset_id) -> bytes:
+async def draw_osu_preview(beatmap_id, beatmapset_id, full: bool = False) -> bytes:
     osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
     img_selector = "img"
     base_url = Path(template_path).as_uri() + "/"
@@ -22,7 +22,12 @@ async def draw_osu_preview(beatmap_id, beatmapset_id) -> bytes:
     async with get_new_page(2) as page:
         await page.goto(f"file://{template_path}")
         await page.set_content(
-            await template.render_async(osu_file=osu_file, base_url=base_url, worker_data_uri=worker_data_uri),
+            await template.render_async(
+                osu_file=osu_file,
+                base_url=base_url,
+                worker_data_uri=worker_data_uri,
+                duration=-1 if full else 10000,
+            ),
             wait_until="networkidle",
         )
         await page.wait_for_function(
