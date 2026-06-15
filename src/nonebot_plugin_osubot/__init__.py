@@ -17,6 +17,19 @@ from .matcher import *  # noqa
 from .info import update_users_info
 from .database.models import UserData
 
+try:
+    require("nonebot_plugin_ai_groupmate")
+except ModuleNotFoundError as e:
+    if e.name != "nonebot_plugin_ai_groupmate":
+        raise
+    logger.debug(f"ai-groupmate agent tools not enabled: {e}")
+except RuntimeError as e:
+    if "nonebot_plugin_ai_groupmate" not in str(e):
+        raise
+    logger.debug(f"ai-groupmate agent tools not enabled: {e}")
+else:
+    from . import agent_tools as agent_tools  # noqa: F401
+
 usage = "发送/osuhelp 查看帮助"
 __plugin_meta__ = PluginMetadata(
     name="OSUBot",
