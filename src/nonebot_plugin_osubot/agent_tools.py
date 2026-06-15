@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from langchain.tools import tool
 from sqlalchemy import select
 from nonebot_plugin_orm import get_session
@@ -14,6 +16,14 @@ from .database import UserData, SbUserData
 from .exceptions import NetworkError
 
 
+@dataclass(slots=True)
+class ResolvedOsuUser:
+    user_id: int
+    name: str
+    default_mode: str = "0"
+    default_is_lazer: bool = True
+
+
 def _normalize_source(source: str) -> str:
     source = (source or "osu").strip().lower()
     if source in {"sb", "ppysb"}:
@@ -21,8 +31,25 @@ def _normalize_source(source: str) -> str:
     return "osu"
 
 
-def _normalize_mode(mode: str | int, source: str) -> str:
+def _clean_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = str(value).strip()
+    if not value:
+        return None
+    if value.lower() in {"none", "null", "nil", "undefined"}:
+        return None
+    if value in {"我", "自己", "本人", "当前用户", "绑定用户"}:
+        return None
+    return value
+
+
+def _normalize_mode(mode: str | int | None, source: str) -> str | None:
+    if mode is None:
+        return None
     mode_text = str(mode).strip()
+    if not mode_text or mode_text.lower() in {"none", "null", "nil", "undefined"}:
+        return None
     allowed = {"0", "1", "2", "3"}
     if source == "ppysb":
         allowed = {"0", "1", "2", "3", "4", "5", "6", "8"}
@@ -43,10 +70,10 @@ def _normalize_range(range_text: str | None, default: str = "1-200") -> tuple[in
     return low, high
 
 
-async def _resolve_osu_user(ctx: AgentToolContext, username: str | None, source: str) -> tuple[int, str]:
-    if username and username.strip():
-        name = username.strip()
-        return await get_uid_by_name(name, source), name
+async def _resolve_osu_user(ctx: AgentToolContext, username: str | None, source: str) -> ResolvedOsuUser:
+    name = _clean_optional_text(username)
+    if name:
+        return ResolvedOsuUser(await get_uid_by_name(name, source), name)
 
     if not ctx.user_id:
         raise ValueError("当前没有可用的用户 ID，请指定 osu 用户名")
@@ -59,7 +86,23 @@ async def _resolve_osu_user(ctx: AgentToolContext, username: str | None, source:
         bind_command = "/sbbind" if source == "ppysb" else "/bind"
         raise ValueError(f"当前用户尚未绑定 osu 账号，请先使用 {bind_command} 用户名")
 
-    return user.osu_id, user.osu_name
+    if source == "ppysb":
+        return ResolvedOsuUser(user.osu_id, user.osu_name)
+
+    return ResolvedOsuUser(
+        user.osu_id,
+        user.osu_name,
+        default_mode=str(user.osu_mode),
+        default_is_lazer=True if user.lazer_mode is None else user.lazer_mode,
+    )
+
+
+def _resolve_mode(mode: str | int | None, user: ResolvedOsuUser, source: str) -> str:
+    return _normalize_mode(mode, source) or _normalize_mode(user.default_mode, source) or "0"
+
+
+def _resolve_is_lazer(is_lazer: bool | None, user: ResolvedOsuUser) -> bool:
+    return user.default_is_lazer if is_lazer is None else is_lazer
 
 
 async def _send_image(ctx: AgentToolContext, raw: bytes) -> str:
@@ -72,7 +115,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     @tool("send_osu_user_info")
     async def send_osu_user_info(
         username: str | None = None,
-        mode: str = "0",
+        mode: str | None = None,
         day: int = 0,
         source: str = "osu",
     ) -> str:
@@ -83,11 +126,11 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         """
         try:
             source = _normalize_source(source)
-            mode = _normalize_mode(mode, source)
-            user_id, name = await _resolve_osu_user(ctx, username, source)
-            data = await draw_info(user_id, NGM[mode], max(day, 0), source)
+            user = await _resolve_osu_user(ctx, username, source)
+            mode = _resolve_mode(mode, user, source)
+            data = await draw_info(user.user_id, NGM[mode], max(day, 0), source)
             await _send_image(ctx, data)
-            return f"已发送 {name} 的 osu 信息图"
+            return f"已发送 {user.name} 的 osu 信息图"
         except NetworkError as e:
             return f"查询 osu 玩家信息失败: {e}"
         except Exception as e:
@@ -97,10 +140,10 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     async def send_osu_bp(
         username: str | None = None,
         best: int = 1,
-        mode: str = "0",
+        mode: str | None = None,
         mods: str = "",
         source: str = "osu",
-        is_lazer: bool = True,
+        is_lazer: bool | None = None,
     ) -> str:
         """
         查询并发送 osu 玩家指定 bp 成绩图。best 为 bp 序号，范围 1-200；mods 可填 HDHR、DT、HD 等。
@@ -109,11 +152,12 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             if best < 1 or best > 200:
                 return "best 必须在 1-200 之间"
             source = _normalize_source(source)
-            mode = _normalize_mode(mode, source)
-            user_id, name = await _resolve_osu_user(ctx, username, source)
+            user = await _resolve_osu_user(ctx, username, source)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer, user)
             data = await draw_score(
                 "bp",
-                user_id,
+                user.user_id,
                 is_lazer,
                 NGM[mode],
                 mods2list(mods) if mods else [],
@@ -122,7 +166,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 best=best,
             )
             await _send_image(ctx, data)
-            return f"已发送 {name} 的 bp{best}"
+            return f"已发送 {user.name} 的 bp{best}"
         except NetworkError as e:
             return f"查询 bp 失败: {e}"
         except Exception as e:
@@ -132,22 +176,23 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     async def send_osu_bp_list(
         username: str | None = None,
         range_text: str = "1-20",
-        mode: str = "0",
+        mode: str | None = None,
         mods: str = "",
         source: str = "osu",
-        is_lazer: bool = True,
+        is_lazer: bool | None = None,
     ) -> str:
         """
         查询并发送 osu 玩家 bp 列表图。range_text 为范围，例如 1-20、20-50，最大到 200。
         """
         try:
             source = _normalize_source(source)
-            mode = _normalize_mode(mode, source)
             low, high = _normalize_range(range_text, default="1-20")
-            user_id, name = await _resolve_osu_user(ctx, username, source)
+            user = await _resolve_osu_user(ctx, username, source)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer, user)
             data = await draw_bp(
                 "bp",
-                user_id,
+                user.user_id,
                 is_lazer,
                 NGM[mode],
                 mods2list(mods) if mods else [],
@@ -158,7 +203,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 source,
             )
             await _send_image(ctx, data)
-            return f"已发送 {name} 的 bp{low}-{high}"
+            return f"已发送 {user.name} 的 bp{low}-{high}"
         except NetworkError as e:
             return f"查询 bp 列表失败: {e}"
         except Exception as e:
@@ -169,9 +214,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         username: str | None = None,
         kind: str = "recent",
         index: int = 1,
-        mode: str = "0",
+        mode: str | None = None,
         source: str = "osu",
-        is_lazer: bool = True,
+        is_lazer: bool | None = None,
     ) -> str:
         """
         查询并发送最近成绩或最近 best 成绩图。kind 为 recent 或 pr；index 表示第几条，默认 1。
@@ -181,12 +226,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 return "index 必须大于等于 1"
             score_type = "pr" if kind.lower() == "pr" else "recent"
             source = _normalize_source(source)
-            mode = _normalize_mode(mode, source)
-            user_id, name = await _resolve_osu_user(ctx, username, source)
-            data = await draw_score(score_type, user_id, is_lazer, NGM[mode], [], [], source, index)
+            user = await _resolve_osu_user(ctx, username, source)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer, user)
+            data = await draw_score(score_type, user.user_id, is_lazer, NGM[mode], [], [], source, index)
             await _send_image(ctx, data)
             label = "最近 best" if score_type == "pr" else "最近"
-            return f"已发送 {name} 的第 {index} 个{label}成绩"
+            return f"已发送 {user.name} 的第 {index} 个{label}成绩"
         except NetworkError as e:
             return f"查询最近成绩失败: {e}"
         except Exception as e:
@@ -196,20 +242,21 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     async def send_osu_score(
         beatmap_id: str,
         username: str | None = None,
-        mode: str = "0",
+        mode: str | None = None,
         mods: str = "",
         source: str = "osu",
-        is_lazer: bool = True,
+        is_lazer: bool | None = None,
     ) -> str:
         """
         查询并发送玩家在指定 beatmap 上的成绩图。beatmap_id 是谱面 ID。
         """
         try:
             source = _normalize_source(source)
-            mode = _normalize_mode(mode, source)
-            user_id, name = await _resolve_osu_user(ctx, username, source)
+            user = await _resolve_osu_user(ctx, username, source)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer, user)
             data = await get_score_data(
-                user_id,
+                user.user_id,
                 is_lazer,
                 NGM[mode],
                 mods2list(mods) if mods else [],
@@ -217,7 +264,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 source,
             )
             await _send_image(ctx, data)
-            return f"已发送 {name} 在谱面 {beatmap_id} 上的成绩"
+            return f"已发送 {user.name} 在谱面 {beatmap_id} 上的成绩"
         except NetworkError as e:
             return f"查询谱面成绩失败: {e}"
         except Exception as e:
@@ -262,6 +309,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             send_osu_beatmapset_info,
         ],
         instructions=[
+            "- 未指定玩家、用户说“我/自己/我的”时，不要传 username；工具会使用当前发言用户绑定的 osu 账号。",
+            "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。未指定 lazer/stable 时，不要传 is_lazer。",
             "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
             "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
             "- send_osu_bp_list: 用户想查 bp 列表、bplist、pfm 或一段 bp 范围时使用。",
