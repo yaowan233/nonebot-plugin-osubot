@@ -442,9 +442,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 data = (await session.scalars(query)).all()
 
             points = [
-                (item.pp, str(item.date), item.g_rank)
-                for item in data
-                if item.g_rank is not None and item.g_rank != 0
+                (item.pp, str(item.date), item.g_rank) for item in data if item.g_rank is not None and item.g_rank != 0
             ]
             if not points:
                 return f"没有找到 {user.name} 的历史数据"
@@ -533,8 +531,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 users = await get_users([mapper for mapper, _ in mapper_pp_items])
                 user_dic = {item.id: item.username for item in users}
                 mapper_pp_data = [
-                    {"name": user_dic.get(mapper, ""), "value": round(pp, 2)}
-                    for mapper, pp in mapper_pp_items
+                    {"name": user_dic.get(mapper, ""), "value": round(pp, 2)} for mapper, pp in mapper_pp_items
                 ]
 
             image = await draw_bpa_plot(f"{user.name} {NGM[mode]} 模式 ", pp_ls, length_ls, pp_data, mapper_pp_data)
