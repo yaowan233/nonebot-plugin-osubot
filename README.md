@@ -112,6 +112,49 @@ nb orm stamp 68a04ea31d05
 
 ![image](https://github.com/yaowan233/nonebot-plugin-osubot/assets/30517062/41fd8326-7b97-4de9-be83-c38b31453ea1)
 
+### AI 自然语言调用（可选）
+
+如果同一个 NoneBot 项目中安装并加载了 `nonebot-plugin-ai-groupmate`，本插件会自动向 ai-groupmate 注册 osu 查询工具。用户可以通过自然语言让 AI 调用 osubot 的查询能力，而不是直接输入固定命令。
+
+没有安装或没有加载 `nonebot-plugin-ai-groupmate` 时，本功能会自动跳过，不影响 osubot 原有指令使用。
+
+示例：
+
+```text
+@bot 查我的 bp1
+@bot 查我的 info
+@bot 查 peppy 的 bp1
+@bot 查 WhiteCat 的 bp 1-20
+@bot 查 @群友 的 bp1
+@bot 查我在 3783810 这张图上的成绩
+@bot 查我的 pp 历史
+@bot 分析我的 bp 构成
+@bot 给我推荐谱面
+@bot 发一下我的 osu 主页
+@bot 查 match 123456789
+@bot 查 match 123456789 的 rating
+@bot 预览谱面 3783810
+@bot 提取谱面 3783810 的背景
+@bot 查成就 Non-stop Dancer
+```
+
+账号与模式规则：
+
+- 用户说“我/我的/自己”或未指定玩家时，使用当前发言用户通过 `/bind` 绑定的 osu 账号。
+- 消息里 `@群友` 时，优先使用被 @ 群友绑定的 osu 账号。
+- 查询绑定用户时会使用绑定记录中的默认模式与 lazer/stable 设置。
+- 明确指定 osu 用户名时会查询该 osu 用户名；如果需要非 std 模式，请在自然语言里说明 `taiko`、`ctb` 或 `mania`。
+
+如果用户只是要求查询，AI 会调用工具发出图片后结束；如果用户同时要求评价，例如：
+
+```text
+@bot 查我的 bp1，我打得怎么样
+@bot 分析一下 @群友 的 bp1
+@bot 看看我 recent 发挥如何
+```
+
+工具会把生成的图片回传给支持多模态的主模型，AI 可以基于图片内容给出简短评价。该分析能力依赖 ai-groupmate 当前配置的主聊天模型支持多模态输入。
+
 
 ## 💡 贡献
 
