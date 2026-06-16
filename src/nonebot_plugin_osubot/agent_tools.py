@@ -73,7 +73,7 @@ def _clean_user_id(value: str | int | None) -> str | None:
     if value is None:
         return None
     value = str(value).strip()
-    if not value or value.lower() in {"none", "null", "nil", "undefined"}:
+    if not value or value.lower() in {"none", "null", "nil", "undefined", "all"}:
         return None
     return value
 
@@ -82,7 +82,14 @@ def _extract_mentioned_user_id(ctx: AgentToolContext) -> str | None:
     if not ctx.event:
         return None
 
-    bot_ids = {user_id for user_id in (ctx.bot_id, getattr(ctx.event, "self_id", None)) if user_id}
+    bot_ids = {
+        user_id
+        for user_id in (
+            _clean_user_id(ctx.bot_id),
+            _clean_user_id(getattr(ctx.event, "self_id", None)),
+        )
+        if user_id
+    }
     try:
         message = ctx.event.get_message()
     except Exception:
