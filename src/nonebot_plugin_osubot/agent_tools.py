@@ -370,7 +370,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             await _send_image(ctx, data)
             label = "最近 best" if score_type == "pr" else "最近"
             return _image_tool_result(
-                f"已发送 {user.name} 的第 {index} 个{label}成绩。图片中包含成绩、pp、acc、combo、miss、mods、谱面等信息。",
+                f"已发送 {user.name} 的第 {index} 个{label}成绩。"
+                "图片中包含成绩、pp、acc、combo、miss、mods、谱面等信息。",
                 data,
                 include_image_for_analysis,
             )
@@ -755,7 +756,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
             "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。未指定 lazer/stable 时，不要传 is_lazer。",
             "- 如果用户只要求查询/发图，不要传 include_image_for_analysis，发图后调用 finish 或简短结束。",
-            "- 如果用户问“打得怎么样/发挥如何/分析/评价/看看问题”，传 include_image_for_analysis=true；看到工具返回的图片后，再基于图片内容给出简短评价。",
+            "- 如果用户问“打得怎么样/发挥如何/分析/评价/看看问题”，传 include_image_for_analysis=true；"
+            "看到工具返回的图片后，再基于图片内容给出简短评价。",
             "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
             "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
             "- send_osu_bp_list: 用户想查 bp 列表、bplist、pfm 或一段 bp 范围时使用。",
