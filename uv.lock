@@ -1470,7 +1470,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-osubot"
-version = "7.1.1"
+version = "7.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "expiringdict" },
@@ -1517,7 +1517,7 @@ requires-dist = [
     { name = "nonebot-plugin-session", specifier = "~=0.3" },
     { name = "nonebot-plugin-waiter", specifier = ">=0.6.1" },
     { name = "nonebot2", specifier = ">=2.3.0" },
-    { name = "osu-tools-py", specifier = ">=0.1.2" },
+    { name = "osu-tools-py", specifier = ">=0.1.3" },
     { name = "pillow", specifier = ">=9.2.0" },
     { name = "pydantic", specifier = ">=1.10.0,!=2.5.0,!=2.5.1,<3.0.0" },
     { name = "rhythmgame-tools", specifier = ">=2.0.0" },
@@ -1736,16 +1736,16 @@ wheels = [
 
 [[package]]
 name = "osu-tools-py"
-version = "0.1.2"
+version = "0.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pythonnet" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/7f/6f1f53d810739303bcb5e57e2bfd2e4ec4d6570988f113e0241cd4f04b4c/osu_tools_py-0.1.2-py3-none-macosx_10_15_x86_64.whl", hash = "sha256:4579b1f5e19d449ddfdf95442f19025b8755b07cdb9b8efa0dae03ba0e6a9d39", size = 39297981, upload-time = "2025-12-19T02:40:51.892Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/3b/3f86a1b906312ea4e838d71dd8436be0b1795036c37fe5f8aaea1ab2276b/osu_tools_py-0.1.2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:f76400ab35972959cab1978fd23381817feecfcc936b07f0f3dbce5c8d3db6d8", size = 38920991, upload-time = "2025-12-19T02:41:00.172Z" },
-    { url = "https://files.pythonhosted.org/packages/99/14/f722bfc8c731efa0d85363dfda1de70be4d381d9b6411ed5d9a02c969f49/osu_tools_py-0.1.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:09d5a25bde8d1865501e7a1998ecfbf900918eb917e79fc19b1fc82231b79f2c", size = 36463824, upload-time = "2025-12-19T02:41:03.715Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/5a/e0e15719e552f8417a3c439727a61b741ef8f0e6553ae1380fdd9a97fc70/osu_tools_py-0.1.2-py3-none-win_amd64.whl", hash = "sha256:3d9cb485cad2d1063e0faa90eb13177c5b2e84489ec9d9bdaf5bbc45fc1b8f3f", size = 31313018, upload-time = "2025-12-19T02:41:07.401Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/81/82444ac03b34ce9bc34476de3bfcd155b776c6908d9607b4bd0976f85ec9/osu_tools_py-0.1.3-py3-none-macosx_10_15_x86_64.whl", hash = "sha256:cba46461ff697d0f7853ef1e7b73cd28f8397ff598cf0f0c2a957ffb2e68b93c", size = 39299200, upload-time = "2026-06-20T13:34:59.31Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/11/67319009e5fdf7a9467c2eed1cb5cb556238b8dbdc2b693307d2745fecdb/osu_tools_py-0.1.3-py3-none-macosx_11_0_arm64.whl", hash = "sha256:751f10920a22183a5bdb09576e645028dc115270aed7d98cc2dbf02e175effb9", size = 38922071, upload-time = "2026-06-20T13:35:02.185Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/2d/57ad248b320442cfab7356170e7d1d4fed79eca1d87d66301be9d966c1b2/osu_tools_py-0.1.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fff83a751b49d465bd0f2cf83d2d2b56ffbfcbe552eb0d666a27f742cc94382c", size = 36464031, upload-time = "2026-06-20T13:35:05.224Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/56/8fd7e4700b2ff4d8048eef4cb4ccde4eecc1ebe7722503621c9d9580d962/osu_tools_py-0.1.3-py3-none-win_amd64.whl", hash = "sha256:5b88ea96f8034fe24842d52f61424118a4f9f4a272bad47990e89099c9c7f562", size = 31313215, upload-time = "2026-06-20T13:35:08.506Z" },
 ]
 
 [[package]]

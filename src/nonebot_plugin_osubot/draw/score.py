@@ -290,7 +290,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     # if info.is_supporter:
     #     im.alpha_composite(SupporterBg.resize((40, 40)), (250, 640))
     # 处理mania转谱cs
-    if score_info.ruleset_id == 3 and mapinfo.mode == 0:
+    if score_info.ruleset_id == 3 and mapinfo.mode == "osu":
         temp_accuracy = mapinfo.accuracy
         convert = (mapinfo.count_sliders + mapinfo.count_spinners) / (
             mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners
