@@ -26,11 +26,7 @@ Torus_SemiBold_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.o
 Venera_60 = ImageFont.truetype(str(osufile / "fonts" / "Venera.otf"), 60)
 extra_30 = ImageFont.truetype(str(osufile / "fonts" / "Extra.otf"), 30)
 
-InfoImg = Image.open(osufile / "info.png").convert("RGBA")
 SupporterBg = Image.open(osufile / "work" / "suppoter.png").convert("RGBA")
-ExpLeftBg = Image.open(osufile / "work" / "left.png").convert("RGBA")
-ExpCenterBg = Image.open(osufile / "work" / "center.png").convert("RGBA")
-ExpRightBg = Image.open(osufile / "work" / "right.png").convert("RGBA")
 BgImg = Image.open(osufile / "Best Performance.png").convert("RGBA")
 BgImg1 = Image.open(osufile / "History Score.jpg").convert("RGBA")
 MapBg = Image.open(osufile / "beatmapinfo.png").convert("RGBA")
@@ -41,7 +37,6 @@ Stardiff = Image.open(osufile / "work" / "stardiff.png").convert("RGBA")
 TeamBlue = Image.open(osufile / "match" / "team_blue.png").convert("RGBA")
 TeamRed = Image.open(osufile / "match" / "team_red.png").convert("RGBA")
 MpLink = Image.open(osufile / "match" / "mplink.png").convert("RGBA")
-MpLinkMap = Image.open(osufile / "match" / "mplink_map.png").convert("RGBA")
 
 
 # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20
