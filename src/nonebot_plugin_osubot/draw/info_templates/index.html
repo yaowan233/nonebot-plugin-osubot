@@ -101,7 +101,8 @@
         .brand { font-size:14px; letter-spacing:.16em; color:#ff67aa; font-weight:800; }
         .portrait { width:246px; height:246px; object-fit:cover; margin-top:38px; box-shadow:14px 14px 0 #ff3f8e; filter:saturate(.82); }
         .region { font-size:13px; letter-spacing:.1em; color:#98a7ba; margin-top:33px; }
-        .name { display:flex; align-items:center; gap:14px; font-size:70px; font-weight:800; line-height:.85; margin-top:8px; white-space:nowrap; }
+        .name { display:flex; align-items:center; gap:14px; width:410px; min-width:0; font-size:70px; font-weight:800; line-height:.9; margin-top:8px; white-space:nowrap; }
+        .name>span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
         .name-supporter { display:inline-flex; align-items:center; gap:0; height:28px; padding:0 10px; border-radius:16px; background:linear-gradient(135deg,#f764a8,#e93689); box-shadow:0 5px 15px #ff3f8e35; transform:translateY(4px); }
         .name-supporter i { display:block; font-family:FASolid!important; font-style:normal; font-size:12px; color:#fff; }
         .name-supporter i+i { margin-left:-1px; }
@@ -453,6 +454,7 @@
     function appendChange(element,value){if(element&&value)element.insertAdjacentHTML("beforeend",changeTag(value))}
     function accountAge(joinDate){if(!joinDate)return"暂无数据";const days=Math.max(0,(Date.now()-new Date(joinDate).getTime())/86400000);return days>=365?`${(days/365.2425).toFixed(1)} 年`:`${Math.floor(days)} 天`}
     function averagePlayTime(seconds,count){const value=Math.round((seconds||0)/Math.max(1,count||0));return value>=60?`${Math.floor(value/60)}分${value%60}秒`:`${value} 秒`}
+    function fitPlayerName(){const box=document.querySelector(".name"),label=box?.firstElementChild;if(!box||!label)return;const supporter=box.querySelector(".name-supporter"),gap=supporter?14:0,available=box.clientWidth-(supporter?.offsetWidth||0)-gap;let size=70;box.style.fontSize=`${size}px`;while(label.scrollWidth>available&&size>36){size-=2;box.style.fontSize=`${size}px`}label.title=label.scrollWidth>available?label.textContent:""}
     function fitGlobalRank(rank){const el=document.querySelector(".rank"),box=el.parentElement,formatted=rank==null?"未排名":"#"+Number(rank).toLocaleString("en-US");el.textContent=formatted;el.style.letterSpacing=formatted.length>=7?"-.04em":"-.055em";let size=rank==null?72:80;el.style.setProperty("font-size",size+"px","important");const start=el.getBoundingClientRect().left,nextLeft=box.nextElementSibling.getBoundingClientRect().left,available=nextLeft-start-24;while(el.scrollWidth>available&&size>24){size-=2;el.style.setProperty("font-size",size+"px","important")}}
     function rankHistory(history,current){const ranked=current!=null,data=ranked?(history||[]).filter(Number.isFinite):[0,0];if(!data.length)data.push(current);const best=Math.min(...data),worst=Math.max(...data),w=680,top=7,bottom=41,range=Math.max(1,worst-best),y=v=>top+(v-best)*(bottom-top)/range,points=data.map((v,i)=>`${i*w/Math.max(1,data.length-1)},${y(v)}`).join(" "),area=`0,48 ${points} ${w},48`,start=data.at(-14)??data[0],delta=start-data.at(-1),rankText=ranked?`#${number(current)}`:"未排名",rangeText=ranked?`最高 #${number(best)} · 最低 #${number(worst)}`:"暂无排名记录";return `<div class="rank-history"><span class="trend-label"><b>90 天排名趋势</b><small>${rangeText}</small></span><svg viewBox="0 0 ${w} 48"><defs><linearGradient id="rankArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20a9b8" stop-opacity=".3"/><stop offset="1" stop-color="#20a9b8" stop-opacity="0"/></linearGradient></defs><line class="history-grid" x1="0" y1="${top}" x2="${w}" y2="${top}"/><line class="history-grid" x1="0" y1="${bottom}" x2="${w}" y2="${bottom}"/><polygon class="history-area" points="${area}"/><polyline class="history-line" points="${points}"/>${ranked?`<circle class="history-dot" cx="${w}" cy="${y(data.at(-1))}" r="4"/>`:""}</svg><span class="trend-value"><b>当前 ${rankText}</b><em>近14天 ${ranked?(delta>0?"↑"+delta:delta<0?"↓"+Math.abs(delta):"—"):"—"}</em></span></div>`}
     function displayUserInfo(user) {
@@ -481,6 +483,7 @@
         const accountDays=user.join_date?Math.max(1,(Date.now()-new Date(user.join_date).getTime())/86400000):null;
         document.querySelector(".grades").insertAdjacentHTML("afterend",`<div class="activity-facts"><div class="activity-fact"><span>账号年龄</span><b>${accountAge(user.join_date)}</b></div><div class="activity-fact"><span>日均游玩</span><b>${accountDays?number(stats.play_count/accountDays,1)+" 次":"暂无数据"}</b></div><div class="activity-fact"><span>平均单次</span><b>${averagePlayTime(stats.play_time,stats.play_count)}</b></div></div>`);
         const insightLabels=document.querySelectorAll(".insight span");if(insightLabels[2])insightLabels[2].textContent="最高星数";
+        fitPlayerName();document.fonts.ready.then(fitPlayerName);
         fitGlobalRank(stats.global_rank);
     }
 
