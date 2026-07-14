@@ -146,8 +146,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     download_tasks = [
         download_osu(score.beatmap.set_id, score.beatmap.id)
         for score in scores
-        if score.beatmap
-        and not (map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu").exists()
+        if score.beatmap and not (map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu").exists()
     ]
     if download_tasks:
         await asyncio.gather(*download_tasks, return_exceptions=True)
