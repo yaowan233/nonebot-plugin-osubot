@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import jinja2
 from pathlib import Path
@@ -11,12 +12,13 @@ from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from .utils import info_calc
+from ..pp import cal_pp
 from ..utils import FGM, GMN
-from ..file import user_cache_path, get_projectimg
+from ..file import user_cache_path, get_projectimg, download_osu, map_path
 from ..exceptions import NetworkError
 from ..database.models import InfoData
-from ..schema.draw_info import DrawUser, Badge
-from ..api import get_random_bg, get_user_info_data
+from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
+from ..api import get_random_bg, get_user_info_data, get_user_scores
 
 
 async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> bytes:
@@ -134,10 +136,67 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     cur_badge = len(info.badges) if info.badges else 0
     badge_count_change = _fmt_change(cur_badge, n_badge_count)
     badges = [Badge(**i.model_dump()) for i in info.badges] if info.badges else None
+
+    best_plays: list[DrawBestPlay] = []
+    try:
+        scores = (await get_user_scores(info.id, mode, "best", source=source, limit=10))[:10]
+    except NetworkError:
+        scores = []
+
+    download_tasks = [
+        download_osu(score.beatmap.set_id, score.beatmap.id)
+        for score in scores
+        if score.beatmap
+        and not (map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu").exists()
+    ]
+    if download_tasks:
+        await asyncio.gather(*download_tasks, return_exceptions=True)
+
+    for score in scores:
+        if not score.beatmap:
+            continue
+        osu_file = map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu"
+        stars = score.beatmap.stars
+        if osu_file.exists():
+            try:
+                stars = cal_pp(score, str(osu_file.absolute()), source).stars
+            except Exception:
+                pass
+        mods = [mod.acronym for mod in score.mods]
+        if "NC" in mods and "DT" in mods:
+            mods.remove("DT")
+        cover_url = (
+            score.beatmapset.covers.list
+            if score.beatmapset and score.beatmapset.covers
+            else f"https://assets.ppy.sh/beatmaps/{score.beatmap.set_id}/covers/list@2x.jpg"
+        )
+        best_plays.append(
+            DrawBestPlay(
+                title=score.beatmap.title,
+                artist=score.beatmap.artist,
+                version=score.beatmap.version,
+                cover_url=cover_url,
+                pp=score.pp or 0,
+                accuracy=score.accuracy,
+                stars=stars,
+                rank=score.rank,
+                mods=mods,
+                ended_at=score.ended_at,
+            )
+        )
+
+    rank_history = (info.rank_history or {}).get("data", [])
     draw_user = DrawUser(
         id=info.id,
         username=info.username,
+        avatar_url=info.avatar_url,
         country_code=info.country_code,
+        support_level=info.support_level,
+        join_date=info.join_date,
+        follower_count=info.follower_count,
+        achievement_count=len(info.user_achievements or []),
+        rank_history=rank_history,
+        best_plays=best_plays,
         mode=mode.upper(),
         badges=badges,
         team=info.team.model_dump() if info.team else None,
@@ -167,10 +226,17 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
     )
     template = template_env.get_template(template_name)
     async with get_new_page(2) as page:
-        await page.goto(f"file://{template_path}")
+        await page.set_viewport_size({"width": 1800, "height": 1200})
+        await page.goto((Path(template_path) / template_name).as_uri(), wait_until="load")
         await page.set_content(
-            await template.render_async(user_json=draw_user.model_dump_json(), bg=bg), wait_until="load"
+            await template.render_async(user_json=draw_user.model_dump_json(), bg=bg),
+            wait_until="domcontentloaded",
+        )
+        await page.evaluate(
+            "Promise.race([Promise.all([document.fonts.ready, "
+            "...Array.from(document.images, image => image.decode().catch(() => {}))]), "
+            "new Promise(resolve => setTimeout(resolve, 8000))])"
         )
         elem = await page.query_selector("#display")
         assert elem
-        return await elem.screenshot(type="jpeg")
+        return await elem.screenshot(type="jpeg", quality=92)

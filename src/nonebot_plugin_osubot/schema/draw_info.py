@@ -1,6 +1,7 @@
 from typing import Optional
+from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .user import Badge, Level, GradeCounts
 
@@ -28,11 +29,24 @@ class Team(BaseModel):
     """用户战队信息（为绘图用途专门创建的模型，若无数据则为 null）"""
 
     name: str
-    flag_url: str
+    flag_url: Optional[str] = None
 
     # 启用 extra="allow" 可以允许接收更多未定义的字段
     class Config:
         extra = "allow"
+
+
+class DrawBestPlay(BaseModel):
+    title: str
+    artist: str
+    version: str
+    cover_url: str
+    pp: float
+    accuracy: float
+    stars: float
+    rank: str
+    mods: list[str]
+    ended_at: datetime
 
 
 class DrawUser(BaseModel):
@@ -40,7 +54,14 @@ class DrawUser(BaseModel):
 
     id: int
     username: str
+    avatar_url: str
     country_code: str  # e.g., "AU"
+    support_level: int = 0
+    join_date: Optional[str] = None
+    follower_count: Optional[int] = None
+    achievement_count: int = 0
+    rank_history: list[int] = Field(default_factory=list)
+    best_plays: list[DrawBestPlay] = Field(default_factory=list)
     team: Optional[Team] = None
     footer: str  # e.g., "2025/11/07 14:11:45 | 数据对比于4天前"
     mode: str  # e.g., "STD"

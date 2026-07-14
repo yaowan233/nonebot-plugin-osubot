@@ -13,6 +13,16 @@
             font-style: normal;
             font-display: swap;
         }
+        @font-face {
+            font-family: 'Torus';
+            src: url('../../osufile/fonts/Torus SemiBold.otf') format('opentype');
+            font-weight: 800;
+        }
+        @font-face {
+            font-family: 'FASolid';
+            src: url('../../osufile/fonts/fa-solid.woff2') format('woff2');
+            font-weight: 900;
+        }
         * {
             font-family: 'Torus', sans-serif !important;
         }
@@ -79,22 +89,147 @@
             color: transparent;
             background-image: linear-gradient(var(--colour));
         }
+
+        html, body { width:1800px; height:1200px; overflow:hidden; background:#dfe4e8; color:#111824; }
+        * { box-sizing:border-box; }
+        .page { width:1740px; height:1140px; margin:30px; display:grid; grid-template-columns:575px 1fr; background:#f5f1e9; box-shadow:0 28px 80px #26334136; overflow:hidden; position:relative; }
+        .slash { position:absolute; z-index:5; inset:0; width:620px; height:1140px; background:linear-gradient(135deg,#ff2f84,#ff5ba5); clip-path:polygon(562px 0,586px 0,511px 1140px,487px 1140px); }
+        .side { background:#0b1420; color:#fff; padding:38px 54px 28px; position:relative; overflow:hidden; clip-path:polygon(0 0,100% 0,500px 100%,0 100%); }
+        .side:before { content:""; position:absolute; width:540px; height:540px; border-radius:50%; left:-310px; bottom:-190px; border:1px solid #ff3f8e55; box-shadow:0 0 0 65px #ff3f8e08,0 0 0 130px #ff3f8e05; }
+        .side-bg { position:absolute; inset:0; z-index:0; background-size:cover; background-position:center; opacity:.07; filter:grayscale(1) contrast(1.2); }
+        .side>*:not(.side-bg) { position:relative; z-index:1; }
+        .brand { font-size:14px; letter-spacing:.16em; color:#ff67aa; font-weight:800; }
+        .portrait { width:246px; height:246px; object-fit:cover; margin-top:38px; box-shadow:14px 14px 0 #ff3f8e; filter:saturate(.82); }
+        .region { font-size:13px; letter-spacing:.1em; color:#98a7ba; margin-top:33px; }
+        .name { display:flex; align-items:center; gap:14px; font-size:70px; font-weight:800; line-height:.85; margin-top:8px; white-space:nowrap; }
+        .name-supporter { display:inline-flex; align-items:center; gap:0; height:28px; padding:0 10px; border-radius:16px; background:linear-gradient(135deg,#f764a8,#e93689); box-shadow:0 5px 15px #ff3f8e35; transform:translateY(4px); }
+        .name-supporter i { display:block; font-family:FASolid!important; font-style:normal; font-size:12px; color:#fff; }
+        .name-supporter i+i { margin-left:-1px; }
+        .team { display:flex; align-items:center; gap:9px; min-height:30px; font-size:14px; color:#b9c2ce; margin-top:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:430px; }
+        .team b { color:#fff; }
+        .team-logo { flex:0 0 auto; width:44px; height:30px; padding:3px; border-radius:5px; object-fit:contain; background:#ffffffed; box-shadow:0 4px 11px #0007; }
+        .identity { margin-top:30px; border-top:1px solid #ffffff24; width:410px; }
+        .iline { height:42px; border-bottom:1px solid #ffffff17; display:grid; grid-template-columns:145px 1fr; align-items:center; font-size:13px; }
+        .iline span { color:#77869a; }
+        .iline b { font-size:14px; }
+        .level { display:flex; align-items:end; gap:20px; margin-top:26px; width:410px; }
+        .level strong { font-size:58px; line-height:.8; }
+        .level>div { flex:0 0 310px; }
+        .level label { display:flex; justify-content:space-between; font-size:11px; color:#8d9aae; margin-bottom:7px; }
+        .bar { height:5px; background:#273442; }
+        .bar i { display:block; height:100%; background:#ff3f8e; }
+        .grades { margin-top:27px; width:410px; position:relative; z-index:2; }
+        .grades h3 { display:flex; justify-content:space-between; margin:0 0 12px; font-size:12px; letter-spacing:.08em; color:#79879a; }
+        .grade-seals { display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid #ffffff19; border-bottom:1px solid #ffffff19; padding:12px 0 11px; }
+        .grade-seal { text-align:center; position:relative; }
+        .grade-seal:not(:last-child):after { content:""; position:absolute; right:0; top:1px; width:1px; height:47px; background:#ffffff12; }
+        .grade-icon { display:flex; align-items:center; justify-content:center; height:31px; }
+        .grade-icon svg { width:60px; height:30px; filter:drop-shadow(0 5px 7px #0006); }
+        .grade-seal b { display:block; margin-top:8px; font-size:13px; }
+        .activity-facts { width:410px; margin-top:16px; padding-top:12px; border-top:1px solid #ffffff19; display:grid; grid-template-columns:repeat(3,1fr); }
+        .activity-fact { min-width:0; padding:0 11px; border-right:1px solid #ffffff12; }
+        .activity-fact:first-child { padding-left:0; }
+        .activity-fact:last-child { padding-right:0; border:0; }
+        .activity-fact span { display:block; margin-bottom:5px; color:#728196; font-size:9px; letter-spacing:.06em; }
+        .activity-fact b { display:block; overflow:hidden; color:#dce4ed; font-size:12px; white-space:nowrap; text-overflow:ellipsis; }
+        .main { padding:35px 46px 24px 70px; position:relative; background-image:radial-gradient(#26303a10 1px,transparent 1px); background-size:17px 17px; }
+        .mast { height:45px; border-bottom:1px solid #c8cdd1; display:flex; justify-content:space-between; font-size:12px; letter-spacing:.09em; }
+        .mast span { color:#7d8791; }
+        .hero { height:182px; padding-top:30px; display:grid; grid-template-columns:430px 1fr 210px; align-items:start; }
+        .hero>div:first-child { min-width:0; overflow:visible; padding-right:18px; }
+        .rank-label,.pp-label { display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.09em; color:#65717d; }
+        .rank { display:block; width:max-content; height:108px; padding-bottom:16px; overflow:visible; white-space:nowrap; font-size:80px; font-weight:800; line-height:92px; letter-spacing:-.055em; background:linear-gradient(135deg,var(--tier-a),var(--tier-b)); color:transparent; background-clip:text; margin:0 0 -16px -5px; font-variant-numeric:tabular-nums; }
+        .rank-history { display:grid; grid-template-columns:150px 1fr 150px; align-items:center; gap:13px; width:100%; height:78px; margin:0; padding:9px 14px; background:linear-gradient(90deg,#e5eaec,#edf0ef); border-left:4px solid #20a9b8; border-bottom:1px solid #c8cdd1; box-shadow:inset 0 1px #fff,inset 0 -1px #cbd2d5; }
+        .trend-label,.trend-value { display:flex; flex-direction:column; gap:4px; }
+        .trend-label b,.trend-value b { font-size:13px; }
+        .trend-label small { font-size:10px; color:#697681; }
+        .rank-history svg { width:100%; height:48px; overflow:visible; }
+        .history-grid { stroke:#bcc7cb; stroke-width:.7; stroke-dasharray:3 4; }
+        .history-area { fill:url(#rankArea); }
+        .history-line { fill:none; stroke:#20a9b8; stroke-width:3; stroke-linejoin:round; }
+        .history-dot { fill:#ff3f8e; stroke:#f5f1e9; stroke-width:2.5; }
+        .trend-value { text-align:right; align-items:flex-end; }
+        .trend-value em { font-style:normal; font-size:10px; color:#0b9d73; }
+        .hero>div:nth-child(2) { position:relative; padding-left:12px; }
+        .hero>div:nth-child(2):before { content:""; position:absolute; left:0; top:4px; width:3px; height:82px; background:linear-gradient(#ff3f8e 0 64%,#20b3c2 64%); }
+        .pp { height:92px; overflow:visible; font-size:80px; font-weight:800; line-height:92px; letter-spacing:-.04em; white-space:nowrap; }
+        .pp small { font-size:20px; color:#ff3f8e; }
+        .subrank { display:flex; align-items:baseline; gap:8px; font-size:12px; color:#747e89; margin-top:10px; }
+        .subrank b { color:#121924; font-size:18px; }
+        .accuracy { position:relative; border-left:1px solid #c8cdd1; padding:0 0 12px 27px; background:linear-gradient(90deg,#ffffff00,#ffffff78); }
+        .accuracy:after { content:""; position:absolute; right:0; top:0; width:34px; height:3px; background:#20b3c2; }
+        .accuracy span { display:block; font-size:12px; color:#7a848e; letter-spacing:.04em; }
+        .accuracy span:first-child { display:flex; align-items:center; gap:7px; }
+        .accuracy b { display:block; font-size:18px; margin:7px 0 16px; }
+        .accuracy small { font-size:18px; font-weight:800; color:#121924; }
+        .career { height:150px; display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid #c8cdd1; background:linear-gradient(90deg,#fffaf5,#f5f1e9 48%,#f1f3f1); position:relative; overflow:hidden; }
+        .career:before { content:""; position:absolute; inset:0 0 auto; height:3px; background:linear-gradient(90deg,#ff3f8e 0 33.333%,#20b3c2 33.333% 66.666%,#ff3f8e 66.666%); }
+        .career-col { padding:21px 28px 16px; border-right:1px solid #d4d8db; }
+        .career-col:first-child { padding-left:18px; }
+        .career-col:last-child { border:0; }
+        .career-col h3 { display:flex; align-items:center; gap:9px; margin:0 0 10px; font-size:12px; color:#ff3f8e; letter-spacing:.09em; }
+        .career-col:nth-child(2) h3 { color:#24aebd; }
+        .career-col h3:before { content:""; width:7px; height:7px; background:currentColor; transform:rotate(45deg); }
+        .datum { display:flex; justify-content:space-between; margin:6px 0; padding-bottom:4px; border-bottom:1px dotted #c8ced1; font-size:12px; line-height:1.15; }
+        .datum:last-child { border:0; }
+        .datum span { color:#697681; }
+        .datum b { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; font-size:16px; }
+        .delta { display:inline-flex; align-items:center; max-width:88px; height:18px; padding:0 6px; border-radius:9px; overflow:hidden; font-style:normal; font-size:9px; font-weight:800; line-height:18px; letter-spacing:0; white-space:nowrap; text-overflow:ellipsis; vertical-align:middle; }
+        .delta.good { color:#087f69; background:#20b3c21b; box-shadow:inset 0 0 0 1px #20a9b83d; }
+        .delta.bad { color:#d72773; background:#ff3f8e16; box-shadow:inset 0 0 0 1px #ff3f8e35; }
+        .side .delta.good { color:#75e5d8; background:#22b7ba26; box-shadow:inset 0 0 0 1px #43d3ce42; }
+        .side .delta.bad { color:#ff8fbe; background:#ff3f8e24; box-shadow:inset 0 0 0 1px #ff6fac42; }
+        .grade-seal .delta { display:flex; width:max-content; max-width:66px; margin:3px auto 0; }
+        .section-head>span { display:flex; align-items:center; gap:7px; }
+        .honours { height:168px; padding-top:17px; }
+        .section-head { display:flex; justify-content:space-between; align-items:baseline; }
+        .section-head h2 { display:flex; align-items:center; gap:10px; margin:0; font-size:22px; }
+        .section-head h2:after { content:""; width:38px; height:4px; background:linear-gradient(90deg,#ff3f8e 0 65%,#20b3c2 65%); }
+        .section-head span { font-size:11px; color:#7b858f; }
+        .badges { display:grid; grid-template-columns:repeat(8,1fr); gap:12px; margin-top:12px; }
+        .badge { text-align:center; min-width:0; }
+        .badge img { width:100%; height:55px; object-fit:contain; border-radius:3px; filter:drop-shadow(0 5px 7px #3334); }
+        .badge b { display:block; height:20px; overflow:hidden; margin-top:6px; font-size:9px; line-height:1.15; }
+        .badge span { display:block; margin-top:3px; font-size:10px; line-height:1; color:#20a9b8; }
+        .bp-head { height:51px; border-top:1px solid #d5d9da; display:flex; align-items:center; justify-content:space-between; position:relative; }
+        .bp-head:before { content:""; position:absolute; left:0; top:-2px; width:86px; height:3px; background:#ff3f8e; }
+        .bp-head h2 { margin:0; font-size:30px; letter-spacing:-.025em; }
+        .bp-head h2 i { font-style:normal; color:#ff3f8e; }
+        .insights { display:flex; gap:18px; }
+        .insight { border-left:1px solid #c8cdd1; padding-left:12px; }
+        .insight span { display:block; font-size:9px; color:#7c8690; }
+        .insight b { font-size:13px; }
+        .bps { display:grid; grid-template-columns:repeat(5,1fr); gap:17px 13px; }
+        .main.no-honours .bp-head { margin-top:18px; }
+        .main.no-honours .bp-visual,.main.no-honours .cover { height:142px; }
+        .main.no-honours .bp-visual:after { height:72px; }
+        .bp { min-width:0; position:relative; }
+        .bp-visual { position:relative; height:112px; border-radius:7px; overflow:hidden; background:#101925; border:1px solid #fff; box-shadow:0 8px 18px #27313b2b,0 0 0 1px #1d2a3614; }
+        .bp-visual:after { content:""; position:absolute; z-index:1; inset:auto 0 0; height:58px; background:linear-gradient(transparent,#07111dcf); }
+        .cover { width:100%; height:112px; object-fit:cover; display:block; transform:scale(1.012); filter:saturate(.9) contrast(1.03); }
+        .bp-num { position:absolute; z-index:3; left:7px; top:7px; min-width:28px; padding:4px 7px; border-radius:10px; background:#ff3f8e; color:#fff; text-align:center; font-size:8px; font-weight:800; }
+        .bp-grade { position:absolute; z-index:4; left:42px; top:7px; width:38px; height:20px; display:flex; align-items:center; justify-content:center; filter:drop-shadow(0 2px 5px #0007); }
+        .bp-grade svg { width:38px; height:20px; }
+        .bp-star { position:absolute; z-index:3; right:7px; top:7px; display:flex; align-items:center; justify-content:center; min-width:45px; height:22px; padding:0 8px; border-radius:11px; background:var(--star-color); color:var(--star-text); border:1px solid #ffffff3d; box-shadow:0 2px 7px #0004; font-size:8px; font-weight:800; }
+        .bp-mod-icons { position:absolute; z-index:3; left:7px; bottom:7px; display:flex; align-items:center; }
+        .bp-mod-icons img { width:25px; height:25px; object-fit:contain; filter:drop-shadow(0 2px 5px #0005); }
+        .bp-mod-icons img+img { margin-left:-3px; }
+        .bp-pp { position:absolute; z-index:3; right:7px; bottom:7px; display:flex; align-items:center; gap:3px; height:21px; padding:0 8px; border-radius:10px; background:linear-gradient(135deg,#ffe78d,#eeb957); border:1px solid #fff6c966; box-shadow:0 3px 9px #0004; }
+        .bp-pp strong { font-size:9px; color:#17202b; }
+        .bp-pp small { font-size:7px; font-weight:800; color:#6d4b13; }
+        .bp-title { display:block; position:relative; margin-top:8px; padding-left:10px; font-size:13px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bp-title:before { content:""; position:absolute; left:0; top:2px; width:4px; height:10px; border-radius:2px; background:#ff3f8e; }
+        .bp:nth-child(3n) .bp-title:before { background:#20a9b8; }
+        .bp-meta { display:flex; justify-content:space-between; margin-top:5px; padding:0 1px; font-size:9px; color:#7c858e; }
+        .bp-meta span { max-width:68%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bp-meta strong { color:#e33c83; }
+        .bp-detail { display:flex; justify-content:space-between; align-items:flex-start; gap:6px; min-height:18px; margin-top:4px; padding:4px 1px 3px; border-top:1px dotted #c8ced1; color:#7f8a94; font-size:8px; line-height:1.35; }
+        .bp-detail span { max-width:70%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bp-detail time { color:#20a2b1; font-weight:800; white-space:nowrap; }
+        .empty { color:#87919a; font-size:13px; padding-top:28px; }
     </style>
 </head>
-<body class="">
-<div
-        id="userInfo"
-        class="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col gap-2 h-full
-               relative
-               before:content-['']
-               before:absolute
-               before:inset-0
-               before:bg-black
-               before:opacity-70
-               z-0
-               max-w-[440px]"
-        style="background-image: url({{bg}})"
-></div>
+<body><div id="userInfo"></div>
 <script>
     function getGlobalTier(user) {
         const rank = user.statistics?.global_rank;
@@ -304,173 +439,49 @@
     // 用户数据，由Jinja2模板注入
     const userData = {{user_json}};
 
+    const number = (value, digits = 0) => Number(value || 0).toLocaleString("zh-CN", {maximumFractionDigits: digits, minimumFractionDigits: digits});
+    const compact = value => Number(value || 0).toLocaleString("en-US", {notation:"compact", maximumFractionDigits:2}).toLowerCase();
+    const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+    const countryName = code => { try { return new Intl.DisplayNames(["zh-CN"], {type:"region"}).of(code) || code; } catch { return code; } };
+    const modeNames = {OSU:"标准",TAIKO:"太鼓",FRUITS:"接水果",MANIA:"键盘",RXOSU:"Relax",RXTAIKO:"Relax 太鼓",RXFRUITS:"Relax 接水果",APOSU:"Autopilot"};
+    const tierColours = {iron:["#bab3ab","#bab3ab"],bronze:["#b88f7a","#855c47"],silver:["#e0e0eb","#a3a3c2"],gold:["#f0e4a8","#e0c952"],platinum:["#a8f0ef","#52e0df"],rhodium:["#d9f8d3","#a0cf96"],radiant:["#97dcff","#ed82ff"],lustrous:["#ffe600","#ed82ff"],base:["#ccc","#999"]};
+    const starStops = [[.1,"#4290FB"],[1.25,"#4FC0FF"],[2,"#4FFFD5"],[2.5,"#7CFF4F"],[3.3,"#F6F05C"],[4.2,"#FF8068"],[4.9,"#FF4E6F"],[5.8,"#C645B8"],[6.7,"#6563DE"],[7.7,"#18158E"],[9,"#000000"]];
+    function mixHex(a,b,t){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16),out=[16,8,0].map(s=>Math.round(((x>>s)&255)*(1-t)+((y>>s)&255)*t));return"#"+out.map(v=>v.toString(16).padStart(2,"0")).join("")}
+    function starColour(value){const v=Number(value);if(v<.1)return"#aaa";if(v>=9)return"#000";for(let i=1;i<starStops.length;i++){if(v<=starStops[i][0]){const[a,ca]=starStops[i-1],[b,cb]=starStops[i];return mixHex(ca,cb,(v-a)/(b-a))}}return"#000"}
+    function gradeKey(rank){return ({XH:"xh",X:"ss",SH:"x",S:"s",A:"a"})[rank] || "a"}
+    function changeTag(value){if(!value)return"";const original=String(value),raw=original.replace(/[()]/g,""),match=raw.match(/^([↑↓+\-])([\d,.]+)(.*)$/);let shown=raw,kind=/^[↑+]/.test(raw)?"good":"bad";if(match){const sign=match[1],amount=Number(match[2].replaceAll(",","")),suffix=match[3];if(Number.isFinite(amount)){let scaled=amount,unit="";if(suffix==="s"){scaled=amount/3600;unit="h"}else if(amount>=1e9){scaled=amount/1e9;unit="b"}else if(amount>=1e6){scaled=amount/1e6;unit="m"}else if(amount>=1e3){scaled=amount/1e3;unit="k"}if(unit){const digits=scaled>=100?0:scaled>=10?1:2;shown=`${sign}${scaled.toFixed(digits).replace(/\.?0+$/,'')}${unit}${suffix==="s"?"":suffix}`}}}return `<em class="delta ${kind}" title="${escapeHtml(original)}">${shown}</em>`}
+    function appendChange(element,value){if(element&&value)element.insertAdjacentHTML("beforeend",changeTag(value))}
+    function accountAge(joinDate){if(!joinDate)return"暂无数据";const days=Math.max(0,(Date.now()-new Date(joinDate).getTime())/86400000);return days>=365?`${(days/365.2425).toFixed(1)} 年`:`${Math.floor(days)} 天`}
+    function averagePlayTime(seconds,count){const value=Math.round((seconds||0)/Math.max(1,count||0));return value>=60?`${Math.floor(value/60)}分${value%60}秒`:`${value} 秒`}
+    function fitGlobalRank(rank){const el=document.querySelector(".rank"),box=el.parentElement,formatted=rank==null?"未排名":"#"+Number(rank).toLocaleString("en-US");el.textContent=formatted;el.style.letterSpacing=formatted.length>=7?"-.04em":"-.055em";let size=rank==null?72:80;el.style.setProperty("font-size",size+"px","important");const start=el.getBoundingClientRect().left,nextLeft=box.nextElementSibling.getBoundingClientRect().left,available=nextLeft-start-24;while(el.scrollWidth>available&&size>24){size-=2;el.style.setProperty("font-size",size+"px","important")}}
+    function rankHistory(history,current){const ranked=current!=null,data=ranked?(history||[]).filter(Number.isFinite):[0,0];if(!data.length)data.push(current);const best=Math.min(...data),worst=Math.max(...data),w=680,top=7,bottom=41,range=Math.max(1,worst-best),y=v=>top+(v-best)*(bottom-top)/range,points=data.map((v,i)=>`${i*w/Math.max(1,data.length-1)},${y(v)}`).join(" "),area=`0,48 ${points} ${w},48`,start=data.at(-14)??data[0],delta=start-data.at(-1),rankText=ranked?`#${number(current)}`:"未排名",rangeText=ranked?`最高 #${number(best)} · 最低 #${number(worst)}`:"暂无排名记录";return `<div class="rank-history"><span class="trend-label"><b>90 天排名趋势</b><small>${rangeText}</small></span><svg viewBox="0 0 ${w} 48"><defs><linearGradient id="rankArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20a9b8" stop-opacity=".3"/><stop offset="1" stop-color="#20a9b8" stop-opacity="0"/></linearGradient></defs><line class="history-grid" x1="0" y1="${top}" x2="${w}" y2="${top}"/><line class="history-grid" x1="0" y1="${bottom}" x2="${w}" y2="${bottom}"/><polygon class="history-area" points="${area}"/><polyline class="history-line" points="${points}"/>${ranked?`<circle class="history-dot" cx="${w}" cy="${y(data.at(-1))}" r="4"/>`:""}</svg><span class="trend-value"><b>当前 ${rankText}</b><em>近14天 ${ranked?(delta>0?"↑"+delta:delta<0?"↓"+Math.abs(delta):"—"):"—"}</em></span></div>`}
     function displayUserInfo(user) {
-        const userInfoDiv = document.getElementById("userInfo");
-
-        userInfoDiv.innerHTML = `
-                <div id="display" class="flex flex-col gap-2 p-2 relative z-10">
-                    <div class="flex flex-row justify-between items-center">
-                        <h2 class="text-2xl font-bold text-white">玩家信息</h2>
-                        <h2 class="text-2xl font-bold text-white">${user.mode}</h2>
-                    </div>
-                    <!-- 用户基本信息 -->
-                    <div class="flex flex-row gap-4 bg-white/20 rounded-lg p-2">
-                        <div class="max-w-[100px] flex-shrink-0">
-                            <img src="https://a.ppy.sh/${user.id}" alt="user" class="rounded-lg">
-                        </div>
-                        <div class="flex flex-col flex-grow justify-around min-w-0 text-white">
-                            <div class="text-xl truncate font-bold">${user.username}</div>
-                            ${
-            user.team
-                ? `
-                                <div class="flex flex-row items-baseline gap-2 text-sm truncate">
-                                    <img src="${user.team.flag_url}" alt="team" class="w-[40px] align-bottom">
-                                    <p class="">${user.team.name}</p>
-                                </div>
-                            `
-                : ""
-        }
-                            <div class="flex flex-row justify-between">
-                                <div class="flex flex-row text-sm gap-2 items-end">
-                                    <img src="${flagUrl(user.country_code)}" alt="country" class="w-[27px]">
-                                    <p>#${user.statistics?.country_rank || 0} ${user.country_rank_change?user.country_rank_change:""}</p>
-                                </div>
-                                ${
-            user.statistics?.variants
-                ? `
-                                    <div class="hidden sm:flex flex-col">
-                                        <div class="text-xs">
-                                            4k: ${user.statistics?.variants?.find((key) => key.variant === "4k")?.pp || 0} /
-                                            #${user.statistics?.variants?.find((key) => key.variant === "4k")?.global_rank || 0} / ${user.country_code} #${user.statistics?.variants?.find((key) => key.variant == "4k")?.country_rank || 0}
-                                        </div>
-                                        <div class="text-xs">
-                                            7k: ${user.statistics?.variants?.find((key) => key.variant === "7k")?.pp || 0} /
-                                            #${user.statistics?.variants?.find((key) => key.variant === "7k")?.global_rank || 0} / ${user.country_code} #${user.statistics?.variants?.find((key) => key.variant == "7k")?.country_rank || 0}
-                                        </div>
-                                    </div>
-                                `
-                : ""
-        }
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 徽章 -->
-                    ${
-            user.badges && user.badges.length > 0
-                ? `
-                        <div class="flex flex-row bg-white/20 rounded-lg p-2 gap-2 flex-wrap items-center">
-                            ${user.badges
-                    .map((badge) => {
-                        return `
-                                    <div>
-                                        <img src="${badge.image_url}" alt="${badge.description}" class="w-[75px]">
-                                    </div>
-                                `;
-                    })
-                    .join("")}
-                        </div>
-                    `
-                : ""
-        }
-
-                    <!-- 等级进度 -->
-                    <div class="flex flex-row bg-white/20 rounded-lg p-2 justify-between items-center gap-4 text-white">
-                        <div class="flex-grow">
-                            <div class="text-sm mb-1">等级</div>
-                            <div class="w-full bg-gray-700 rounded-full h-2">
-                                <div class="bg-pink-400 h-2 rounded-full" style="width: ${user.statistics?.level.progress}%"></div>
-                            </div>
-                            <div class="text-xs mt-1">${user.statistics?.level.progress}%</div>
-                        </div>
-                        ${getUserLevelHTML(user.statistics?.level.current || 0)}
-                    </div>
-
-
-                    <!-- 排名和评级 -->
-                    <div class="flex flex-row bg-white/20 rounded-lg p-2 justify-between flex-wrap gap-2 text-white">
-                        <div class="flex flex-col">
-                            <div>世界排名</div>
-                            ${getRankDisplay(user)}
-                            ${user.rank_change ?
-                            `<span class="text-sm">
-                                ${user.rank_change}
-                            </span>` : ""}
-                        </div>
-                        <div class="flex flex-col">
-                            <div>PP</div>
-                            <div class="text-xl">${user.statistics?.pp.toLocaleString()}</div>
-                            ${user.pp_change ?
-                            `<span class="text-sm">
-                                ${user.pp_change}
-                            </span>` : ""}
-                        </div>
-                        <div class="flex flex-row gap-2">
-                            <div class="flex flex-col items-center gap-1">
-                                <div class="score-rank">${getScoreRankSVG("xh")}</div>
-                                <div class="text-center">${user.statistics?.grade_counts.ssh}${user.xh_change?`<br>${user.xh_change}`:""}</div>
-                            </div>
-                            <div class="flex flex-col items-center gap-1">
-                                <div class="score-rank">${getScoreRankSVG("ss")}</div>
-                                <div class="text-center">${user.statistics?.grade_counts.ss}${user.x_change?`<br>${user.x_change}`:""}</div>
-                            </div>
-                            <div class="flex flex-col items-center gap-1">
-                                <div class="score-rank">${getScoreRankSVG("x")}</div>
-                                <div class="text-center">${user.statistics?.grade_counts.sh}${user.sh_change?`<br>${user.sh_change}`:""}</div>
-                            </div>
-                            <div class="flex flex-col items-center gap-1">
-                                <div class="score-rank">${getScoreRankSVG("s")}</div>
-                                <div class="text-center">${user.statistics?.grade_counts.s}${user.s_change?`<br>${user.s_change}`:""}</div>
-                            </div>
-                            <div class="flex flex-col items-center gap-1">
-                                <div class="score-rank">${getScoreRankSVG("a")}</div>
-                                <div class="text-center">${user.statistics?.grade_counts.a}${user.a_change?`<br>${user.a_change}`:""}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 详细统计 -->
-                    <div class="flex flex-col gap-2 bg-white/20 rounded-lg p-2 text-white">
-                        <div class="flex flex-row justify-between">
-                            <div>Ranked 谱面总分</div>
-                            <div>${user.statistics?.ranked_score.toLocaleString()}${user.ranked_score_change?user.ranked_score_change:""}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>准确率</div>
-                            <div>${user.statistics?.hit_accuracy.toFixed(2)}%${user.acc_change?user.acc_change:""}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>游戏次数</div>
-                            <div>${user.statistics?.play_count.toLocaleString()}${user.pc_change?user.pc_change:""}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>总分</div>
-                            <div>${user.statistics?.total_score.toLocaleString()}${user.total_score_change?user.total_score_change:""}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>总命中次数</div>
-                            <div>${user.statistics?.total_hits.toLocaleString()}${user.hits_change?user.hits_change:""}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>游玩时间</div>
-                            <div>${formatPlayTime(user.statistics?.play_time)}${user.play_time_change?user.play_time_change:""}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>每次游玩击打数</div>
-                            <div>${(user.statistics?.total_hits / (user.statistics?.play_count || 1)).toFixed(2)}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>最大连击</div>
-                            <div>${user.statistics?.maximum_combo.toLocaleString()}</div>
-                        </div>
-                        <div class="flex flex-row justify-between">
-                            <div>回放被观看次数</div>
-                            <div>${user.statistics?.replays_watched_by_others.toLocaleString()}</div>
-                        </div>
-                    </div>
-                    <span class="text-center text-sm text-white">${user.footer}</span>
-                </div>
-            `;
+        const stats=user.statistics||{}, grades=stats.grade_counts||{}, badges=(user.badges||[]).slice(0,8), bps=(user.best_plays||[]).slice(0,10), tier=getGlobalTier(user)||"base", colours=tierColours[tier];
+        document.documentElement.style.setProperty("--tier-a",colours[0]);document.documentElement.style.setProperty("--tier-b",colours[1]);
+        const supporter=Math.max(0,Math.min(5,user.support_level||0)), team=user.team, joined=user.join_date?new Date(user.join_date).toLocaleDateString("zh-CN",{year:"numeric",month:"long",day:"numeric"}):"暂无数据";
+        const gradeRows=[["xh",grades.ssh],["ss",grades.ss],["x",grades.sh],["s",grades.s],["a",grades.a]];
+        const avgPp=bps.length?bps.reduce((s,x)=>s+x.pp,0)/bps.length:0, avgAcc=bps.length?bps.reduce((s,x)=>s+x.accuracy,0)/bps.length:0, peak=bps.length?Math.max(...bps.map(x=>x.stars)):0;
+        const modFreq={};bps.flatMap(x=>x.mods).forEach(m=>modFreq[m]=(modFreq[m]||0)+1);const commonMods=Object.entries(modFreq).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]).join(" + ")||"无";
+        document.getElementById("userInfo").innerHTML=`<main id="display" class="page"><div class="slash"></div><aside class="side"><div class="side-bg" style="background-image:url('{{bg}}')"></div><div class="brand">OSU! 玩家档案 / ${modeNames[user.mode]||user.mode}模式</div><img class="portrait" src="${user.avatar_url}" alt="头像"><div class="region">${countryName(user.country_code)} · ${user.country_code} #${number(stats.country_rank)}</div><div class="name"><span>${escapeHtml(user.username)}</span>${supporter?`<span class="name-supporter" title="osu! 支持者等级 ${supporter}">${'<i>&#xf004;</i>'.repeat(supporter)}</span>`:""}</div><div class="team">${team?`<b>${escapeHtml(team.short_name||team.name)}</b> · ${escapeHtml(team.name)} / `:""}UID ${number(user.id)}</div><div class="identity"><div class="iline"><span>注册时间</span><b>${joined}</b></div><div class="iline"><span>关注者</span><b>${user.follower_count==null?"—":number(user.follower_count)}</b></div><div class="iline"><span>徽章 / 成就</span><b>${number((user.badges||[]).length)} / ${number(user.achievement_count)}</b></div><div class="iline"><span>回放观看</span><b>${number(stats.replays_watched_by_others)}</b></div></div><div class="level"><strong>${number(stats.level?.current)}</strong><div><label><span>等级进度</span><span>${number(stats.level?.progress)}%</span></label><div class="bar"><i style="width:${stats.level?.progress||0}%"></i></div></div></div><div class="grades"><h3><b>评级成绩 / ${number(gradeRows.reduce((s,x)=>s+(x[1]||0),0))}</b></h3><div class="grade-seals">${gradeRows.map(([g,c])=>`<div class="grade-seal"><span class="grade-icon">${getScoreRankSVG(g)}</span><b>${number(c)}</b></div>`).join("")}</div></div></aside><section class="main"><div class="mast"><b>玩家表现 / ${modeNames[user.mode]||user.mode}模式</b><span>${escapeHtml(user.footer)}</span></div><div class="hero"><div><div class="rank-label">全球排名</div><div class="rank"></div>${rankHistory(user.rank_history,stats.global_rank)}</div><div><div class="pp-label">表现分</div><div class="pp">${number(stats.pp,1)} <small>pp</small></div><div class="subrank">地区排名&nbsp;&nbsp;<b>${countryName(user.country_code)} #${number(stats.country_rank)}</b></div></div><div class="accuracy"><span>准确率</span><b>${number(stats.hit_accuracy,4)}%</b><span>最大连击</span><small>${number(stats.maximum_combo)}x</small></div></div><div class="career"><div class="career-col"><h3>游玩</h3><div class="datum"><span>游玩次数</span><b>${number(stats.play_count)}</b></div><div class="datum"><span>游玩时间</span><b>${formatPlayTime(stats.play_time)}</b></div><div class="datum"><span>场均命中</span><b>${number((stats.total_hits||0)/(stats.play_count||1),2)}</b></div></div><div class="career-col"><h3>得分</h3><div class="datum"><span>计入排名得分</span><b>${compact(stats.ranked_score)}</b></div><div class="datum"><span>累计总分</span><b>${compact(stats.total_score)}</b></div><div class="datum"><span>总命中数</span><b>${compact(stats.total_hits)}</b></div></div><div class="career-col"><h3>命中</h3><div class="datum"><span>评级成绩</span><b>${number(gradeRows.reduce((s,x)=>s+(x[1]||0),0))}</b></div><div class="datum"><span>最大连击</span><b>${number(stats.maximum_combo)}x</b></div><div class="datum"><span>回放观看</span><b>${compact(stats.replays_watched_by_others)}</b></div></div></div><section class="honours"><div class="section-head"><h2>近期荣誉</h2><span>最近 ${badges.length} 枚 / 共 ${(user.badges||[]).length} 枚</span></div>${badges.length?`<div class="badges">${badges.map(x=>`<div class="badge"><img src="${x.image_url}" alt=""><b>${escapeHtml(x.description)}</b><span>${String(x.awarded_at||"").slice(0,4)}</span></div>`).join("")}</div>`:`<div class="empty">暂无荣誉徽章</div>`}</section><div class="bp-head"><h2>最佳成绩 <i>/ 前 ${bps.length}</i></h2><div class="insights"><div class="insight"><span>平均 pp</span><b>${number(avgPp,2)} pp</b></div><div class="insight"><span>平均准确率</span><b>${number(avgAcc,2)}%</b></div><div class="insight"><span>最高星数</span><b>${number(peak,2)}★</b></div><div class="insight"><span>常用模组</span><b>${commonMods}</b></div></div></div>${bps.length?`<div class="bps">${bps.map((x,i)=>{const colour=starColour(x.stars),text=x.stars<6.5?"#101925":"#ffd966";return `<div class="bp"><div class="bp-visual"><img class="cover" src="${x.cover_url}" alt=""><span class="bp-num">#${i+1}</span><span class="bp-grade">${getScoreRankSVG(gradeKey(x.rank))}</span><span class="bp-star" style="--star-color:${colour};--star-text:${text}">${number(x.stars,2)}★</span><span class="bp-mod-icons">${x.mods.map(m=>`<img src="../../osufile/mods/${m}.png" alt="${m}">`).join("")}</span><span class="bp-pp"><strong>${number(x.pp,2)}</strong><small>pp</small></span></div><b class="bp-title">${escapeHtml(x.title)}</b><div class="bp-meta"><span>${escapeHtml(x.artist)}</span><strong>${number(x.accuracy,2)}%</strong></div><div class="bp-detail"><span>${escapeHtml(x.version)}</span><time>${String(x.ended_at).slice(0,10).replaceAll("-",".")}</time></div></div>`}).join("")}</div>`:`<div class="empty">暂无最佳成绩数据</div>`}</section></main>`;
+        appendChange(document.querySelector(".rank-label"),user.rank_change);
+        appendChange(document.querySelector(".pp-label"),user.pp_change);
+        appendChange(document.querySelector(".subrank"),user.country_rank_change);
+        appendChange(document.querySelector(".accuracy span:first-child"),user.acc_change);
+        const datumChanges=[user.pc_change,user.play_time_change,null,user.ranked_score_change,user.total_score_change,user.hits_change,null,null,null];
+        document.querySelectorAll(".datum b").forEach((element,index)=>appendChange(element,datumChanges[index]));
+        const gradeChanges=[user.xh_change,user.x_change,user.sh_change,user.s_change,user.a_change];
+        document.querySelectorAll(".grade-seal").forEach((element,index)=>appendChange(element,gradeChanges[index]));
+        document.querySelector(".grades h3 b").textContent="成绩评级分布";
+        const hitAccuracyDatum=document.querySelector(".career-col:last-child .datum");hitAccuracyDatum.querySelector("span").textContent="命中准确率";hitAccuracyDatum.querySelector("b").textContent=`${number(stats.hit_accuracy,4)}%`;
+        appendChange(document.querySelector(".section-head>span"),user.badge_count_change);
+        const historyBand=document.querySelector(".rank-history");document.querySelector(".hero").after(historyBand);
+        const teamInfo=document.querySelector(".team");teamInfo.innerHTML=teamInfo.innerHTML.replace(`UID ${number(user.id)}`,`UID ${String(user.id)}`);
+        if(team?.flag_url)teamInfo.insertAdjacentHTML("afterbegin",`<img class="team-logo" src="${team.flag_url}" alt="队伍图像">`);
+        if(!badges.length){document.querySelector(".main").classList.add("no-honours");document.querySelector(".honours").remove()}
+        const accountDays=user.join_date?Math.max(1,(Date.now()-new Date(user.join_date).getTime())/86400000):null;
+        document.querySelector(".grades").insertAdjacentHTML("afterend",`<div class="activity-facts"><div class="activity-fact"><span>账号年龄</span><b>${accountAge(user.join_date)}</b></div><div class="activity-fact"><span>日均游玩</span><b>${accountDays?number(stats.play_count/accountDays,1)+" 次":"暂无数据"}</b></div><div class="activity-fact"><span>平均单次</span><b>${averagePlayTime(stats.play_time,stats.play_count)}</b></div></div>`);
+        const insightLabels=document.querySelectorAll(".insight span");if(insightLabels[2])insightLabels[2].textContent="最高星数";
+        fitGlobalRank(stats.global_rank);
     }
 
     function flagUrl(countryCode) {

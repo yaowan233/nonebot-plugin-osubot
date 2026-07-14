@@ -99,6 +99,12 @@ class UnifiedUser(Base):
     id: int
     username: str
     is_supporter: bool
+    support_level: int = 0
+    join_date: Optional[str] = None
+    follower_count: Optional[int] = None
+    mapping_follower_count: Optional[int] = None
+    rank_history: Optional[dict] = None
+    user_achievements: Optional[list[dict]] = None
     badges: Optional[list[Badge]] = None
     statistics: Optional[UserStatistics] = None
     team: Optional[Team] = None
