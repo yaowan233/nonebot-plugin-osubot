@@ -1,19 +1,21 @@
 import asyncio
-from io import BytesIO
-from typing import Union, Optional
+import json
 from datetime import datetime, timedelta
+from io import BytesIO
+from pathlib import Path
+from typing import Optional, Union
 
-from PIL import ImageDraw, UnidentifiedImageError
+import jinja2
+from nonebot_plugin_htmlrender import get_new_page
 
-from ..pp import cal_pp
-from ..mods import get_mods_list
+from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
-from ..schema.score import Mod, UnifiedScore
+from ..file import download_osu, get_pfm_img, map_path
+from ..mods import get_mods_list
+from ..pp import cal_pp
+from ..schema.score import UnifiedScore
 from .score import cal_score_info
-from ..api import get_user_scores, get_user_info_data
-from ..file import map_path, get_pfm_img, download_osu
-from .utils import draw_fillet, draw_fillet2, open_user_icon, filter_scores_with_regex
-from .static import BgImg, Image, BgImg1, ModsDict, RankDict, Torus_Regular_20, Torus_Regular_25, Torus_SemiBold_25
+from .utils import filter_scores_with_regex
 
 
 async def draw_bp(
@@ -33,30 +35,22 @@ async def draw_bp(
         mods_ls = get_mods_list(scores, mods)
         if low_bound > len(mods_ls):
             raise NetworkError(f"未找到开启 {'|'.join(mods)} Mods的成绩")
-        if high_bound > len(mods_ls):
-            mods_ls = mods_ls[low_bound - 1 :]
-        else:
-            mods_ls = mods_ls[low_bound - 1 : high_bound]
-        score_ls_filtered = [scores[i] for i in mods_ls]
+        selected = [scores[i] for i in mods_ls[low_bound - 1 : high_bound]]
     else:
-        score_ls_filtered = scores[low_bound - 1 : high_bound]
+        selected = scores[low_bound - 1 : high_bound]
     if project == "tbp":
-        score_ls_filtered = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day + 1)]
-        if not score_ls_filtered:
+        selected = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day + 1)]
+        if not selected:
             raise NetworkError("未查询到游玩记录")
-    for i, score_info in enumerate(score_ls_filtered):
-        if score_info.mods:
-            has_nc = any(m.acronym == "NC" for m in score_info.mods)
-            if has_nc:
-                score_info.mods = [m for m in score_info.mods if m.acronym != "DT"]
-        # 判断是否开启lazer模式
-        score_ls_filtered[i] = cal_score_info(is_lazer, score_info, source)
+    for index, score in enumerate(selected):
+        if score.mods and any(mod.acronym == "NC" for mod in score.mods):
+            score.mods = [mod for mod in score.mods if mod.acronym != "DT"]
+        selected[index] = cal_score_info(is_lazer, score, source)
     if search_condition:
-        score_ls_filtered = filter_scores_with_regex(score_ls_filtered, search_condition)
-    if not score_ls_filtered:
+        selected = filter_scores_with_regex(selected, search_condition)
+    if not selected:
         raise NetworkError("未查询到游玩记录")
-    msg = await draw_pfm(project, uid, scores, score_ls_filtered, mode, source, low_bound, high_bound, day)
-    return msg
+    return await draw_pfm(project, uid, scores, selected, mode, source, low_bound, high_bound, day)
 
 
 async def draw_pfm(
@@ -70,186 +64,115 @@ async def draw_pfm(
     high_bound: int = 0,
     day: int = 0,
 ) -> Union[str, BytesIO]:
-    task0 = [
+    cover_paths = [map_path / str(score.beatmap.set_id) / "cover.jpg" for score in score_ls_filtered]
+    cover_tasks = [
         get_pfm_img(
-            f"https://assets.ppy.sh/beatmaps/{i.beatmap.set_id}/covers/list.jpg",
-            map_path / f"{i.beatmap.set_id}" / "list.jpg",
+            f"https://assets.ppy.sh/beatmaps/{score.beatmap.set_id}/covers/cover.jpg",
+            cover_path,
         )
-        for i in score_ls_filtered
+        for score, cover_path in zip(score_ls_filtered, cover_paths)
     ]
-
-    task1 = [
-        get_pfm_img(
-            f"https://assets.ppy.sh/beatmaps/{i.beatmap.set_id}/covers/cover.jpg",
-            map_path / f"{i.beatmap.set_id}" / "cover.jpg",
-        )
-        for i in score_ls_filtered
+    osu_tasks = [
+        download_osu(score.beatmap.set_id, score.beatmap.id)
+        for score in score_ls_filtered
+        if not (map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu").exists()
     ]
-    task2 = [
-        download_osu(i.beatmap.set_id, i.beatmap.id)
-        for i in score_ls_filtered
-        if not (map_path / f"{i.beatmap.set_id}" / f"{i.beatmap.id}.osu").exists()
-    ]
-    (info, bg_ls, large_banner_ls, *_) = await asyncio.gather(
+    info, *_ = await asyncio.gather(
         get_user_info_data(uid, mode, source),
-        asyncio.gather(*task0),
-        asyncio.gather(*task1),
-        asyncio.gather(*task2),
+        asyncio.gather(*cover_tasks),
+        asyncio.gather(*osu_tasks),
     )
-    bplist_len = len(score_ls_filtered)
-    im = Image.new("RGBA", (1420, 280 + 177 * ((bplist_len + 1) // 2 - 1)), (31, 41, 46, 255))
-    if project in ("prlist", "relist"):
-        im.alpha_composite(BgImg1)
-    else:
-        im.alpha_composite(BgImg)
-    draw = ImageDraw.Draw(im)
-    f_div = Image.new("RGBA", (1450, 2), (255, 255, 255, 255)).convert("RGBA")
-    im.alpha_composite(f_div, (0, 100))
+
+    plays = []
+    for score, cover_path in zip(score_ls_filtered, cover_paths):
+        osu_file = map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu"
+        stars = score.beatmap.stars
+        pp_value = score.pp or 0
+        if osu_file.exists():
+            try:
+                pp_info = cal_pp(score, str(osu_file.absolute()), source)
+                stars = pp_info.stars
+                if source != "ppysb":
+                    pp_value = pp_info.pp
+            except Exception:
+                pass
+        mods = [mod.acronym for mod in score.mods]
+        if "NC" in mods and "DT" in mods:
+            mods.remove("DT")
+        try:
+            bp_index = score_ls.index(score) + 1
+        except ValueError:
+            bp_index = low_bound + len(plays)
+        plays.append(
+            {
+                "index": bp_index,
+                "title": score.beatmap.title,
+                "artist": score.beatmap.artist,
+                "version": score.beatmap.version,
+                "cover": cover_path.resolve().as_uri()
+                if cover_path.exists()
+                else f"https://assets.ppy.sh/beatmaps/{score.beatmap.set_id}/covers/cover.jpg",
+                "pp": pp_value,
+                "accuracy": score.accuracy,
+                "stars": stars,
+                "mods": mods,
+                "date": score.ended_at.strftime("%Y.%m.%d"),
+            }
+        )
+
     if project == "bp":
-        uinfo = f"{mode.capitalize()} 模式 | BP {low_bound} - {high_bound}"
+        shown_high = min(high_bound, low_bound + len(score_ls_filtered) - 1)
+        section_title = "最佳成绩"
+        range_label = f"BP {low_bound}–{shown_high}"
     elif project == "prlist":
-        uinfo = f"{mode.capitalize()} 模式 | 近24h内上传成绩"
+        section_title, range_label = "上传成绩", "近 24 小时"
     elif project == "relist":
-        uinfo = f"{mode.capitalize()} 模式 | 近24h内（含死亡）上传成绩"
+        section_title, range_label = "上传成绩", "近 24 小时 · 含未通过"
     else:
-        uinfo = f"{mode.capitalize()} 模式 | 近{day + 1}日新增 BP"
-    draw.text((1388, 80), uinfo, font=Torus_SemiBold_25, anchor="rm")
-    user_icon = await open_user_icon(info, source)
-    icon_img = draw_fillet(user_icon.convert("RGBA").resize((75, 75)), 15)
-    user_icon.close()
-    for num, bp in enumerate(score_ls_filtered):
-        h_num = 177 * (num // 2)  # 每两个数据换行
-        offset = 695 * (num % 2)  # 数据在右边时的偏移量
+        section_title, range_label = "新增最佳成绩", f"近 {day + 1} 日"
+    payload = {
+        "mode": mode,
+        "section_title": section_title,
+        "range_label": range_label,
+        "generated_at": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+        "user": {
+            "id": info.id,
+            "name": info.username,
+            "avatar": info.avatar_url,
+            "country": info.country_code,
+            "support_level": info.support_level,
+            "team": info.team.model_dump() if info.team else None,
+            "statistics": info.statistics.model_dump() if info.statistics else {},
+        },
+        "plays": plays,
+    }
 
-        # BP排名
-        index = score_ls.index(bp)
-        draw.text(
-            (40 + offset, 190 + h_num),
-            str(index + 1),
-            font=Torus_Regular_20,
-            anchor="rm",
+    template_path = Path(__file__).parent / "bp_templates"
+    template = jinja2.Environment(  # noqa: S701
+        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
+    ).get_template("index.html")
+    async with get_new_page(1) as page:
+        await page.set_viewport_size({"width": 1440, "height": 900})
+        await page.goto((template_path / "index.html").as_uri(), wait_until="load")
+        await page.set_content(
+            await template.render_async(payload_json=json.dumps(payload, ensure_ascii=False)),
+            wait_until="domcontentloaded",
         )
-
-        # 获取谱面大banner
-        try:
-            banner = Image.open(large_banner_ls[num]).convert("RGBA").resize((650, 150))
-            banner_with_fillet = draw_fillet2(banner, 15)
-            im.alpha_composite(banner_with_fillet, (45 + offset, 114 + h_num))
-        except UnidentifiedImageError:
-            ...
-
-        # 获取谱面banner
-        try:
-            bg = Image.open(bg_ls[num]).convert("RGBA").resize((150, 150))
-            bg_imag = draw_fillet(bg, 15)
-            im.alpha_composite(bg_imag, (45 + offset, 114 + h_num))
-        except UnidentifiedImageError:
-            ...
-
-        # 地区排名和地区
-        draw.text(
-            (115, 70),
-            f"{info.country_code} #{info.statistics.country_rank}",
-            font=Torus_SemiBold_25,
-            anchor="lm",
+        await page.evaluate(
+            "Promise.race([Promise.all([document.fonts.ready,"
+            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
+            "new Promise(resolve=>setTimeout(resolve,8000))])"
         )
-
-        # 用户名
-        draw.text(
-            (115, 25),
-            f"{info.username}",
-            font=Torus_SemiBold_25,
-            anchor="lm",
+        await page.evaluate(
+            "const box=document.querySelector('.minor'),label=box?.querySelector('span');"
+            "if(box&&label&&!box.querySelector('.minor-lines')){"
+            "const parts=label.textContent.split(' · '),logo=box.querySelector('img')?.outerHTML||'';"
+            "const cut=Math.max(1,parts.length-2);"
+            "box.innerHTML=logo+'<span class=\"minor-lines\"><span>'+"
+            "parts.slice(0,cut).join(' · ')+'</span><span>'+"
+            "parts.slice(cut).join(' · ')+'</span></span>'}"
         )
-
-        # 头像
-        im.alpha_composite(icon_img, (30, 10))
-
-        # mods
-        if bp.mods:
-            for mods_num, s_mods in enumerate(bp.mods):
-                if s_mods.acronym in ModsDict:
-                    im.alpha_composite(ModsDict[s_mods.acronym], (210 + offset + 50 * mods_num, 192 + h_num))
-            if (bp.rank == "X" or bp.rank == "S") and (
-                Mod(acronym="HD") in bp.mods or Mod(acronym="FL") in bp.mods or Mod(acronym="FI") in bp.mods
-            ):
-                bp.rank += "H"
-
-        # 曲名&作曲
-        metadata = f"{bp.beatmap.title} | by {bp.beatmap.artist}"
-        if len(metadata) > 30:
-            metadata = metadata[:27] + "..."
-        draw.text((210 + offset, 135 + h_num), metadata, font=Torus_Regular_25, anchor="lm")
-
-        # 地图版本&时间
-        difficulty = bp.beatmap.version
-        if len(difficulty) > 30:
-            difficulty = difficulty[:27] + "..."
-        osu = map_path / f"{bp.beatmap.set_id}" / f"{bp.beatmap.id}.osu"
-        api_pp = bp.pp if source == "ppysb" else None
-        pp_info = cal_pp(bp, str(osu.absolute()), source) if osu.exists() else None
-        stars = pp_info.stars if pp_info else bp.beatmap.stars
-        pp_value = api_pp if api_pp is not None else (pp_info.pp if pp_info else (bp.pp or 0))
-        difficulty = f"{stars:.2f}★ | {difficulty}"
-        draw.text(
-            (210 + offset, 168 + h_num),
-            difficulty,
-            font=Torus_Regular_20,
-            anchor="lm",
-            fill=(238, 171, 0, 255),
-        )
-
-        # 达成时间
-        draw.text(
-            (210 + offset, 245 + h_num),
-            f"{bp.ended_at.strftime('%Y-%m-%dT%H:%M:%S')}",
-            font=Torus_Regular_20,
-            anchor="lm",
-        )
-
-        # acc
-        draw.text(
-            (680 + offset, 210 + h_num),
-            f"{bp.accuracy:.2f}%",
-            font=Torus_SemiBold_25,
-            anchor="rm",
-            fill=(238, 171, 0, 255),
-        )
-
-        # rank
-        rank_bg = RankDict[f"ranking-{bp.rank}"].resize((60, 30))
-        im.alpha_composite(rank_bg, (621 + offset, 120 + h_num))
-
-        # mapid
-        draw.text(
-            (680 + offset, 245 + h_num),
-            f"ID: {bp.beatmap.id}",
-            font=Torus_Regular_20,
-            anchor="rm",
-        )
-
-        # pp
-        draw.text(
-            (645 + offset, 174 + h_num),
-            f"{pp_value:.0f}",
-            font=Torus_SemiBold_25,
-            anchor="rm",
-            fill=(255, 102, 171, 255),
-        )
-        draw.text(
-            (648 + offset, 170 + h_num),
-            "pp",
-            font=Torus_SemiBold_25,
-            anchor="lm",
-            fill=(209, 148, 176, 255),
-        )
-
-        # 分割线
-        div = Image.new("RGBA", (1400, 2), (46, 53, 56, 255)).convert("RGBA")
-        im.alpha_composite(div, (25, 275 + h_num))
-
-        await asyncio.sleep(0)
-    image_bytesio = BytesIO()
-    im = im.convert("RGB")
-    im.save(image_bytesio, "JPEG", quality=40)
-    return image_bytesio
+        element = await page.query_selector("#display")
+        assert element
+        result = await element.screenshot(type="jpeg", quality=90)
+    return BytesIO(result)

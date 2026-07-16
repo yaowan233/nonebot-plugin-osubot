@@ -8,6 +8,7 @@
 """
 
 import asyncio
+import random
 import time
 import pytest
 from datetime import date, timedelta
@@ -256,3 +257,99 @@ async def test_recommend_stress(app: App):
     for label, pid, count, t, err in results:
         status = f"{count}张" if err is None else f"错误: {err[:40]}"
         print(f"    {label:>6}  pid={pid:>9}  {status:>20}  {t:.1f}s")
+
+
+@pytest.mark.asyncio
+async def test_bpa_synthetic_render(app: App):
+    """bpa 合成数据渲染（不联网），用于查看图表样式"""
+    from types import SimpleNamespace
+    from nonebot_plugin_osubot.draw.echarts import build_bpa_data, draw_bpa_plot
+
+    random.seed(42)
+    ranks = ["XH", "X", "SH", "S", "A", "B", "C"]
+    rank_weights = [0.05, 0.1, 0.08, 0.32, 0.3, 0.1, 0.05]
+    mod_choices = [[], [], [], [("DT",)], [("HR", "HD")], [("HD",)], [("DT", "HD")], [("FL",)], [("EZ",)]]
+    mapper_names = ["Sotarks", "Deru", "Monstrata", "Camellia", "Hollow Wings", "AJT", "olie", "gzdongsheng"]
+
+    def _choose_mods():
+        m = random.choice(mod_choices)
+        return [SimpleNamespace(acronym=x) for x in m]
+
+    score_ls = []
+    base_pp = 580
+    for i in range(75):
+        decay = 0.95**i
+        pp = max(60, base_pp * decay + random.uniform(-12, 12))
+        r = random.choices(ranks, weights=rank_weights, k=1)[0]
+        stars = max(3.5, min(9.5, 5.0 + (pp / base_pp) * 3.5 + random.uniform(-0.6, 0.6)))
+        bpm = random.choice([160, 170, 180, 190, 200, 210, 220, 240, 260, 280])
+        length = random.randint(90, 320)
+        # DT 缩短时长
+        mods = _choose_mods()
+        is_dt = any(x.acronym in {"DT", "NC"} for x in mods)
+        if is_dt:
+            length = round(length / 1.5, 1)
+        acc = max(92.0, min(99.9, 99.5 - (stars - 5) * 0.6 + random.uniform(-1.5, 1.0)))
+        score_ls.append(
+            SimpleNamespace(
+                pp=round(pp, 1),
+                rank=r,
+                accuracy=round(acc, 2),
+                mods=mods,
+                beatmap=SimpleNamespace(
+                    total_length=length,
+                    stars=round(stars, 2),
+                    bpm=float(bpm),
+                    user_id=1000 + (i % len(mapper_names)),
+                    creator=mapper_names[i % len(mapper_names)],
+                ),
+            )
+        )
+
+    data = await build_bpa_data(score_ls, "ppysb")
+    pic = await draw_bpa_plot("TestPlayer osu 模式", **data)
+    path = OUT / "bpa_synthetic.png"
+    path.write_bytes(pic)
+    print(f"\n  [bpa synthetic] -> {path.name}  stats={data['stats']}")
+
+
+@pytest.mark.asyncio
+async def test_bpa_real_ctb(app: App):
+    """bpa 真实数据渲染：3162675 fruits(ctb) 模式，并导出 JSON 快照"""
+    import json
+    from nonebot_plugin_osubot.api import get_user_scores
+    from nonebot_plugin_osubot.draw.score import cal_score_info
+    from nonebot_plugin_osubot.draw.echarts import build_bpa_data
+
+    uid = 3162675
+    mode = "fruits"
+
+    t0 = time.perf_counter()
+    score_ls = await get_user_scores(uid, mode, "best", "osu", legacy_only=True)
+    print(f"\n  [bpa real ctb] 拿到 {len(score_ls)} 条 bp")
+    if not score_ls:
+        pytest.skip("没有拿到 bp 数据")
+
+    for score in score_ls:
+        score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
+        for mod in score.mods:
+            if not score.beatmap:
+                continue
+            if mod.acronym in {"DT", "NC"}:
+                score.beatmap.total_length = score.beatmap.total_length / 1.5
+            if mod.acronym == "HT":
+                score.beatmap.total_length = score.beatmap.total_length / 0.75
+
+    score_ls = [cal_score_info(False, score) for score in score_ls]
+    data = await build_bpa_data(score_ls, "osu")
+
+    json_path = OUT / "bpa_real_ctb.json"
+    json_path.write_text(json.dumps({"name": "3162675 fruits 模式", **data}, ensure_ascii=False), encoding="utf-8")
+    print(f"  [bpa real ctb] JSON -> {json_path}")
+
+    from nonebot_plugin_osubot.draw.echarts import draw_bpa_plot
+    pic = await draw_bpa_plot("3162675 fruits 模式", **data)
+    elapsed = time.perf_counter() - t0
+    path = OUT / "bpa_real_ctb.png"
+    path.write_bytes(pic)
+    print(f"  [bpa real ctb] {elapsed:.2f}s -> {path.name}  stats={data['stats']}")
