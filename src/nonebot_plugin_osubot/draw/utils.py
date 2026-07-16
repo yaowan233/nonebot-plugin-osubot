@@ -12,7 +12,7 @@ from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError, Im
 from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
-from .static import Path, Image, ColorArr, np, osufile
+from .static import Path, Image, ColorArr, np
 from ..file import map_path, download_osu, get_projectimg, user_cache_path, team_cache_path
 
 
@@ -197,18 +197,6 @@ def stars_diff(stars: float, stars_bg: ImageFile):
     # 将numpy数组转换回PIL图片
     img = Image.fromarray(arr)
     return img
-
-
-def get_modeimage(mode: int) -> Path:
-    if mode in {0, 4, 8}:
-        img = "pfm_std.png"
-    elif mode in {1, 5}:
-        img = "pfm_taiko.png"
-    elif mode in {2, 6}:
-        img = "pfm_ctb.png"
-    else:
-        img = "pfm_mania.png"
-    return osufile / img
 
 
 def calc_songlen(length: int) -> str:
