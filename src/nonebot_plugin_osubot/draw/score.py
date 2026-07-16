@@ -821,7 +821,7 @@ async def render_score_template(
                 target_accuracy,
             ).pp
     except Exception:
-        accuracy_pp = {target_accuracy: "nan" for target_accuracy in target_accuracies}
+        accuracy_pp = dict.fromkeys(target_accuracies, "nan")
     try:
         mode_pp = get_pp_components(score_info, osu_path, source)
     except Exception:
