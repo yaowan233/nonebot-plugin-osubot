@@ -39,7 +39,7 @@ async def draw_bp(
     else:
         selected = scores[low_bound - 1 : high_bound]
     if project == "tbp":
-        selected = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day + 1)]
+        selected = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day)]
         if not selected:
             raise NetworkError("未查询到游玩记录")
     for index, score in enumerate(selected):
@@ -129,7 +129,7 @@ async def draw_pfm(
     elif project == "relist":
         section_title, range_label = "上传成绩", "近 24 小时 · 含未通过"
     else:
-        section_title, range_label = "新增最佳成绩", f"近 {day + 1} 日"
+        section_title, range_label = "新增最佳成绩", f"近 {day} 日"
     payload = {
         "mode": mode,
         "section_title": section_title,
@@ -172,6 +172,7 @@ async def draw_pfm(
             "parts.slice(0,cut).join(' · ')+'</span><span>'+"
             "parts.slice(cut).join(' · ')+'</span></span>'}"
         )
+        await page.evaluate("fitProfileName()")
         element = await page.query_selector("#display")
         assert element
         result = await element.screenshot(type="jpeg", quality=90)

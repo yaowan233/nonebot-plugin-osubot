@@ -85,6 +85,8 @@ async def _pfm(state: T_State):
 async def _tbp(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
+    if state["day"] <= 0:
+        state["day"] = 1
     if not state["range"]:
         state["range"] = "1-200"
     ls = state["range"].split("-")

@@ -2,7 +2,10 @@
 
 import base64
 import pytest
+import importlib
+from datetime import datetime, timedelta
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
 from nonebug import App
@@ -308,3 +311,31 @@ async def test_tbp_success(app: App):
     # 验证 project 参数是 "tbp"
     mock_draw.assert_awaited_once()
     assert mock_draw.call_args[0][0] == "tbp"
+    assert mock_draw.call_args[0][7] == 1
+
+
+@pytest.mark.asyncio
+async def test_tbp_one_day_filter_uses_exact_24_hours(app: App):
+    """day=1 只保留最近 24 小时内的最佳成绩。"""
+    draw_bp_module = importlib.import_module("nonebot_plugin_osubot.draw.bp")
+    recent = SimpleNamespace(ended_at=datetime.now() - timedelta(hours=23), mods=[])
+    expired = SimpleNamespace(ended_at=datetime.now() - timedelta(hours=25), mods=[])
+
+    with (
+        patch.object(
+            draw_bp_module,
+            "get_user_scores",
+            new=AsyncMock(return_value=[recent, expired]),
+        ),
+        patch.object(draw_bp_module, "cal_score_info", side_effect=lambda _, score, __: score),
+        patch.object(
+            draw_bp_module,
+            "draw_pfm",
+            new=AsyncMock(return_value=BytesIO(FAKE_IMG)),
+        ) as mock_draw_pfm,
+    ):
+        await draw_bp_module.draw_bp(
+            "tbp", 1, False, "osu", [], 1, 200, 1, [], "osu"
+        )
+
+    assert mock_draw_pfm.call_args.args[3] == [recent]
