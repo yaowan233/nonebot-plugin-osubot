@@ -520,6 +520,7 @@ async def render_score_template(
         await page.set_viewport_size({"width": 1440, "height": 900})
         await page.goto((template_path / "index.html").as_uri(), wait_until="load")
         await page.set_content(await template.render_async(d=data), wait_until="domcontentloaded")
+        await page.evaluate("colourStarBadge()")
         await page.evaluate(
             "Promise.race([Promise.all([document.fonts.ready, "
             "...Array.from(document.images, image => image.decode().catch(() => {}))]), "
