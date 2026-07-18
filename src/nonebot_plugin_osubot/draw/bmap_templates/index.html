@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @font-face {
+      font-family: Torus;
+      src: url('{{ torus_regular_url }}') format('woff');
+    }
+    @font-face {
+      font-family: Torus;
+      src: url('{{ torus_semibold_url }}') format('woff');
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: Extra;
+      src: url('{{ extra_font_url }}') format('woff');
+    }
+
+    :root {
+      --pink: #ff4d96;
+      --cyan: #43d5df;
+      --panel: #101b28;
+      --muted: #91a2af;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 1400px;
+      height: 900px;
+      overflow: hidden;
+      color: #f6f8fa;
+      font-family: Torus, "Microsoft YaHei", sans-serif;
+      background: #08121d;
+    }
+
+    .sheet {
+      position: relative;
+      width: 1400px;
+      height: 900px;
+      overflow: hidden;
+      background: #08121d;
+    }
+    .backdrop {
+      position: absolute;
+      inset: -30px;
+      background:
+        linear-gradient(102deg, rgba(5, 15, 25, .97) 0 30%, rgba(8, 18, 29, .91) 57%, rgba(20, 21, 39, .87)),
+        var(--cover) center / cover;
+      filter: blur(15px) saturate(1.25);
+      transform: scale(1.08);
+    }
+    .backdrop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 77% 7%, rgba(255, 77, 150, .18), transparent 28%),
+        radial-gradient(circle at 6% 86%, rgba(67, 213, 223, .16), transparent 30%);
+    }
+    .texture {
+      position: absolute;
+      inset: 0;
+      opacity: .075;
+      background-image: radial-gradient(#fff .65px, transparent .8px);
+      background-size: 4px 4px;
+    }
+
+    .masthead {
+      position: relative;
+      z-index: 2;
+      height: 44px;
+      padding: 0 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, .13);
+      background: rgba(4, 13, 22, .65);
+      font-size: 10px;
+      letter-spacing: .65px;
+    }
+    .masthead strong { color: var(--cyan); }
+    .masthead span { color: #b8c4cc; }
+    .masthead .set-id-top {
+      padding-left: 10px;
+      border-left: 3px solid var(--pink);
+      color: #f7f9fa;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .8px;
+    }
+
+    .layout {
+      position: relative;
+      z-index: 1;
+      height: 856px;
+      padding: 17px;
+      display: grid;
+      grid-template-columns: 404px minmax(0, 1fr);
+      gap: 15px;
+    }
+
+    .identity {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 23px;
+      background: linear-gradient(155deg, rgba(25, 37, 52, .93), rgba(7, 18, 29, .94));
+      box-shadow: 0 25px 70px rgba(0, 0, 0, .38);
+    }
+    .cover {
+      position: relative;
+      height: 314px;
+      background: var(--cover) center / cover;
+      overflow: hidden;
+    }
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5, 14, 24, .70), transparent 29%),
+        linear-gradient(0deg, rgba(7, 16, 27, .84), transparent 48%),
+        linear-gradient(130deg, transparent 57%, rgba(255, 77, 150, .22));
+    }
+    .cover-state,
+    .cover-range {
+      position: absolute;
+      z-index: 2;
+      top: 18px;
+    }
+    .cover-state {
+      left: 18px;
+      padding: 5px 12px 5px 10px;
+      border: 0;
+      border-left: 3px solid var(--cyan);
+      border-radius: 0 8px 8px 0;
+      color: #fff;
+      background: linear-gradient(90deg, rgba(6, 14, 23, .84), rgba(6, 14, 23, .26));
+      backdrop-filter: blur(8px);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .7px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .76);
+      box-shadow: 0 5px 16px rgba(0, 0, 0, .26);
+    }
+    .cover-range {
+      right: 19px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      text-align: right;
+      text-shadow: 0 2px 9px #000;
+    }
+    .cover-range span { display: block; font-size: 8px; color: #dce4e8; }
+    .cover-range b { display: block; margin-top: 2px; font-size: 20px; }
+    .cover-note {
+      position: absolute;
+      z-index: 2;
+      left: 20px;
+      bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #d7e0e5;
+      font-size: 9px;
+    }
+    .cover-note i {
+      width: 23px;
+      height: 4px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+    }
+
+    .creator-line {
+      height: 82px;
+      margin: 0 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 155px);
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .13);
+    }
+    .creator {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+    .avatar {
+      flex: 0 0 auto;
+      width: 47px;
+      height: 47px;
+      border: 2px solid var(--cyan);
+      border-radius: 50%;
+      background: var(--avatar) center / cover;
+      box-shadow: 0 0 0 4px rgba(67, 213, 223, .08);
+    }
+    .creator-copy,
+    .source { min-width: 0; }
+    .creator-copy span,
+    .source span {
+      display: block;
+      color: var(--muted);
+      font-size: 8px;
+    }
+    .creator-copy b,
+    .source b {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .creator-copy b { font-size: 16px; }
+    .source { text-align: right; }
+    .source b { font-size: 11px; }
+
+    .overview { padding: 20px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    .section-title h3 { margin: 0; font-size: 15px; }
+    .section-title span { color: var(--muted); font-size: 8px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 17px 15px;
+    }
+    .summary-item {
+      min-width: 0;
+      padding-left: 10px;
+      border-left: 4px solid var(--accent, var(--cyan));
+    }
+    .summary-item span { display: block; color: var(--muted); font-size: 8px; }
+    .summary-item b {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      font-size: 19px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tags-label {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8px;
+    }
+    .tags {
+      margin-top: 6px;
+      display: -webkit-box;
+      overflow: hidden;
+      color: #a9b6bf;
+      font-size: 9px;
+      line-height: 1.55;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .content {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 130px 76px minmax(0, 1fr);
+      gap: 11px;
+    }
+    .title-block {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      padding: 20px 27px 18px 31px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 22px;
+      background: linear-gradient(105deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .055));
+      backdrop-filter: blur(16px);
+    }
+    .title-block::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      background: linear-gradient(var(--pink), var(--cyan));
+    }
+    .title-block::after {
+      display: none;
+    }
+    .title-copy { width: calc(100% - 340px); min-width: 0; }
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 8px;
+      letter-spacing: 1.4px;
+    }
+    .title-copy h1 {
+      margin: 7px 0 3px;
+      overflow: hidden;
+      font-size: 35px;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .title-copy h2 {
+      margin: 0;
+      overflow: hidden;
+      color: #cbd4da;
+      font-size: 15px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .title-stats {
+      position: absolute;
+      z-index: 1;
+      right: 24px;
+      top: 27px;
+      display: flex;
+      gap: 22px;
+    }
+    .title-stat {
+      min-width: 73px;
+      text-align: right;
+    }
+    .title-stat span { display: block; color: var(--muted); font-size: 8px; }
+    .title-stat b { display: block; margin-top: 5px; font-size: 15px; }
+
+    .spectrum {
+      position: relative;
+      display: grid;
+      grid-template-columns: 126px minmax(0, 1fr) 112px;
+      align-items: center;
+      gap: 17px;
+      padding: 12px 18px;
+      border-top: 1px solid rgba(67, 213, 223, .48);
+      border-bottom: 1px solid rgba(255, 77, 150, .42);
+      background: rgba(8, 20, 31, .76);
+    }
+    .spectrum-title span { display: block; color: var(--muted); font-size: 8px; }
+    .spectrum-title b { display: block; margin-top: 4px; font-size: 14px; }
+    .spectrum-track { position: relative; height: 34px; }
+    .spectrum-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 16px;
+      height: 2px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #42d5ee, #62e1b2, #ebde51, #ff9c5c, #ef55a6, #9b72f3);
+    }
+    .spectrum-points { position: absolute; inset: 0; }
+    .spectrum-point {
+      position: absolute;
+      top: 9px;
+      width: 12px;
+      height: 16px;
+      transform: translateX(-50%);
+    }
+    .spectrum-point::before,
+    .spectrum-point::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 2px;
+      background: var(--diff);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--diff) 58%, transparent);
+      transform: translate(-50%, -50%);
+    }
+    .spectrum-point::before { width: 2px; height: 16px; }
+    .spectrum-point::after { width: 12px; height: 2px; }
+    .spectrum-range { text-align: right; }
+    .spectrum-range span { display: block; color: var(--muted); font-size: 8px; }
+    .spectrum-range b { display: block; margin-top: 4px; font-size: 14px; }
+
+    .difficulty-area { min-height: 0; }
+    .column-head,
+    .difficulty-row {
+      display: grid;
+      grid-template-columns: 32px 31px minmax(180px, 1fr) 78px 82px 108px 178px;
+      align-items: center;
+      column-gap: 5px;
+    }
+    .column-head {
+      height: 28px;
+      padding: 0 14px;
+      color: #7f929f;
+      font-size: 8px;
+      letter-spacing: .35px;
+    }
+    .difficulty-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .difficulty-row {
+      position: relative;
+      height: 58px;
+      overflow: hidden;
+      padding: 0 14px 0 11px;
+      border-left: 7px solid var(--diff);
+      border-radius: 13px;
+      background:
+        linear-gradient(96deg,
+          color-mix(in srgb, var(--diff) 28%, #12202a 72%),
+          color-mix(in srgb, var(--diff) 10%, #15202c 90%));
+      box-shadow: 0 6px 17px rgba(0, 0, 0, .20);
+    }
+    .difficulty-row::after {
+      display: none;
+    }
+    .difficulty-row.is-peak {
+      border-right: 1px solid color-mix(in srgb, var(--diff) 55%, transparent);
+      box-shadow: 0 7px 23px color-mix(in srgb, var(--diff) 20%, transparent);
+    }
+    .index { color: #9babb5; font-size: 9px; }
+    .mode {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 0;
+      color: var(--diff-text, var(--diff));
+      font-family: Extra;
+      font-size: 23px;
+      line-height: 1;
+      text-shadow: 0 0 9px color-mix(in srgb, var(--diff) 42%, transparent);
+    }
+    .version { min-width: 0; }
+    .version b {
+      display: block;
+      overflow: hidden;
+      font-size: 15px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .version small {
+      display: block;
+      margin-top: 2px;
+      color: #a7b5be;
+      font-size: 8px;
+    }
+    .stars {
+      min-width: 65px;
+      height: 27px;
+      padding: 0 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      justify-self: start;
+      border: 1px solid color-mix(in srgb, var(--diff) 62%, rgba(255, 255, 255, .42));
+      border-radius: 15px;
+      color: var(--diff-text, var(--diff));
+      background: rgba(5, 13, 22, .72);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .34), inset 0 0 10px rgba(255, 255, 255, .035);
+      font-size: 11px;
+      font-weight: 700;
+      text-shadow: 0 1px 5px rgba(0, 0, 0, .72);
+    }
+    .metric span,
+    .pass-rate span { display: block; color: #91a2ad; font-size: 7px; }
+    .metric b,
+    .pass-rate b { display: block; margin-top: 2px; font-size: 12px; }
+    .pass-bar {
+      width: 92px;
+      height: 3px;
+      margin-top: 4px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .13);
+    }
+    .pass-bar i { display: block; height: 100%; background: var(--diff); }
+    .params { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .params span {
+      padding: 5px 1px;
+      color: #c0cbd1;
+      background: rgba(255, 255, 255, .055);
+      text-align: center;
+      font-size: 8px;
+    }
+  </style>
+</head>
+<body>
+  <section class="sheet" id="bmap-refined">
+    <div class="backdrop"></div>
+    <div class="texture"></div>
+    <header class="masthead">
+      <strong>OSU! / 谱面组资料</strong>
+      <span class="set-id-top"></span>
+    </header>
+
+    <div class="layout">
+      <aside class="identity">
+        <div class="cover">
+          <span class="cover-state"></span>
+          <div class="cover-range"><span>难度范围</span><b></b></div>
+        </div>
+
+        <div class="creator-line">
+          <div class="creator">
+            <div class="avatar"></div>
+            <div class="creator-copy"><span>谱面作者</span><b></b></div>
+          </div>
+          <div class="source"><span>来源</span><b></b></div>
+        </div>
+
+        <div class="overview">
+          <div class="section-title"><h3>谱面组概览</h3><span class="ranked-date-overview"></span></div>
+          <div class="summary"></div>
+          <div class="tags-label">标签</div>
+          <div class="tags"></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="title-block">
+          <div class="title-copy">
+            <div class="eyebrow">BEATMAPSET / DIFFICULTY COLLECTION</div>
+            <h1></h1>
+            <h2></h2>
+          </div>
+          <div class="title-stats"></div>
+        </section>
+
+        <section class="spectrum">
+          <div class="spectrum-title"><span>难度光谱</span><b></b></div>
+          <div class="spectrum-track"><div class="spectrum-line"></div><div class="spectrum-points"></div></div>
+          <div class="spectrum-range"><span>星数范围</span><b></b></div>
+        </section>
+
+        <section class="difficulty-area">
+          <div class="column-head">
+            <span>#</span><span>模式</span><span>难度名称</span><span>星数</span>
+            <span>最大连击</span><span>通过率</span><span>谱面参数</span>
+          </div>
+          <div class="difficulty-list"></div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <script>
+    const DATA = {{ payload_json | safe }};
+    const root = document.documentElement;
+    const $ = (selector, scope = document) => scope.querySelector(selector);
+    const fmt = value => Number(value).toLocaleString('zh-CN');
+    const starStops = [
+      [.1, '#4290FB'], [1.25, '#4FC0FF'], [2, '#4FFFD5'], [2.5, '#7CFF4F'],
+      [3.3, '#F6F05C'], [4.2, '#FF8068'], [4.9, '#FF4E6F'], [5.8, '#C645B8'],
+      [6.7, '#6563DE'], [7.7, '#18158E'], [9, '#000000'],
+    ];
+    function mixColor(start, end, ratio) {
+      const a = parseInt(start.slice(1), 16);
+      const b = parseInt(end.slice(1), 16);
+      return '#' + [16, 8, 0].map(shift => {
+        const value = Math.round(((a >> shift) & 255) * (1 - ratio) + ((b >> shift) & 255) * ratio);
+        return value.toString(16).padStart(2, '0');
+      }).join('');
+    }
+    function starColor(value) {
+      const stars = Number(value);
+      if (stars < .1) return '#AAAAAA';
+      if (stars >= 9) return '#000000';
+      for (let index = 1; index < starStops.length; index++) {
+        if (stars <= starStops[index][0]) {
+          const [lowValue, lowColor] = starStops[index - 1];
+          const [highValue, highColor] = starStops[index];
+          return mixColor(lowColor, highColor, (stars - lowValue) / (highValue - lowValue));
+        }
+      }
+      return '#000000';
+    }
+    function starGradient(minimum, maximum) {
+      const range = Math.max(maximum - minimum, .01);
+      const points = [[minimum, starColor(minimum)], ...starStops.filter(([value]) => value > minimum && value < maximum), [maximum, starColor(maximum)]];
+      return `linear-gradient(90deg, ${points.map(([value, color]) => `${color} ${((value - minimum) / range * 100).toFixed(2)}%`).join(', ')})`;
+    }
+    const statusText = { ranked: '已上架', approved: '已批准', loved: '社区喜爱', qualified: '已过审', pending: '待定', graveyard: '坟场' };
+    const modeGlyph = ['\ue800', '\ue803', '\ue801', '\ue802'];
+
+    root.style.setProperty('--cover', `url('${DATA.set.cover}')`);
+    root.style.setProperty('--avatar', `url('${DATA.set.avatar}')`);
+
+    const allDifficulties = DATA.difficulties;
+    const difficulties = allDifficulties.slice(0, 20);
+    const extraRows = Math.max(0, difficulties.length - 9);
+    const sheetHeight = 900 + extraRows * 65;
+    document.documentElement.style.height = `${sheetHeight}px`;
+    document.body.style.height = `${sheetHeight}px`;
+    $('#bmap-refined').style.height = `${sheetHeight}px`;
+    $('.layout').style.height = `${sheetHeight - 44}px`;
+    const minimum = difficulties[0].stars;
+    const maximum = difficulties[difficulties.length - 1].stars;
+    const spread = maximum - minimum;
+    const average = difficulties.reduce((sum, item) => sum + item.stars, 0) / difficulties.length;
+
+    $('.set-id-top').textContent = `谱面组 · ${DATA.set.id}`;
+    $('.ranked-date-overview').textContent = `上架于 ${DATA.set.ranked_date}`;
+    $('.cover-state').textContent = statusText[String(DATA.set.status).toLowerCase()] || DATA.set.status;
+    $('.cover-range b').textContent = `${minimum.toFixed(2)}–${maximum.toFixed(2)}★`;
+    $('.creator-copy b').textContent = DATA.set.creator;
+    $('.source b').textContent = DATA.set.source || '原创曲目';
+    $('.tags').textContent = DATA.set.tags;
+    $('.title-copy h1').textContent = DATA.set.title;
+    $('.title-copy h2').textContent = DATA.set.artist;
+
+    const summary = [
+      ['平均星数', `${average.toFixed(2)}★`, '#43d5df'],
+      ['基准 BPM', Number(DATA.set.bpm).toFixed(1), '#ff4d96'],
+      ['累计游玩', fmt(DATA.set.plays), '#43d5df'],
+      ['累计通过', fmt(DATA.set.passes), '#ff4d96'],
+      ['收藏', fmt(DATA.set.favourites), '#43d5df'],
+      ['完整时长', DATA.set.duration, '#ff4d96'],
+    ];
+    $('.summary').innerHTML = summary.map(([label, value, color]) =>
+      `<div class="summary-item" style="--accent:${color}"><span>${label}</span><b>${value}</b></div>`
+    ).join('');
+
+    const titleStats = [
+      ['难度数量', `${allDifficulties.length} 张`],
+      ['最高星数', `${maximum.toFixed(2)}★`],
+      ['累计通过', fmt(DATA.set.passes)],
+    ];
+    $('.title-stats').innerHTML = titleStats.map(([label, value]) =>
+      `<div class="title-stat"><span>${label}</span><b>${value}</b></div>`
+    ).join('');
+
+    $('.spectrum-title b').textContent = `${difficulties.length} 个难度节点`;
+    $('.spectrum-range b').textContent = `${minimum.toFixed(2)}–${maximum.toFixed(2)}★`;
+    $('.spectrum-line').style.background = starGradient(minimum, maximum);
+    $('.spectrum-points').innerHTML = difficulties.map((item, index) => {
+      const color = starColor(item.stars);
+      const left = spread ? (item.stars - minimum) / spread * 100 : 50;
+      return `<i class="spectrum-point" style="--diff:${color};left:${left}%"></i>`;
+    }).join('');
+
+    $('.difficulty-list').innerHTML = difficulties.map((item, index) => {
+      const color = starColor(item.stars);
+      const passRate = item.plays ? item.passes / item.plays * 100 : 0;
+      const peak = index === difficulties.length - 1 ? ' is-peak' : '';
+      return `
+        <article class="difficulty-row${peak}" style="--diff:${color};--diff-text:${item.stars >= 6.5 ? '#ffd966' : color}">
+          <span class="index">${String(index + 1).padStart(2, '0')}</span>
+          <span class="mode">${modeGlyph[item.mode] || modeGlyph[0]}</span>
+          <div class="version"><b>${item.version}</b><small>谱面 ${item.id} · ${item.length}</small></div>
+          <span class="stars">★ ${item.stars.toFixed(2)}</span>
+          <div class="metric"><span>最大连击</span><b>${fmt(item.combo)}x</b></div>
+          <div class="pass-rate"><span>通过率</span><b>${passRate.toFixed(1)}%</b><div class="pass-bar"><i style="width:${Math.min(passRate, 100)}%"></i></div></div>
+          <div class="params"><span>CS ${item.cs}</span><span>AR ${item.ar}</span><span>OD ${item.od}</span><span>HP ${item.hp}</span></div>
+        </article>`;
+    }).join('');
+  </script>
+</body>
+</html>

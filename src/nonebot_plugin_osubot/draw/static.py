@@ -23,12 +23,6 @@ Torus_SemiBold_30 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.o
 Torus_SemiBold_40 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 40)
 Torus_SemiBold_45 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 45)
 Torus_SemiBold_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 50)
-extra_30 = ImageFont.truetype(str(osufile / "fonts" / "Extra.otf"), 30)
-
-MapBg = Image.open(osufile / "beatmapinfo.png").convert("RGBA")
-MapBg1 = Image.open(osufile / "maniabeatmapinfo.png").convert("RGBA")
-BarImg = Image.open(osufile / "work" / "bmap.png").convert("RGBA")
-Stars = Image.open(osufile / "work" / "stars.png").convert("RGBA")
 TeamBlue = Image.open(osufile / "match" / "team_blue.png").convert("RGBA")
 TeamRed = Image.open(osufile / "match" / "team_red.png").convert("RGBA")
 MpLink = Image.open(osufile / "match" / "mplink.png").convert("RGBA")
@@ -60,5 +54,3 @@ __cmap = mcolors.LinearSegmentedColormap.from_list(
 )
 __norm = mpl.colors.Normalize(vmin=0, vmax=9)
 ColorArr = mpl.cm.ScalarMappable(norm=__norm, cmap=__cmap).to_rgba(np.linspace(0, 9, 900), bytes=True)
-IconLs = ["\ue800", "\ue803", "\ue801", "\ue802", "\ue800", "\ue803", "\ue801", "\ue802", "\ue800"]
-ModsDict = {file.stem: Image.open(file).convert("RGBA") for file in (osufile / "mods").glob("*.png")}

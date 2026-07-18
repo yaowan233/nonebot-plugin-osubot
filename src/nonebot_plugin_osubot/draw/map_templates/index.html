@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @font-face {
+      font-family: Torus;
+      src: url('{{ torus_regular_url }}') format('woff');
+    }
+    @font-face {
+      font-family: Torus;
+      src: url('{{ torus_semibold_url }}') format('woff');
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: Extra;
+      src: url('{{ extra_font_url }}') format('woff');
+    }
+
+    :root {
+      --pink: #ff4d96;
+      --cyan: #43d5df;
+      --panel: #101b28;
+      --muted: #91a2af;
+      --up: #ff6b81;
+      --down: #5fb7e8;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 1400px;
+      height: 860px;
+      overflow: hidden;
+      color: #f6f8fa;
+      font-family: Torus, "Microsoft YaHei", sans-serif;
+      background: #08121d;
+    }
+
+    .sheet {
+      position: relative;
+      width: 1400px;
+      height: 860px;
+      overflow: hidden;
+      background: #08121d;
+    }
+    .backdrop {
+      position: absolute;
+      inset: -30px;
+      background:
+        linear-gradient(102deg, rgba(5, 15, 25, .97) 0 30%, rgba(8, 18, 29, .91) 57%, rgba(20, 21, 39, .87)),
+        var(--cover) center / cover;
+      filter: blur(15px) saturate(1.25);
+      transform: scale(1.08);
+    }
+    .backdrop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 77% 7%, rgba(255, 77, 150, .18), transparent 28%),
+        radial-gradient(circle at 6% 86%, rgba(67, 213, 223, .16), transparent 30%);
+    }
+    .texture {
+      position: absolute;
+      inset: 0;
+      opacity: .075;
+      background-image: radial-gradient(#fff .65px, transparent .8px);
+      background-size: 4px 4px;
+    }
+
+    .masthead {
+      position: relative;
+      z-index: 2;
+      height: 44px;
+      padding: 0 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, .13);
+      background: rgba(4, 13, 22, .65);
+      font-size: 10px;
+      letter-spacing: .65px;
+    }
+    .masthead strong { color: var(--cyan); }
+    .masthead .map-id-top {
+      padding-left: 10px;
+      border-left: 3px solid var(--pink);
+      color: #f7f9fa;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .8px;
+    }
+
+    .layout {
+      position: relative;
+      z-index: 1;
+      height: 816px;
+      padding: 17px;
+      display: grid;
+      grid-template-columns: 580px minmax(0, 1fr);
+      gap: 15px;
+    }
+
+    /* ---------- 左栏 · 封面身份卡 ---------- */
+    .identity {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 23px;
+      background: linear-gradient(155deg, rgba(25, 37, 52, .93), rgba(7, 18, 29, .94));
+      box-shadow: 0 25px 70px rgba(0, 0, 0, .38);
+    }
+    .cover {
+      position: relative;
+      height: 420px;
+      flex: 0 0 auto;
+      background: var(--cover) center / cover;
+      overflow: hidden;
+    }
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5, 14, 24, .62), transparent 26%),
+        linear-gradient(0deg, rgba(7, 16, 27, .92) 4%, transparent 52%),
+        linear-gradient(130deg, transparent 57%, rgba(255, 77, 150, .20));
+    }
+    .cover-badges {
+      position: absolute;
+      z-index: 2;
+      left: 18px;
+      right: 18px;
+      top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px 5px 10px;
+      border: 0;
+      border-left: 3px solid var(--cyan);
+      border-radius: 0 8px 8px 0;
+      background: linear-gradient(90deg, rgba(6, 14, 23, .82), rgba(6, 14, 23, .28));
+      backdrop-filter: blur(8px);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .7px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .72);
+    }
+    .pill .dot { display: none; }
+    .star-badge {
+      min-width: 78px;
+      height: 29px;
+      padding: 0 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, .32);
+      border-radius: 20px;
+      color: var(--star-text);
+      background: var(--starc);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .66), inset 0 0 12px rgba(255, 255, 255, .07);
+    }
+    .star-badge span { display: none; }
+    .star-badge b {
+      display: inline;
+      margin: 0;
+      color: inherit;
+      font-size: 14px;
+      line-height: 1;
+      text-shadow: none;
+    }
+    .cover-title {
+      position: absolute;
+      z-index: 2;
+      left: 24px;
+      right: 24px;
+      bottom: 20px;
+    }
+    .cover-title h1 {
+      margin: 0;
+      font-size: 46px;
+      line-height: 1.04;
+      text-shadow: 0 4px 22px rgba(0, 0, 0, .75);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cover-title h2 {
+      margin: 6px 0 0;
+      color: #dde5ea;
+      font-size: 17px;
+      font-weight: 400;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, .8);
+    }
+    .cover-note {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 12px;
+      color: #d7e0e5;
+      font-size: 9px;
+      letter-spacing: .5px;
+    }
+    .cover-note i {
+      width: 23px;
+      height: 4px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+    }
+
+    .creator-line {
+      height: 80px;
+      flex: 0 0 auto;
+      margin: 0 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 150px);
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .13);
+    }
+    .creator { min-width: 0; display: flex; align-items: center; gap: 11px; }
+    .avatar {
+      flex: 0 0 auto;
+      width: 46px;
+      height: 46px;
+      border: 2px solid var(--cyan);
+      border-radius: 50%;
+      background: var(--avatar) center / cover;
+      box-shadow: 0 0 0 4px rgba(67, 213, 223, .08);
+    }
+    .creator-copy, .ranked { min-width: 0; }
+    .creator-copy span, .ranked span { display: block; color: var(--muted); font-size: 8px; }
+    .creator-copy b, .ranked b {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .creator-copy b { font-size: 16px; }
+    .ranked { text-align: right; }
+    .ranked b { font-size: 12px; font-weight: 400; }
+
+    .overview { padding: 16px 20px 18px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 13px;
+    }
+    .section-title h3 { margin: 0; font-size: 15px; }
+    .section-title span { color: var(--muted); font-size: 8px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 15px;
+    }
+    .summary-item {
+      min-width: 0;
+      padding-left: 10px;
+      border-left: 4px solid var(--accent, var(--cyan));
+    }
+    .summary-item span { display: block; color: var(--muted); font-size: 8px; }
+    .summary-item b {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      font-size: 17px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tags-label { margin-top: 16px; color: var(--muted); font-size: 8px; }
+    .tags {
+      margin-top: 5px;
+      display: -webkit-box;
+      overflow: hidden;
+      color: #a9b6bf;
+      font-size: 9px;
+      line-height: 1.55;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    /* ---------- 右栏 ---------- */
+    .content {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 128px 78px minmax(0, 1fr) 178px;
+      gap: 11px;
+    }
+    .title-block {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      padding: 20px 27px 18px 31px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 22px;
+      background: linear-gradient(105deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .055));
+      backdrop-filter: blur(16px);
+    }
+    .title-block::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      background: linear-gradient(var(--pink), var(--cyan));
+    }
+    .title-copy { width: calc(100% - 330px); min-width: 0; }
+    .eyebrow { color: var(--cyan); font-size: 8px; letter-spacing: 1.4px; }
+    .title-copy h1 {
+      margin: 7px 0 4px;
+      overflow: hidden;
+      font-size: 34px;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .title-copy h2 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #cbd4da;
+      font-size: 14px;
+      font-weight: 400;
+    }
+    .title-copy h2 .mode-glyph {
+      font-family: Extra;
+      font-size: 20px;
+      color: var(--cyan);
+      text-shadow: 0 0 9px rgba(67, 213, 223, .45);
+    }
+    .title-stats {
+      position: absolute;
+      z-index: 1;
+      right: 24px;
+      top: 30px;
+      display: flex;
+      gap: 24px;
+    }
+    .title-stat { min-width: 76px; text-align: right; }
+    .title-stat span { display: block; color: var(--muted); font-size: 8px; }
+    .title-stat b { display: block; margin-top: 5px; font-size: 17px; }
+    .title-stat b small { font-size: 10px; color: var(--muted); font-weight: 400; }
+    .title-stat.hl b { color: var(--cyan); text-shadow: 0 0 12px rgba(67, 213, 223, .4); }
+
+    /* 模组 · 星数变化条 */
+    .mod-strip {
+      position: relative;
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr) 150px;
+      align-items: center;
+      gap: 18px;
+      padding: 10px 20px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 18px;
+      background: rgba(8, 20, 31, .76);
+    }
+    .mod-strip .mods-label span { display: block; color: var(--muted); font-size: 8px; }
+    .mod-strip .mods-icons { display: flex; gap: 6px; margin-top: 5px; }
+    .mod-strip .mods-icons img { height: 30px; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,.5)); }
+    .mod-strip .mods-none { margin-top: 5px; font-size: 12px; color: #d7e0e5; }
+    .star-track { position: relative; height: 46px; }
+    .star-line {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      top: 14px;
+      height: 3px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--fromc), var(--toc));
+      box-shadow: 0 0 10px color-mix(in srgb, var(--toc) 40%, transparent);
+    }
+    .star-point {
+      position: absolute;
+      top: 7px;
+      width: 14px;
+      height: 18px;
+      transform: translateX(-50%);
+    }
+    .star-point::before, .star-point::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 2px;
+      background: var(--pc);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--pc) 60%, transparent);
+      transform: translate(-50%, -50%);
+    }
+    .star-point::before { width: 2px; height: 16px; }
+    .star-point::after { width: 13px; height: 2px; }
+    .star-track .cap {
+      position: absolute;
+      top: 32px;
+      transform: translateX(-50%);
+      color: #c6d2da;
+      font-size: 9px;
+      white-space: nowrap;
+    }
+    .star-delta { text-align: right; }
+    .star-delta span { display: block; color: var(--muted); font-size: 8px; }
+    .star-delta b { display: block; margin-top: 3px; font-size: 19px; color: var(--up); }
+    .star-delta b.same { color: #f6f8fa; }
+
+    /* 参数面板 */
+    .stats-panel {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 20px 14px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 18px;
+      background: rgba(8, 20, 31, .76);
+    }
+    .column-head, .stat-row {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) 64px;
+      align-items: center;
+      column-gap: 18px;
+    }
+    .column-head {
+      height: 24px;
+      color: #7f929f;
+      font-size: 8px;
+      letter-spacing: .35px;
+    }
+    .column-head .scale { display: flex; justify-content: space-between; }
+    .column-head .scale i { font-style: normal; }
+    .stat-rows { display: flex; flex-direction: column; }
+    .stat-row { height: 55px; border-top: 1px solid rgba(255, 255, 255, .08); }
+    .stat-row:last-child { border-bottom: 1px solid rgba(255, 255, 255, .08); }
+    .stat-name b { display: block; font-size: 15px; }
+    .stat-name span { display: block; margin-top: 2px; color: #a7b5be; font-size: 8px; letter-spacing: .5px; }
+    .track { position: relative; height: 18px; }
+    .track::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 8px;
+      height: 2px;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, .16);
+    }
+    .tick { position: absolute; top: 4px; width: 1px; height: 10px; background: rgba(255, 255, 255, .25); }
+    .t0 { left: 0; }
+    .t5 { left: 50%; }
+    .tmax { right: 0; }
+    .dot {
+      position: absolute;
+      z-index: 3;
+      top: 3.5px;
+      width: 11px;
+      height: 11px;
+      background: var(--cyan);
+      transform: translateX(-50%) rotate(45deg);
+      box-shadow: 0 0 0 2px #0b1622, 0 0 10px color-mix(in srgb, var(--cyan) 60%, transparent);
+    }
+    .stat-row.changed .dot {
+      background: var(--pink);
+      box-shadow: 0 0 0 2px #0b1622, 0 0 10px color-mix(in srgb, var(--pink) 60%, transparent);
+    }
+    .origin-dot {
+      position: absolute;
+      z-index: 2;
+      top: 3px;
+      width: 8px;
+      height: 8px;
+      border: 2px solid var(--cyan);
+      border-radius: 50%;
+      background: #0b1622;
+      transform: translateX(-50%);
+    }
+    .origin-value {
+      position: absolute;
+      z-index: 4;
+      top: -13px;
+      transform: translateX(-50%);
+      color: var(--cyan);
+      font-size: 9px;
+      font-style: normal;
+      line-height: 1;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px #0b1622;
+    }
+    .stat-value { text-align: right; }
+    .stat-value b { font-size: 17px; }
+    .stat-row.changed .stat-value b { color: #ff78ae; }
+
+    .obj-strip {
+      margin-top: auto;
+      padding-top: 13px;
+      border-top: 1px solid rgba(255, 255, 255, .1);
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+    }
+    .obj-strip .obj-label span { display: block; color: var(--muted); font-size: 8px; }
+    .obj-strip .obj-label b { display: block; margin-top: 3px; font-size: 13px; }
+    .obj-bar { display: flex; height: 9px; border-radius: 5px; overflow: hidden; }
+    .obj-bar i { display: block; height: 100%; }
+    .obj-bar i:nth-child(1) { background: var(--cyan); }
+    .obj-bar i:nth-child(2) { background: var(--pink); }
+    .obj-bar i:nth-child(3) { background: #ffc24d; }
+    .obj-legend { display: flex; gap: 16px; font-size: 9px; color: var(--muted); }
+    .obj-legend b { color: #f6f8fa; margin-left: 4px; font-size: 11px; }
+    .obj-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; }
+
+    /* 核心指标 */
+    .metrics-panel {
+      display: flex;
+      flex-direction: column;
+      padding: 15px 20px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 18px;
+      background: rgba(8, 20, 31, .76);
+    }
+    .metrics-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px 18px;
+      align-content: center;
+    }
+    .metric-cell {
+      min-width: 0;
+      padding-left: 10px;
+      border-left: 4px solid var(--accent, var(--cyan));
+    }
+    .metric-cell span { display: block; color: var(--muted); font-size: 8px; }
+    .metric-cell b {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      font-size: 18px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .metric-cell b small { font-size: 10px; color: var(--muted); font-weight: 400; }
+  </style>
+</head>
+<body>
+  <section class="sheet" id="map-refined">
+    <div class="backdrop"></div>
+    <div class="texture"></div>
+    <header class="masthead">
+      <strong>OSU! / 谱面资料</strong>
+      <span class="map-id-top"></span>
+    </header>
+
+    <div class="layout">
+      <aside class="identity">
+        <div class="cover">
+          <div class="cover-badges">
+            <span class="pill"><i class="dot"></i><span class="status-text"></span></span>
+            <div class="star-badge"><b></b></div>
+          </div>
+          <div class="cover-title">
+            <h1></h1>
+            <h2></h2>
+            <div class="cover-note"><i></i><span class="source-line"></span></div>
+          </div>
+        </div>
+
+        <div class="creator-line">
+          <div class="creator">
+            <div class="avatar"></div>
+            <div class="creator-copy"><span>谱面作者</span><b></b></div>
+          </div>
+          <div class="ranked"><span>上架时间</span><b></b></div>
+        </div>
+
+        <div class="overview">
+          <div class="section-title"><h3>谱面概览</h3><span class="ov-sub"></span></div>
+          <div class="summary"></div>
+          <div class="tags-label">标签</div>
+          <div class="tags"></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="title-block">
+          <div class="title-copy">
+            <div class="eyebrow">BEATMAP / DIFFICULTY DETAIL</div>
+            <h1></h1>
+            <h2><span class="mode-glyph"></span><span class="mode-name"></span></h2>
+          </div>
+          <div class="title-stats"></div>
+        </section>
+
+        <section class="mod-strip">
+          <div class="mods-label"><span>应用模组</span><div class="mods-icons"></div></div>
+          <div class="star-track">
+            <div class="star-line"></div>
+            <i class="star-point p-from"><span class="cap cap-from"></span></i>
+            <i class="star-point p-to"><span class="cap cap-to"></span></i>
+          </div>
+          <div class="star-delta"><span>星数变化</span><b></b></div>
+        </section>
+
+        <section class="stats-panel">
+          <div class="section-title"><h3>谱面参数 · 模组前后对比</h3><span>菱形为模组后 · 圆圈为原始</span></div>
+          <div class="column-head"><span></span><span class="scale"><i>0</i><i>5</i><i class="scale-max">10</i></span><span style="text-align:right">当前</span></div>
+          <div class="stat-rows"></div>
+          <div class="obj-strip">
+            <div class="obj-label"><span>物件总数</span><b class="obj-total"></b></div>
+            <div class="obj-bar"></div>
+            <div class="obj-legend">
+              <span><i style="background:var(--cyan)"></i>圆圈<b class="lg-c"></b></span>
+              <span><i style="background:var(--pink)"></i>滑条<b class="lg-s"></b></span>
+              <span><i style="background:#ffc24d"></i>转盘<b class="lg-p"></b></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics-panel">
+          <div class="section-title"><h3>核心指标</h3><span>模组生效后</span></div>
+          <div class="metrics-grid"></div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <script>
+    const DATA = {{ payload_json | safe }};
+    const root = document.documentElement;
+    const $ = (selector, scope = document) => scope.querySelector(selector);
+    const fmt = value => Number(value).toLocaleString('zh-CN');
+    const starStops = [
+      [.1, '#4290FB'], [1.25, '#4FC0FF'], [2, '#4FFFD5'], [2.5, '#7CFF4F'],
+      [3.3, '#F6F05C'], [4.2, '#FF8068'], [4.9, '#FF4E6F'], [5.8, '#C645B8'],
+      [6.7, '#6563DE'], [7.7, '#18158E'], [9, '#000000'],
+    ];
+    function mixColor(start, end, ratio) {
+      const a = parseInt(start.slice(1), 16);
+      const b = parseInt(end.slice(1), 16);
+      return '#' + [16, 8, 0].map(shift => {
+        const value = Math.round(((a >> shift) & 255) * (1 - ratio) + ((b >> shift) & 255) * ratio);
+        return value.toString(16).padStart(2, '0');
+      }).join('');
+    }
+    function starColor(value) {
+      const stars = Number(value);
+      if (stars < .1) return '#AAAAAA';
+      if (stars >= 9) return '#000000';
+      for (let index = 1; index < starStops.length; index++) {
+        if (stars <= starStops[index][0]) {
+          const [lowValue, lowColor] = starStops[index - 1];
+          const [highValue, highColor] = starStops[index];
+          return mixColor(lowColor, highColor, (stars - lowValue) / (highValue - lowValue));
+        }
+      }
+      return '#000000';
+    }
+    function displayColor(color) {
+      const value = parseInt(color.slice(1), 16);
+      const lum = ((value >> 16) & 255) * .3 + ((value >> 8) & 255) * .59 + (value & 255) * .11;
+      return lum < 70 ? mixColor(color, '#8f8cff', .72) : color;
+    }
+    const statusText = { ranked: '已上架', approved: '已批准', loved: '社区喜爱', qualified: '已过审', pending: '待定', graveyard: '坟场' };
+    const modeGlyph = ['\ue800', '\ue803', '\ue801', '\ue802'];
+    const modeName = ['STANDARD', 'TAIKO', 'CATCH', 'MANIA'];
+
+    const M = DATA.map, S = DATA.set;
+    root.style.setProperty('--cover', `url('${S.cover}')`);
+    root.style.setProperty('--avatar', `url('${S.avatar}')`);
+
+    const starC = starColor(M.stars);
+    const sheet = $('#map-refined');
+    sheet.style.setProperty('--starc', starC);
+    sheet.style.setProperty('--star-text', M.stars < 6.5 ? '#101925' : '#ffd966');
+
+    $('.map-id-top').textContent = `谱面 ${M.id} · 谱面组 ${S.id}`;
+    $('.status-text').textContent = statusText[String(S.status).toLowerCase()] || S.status;
+    $('.star-badge b').textContent = `★ ${M.stars.toFixed(2)}`;
+    $('.cover-title h1').textContent = S.title_unicode || S.title;
+    $('.cover-title h2').textContent = `by ${S.artist_unicode || S.artist}`;
+    $('.source-line').textContent = S.source ? `来源 · ${S.source}` : '原创曲目';
+    $('.creator-copy b').textContent = S.creator;
+    $('.ranked b').textContent = S.ranked_date || '未上架';
+    $('.tags').textContent = (S.tags || []).join(' ');
+    $('.ov-sub').textContent = `谱面 ${M.id}`;
+
+    const passRate = M.plays ? (M.passes / M.plays * 100) : 0;
+    const summary = [
+      ['游玩次数', fmt(M.plays), '#43d5df'],
+      ['通过次数', fmt(M.passes), '#ff4d96'],
+      ['通过率', `${passRate.toFixed(1)}%`, '#43d5df'],
+      ['收藏', fmt(S.favourites), '#ff4d96'],
+    ];
+    $('.summary').innerHTML = summary.map(([label, value, color]) =>
+      `<div class="summary-item" style="--accent:${color}"><span>${label}</span><b>${value}</b></div>`
+    ).join('');
+
+    $('.title-copy h1').textContent = M.version;
+    $('.title-copy .mode-glyph').textContent = modeGlyph[M.mode_int] || modeGlyph[0];
+    $('.title-copy .mode-name').textContent = `OSU! ${modeName[M.mode_int] || ''} · 当前难度`;
+    const titleStats = [
+      ['SS 表现值', `${fmt(Math.round(M.ss_pp))}<small> pp</small>`, true],
+      ['原始星数', `${M.original_stars.toFixed(2)}★`, false],
+      ['谱面状态', (statusText[String(S.status).toLowerCase()] || S.status), false],
+    ];
+    $('.title-stats').innerHTML = titleStats.map(([label, value, hl]) =>
+      `<div class="title-stat${hl ? ' hl' : ''}"><span>${label}</span><b>${value}</b></div>`
+    ).join('');
+
+    // 模组 · 星数变化
+    const modsBox = $('.mod-strip .mods-icons');
+    if (M.mods.length) {
+      modsBox.innerHTML = M.mods.map(m => `<img src="${DATA.mod_images[m]}" title="${m}">`).join('');
+    } else {
+      modsBox.outerHTML = '<div class="mods-none">未应用模组</div>';
+    }
+    const fromC = displayColor(starColor(M.original_stars));
+    const toC = displayColor(starC);
+    const track = $('.star-track');
+    track.style.setProperty('--fromc', fromC);
+    track.style.setProperty('--toc', toC);
+    const lo = Math.min(M.original_stars, M.stars), hi = Math.max(M.original_stars, M.stars);
+    const span = Math.max(hi - lo, .4), base = lo - span * .18, trackSpan = span * 1.36;
+    const pos = v => ((v - base) / trackSpan * 100);
+    const pFrom = $('.star-point.p-from'), pTo = $('.star-point.p-to');
+    pFrom.style.left = `${pos(M.original_stars)}%`;
+    pFrom.style.setProperty('--pc', fromC);
+    pTo.style.left = `${pos(M.stars)}%`;
+    pTo.style.setProperty('--pc', toC);
+    $('.cap-from').textContent = `原始 ${M.original_stars.toFixed(2)}★`;
+    $('.cap-from').style.left = '50%'; $('.cap-from').style.transform = 'translateX(-50%)';
+    $('.cap-to').textContent = `模组后 ${M.stars.toFixed(2)}★`;
+    $('.cap-to').style.left = '50%'; $('.cap-to').style.transform = 'translateX(-50%)';
+    const delta = M.stars - M.original_stars;
+    const deltaEl = $('.star-delta b');
+    if (Math.abs(delta) < .005) {
+      deltaEl.textContent = '无变化';
+      deltaEl.classList.add('same');
+    } else {
+      deltaEl.textContent = `${delta > 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}★`;
+      deltaEl.style.color = delta > 0 ? 'var(--up)' : 'var(--down)';
+    }
+
+    // 参数行（与 score 成绩图一致：细线轨道 + 刻度 + 菱形当前点 + 圆圈原始点）
+    const trim = v => Number(v).toFixed(2).replace(/\.?0+$/, '');
+    const dimMax = M.stats.some(s => Math.max(s.before, s.after) > 10) ? 11 : 10;
+    const dpos = v => Math.min(Math.max(v, 0) / dimMax * 100, 100);
+    $('.scale-max').textContent = dimMax;
+    $('.stat-rows').innerHTML = M.stats.map(s => {
+      const changed = Math.abs(s.after - s.before) > .005;
+      return `<div class="stat-row${changed ? ' changed' : ''}">
+        <div class="stat-name"><b>${s.key}</b><span>${s.name}</span></div>
+        <div class="track"><u class="tick t0"></u><u class="tick t5"></u><u class="tick tmax"></u>${changed ? `<em class="origin-value" style="left:${dpos(s.before)}%">${trim(s.before)}</em><em class="origin-dot" style="left:${dpos(s.before)}%"></em>` : ''}<b class="dot" style="left:${dpos(s.after)}%"></b></div>
+        <div class="stat-value"><b>${trim(s.after)}</b></div>
+      </div>`;
+    }).join('');
+
+    // 物件构成
+    const total = M.objects || 1;
+    $('.obj-total').textContent = fmt(M.objects);
+    $('.obj-bar').innerHTML = [M.circles, M.sliders, M.spinners].map(n => `<i style="width:${n / total * 100}%"></i>`).join('');
+    $('.lg-c').textContent = fmt(M.circles);
+    $('.lg-s').textContent = fmt(M.sliders);
+    $('.lg-p').textContent = fmt(M.spinners);
+
+    // 核心指标
+    const bpmDelta = Math.abs(M.bpm - M.original_bpm) > .05 ? `<small> 原 ${Number(M.original_bpm).toFixed(0)}</small>` : '';
+    const metrics = [
+      ['速度 BPM', `${Number(M.bpm).toFixed(1)}${bpmDelta}`, '#43d5df'],
+      ['时长', M.duration, '#ff4d96'],
+      ['最大连击', `${fmt(M.max_combo)}x`, '#43d5df'],
+      ['物件总数', fmt(M.objects), '#ff4d96'],
+      ['圆圈 / 滑条 / 转盘', `${fmt(M.circles)} / ${fmt(M.sliders)} / ${fmt(M.spinners)}`, '#43d5df'],
+      ['通过率', `${passRate.toFixed(1)}%`, '#ff4d96'],
+    ];
+    $('.metrics-grid').innerHTML = metrics.map(([label, value, color]) =>
+      `<div class="metric-cell" style="--accent:${color}"><span>${label}</span><b>${value}</b></div>`
+    ).join('');
+  </script>
+</body>
+</html>
