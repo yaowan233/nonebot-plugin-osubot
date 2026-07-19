@@ -315,12 +315,19 @@ async def render_score_template(
         judge_cols = 3
         ratio = f"{stats.perfect / stats.great:.1f} : 1" if stats.great else "∞ : 1"
 
-    dimension_values = [
-        ("CS", original_mapinfo.cs, mapinfo.cs),
-        ("AR", original_mapinfo.ar, mapinfo.ar),
-        ("OD", original_mapinfo.accuracy, mapinfo.accuracy),
-        ("HP", original_mapinfo.drain, mapinfo.drain),
-    ]
+    od = ("OD", original_mapinfo.accuracy, mapinfo.accuracy)
+    hp = ("HP", original_mapinfo.drain, mapinfo.drain)
+    if mode == 1:
+        dimension_values = [od, hp]
+    elif mode == 3:
+        dimension_values = [("KEYS", original_mapinfo.cs, mapinfo.cs), od, hp]
+    else:
+        dimension_values = [
+            ("CS", original_mapinfo.cs, mapinfo.cs),
+            ("AR", original_mapinfo.ar, mapinfo.ar),
+            od,
+            hp,
+        ]
     dimension_max = 11 if any(current > 10 for _, _, current in dimension_values) else 10
     dimensions = []
     for name, original, current in dimension_values:
@@ -328,8 +335,8 @@ async def render_score_template(
         dimensions.append(
             {
                 "name": name,
-                "original": f"{original:.1f}",
-                "current": f"{current:.1f}",
+                "original": f"{original:.0f}" if name == "KEYS" else f"{original:.1f}",
+                "current": f"{current:.0f}" if name == "KEYS" else f"{current:.1f}",
                 "changed": changed,
                 "original_pos": min(100, max(0, original / dimension_max * 100)),
                 "current_pos": min(100, max(0, current / dimension_max * 100)),

@@ -4,7 +4,8 @@ from pathlib import Path
 
 from ..api import get_beatmapsets_info
 from ..exceptions import NetworkError
-from .map_render import duration_text, remote_image_data_uri, render_map_template
+from .map import draw_map_info
+from .map_render import duration_text, remote_image_data_uri, render_map_template, beatmap_background_data_uri
 
 
 TEMPLATE_PATH = Path(__file__).parent / "bmap_templates"
@@ -24,9 +25,15 @@ async def draw_bmap_info(mapid: int) -> BytesIO:
     difficulties = sorted(beatmapset.beatmaps, key=lambda item: item.difficulty_rating)
     if not difficulties:
         raise NetworkError("谱面组中没有可展示的难度")
+    if len(difficulties) == 1:
+        return await draw_map_info(difficulties[0].id, [])
 
     cover, avatar = await asyncio.gather(
-        remote_image_data_uri(f"https://assets.ppy.sh/beatmaps/{beatmapset.id}/covers/cover@2x.jpg"),
+        beatmap_background_data_uri(
+            difficulties[0].id,
+            beatmapset.id,
+            f"https://assets.ppy.sh/beatmaps/{beatmapset.id}/covers/cover@2x.jpg",
+        ),
         remote_image_data_uri(f"https://a.ppy.sh/{beatmapset.user_id}"),
     )
     payload = {

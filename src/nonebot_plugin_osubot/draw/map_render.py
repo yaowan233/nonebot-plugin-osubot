@@ -8,6 +8,7 @@ import jinja2
 from nonebot_plugin_htmlrender import get_new_page
 from PIL import Image
 
+from ..info import get_bg
 from ..file import get_projectimg
 
 
@@ -31,6 +32,27 @@ async def remote_image_data_uri(url: str) -> str:
         output = BytesIO()
         image.save(output, "JPEG", quality=90, optimize=True)
     return f"data:image/jpeg;base64,{base64.b64encode(output.getvalue()).decode()}"
+
+
+def image_data_uri(image: Image.Image) -> str:
+    output = BytesIO()
+    rgb_image = image.convert("RGB")
+    try:
+        rgb_image.save(output, "JPEG", quality=90, optimize=True)
+    finally:
+        rgb_image.close()
+    return f"data:image/jpeg;base64,{base64.b64encode(output.getvalue()).decode()}"
+
+
+async def beatmap_background_data_uri(map_id: int, set_id: int, fallback_url: str) -> str:
+    try:
+        image = await get_bg(map_id, set_id)
+        try:
+            return image_data_uri(image)
+        finally:
+            image.close()
+    except Exception:
+        return await remote_image_data_uri(fallback_url)
 
 
 async def render_map_template(

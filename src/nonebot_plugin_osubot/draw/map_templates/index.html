@@ -48,9 +48,9 @@
       position: absolute;
       inset: -30px;
       background:
-        linear-gradient(102deg, rgba(5, 15, 25, .97) 0 30%, rgba(8, 18, 29, .91) 57%, rgba(20, 21, 39, .87)),
+        linear-gradient(102deg, rgba(5, 15, 25, .86) 0 30%, rgba(8, 18, 29, .76) 57%, rgba(20, 21, 39, .72)),
         var(--cover) center / cover;
-      filter: blur(15px) saturate(1.25);
+      filter: blur(9px) saturate(1.15);
       transform: scale(1.08);
     }
     .backdrop::after {
@@ -249,6 +249,17 @@
     .ranked b { font-size: 12px; font-weight: 400; }
 
     .overview { padding: 16px 20px 18px; }
+    .identity.no-tags .cover { height: 455px; }
+    .identity.no-tags .overview {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .identity.no-tags .summary {
+      flex: 1;
+      align-content: center;
+      row-gap: 22px;
+    }
     .section-title {
       display: flex;
       align-items: center;
@@ -295,6 +306,14 @@
       grid-template-rows: 128px 78px minmax(0, 1fr) 178px;
       gap: 11px;
     }
+    .content.no-mods { grid-template-rows: 128px var(--stats-height, 360px) minmax(0, 1fr); }
+    .content.no-mods .stat-rows { flex: 1; }
+    .content.no-mods .stat-row {
+      flex: 1;
+      min-height: 55px;
+      max-height: 76px;
+    }
+    .content.no-mods .metrics-grid { row-gap: 20px; }
     .title-block {
       position: relative;
       min-width: 0;
@@ -365,6 +384,9 @@
       border-radius: 18px;
       background: rgba(8, 20, 31, .76);
     }
+    .mod-strip.mods-only { grid-template-columns: 1fr; }
+    .mod-strip.mods-only .mods-label { display: flex; align-items: center; gap: 14px; }
+    .mod-strip.mods-only .mods-icons { margin-top: 0; }
     .mod-strip .mods-label span { display: block; color: var(--muted); font-size: 8px; }
     .mod-strip .mods-icons { display: flex; gap: 6px; margin-top: 5px; }
     .mod-strip .mods-icons img { height: 30px; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,.5)); }
@@ -517,7 +539,7 @@
     .obj-legend b { color: #f6f8fa; margin-left: 4px; font-size: 11px; }
     .obj-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; }
 
-    /* 核心指标 */
+    /* 谱面数据 */
     .metrics-panel {
       display: flex;
       flex-direction: column;
@@ -548,6 +570,64 @@
       white-space: nowrap;
     }
     .metric-cell b small { font-size: 10px; color: var(--muted); font-weight: 400; }
+
+    /* 提升缩放后可读性 */
+    .masthead { font-size: 11px; }
+    .masthead .map-id-top { font-size: 13px; }
+    .pill { font-size: 11px; }
+    .cover-title h2 { font-size: 18px; }
+    .cover-note { font-size: 10px; }
+    .creator-copy span, .ranked span { font-size: 10px; }
+    .creator-copy b { font-size: 18px; }
+    .ranked b { font-size: 14px; }
+    .section-title h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      letter-spacing: .25px;
+    }
+    .section-title h3::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      flex: 0 0 auto;
+      border-radius: 2px;
+      background: linear-gradient(var(--cyan), var(--pink));
+      box-shadow: 0 0 8px rgba(67, 213, 223, .28);
+    }
+    .section-title span { font-size: 9px; }
+    .summary-item span, .tags-label { font-size: 10px; }
+    .summary-item span, .metric-cell span, .obj-strip .obj-label span {
+      color: #aab8c1;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .summary-item b { font-size: 21px; }
+    .tags { font-size: 11px; }
+    .eyebrow { font-size: 9px; }
+    .title-copy h1 { font-size: 34px; }
+    .title-copy h2 { font-size: 14px; }
+    .title-stat span { font-size: 9px; }
+    .title-stat b { font-size: 19px; }
+    .mod-strip .mods-label span, .star-delta span { font-size: 10px; }
+    .star-track .cap { font-size: 11px; }
+    .star-delta b { font-size: 22px; }
+    .column-head {
+      color: #98aab6;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .stat-name b { font-size: 18px; }
+    .stat-name span { font-size: 10px; }
+    .stat-value b { font-size: 21px; }
+    .obj-strip .obj-label span { font-size: 10px; }
+    .obj-strip .obj-label b { font-size: 17px; }
+    .obj-legend { font-size: 11px; }
+    .obj-legend b { font-size: 13px; }
+    .metric-cell span { font-size: 10px; }
+    .metric-cell b { font-size: 22px; }
   </style>
 </head>
 <body>
@@ -610,7 +690,7 @@
         </section>
 
         <section class="stats-panel">
-          <div class="section-title"><h3>谱面参数 · 模组前后对比</h3><span>菱形为模组后 · 圆圈为原始</span></div>
+          <div class="section-title"><h3 class="stats-title"></h3><span class="stats-note"></span></div>
           <div class="column-head"><span></span><span class="scale"><i>0</i><i>5</i><i class="scale-max">10</i></span><span style="text-align:right">当前</span></div>
           <div class="stat-rows"></div>
           <div class="obj-strip">
@@ -625,7 +705,7 @@
         </section>
 
         <section class="metrics-panel">
-          <div class="section-title"><h3>核心指标</h3><span>模组生效后</span></div>
+          <div class="section-title"><h3>谱面数据</h3></div>
           <div class="metrics-grid"></div>
         </section>
       </main>
@@ -686,10 +766,21 @@
     $('.star-badge b').textContent = `★ ${M.stars.toFixed(2)}`;
     $('.cover-title h1').textContent = S.title_unicode || S.title;
     $('.cover-title h2').textContent = `by ${S.artist_unicode || S.artist}`;
-    $('.source-line').textContent = S.source ? `来源 · ${S.source}` : '原创曲目';
+    if (S.source) {
+      $('.source-line').textContent = `来源 · ${S.source}`;
+    } else {
+      $('.cover-note').style.display = 'none';
+    }
     $('.creator-copy b').textContent = S.creator;
     $('.ranked b').textContent = S.ranked_date || '未上架';
-    $('.tags').textContent = (S.tags || []).join(' ');
+    const tags = S.tags || [];
+    if (tags.length) {
+      $('.tags').textContent = tags.join(' ');
+    } else {
+      $('.identity').classList.add('no-tags');
+      $('.tags-label').style.display = 'none';
+      $('.tags').style.display = 'none';
+    }
     $('.ov-sub').textContent = `谱面 ${M.id}`;
 
     const passRate = M.plays ? (M.passes / M.plays * 100) : 0;
@@ -708,7 +799,7 @@
     $('.title-copy .mode-name').textContent = `OSU! ${modeName[M.mode_int] || ''} · 当前难度`;
     const titleStats = [
       ['SS 表现值', `${fmt(Math.round(M.ss_pp))}<small> pp</small>`, true],
-      ['原始星数', `${M.original_stars.toFixed(2)}★`, false],
+      ['星数', `${M.stars.toFixed(2)}★`, false],
       ['谱面状态', (statusText[String(S.status).toLowerCase()] || S.status), false],
     ];
     $('.title-stats').innerHTML = titleStats.map(([label, value, hl]) =>
@@ -716,46 +807,55 @@
     ).join('');
 
     // 模组 · 星数变化
+    const hasMods = M.mods.length > 0;
+    const hasStarChange = Math.abs(M.stars - M.original_stars) >= .005;
+    const content = $('.content');
+    const modStrip = $('.mod-strip');
     const modsBox = $('.mod-strip .mods-icons');
-    if (M.mods.length) {
+    if (hasMods) {
       modsBox.innerHTML = M.mods.map(m => `<img src="${DATA.mod_images[m]}" title="${m}">`).join('');
     } else {
-      modsBox.outerHTML = '<div class="mods-none">未应用模组</div>';
+      modStrip.remove();
+      content.classList.add('no-mods');
+      content.style.setProperty('--stats-height', `${245 + M.stats.length * 38}px`);
     }
-    const fromC = displayColor(starColor(M.original_stars));
-    const toC = displayColor(starC);
-    const track = $('.star-track');
-    track.style.setProperty('--fromc', fromC);
-    track.style.setProperty('--toc', toC);
-    const lo = Math.min(M.original_stars, M.stars), hi = Math.max(M.original_stars, M.stars);
-    const span = Math.max(hi - lo, .4), base = lo - span * .18, trackSpan = span * 1.36;
-    const pos = v => ((v - base) / trackSpan * 100);
-    const pFrom = $('.star-point.p-from'), pTo = $('.star-point.p-to');
-    pFrom.style.left = `${pos(M.original_stars)}%`;
-    pFrom.style.setProperty('--pc', fromC);
-    pTo.style.left = `${pos(M.stars)}%`;
-    pTo.style.setProperty('--pc', toC);
-    $('.cap-from').textContent = `原始 ${M.original_stars.toFixed(2)}★`;
-    $('.cap-from').style.left = '50%'; $('.cap-from').style.transform = 'translateX(-50%)';
-    $('.cap-to').textContent = `模组后 ${M.stars.toFixed(2)}★`;
-    $('.cap-to').style.left = '50%'; $('.cap-to').style.transform = 'translateX(-50%)';
-    const delta = M.stars - M.original_stars;
-    const deltaEl = $('.star-delta b');
-    if (Math.abs(delta) < .005) {
-      deltaEl.textContent = '无变化';
-      deltaEl.classList.add('same');
-    } else {
+    if (hasMods && hasStarChange) {
+      const fromC = displayColor(starColor(M.original_stars));
+      const toC = displayColor(starC);
+      const track = $('.star-track');
+      track.style.setProperty('--fromc', fromC);
+      track.style.setProperty('--toc', toC);
+      const lo = Math.min(M.original_stars, M.stars), hi = Math.max(M.original_stars, M.stars);
+      const span = Math.max(hi - lo, .4), base = lo - span * .18, trackSpan = span * 1.36;
+      const pos = v => ((v - base) / trackSpan * 100);
+      const pFrom = $('.star-point.p-from'), pTo = $('.star-point.p-to');
+      pFrom.style.left = `${pos(M.original_stars)}%`;
+      pFrom.style.setProperty('--pc', fromC);
+      pTo.style.left = `${pos(M.stars)}%`;
+      pTo.style.setProperty('--pc', toC);
+      $('.cap-from').textContent = `原始 ${M.original_stars.toFixed(2)}★`;
+      $('.cap-from').style.left = '50%'; $('.cap-from').style.transform = 'translateX(-50%)';
+      $('.cap-to').textContent = `模组后 ${M.stars.toFixed(2)}★`;
+      $('.cap-to').style.left = '50%'; $('.cap-to').style.transform = 'translateX(-50%)';
+      const delta = M.stars - M.original_stars;
+      const deltaEl = $('.star-delta b');
       deltaEl.textContent = `${delta > 0 ? '+' : '−'}${Math.abs(delta).toFixed(2)}★`;
       deltaEl.style.color = delta > 0 ? 'var(--up)' : 'var(--down)';
+    } else if (hasMods) {
+      $('.star-track').remove();
+      $('.star-delta').remove();
+      modStrip.classList.add('mods-only');
     }
 
     // 参数行（与 score 成绩图一致：细线轨道 + 刻度 + 菱形当前点 + 圆圈原始点）
+    $('.stats-title').textContent = hasMods ? '谱面参数 · 模组前后对比' : '谱面参数';
+    $('.stats-note').textContent = hasMods ? '菱形为模组后 · 圆圈为原始' : '';
     const trim = v => Number(v).toFixed(2).replace(/\.?0+$/, '');
     const dimMax = M.stats.some(s => Math.max(s.before, s.after) > 10) ? 11 : 10;
     const dpos = v => Math.min(Math.max(v, 0) / dimMax * 100, 100);
     $('.scale-max').textContent = dimMax;
     $('.stat-rows').innerHTML = M.stats.map(s => {
-      const changed = Math.abs(s.after - s.before) > .005;
+      const changed = hasMods && Math.abs(s.after - s.before) > .005;
       return `<div class="stat-row${changed ? ' changed' : ''}">
         <div class="stat-name"><b>${s.key}</b><span>${s.name}</span></div>
         <div class="track"><u class="tick t0"></u><u class="tick t5"></u><u class="tick tmax"></u>${changed ? `<em class="origin-value" style="left:${dpos(s.before)}%">${trim(s.before)}</em><em class="origin-dot" style="left:${dpos(s.before)}%"></em>` : ''}<b class="dot" style="left:${dpos(s.after)}%"></b></div>
@@ -771,7 +871,7 @@
     $('.lg-s').textContent = fmt(M.sliders);
     $('.lg-p').textContent = fmt(M.spinners);
 
-    // 核心指标
+    // 谱面数据
     const bpmDelta = Math.abs(M.bpm - M.original_bpm) > .05 ? `<small> 原 ${Number(M.original_bpm).toFixed(0)}</small>` : '';
     const metrics = [
       ['速度 BPM', `${Number(M.bpm).toFixed(1)}${bpmDelta}`, '#43d5df'],

@@ -46,9 +46,9 @@
       position: absolute;
       inset: -30px;
       background:
-        linear-gradient(102deg, rgba(5, 15, 25, .97) 0 30%, rgba(8, 18, 29, .91) 57%, rgba(20, 21, 39, .87)),
+        linear-gradient(102deg, rgba(5, 15, 25, .86) 0 30%, rgba(8, 18, 29, .76) 57%, rgba(20, 21, 39, .72)),
         var(--cover) center / cover;
-      filter: blur(15px) saturate(1.25);
+      filter: blur(9px) saturate(1.15);
       transform: scale(1.08);
     }
     .backdrop::after {
@@ -268,6 +268,7 @@
       grid-template-rows: 130px 76px minmax(0, 1fr);
       gap: 11px;
     }
+    .content.single-difficulty { grid-template-rows: 130px minmax(0, 1fr); }
     .title-block {
       position: relative;
       min-width: 0;
@@ -480,6 +481,61 @@
       text-align: center;
       font-size: 8px;
     }
+
+    /* 提升缩放后可读性 */
+    .masthead { font-size: 11px; }
+    .masthead .set-id-top { font-size: 13px; }
+    .cover-state { font-size: 11px; }
+    .cover-range span { font-size: 9px; }
+    .cover-range b { font-size: 16px; }
+    .creator-copy span, .source span { font-size: 10px; }
+    .creator-copy b { font-size: 18px; }
+    .source b { font-size: 14px; }
+    .section-title h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      letter-spacing: .25px;
+    }
+    .section-title h3::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      flex: 0 0 auto;
+      border-radius: 2px;
+      background: linear-gradient(var(--cyan), var(--pink));
+      box-shadow: 0 0 8px rgba(67, 213, 223, .28);
+    }
+    .section-title span { font-size: 9px; }
+    .summary-item span, .tags-label { font-size: 10px; }
+    .summary-item span, .metric span, .pass-rate span {
+      color: #aab8c1;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .summary-item b { font-size: 21px; }
+    .tags { font-size: 11px; }
+    .eyebrow { font-size: 9px; }
+    .title-copy h1 { font-size: 35px; }
+    .title-copy h2 { font-size: 15px; }
+    .title-stat span { font-size: 9px; }
+    .title-stat b { font-size: 17px; }
+    .spectrum-title span, .spectrum-range span { font-size: 10px; }
+    .spectrum-title b, .spectrum-range b { font-size: 17px; }
+    .column-head {
+      color: #98aab6;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .index { font-size: 11px; }
+    .version b { font-size: 17px; }
+    .version small { font-size: 10px; }
+    .stars { font-size: 13px; }
+    .metric span, .pass-rate span { font-size: 9px; }
+    .metric b, .pass-rate b { font-size: 14px; }
+    .params span { font-size: 10px; }
   </style>
 </head>
 <body>
@@ -586,7 +642,7 @@
     const allDifficulties = DATA.difficulties;
     const difficulties = allDifficulties.slice(0, 20);
     const extraRows = Math.max(0, difficulties.length - 9);
-    const sheetHeight = 900 + extraRows * 65;
+    const sheetHeight = difficulties.length === 1 ? 700 : 900 + extraRows * 65;
     document.documentElement.style.height = `${sheetHeight}px`;
     document.body.style.height = `${sheetHeight}px`;
     $('#bmap-refined').style.height = `${sheetHeight}px`;
@@ -595,14 +651,27 @@
     const maximum = difficulties[difficulties.length - 1].stars;
     const spread = maximum - minimum;
     const average = difficulties.reduce((sum, item) => sum + item.stars, 0) / difficulties.length;
+    const hasSpectrum = difficulties.length > 1;
+    if (!hasSpectrum) {
+      $('.spectrum').remove();
+      $('.content').classList.add('single-difficulty');
+      $('.cover-range span').textContent = '星数';
+    }
 
     $('.set-id-top').textContent = `谱面组 · ${DATA.set.id}`;
     $('.ranked-date-overview').textContent = `上架于 ${DATA.set.ranked_date}`;
     $('.cover-state').textContent = statusText[String(DATA.set.status).toLowerCase()] || DATA.set.status;
-    $('.cover-range b').textContent = `${minimum.toFixed(2)}–${maximum.toFixed(2)}★`;
+    $('.cover-range b').textContent = hasSpectrum
+      ? `${minimum.toFixed(2)}–${maximum.toFixed(2)}★`
+      : `${minimum.toFixed(2)}★`;
     $('.creator-copy b').textContent = DATA.set.creator;
     $('.source b').textContent = DATA.set.source || '原创曲目';
-    $('.tags').textContent = DATA.set.tags;
+    if ((DATA.set.tags || '').trim()) {
+      $('.tags').textContent = DATA.set.tags;
+    } else {
+      $('.tags-label').style.display = 'none';
+      $('.tags').style.display = 'none';
+    }
     $('.title-copy h1').textContent = DATA.set.title;
     $('.title-copy h2').textContent = DATA.set.artist;
 
@@ -627,14 +696,16 @@
       `<div class="title-stat"><span>${label}</span><b>${value}</b></div>`
     ).join('');
 
-    $('.spectrum-title b').textContent = `${difficulties.length} 个难度节点`;
-    $('.spectrum-range b').textContent = `${minimum.toFixed(2)}–${maximum.toFixed(2)}★`;
-    $('.spectrum-line').style.background = starGradient(minimum, maximum);
-    $('.spectrum-points').innerHTML = difficulties.map((item, index) => {
-      const color = starColor(item.stars);
-      const left = spread ? (item.stars - minimum) / spread * 100 : 50;
-      return `<i class="spectrum-point" style="--diff:${color};left:${left}%"></i>`;
-    }).join('');
+    if (hasSpectrum) {
+      $('.spectrum-title b').textContent = `${difficulties.length} 个难度节点`;
+      $('.spectrum-range b').textContent = `${minimum.toFixed(2)}–${maximum.toFixed(2)}★`;
+      $('.spectrum-line').style.background = starGradient(minimum, maximum);
+      $('.spectrum-points').innerHTML = difficulties.map(item => {
+        const color = starColor(item.stars);
+        const left = (item.stars - minimum) / spread * 100;
+        return `<i class="spectrum-point" style="--diff:${color};left:${left}%"></i>`;
+      }).join('');
+    }
 
     $('.difficulty-list').innerHTML = difficulties.map((item, index) => {
       const color = starColor(item.stars);
