@@ -358,7 +358,7 @@ async def test_bp_success(app: App):
     event = fake_group_message_event_v11(message=Message("/bp 1"))
 
     with patch_session(UTILS_MODULE, session):
-        with patch(f"{BP_MODULE}.draw_score", new=AsyncMock(return_value=FAKE_BP_IMG)):
+        with patch(f"{BP_MODULE}.draw_score", new=AsyncMock(return_value=(FAKE_BP_IMG, 24680, 13579))):
             async with app.test_matcher(bp) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -491,13 +491,41 @@ async def test_pr_success(app: App):
     event = fake_group_message_event_v11(message=Message("/pr"))
 
     with patch_session(UTILS_MODULE, session):
-        with patch(f"{PR_MODULE}.draw_score", new=AsyncMock(return_value=FAKE_PR_IMG)):
+        with patch(f"{PR_MODULE}.draw_score", new=AsyncMock(return_value=(FAKE_PR_IMG, 24680, 13579))):
             async with app.test_matcher(pr) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(event, img_msg(event, FAKE_PR_IMG), result={"message_id": 1})
                 ctx.should_finished()
+
+    from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, get_last_set_id
+
+    assert get_last_map_id(event) == "24680"
+    assert await get_last_set_id(event) == "13579"
+
+
+@pytest.mark.asyncio
+async def test_recent_success_remembers_map(app: App):
+    """/re records the beatmap returned by the selected recent score."""
+    from nonebot_plugin_osubot.matcher.pr import recent
+    from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, get_last_set_id
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_id=114514)
+    event = fake_group_message_event_v11(message=Message("/re"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{PR_MODULE}.draw_score", new=AsyncMock(return_value=(FAKE_PR_IMG, 97531, 86420))):
+            async with app.test_matcher(recent) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, img_msg(event, FAKE_PR_IMG), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert get_last_map_id(event) == "97531"
+    assert await get_last_set_id(event) == "86420"
 
 
 @pytest.mark.asyncio

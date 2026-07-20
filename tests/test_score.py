@@ -3,6 +3,7 @@
 import base64
 import pytest
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
 from nonebug import App
@@ -15,6 +16,31 @@ SCORE_MODULE = "nonebot_plugin_osubot.matcher.score"
 
 FAKE_IMG = b"FAKE_IMAGE"
 FAKE_IMG_B64 = base64.b64encode(FAKE_IMG).decode()
+
+
+@pytest.mark.asyncio
+async def test_draw_score_can_return_selected_beatmap_context(tmp_path):
+    """The drawing layer exposes the exact score selected after filtering/indexing."""
+    from nonebot_plugin_osubot.draw.score import draw_score
+
+    score = SimpleNamespace(beatmap=SimpleNamespace(id=24680, set_id=13579))
+    user = SimpleNamespace(id=114514)
+    module = "nonebot_plugin_osubot.draw.score"
+
+    with (
+        patch(f"{module}.map_path", tmp_path),
+        patch(f"{module}.get_user_scores", new=AsyncMock(return_value=[score])),
+        patch(f"{module}.get_user_info_data", new=AsyncMock(return_value=user)),
+        patch(f"{module}.osu_api", new=AsyncMock(return_value={})),
+        patch(f"{module}.download_osu", new=AsyncMock()),
+        patch(f"{module}.cal_score_info", side_effect=lambda _, value, __: value),
+        patch(f"{module}.draw_score_pic", new=AsyncMock(return_value=BytesIO(FAKE_IMG))),
+    ):
+        image, map_id, set_id = await draw_score("recent", 114514, False, "osu", [], [], return_context=True)
+
+    assert image.getvalue() == FAKE_IMG
+    assert map_id == 24680
+    assert set_id == 13579
 
 
 def _img_msg(event):

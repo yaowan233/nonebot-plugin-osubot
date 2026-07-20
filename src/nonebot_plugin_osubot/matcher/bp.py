@@ -1,11 +1,13 @@
 from nonebot import on_command
 from nonebot.typing import T_State
+from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
 from ..utils import NGM
 from .utils import split_msg
 from ..exceptions import NetworkError
 from ..draw import draw_bp, draw_score
+from .map_context import remember_map
 
 bp = on_command("bp", priority=11, block=True)
 pfm = on_command("pfm", priority=11, block=True, aliases={"bplist", "bl"})
@@ -13,7 +15,7 @@ tbp = on_command("tbp", priority=11, block=True, aliases={"nb", "todaybp"})
 
 
 @bp.handle(parameterless=[split_msg()])
-async def _bp(state: T_State):
+async def _bp(event: Event, state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if not state["range"] and state["query"]:
@@ -30,7 +32,7 @@ async def _bp(state: T_State):
     if best <= 0 or best > 200:
         await UniMessage.text("只允许查询bp 1-200 的成绩").finish(reply_to=True)
     try:
-        data = await draw_score(
+        data, map_id, set_id = await draw_score(
             "bp",
             state["user"],
             state["is_lazer"],
@@ -39,6 +41,7 @@ async def _bp(state: T_State):
             state["query"],
             state["source"],
             best=best,
+            return_context=True,
         )
     except NetworkError as e:
         lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
@@ -46,6 +49,7 @@ async def _bp(state: T_State):
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式 bp{best} {lazer_mode}{mods}时 {str(e)}"
         ).finish(reply_to=True)
+    remember_map(event, map_id, set_id)
     await UniMessage.image(raw=data).finish(reply_to=True)
 
 

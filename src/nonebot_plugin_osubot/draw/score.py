@@ -41,7 +41,9 @@ async def draw_score(
     search_condition: list,
     source: str = "osu",
     best: int = 1,
-) -> BytesIO:
+    *,
+    return_context: bool = False,
+) -> BytesIO | tuple[BytesIO, int, int]:
     task1 = asyncio.create_task(get_user_info_data(uid, mode, source))
     if project == "bp":
         scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer, limit=best)
@@ -88,7 +90,10 @@ async def draw_score(
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
-    return await draw_score_pic(score, info, map_json, "", source)
+    image = await draw_score_pic(score, info, map_json, "", source)
+    if return_context:
+        return image, score.beatmap.id, score.beatmap.set_id
+    return image
 
 
 async def get_score_data(

@@ -75,7 +75,7 @@ async def test_bp_not_bound(app: App):
 
 @pytest.mark.asyncio
 async def test_bp_success(app: App):
-    """/bp 1 ：成功查询，调用 draw_score 并回复图片。"""
+    """/bp 1 caches its beatmap for following /m and /preview commands."""
     try:
         from nonebot_plugin_osubot.matcher.bp import bp
     except ImportError:
@@ -87,15 +87,63 @@ async def test_bp_success(app: App):
     session.scalar.return_value = make_mock_user()
 
     event = fake_group_message_event_v11(message=Message("/bp 1"))
+    map_event = fake_group_message_event_v11(message=Message("/m"))
+    preview_event = fake_group_message_event_v11(message=Message("/预览"))
 
     with patch_session(UTILS_MODULE, session):
-        with patch(f"{BP_MODULE}.draw_score", new=AsyncMock(return_value=BytesIO(FAKE_IMG))):
+        with patch(
+            f"{BP_MODULE}.draw_score",
+            new=AsyncMock(return_value=(BytesIO(FAKE_IMG), 24680, 13579)),
+        ):
             async with app.test_matcher(bp) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
                 ctx.should_finished()
+
+        from nonebot_plugin_osubot.matcher.map import osu_map
+
+        with patch(
+            "nonebot_plugin_osubot.matcher.map.draw_map_info",
+            new=AsyncMock(return_value=BytesIO(FAKE_IMG)),
+        ) as draw_map:
+            async with app.test_matcher(osu_map) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, map_event)
+                ctx.should_call_send(map_event, _img_msg(map_event), result={"message_id": 1})
+                ctx.should_finished()
+
+        from nonebot_plugin_osubot.matcher.preview import generate_preview
+
+        with (
+            patch(
+                "nonebot_plugin_osubot.matcher.preview.osu_api",
+                new=AsyncMock(return_value={"beatmapset_id": 13579, "mode_int": 0}),
+            ) as get_map,
+            patch(
+                "nonebot_plugin_osubot.matcher.preview.draw_osu_preview",
+                new=AsyncMock(return_value=FAKE_IMG),
+            ) as draw_preview,
+        ):
+            async with app.test_matcher(generate_preview) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, preview_event)
+                ctx.should_call_send(
+                    preview_event,
+                    _img_msg(preview_event)
+                    + MessageSegment.text(
+                        "点击预览：\nhttps://beatmap.try-z.net/?b=24680\nhttps://beatmap.try-z.net/dev/?b=24680"
+                    ),
+                    result={"message_id": 1},
+                )
+                ctx.should_finished()
+
+    draw_map.assert_awaited_once_with("24680", [])
+    get_map.assert_awaited_once_with("map", map_id=24680)
+    draw_preview.assert_awaited_once_with(24680, 13579)
 
 
 @pytest.mark.asyncio
