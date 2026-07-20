@@ -227,18 +227,23 @@ async def test_history_no_data(app: App):
 
     hist_session = make_mock_session()
     hist_session.scalar.return_value = None  # UserData 不存在
+    scalars_result = MagicMock()
+    scalars_result.all.return_value = []
+    hist_session.scalars.return_value = scalars_result
 
     event = fake_group_message_event_v11(message=Message("/history"))
 
     with patch_session(UTILS_MODULE, utils_session):
-        with patch_session(HISTORY_MODULE, hist_session):
+        with patch_session(HISTORY_MODULE, hist_session), patch(
+            f"{HISTORY_MODULE}.merge_osutrack_history", new=AsyncMock(return_value=([], False))
+        ):
             async with app.test_matcher(history) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "没有114514的数据哦"),
+                    text_msg(event, "没有找到 test_player 的历史数据"),
                     result={"message_id": 1},
                 )
                 ctx.should_finished()
@@ -277,7 +282,15 @@ async def test_history_success(app: App):
     event = fake_group_message_event_v11(message=Message("/history"))
 
     with patch_session(UTILS_MODULE, utils_session):
-        with patch_session(HISTORY_MODULE, hist_session):
+        with patch_session(HISTORY_MODULE, hist_session), patch(
+            f"{HISTORY_MODULE}.merge_osutrack_history",
+            new=AsyncMock(
+                return_value=(
+                    [(1000.0, "2026-01-01", 10000), (1050.0, "2026-01-08", 9500)],
+                    False,
+                )
+            ),
+        ):
             with patch(f"{HISTORY_MODULE}.draw_history_plot", new=AsyncMock(return_value=FAKE_IMG)):
                 async with app.test_matcher(history) as ctx:
                     adapter = nonebot.get_adapter(OnebotV11Adapter)

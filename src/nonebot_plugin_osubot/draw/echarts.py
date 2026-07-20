@@ -1,4 +1,6 @@
 import asyncio
+import datetime
+import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -27,12 +29,101 @@ rank_order = ["XH", "X", "SH", "S", "A", "B", "C", "D"]
 # 影响星数的 mod（需要重新计算难度评级）
 STAR_MODS = {"DT", "NC", "HT", "HR", "EZ", "DC", "DA"}
 
-async def draw_history_plot(pp_ls, date_ls, rank_ls, title) -> bytes:
+def build_history_data(
+    pp_ls,
+    date_ls,
+    rank_ls,
+    title: str,
+    *,
+    username: str | None = None,
+    mode: str | None = None,
+    user_id: int | str | None = None,
+    source_label: str = "本地记录",
+) -> dict[str, Any]:
+    points = [
+        (str(date), float(pp), int(rank))
+        for pp, date, rank in zip(pp_ls, date_ls, rank_ls)
+        if pp is not None and rank is not None and int(rank) > 0
+    ]
+    if not points:
+        raise ValueError("没有可用于绘制历史趋势的数据")
+
+    dates = [point[0] for point in points]
+    pp_values = [point[1] for point in points]
+    rank_values = [point[2] for point in points]
+    try:
+        parsed_dates = [datetime.date.fromisoformat(date) for date in dates]
+    except ValueError:
+        parsed_dates = []
+
+    period_days = max((parsed_dates[-1] - parsed_dates[0]).days, 1) if parsed_dates else len(points)
+    recent_index = 0
+    if parsed_dates:
+        cutoff = parsed_dates[-1] - datetime.timedelta(days=30)
+        recent_index = next((index for index, date in enumerate(parsed_dates) if date >= cutoff), 0)
+
+    start_rank = rank_values[0]
+    rank_gain = start_rank - rank_values[-1]
+    mode_labels = {
+        "osu": "标准模式",
+        "taiko": "太鼓模式",
+        "fruits": "接水果模式",
+        "mania": "键盘模式",
+        "rxosu": "Relax 标准模式",
+        "rxtaiko": "Relax 太鼓模式",
+        "rxfruits": "Relax 接水果模式",
+        "aposu": "Autopilot 标准模式",
+    }
+    display_name = username or title.split(" ", 1)[0] or "osu! 玩家"
+    return {
+        "username": display_name,
+        "initial": display_name[:1].upper(),
+        "user_id": str(user_id or ""),
+        "avatar": f"https://a.ppy.sh/{user_id}" if user_id else "",
+        "mode": mode_labels.get(mode or "", mode or "osu! 模式"),
+        "period_days": period_days,
+        "period": f"{dates[0]}—{dates[-1]}",
+        "dates": dates,
+        "pp_values": pp_values,
+        "rank_values": rank_values,
+        "start_pp": pp_values[0],
+        "current_pp": pp_values[-1],
+        "pp_gain": pp_values[-1] - pp_values[0],
+        "recent_pp_gain": pp_values[-1] - pp_values[recent_index],
+        "current_rank": rank_values[-1],
+        "rank_gain": rank_gain,
+        "rank_gain_rate": rank_gain / start_rank * 100 if start_rank else 0,
+        "source_label": source_label,
+    }
+
+
+async def draw_history_plot(
+    pp_ls,
+    date_ls,
+    rank_ls,
+    title,
+    *,
+    username: str | None = None,
+    mode: str | None = None,
+    user_id: int | str | None = None,
+    source_label: str = "本地记录",
+) -> bytes:
     template_name = "pp_rank_line_chart.html"
+    payload = build_history_data(
+        pp_ls,
+        date_ls,
+        rank_ls,
+        title,
+        username=username,
+        mode=mode,
+        user_id=user_id,
+        source_label=source_label,
+    )
+    payload_json = json.dumps(payload, ensure_ascii=False).replace("<", "\\u003c")
     pic = await template_to_pic(
         template_path,
         template_name,
-        {"pp_ls": pp_ls, "date_ls": date_ls, "rank_ls": rank_ls, "title": title},
+        {"payload_json": payload_json},
     )
     return pic
 

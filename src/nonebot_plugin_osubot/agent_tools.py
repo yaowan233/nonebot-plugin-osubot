@@ -34,6 +34,7 @@ from .draw.match_history import draw_match_history
 from .draw.catch_preview import draw_cath_preview
 from .draw.taiko_preview import map_to_image, parse_map
 from .help_data import get_command_help
+from .history_data import merge_osutrack_history
 
 ContentBlock = str | dict[str, Any]
 medal_data_path = Path(__file__).parent / "osufile" / "medals" / "medals.json"
@@ -456,13 +457,27 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             async with get_session() as session:
                 data = (await session.scalars(query)).all()
 
-            points = [
+            local_points = [
                 (item.pp, str(item.date), item.g_rank) for item in data if item.g_rank is not None and item.g_rank != 0
             ]
+            has_local_points = bool(local_points)
+            points, used_osutrack = await merge_osutrack_history(user.user_id, int(mode), local_points, day)
             if not points:
                 return f"没有找到 {user.name} 的历史数据"
             pp_ls, date_ls, rank_ls = map(list, zip(*points))
-            image = await draw_history_plot(pp_ls, date_ls, rank_ls, f"{user.name} {NGM[mode]} pp/rank history")
+            source_label = "本地记录"
+            if used_osutrack:
+                source_label = "本地记录 + osu!track" if has_local_points else "osu!track"
+            image = await draw_history_plot(
+                pp_ls,
+                date_ls,
+                rank_ls,
+                f"{user.name} {NGM[mode]} pp/rank history",
+                username=user.name,
+                mode=NGM[mode],
+                user_id=user.user_id,
+                source_label=source_label,
+            )
             await _send_image(ctx, image)
             return _image_tool_result(
                 f"已发送 {user.name} 的 {NGM[mode]} pp/rank 历史曲线图。",

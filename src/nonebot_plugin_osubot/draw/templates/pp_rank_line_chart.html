@@ -1,58 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>Awesome-pyecharts</title>
-    <script type="text/javascript" src="./echarts.min.js"></script>
+<meta charset="utf-8">
+<title>OSUBot 玩家历史趋势</title>
+<script src="./echarts.min.js"></script>
+<style>
+@font-face{font-family:Torus;src:url('../template_assets/torus-regular.woff')}@font-face{font-family:Torus;src:url('../template_assets/torus-semibold.woff');font-weight:700}
+*{box-sizing:border-box}html,body{margin:0;width:1280px;height:760px;overflow:hidden;background:#dfe4e8;color:#101824;font-family:Torus,"Microsoft YaHei",sans-serif}.page{position:relative;width:1280px;height:760px;background:#f5f1e9;overflow:hidden}.page:before{content:"";position:absolute;z-index:5;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,#e6377a 0 30%,#168b94 30%)}.top{height:200px;display:grid;grid-template-columns:390px 1fr;border-bottom:1px solid #cbd1d3}.profile{display:flex;align-items:center;gap:22px;padding:33px 42px;border-right:1px solid #cbd1d3;background:linear-gradient(120deg,#e8ece9,#f5f1e9)}.avatar-wrap{position:relative;flex:0 0 88px;width:88px;height:88px}.avatar-fallback,.avatar{position:absolute;inset:0;width:88px;height:88px;border-radius:8px}.avatar-fallback{display:grid;place-items:center;background:#fff;font-size:28px;font-weight:700;box-shadow:9px 9px 0 #e6377a}.avatar{z-index:2;object-fit:cover;box-shadow:9px 9px 0 #e6377a}.player{min-width:0}.name{max-width:205px;font-size:27px;font-weight:700;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.uid{margin-top:8px;color:#6f7b84;font-size:11px}.mode{display:inline-block;margin-top:10px;padding:5px 8px;border:1px solid #c9ced1;border-left:4px solid #168b94;background:#fff;color:#26323c;font-size:10px}.heading{padding:31px 44px 19px}.heading-line{display:flex;justify-content:space-between;align-items:flex-start}.eyebrow{color:#e6377a;font-size:11px;font-weight:700;letter-spacing:.16em}.heading h1{margin:8px 0 0;font-size:38px;letter-spacing:-.035em}.period{text-align:right;color:#727e87;font-size:11px;line-height:1.65}.facts{display:flex;gap:46px;margin-top:16px}.fact{min-width:108px}.fact span{display:block;color:#7d878e;font-size:9px}.fact b{display:block;margin-top:4px;font-size:16px}.pink{color:#e6377a}.teal{color:#168b94}.main{padding:20px 44px 31px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);height:82px;background:#fff;border:1px solid #d3d8da}.kpi{padding:16px 20px;border-right:1px solid #d3d8da}.kpi:last-child{border-right:0}.kpi span{display:block;color:#7c858b;font-size:9px}.kpi b{display:block;margin-top:5px;font-size:23px;font-variant-numeric:tabular-nums}.chart-wrap{height:380px;margin-top:16px;padding:13px 20px 7px;background:#fff;border:1px solid #d3d8da}.chart-head{height:28px;display:flex;justify-content:space-between;align-items:center}.chart-head b{font-size:12px}.legend{display:flex;gap:22px;color:#657078;font-size:10px}.legend i{display:inline-block;width:18px;height:3px;margin-right:7px;vertical-align:middle;background:#e6377a}.legend .rank{background:#168b94}.chart{width:100%;height:326px}.footer{position:absolute;right:44px;bottom:10px;color:#929a9f;font-size:9px}
+</style>
 </head>
-<body >
-    <div id="1" class="chart-container" style="width:900px; height:500px; "></div>
-    <script>
-        const chart = echarts.init(
-            document.getElementById('1'), 'white', {renderer: 'canvas'}
-        );
-        const option = {
-            "animation": false,
-        title: {
-          text: '{{ title }}',
-          left: 'center' // 标题水平居中
-        },
-        xAxis: {
-          type: 'category',
-          data: {{ date_ls }}
-        },
-        yAxis: [{
-          type: 'value',
-          scale: true,
-          name: 'pp'
-        },
-        {
-          type: 'value',
-          scale: true,
-          alignTicks: true,
-          inverse: true,
-          nameLocation: 'start',
-          name: 'rank'
-        }],
-        legend: {
-          top: 30,
-          left: 'center',
-          data: ['pp', 'rank']
-        },
-        series: [
-          {
-            name: 'pp',
-            type: 'line',
-            data: {{ pp_ls }},
-            yAxisIndex: 0,
-            connectNulls: true
-          },
-          {
-            name: 'rank',
-            type: 'line',
-            data: {{ rank_ls }},
-            yAxisIndex: 1,
-            connectNulls: true
-          }
-        ]};
-        chart.setOption(option);
-    </script>
+<body>
+<main class="page">
+  <header class="top">
+    <section class="profile"><div class="avatar-wrap"><div id="initial" class="avatar-fallback"></div><img id="avatar" class="avatar" alt=""></div><div class="player"><div id="username" class="name"></div><div id="uid" class="uid"></div><div id="mode" class="mode"></div></div></section>
+    <section class="heading"><div class="heading-line"><div><div class="eyebrow">玩家成长档案</div><h1>表现趋势 / 最近 <span id="days"></span> 天</h1></div><div id="period" class="period"></div></div><div class="facts"><div class="fact"><span>起始 PP</span><b id="start-pp"></b></div><div class="fact"><span>当前 PP</span><b id="current-pp"></b></div><div class="fact"><span>最近 30 天</span><b id="recent-gain" class="pink"></b></div></div></section>
+  </header>
+  <section class="main"><div class="kpis"><div class="kpi"><span>PP 净增长</span><b id="pp-gain" class="pink"></b></div><div class="kpi"><span>当前全球排名</span><b id="current-rank"></b></div><div class="kpi"><span>排名提升</span><b id="rank-gain" class="teal"></b></div><div class="kpi"><span>排名变化幅度</span><b id="rank-rate"></b></div></div><section class="chart-wrap"><header class="chart-head"><b>PP 与全球排名变化</b><div class="legend"><span><i></i>表现分数</span><span><i class="rank"></i>全球排名</span></div></header><div id="chart" class="chart"></div></section></section>
+  <div class="footer">nonebot_plugin_osubot · 历史趋势 · <span id="source"></span></div>
+</main>
+<script>
+const d={{payload_json}};
+const num=(v,digits=0)=>Number(v||0).toLocaleString('zh-CN',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+const signed=(v,suffix='')=>`${Number(v)>=0?'+':'−'}${num(Math.abs(v))}${suffix}`;
+document.getElementById('initial').textContent=d.initial;
+document.getElementById('username').textContent=d.username;
+document.getElementById('uid').textContent=d.user_id?`UID ${d.user_id}`:'osu! 玩家';
+document.getElementById('mode').textContent=d.mode;
+document.getElementById('days').textContent=d.period_days;
+document.getElementById('period').textContent=`记录区间 ${d.period}`;
+document.getElementById('start-pp').textContent=num(d.start_pp);
+document.getElementById('current-pp').textContent=num(d.current_pp);
+document.getElementById('recent-gain').textContent=signed(d.recent_pp_gain,' pp');
+document.getElementById('pp-gain').textContent=signed(d.pp_gain);
+document.getElementById('current-rank').textContent=`#${num(d.current_rank)}`;
+document.getElementById('rank-gain').textContent=`${d.rank_gain>=0?'↑':'↓'}${num(Math.abs(d.rank_gain))}`;
+document.getElementById('rank-rate').textContent=`${num(d.rank_gain_rate,1)}%`;
+document.getElementById('source').textContent=`数据来源：${d.source_label}`;
+const avatar=document.getElementById('avatar');if(d.avatar){avatar.src=d.avatar;avatar.onerror=()=>avatar.remove()}else avatar.remove();
+const labels=d.dates.map(value=>{const parts=value.split('-');return parts.length===3?`${parts[1]}.${parts[2]}`:value});
+const interval=Math.max(0,Math.ceil(labels.length/6)-1);
+const chart=echarts.init(document.getElementById('chart'),null,{renderer:'canvas'});
+chart.setOption({animation:false,textStyle:{fontFamily:'Torus, Microsoft YaHei'},grid:{left:70,right:76,top:34,bottom:40},xAxis:{type:'category',boundaryGap:false,data:labels,axisLine:{lineStyle:{color:'#cfd5d8'}},axisTick:{show:false},axisLabel:{color:'#758089',fontSize:10,interval,showMinLabel:true,showMaxLabel:true}},yAxis:[{type:'value',scale:true,name:'PP',nameTextStyle:{color:'#758089',fontSize:10,align:'left'},axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#35434e',fontSize:10,formatter:value=>num(value)},splitLine:{lineStyle:{color:'#e2e6e7'}}},{type:'value',scale:true,inverse:true,name:'全球排名',nameLocation:'start',nameTextStyle:{color:'#758089',fontSize:10,align:'right'},axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#35434e',fontSize:10,formatter:value=>`#${num(value)}`},splitLine:{show:false}}],series:[{name:'表现分数',type:'line',data:d.pp_values,yAxisIndex:0,smooth:.12,symbol:'circle',showSymbol:false,lineStyle:{width:4,color:'#e6377a'},itemStyle:{color:'#fff',borderColor:'#e6377a',borderWidth:3},emphasis:{disabled:true}},{name:'全球排名',type:'line',data:d.rank_values,yAxisIndex:1,smooth:.12,symbol:'circle',showSymbol:false,lineStyle:{width:3,color:'#168b94'},itemStyle:{color:'#fff',borderColor:'#168b94',borderWidth:2},emphasis:{disabled:true}}]});
+</script>
 </body>
+</html>
