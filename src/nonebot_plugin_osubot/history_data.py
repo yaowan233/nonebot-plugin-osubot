@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import Iterable
+from collections.abc import Iterable
 
 from expiringdict import ExpiringDict
 from nonebot import get_plugin_config
