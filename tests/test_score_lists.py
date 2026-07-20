@@ -37,7 +37,7 @@ async def test_score_list_defaults_to_top_30(
         with (
             patch(f"{PR_MODULE}.get_user_scores", new=AsyncMock(return_value=[score])) as get_scores,
             patch(f"{PR_MODULE}.cal_score_info"),
-            patch(f"{PR_MODULE}.draw_pfm", new=AsyncMock(return_value=b'LIST')) as draw_list,
+            patch(f"{PR_MODULE}.draw_pfm", new=AsyncMock(return_value=b"LIST")) as draw_list,
         ):
             async with app.test_matcher(matcher) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
