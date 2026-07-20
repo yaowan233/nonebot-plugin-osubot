@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -5,10 +6,12 @@ from typing import Any
 from nonebot_plugin_htmlrender import template_to_pic
 
 from ..api import get_users
+from ..file import download_osu, map_path
+from ..pp import cal_pp
 
 template_path = str(Path(__file__).parent / "templates")
 
-RANK_COLORS = {
+rank_color = {
     "X": "#ffc83a",
     "XH": "#c7eaf5",
     "S": "#ffc83a",
@@ -19,6 +22,10 @@ RANK_COLORS = {
     "D": "#f55757",
 }
 
+rank_order = ["XH", "X", "SH", "S", "A", "B", "C", "D"]
+
+# 影响星数的 mod（需要重新计算难度评级）
+STAR_MODS = {"DT", "NC", "HT", "HR", "EZ", "DC", "DA"}
 
 async def draw_history_plot(pp_ls, date_ls, rank_ls, title) -> bytes:
     template_name = "pp_rank_line_chart.html"
@@ -30,70 +37,169 @@ async def draw_history_plot(pp_ls, date_ls, rank_ls, title) -> bytes:
     return pic
 
 
-async def build_bpa_data(score_ls, source: str) -> dict[str, Any]:
-    pp_values = [float(score.pp or 0) for score in score_ls]
-    pp_ls = [round(pp, 0) for pp in pp_values]
+def _num(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
-    length_ls = []
-    lengths = []
-    for score in score_ls:
+
+def _has_star_mod(score) -> bool:
+    mods = getattr(score, "mods", None) or []
+    return any(getattr(m, "acronym", str(m)) in STAR_MODS for m in mods)
+
+
+async def _ensure_osu(set_id, map_id) -> Path | None:
+    p = map_path / str(set_id) / f"{map_id}.osu"
+    if p.exists():
+        return p
+    try:
+        await download_osu(set_id, map_id)
+        return p if p.exists() else None
+    except Exception:
+        return None
+
+
+async def _calc_modded_stars(score, source: str) -> float | None:
+    beatmap = getattr(score, "beatmap", None)
+    if not beatmap:
+        return None
+    p = await _ensure_osu(getattr(beatmap, "set_id", None), getattr(beatmap, "id", None))
+    if not p:
+        return None
+    try:
+        res = cal_pp(score, str(p.absolute()), source)
+        return _num(getattr(res, "stars", None))
+    except Exception:
+        return None
+
+
+async def _resolve_stars(score_ls: list, source: str) -> list[float]:
+    """返回每个 score 的星数；开了影响星数 mod 的会重新计算，失败则回退原值。"""
+    async def one(idx, score):
         beatmap = getattr(score, "beatmap", None)
-        if beatmap is None:
+        base = _num(getattr(beatmap, "stars", 0)) if beatmap else 0.0
+        if not beatmap or not _has_star_mod(score):
+            return idx, base
+        modded = await _calc_modded_stars(score, source)
+        return idx, modded if modded and modded > 0 else base
+
+    results = await asyncio.gather(*[one(i, s) for i, s in enumerate(score_ls)], return_exceptions=False)
+    out = [0.0] * len(score_ls)
+    for idx, val in results:
+        out[idx] = round(val, 2)
+    return out
+
+
+async def build_bpa_data(score_ls: list, source: str) -> dict:
+    """从已预处理的 score_ls 构建 bpa 图表所需的全部数据。"""
+    pp_ls = [round(_num(i.pp), 0) for i in score_ls]
+
+    # 并发解析 mod 后的真实星数
+    stars_ls = await _resolve_stars(score_ls, source)
+
+    length_ls: list[dict[str, Any]] = []
+    for i in score_ls:
+        color = rank_color.get(i.rank, "#9aa5ce")
+        item_style: dict[str, Any] = {"color": color}
+        if i.rank == "XH":
+            item_style.update({"shadowBlur": 10, "shadowColor": "rgba(180,255,255,0.85)"})
+        elif i.rank == "X":
+            item_style.update({"shadowBlur": 10, "shadowColor": "rgba(255,255,0,0.85)"})
+        length_ls.append(
+            {
+                "value": round(_num(getattr(getattr(i, "beatmap", None), "total_length", 0)), 1),
+                "itemStyle": item_style,
+            }
+        )
+
+    rank_data: dict[str, list[list[float]]] = {r: [] for r in rank_order}
+    for idx, i in enumerate(score_ls):
+        if not getattr(i, "beatmap", None):
             continue
-        length = float(beatmap.total_length or 0)
-        lengths.append(length)
-        item_style = {"color": RANK_COLORS.get(score.rank, "#ffffff")}
-        if score.rank == "XH":
-            item_style.update({"shadowBlur": 8, "shadowColor": "#b4ffff"})
-        elif score.rank == "X":
-            item_style.update({"shadowBlur": 8, "shadowColor": "#ffff00"})
-        length_ls.append({"value": length, "itemStyle": item_style})
+        pp = _num(i.pp)
+        rank_data.setdefault(i.rank, []).append([stars_ls[idx], round(pp, 1)])
+    star_scatter = [
+        {"name": r, "color": rank_color[r], "data": rank_data.get(r, [])} for r in rank_order
+    ]
 
     mods_pp: defaultdict[str, float] = defaultdict(float)
-    mapper_pp: defaultdict[Any, float] = defaultdict(float)
-    for index, score in enumerate(score_ls):
-        weighted_pp = float(score.pp or 0) * 0.95**index
-        mods = score.mods or []
+    for num, i in enumerate(score_ls):
+        weighted = _num(i.pp) * 0.95**num
+        mods = getattr(i, "mods", None) or []
         if not mods:
-            mods_pp["NM"] += weighted_pp
-        for mod in mods:
-            mods_pp[mod.acronym] += weighted_pp
+            mods_pp["NM"] += weighted
+        for j in mods:
+            mods_pp[getattr(j, "acronym", str(j))] += weighted
+    mod_pp_data = [{"name": m, "value": round(pp, 2)} for m, pp in mods_pp.items()]
+    mod_pp_data.sort(key=lambda x: x["value"], reverse=True)
 
-        beatmap = getattr(score, "beatmap", None)
-        if beatmap is not None:
-            mapper = beatmap.creator if source == "ppysb" else beatmap.user_id
-            mapper_pp[mapper] += weighted_pp
-
-    mod_pp_ls = [
-        {"name": mod, "value": round(pp, 2)}
-        for mod, pp in sorted(mods_pp.items(), key=lambda item: item[1], reverse=True)
-    ]
-    mapper_items = sorted(mapper_pp.items(), key=lambda item: item[1], reverse=True)[:9]
+    mapper_pp: defaultdict[Any, float] = defaultdict(float)
+    for num, i in enumerate(score_ls):
+        beatmap = getattr(i, "beatmap", None)
+        if not beatmap:
+            continue
+        key = getattr(beatmap, "creator", None) if source == "ppysb" else getattr(beatmap, "user_id", None)
+        mapper_pp[key] += _num(i.pp) * 0.95**num
+    mapper_items = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)[:9]
     if source == "ppysb":
-        mapper_pp_ls = [{"name": str(mapper), "value": round(pp, 2)} for mapper, pp in mapper_items]
-    else:
-        users = await get_users([mapper for mapper, _ in mapper_items]) if mapper_items else []
-        usernames = {user.id: user.username for user in users}
-        mapper_pp_ls = [
-            {"name": usernames.get(mapper, str(mapper)), "value": round(pp, 2)} for mapper, pp in mapper_items
+        mapper_pp_data = [{"name": str(m), "value": round(pp, 2)} for m, pp in mapper_items]
+    elif mapper_items:
+        users = await get_users([m for m, _ in mapper_items])
+        user_dic = {u.id: u.username for u in users}
+        mapper_pp_data = [
+            {"name": user_dic.get(m, str(m)), "value": round(pp, 2)} for m, pp in mapper_items
         ]
+    else:
+        mapper_pp_data = []
 
+    bp_count = len(score_ls)
+    weighted_pp = sum(_num(i.pp) * 0.95**num for num, i in enumerate(score_ls))
+    total_pp = sum(_num(i.pp) for i in score_ls)
+    accs = [_num(i.accuracy) for i in score_ls if getattr(i, "accuracy", None) is not None]
+    valid_stars = [s for s in stars_ls if s > 0]
+    bpms = [
+        _num(getattr(i.beatmap, "bpm", 0))
+        for i in score_ls
+        if getattr(i, "beatmap", None) and _num(getattr(i.beatmap, "bpm", 0)) > 0
+    ]
+    avg_acc = sum(accs) / len(accs) if accs else 0.0
+    avg_stars = sum(valid_stars) / len(valid_stars) if valid_stars else 0.0
+    avg_bpm = sum(bpms) / len(bpms) if bpms else 0.0
+    top_mod = mod_pp_data[0]["name"] if mod_pp_data else "-"
+    top_mapper = mapper_pp_data[0]["name"] if mapper_pp_data else "-"
     stats = {
-        "count": len(score_ls),
-        "average_pp": round(sum(pp_values) / len(pp_values), 2) if pp_values else 0,
-        "max_pp": round(max(pp_values), 2) if pp_values else 0,
-        "average_length": round(sum(lengths) / len(lengths), 2) if lengths else 0,
+        "weighted_pp": round(weighted_pp, 1),
+        "total_pp": round(total_pp, 1),
+        "bp_count": bp_count,
+        "avg_acc": round(avg_acc, 2),
+        "avg_stars": round(avg_stars, 2),
+        "avg_bpm": round(avg_bpm, 1),
+        "top_mod": top_mod,
+        "top_mapper": top_mapper,
     }
+
     return {
         "pp_ls": pp_ls,
         "length_ls": length_ls,
-        "mod_pp_ls": mod_pp_ls,
-        "mapper_pp_ls": mapper_pp_ls,
+        "star_scatter": star_scatter,
+        "mod_pp_ls": mod_pp_data,
+        "mapper_pp_ls": mapper_pp_data,
         "stats": stats,
     }
 
 
-async def draw_bpa_plot(name, pp_ls, length_ls, mod_pp_ls, mapper_pp_ls, stats=None) -> bytes:
+async def draw_bpa_plot(
+    name,
+    pp_ls,
+    length_ls,
+    star_scatter,
+    mod_pp_ls,
+    mapper_pp_ls,
+    stats,
+) -> bytes:
     template_name = "bpa_chart.html"
     pic = await template_to_pic(
         template_path,
@@ -102,20 +208,11 @@ async def draw_bpa_plot(name, pp_ls, length_ls, mod_pp_ls, mapper_pp_ls, stats=N
             "name": name,
             "pp_ls": pp_ls,
             "length_ls": length_ls,
+            "star_scatter": star_scatter,
             "mod_pp_ls": mod_pp_ls,
             "mapper_pp_ls": mapper_pp_ls,
+            "stats": stats,
             "length": len(pp_ls),
-            "stats": stats or {},
         },
     )
     return pic
-
-
-# async def draw_strains_plot(time, strains) -> bytes:
-#     template_name = "basic_line_chart.html"
-#     pic = await template_to_pic(
-#         template_path,
-#         template_name,
-#         {"time": time, "strains": strains},
-#     )
-#     return pic

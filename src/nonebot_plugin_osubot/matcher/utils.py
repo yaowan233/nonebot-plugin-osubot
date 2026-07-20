@@ -7,8 +7,8 @@ from nonebot.internal.adapter import Event, Message
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
-from ..utils import mods2list
-from ..api import get_uid_by_name
+from ..utils import extract_beatmap_id, extract_beatmapset_id, mods2list, parse_mode
+from ..api import get_uid_by_name, osu_api
 from ..exceptions import NetworkError
 from ..database import UserData, SbUserData
 
@@ -39,6 +39,18 @@ def split_msg():
         arg = (
             arg.extract_plain_text().strip().replace("＝", "=").replace("：", ":").replace("＆", "&").replace("＃", "#")
         )
+        command = state.get("_prefix", {}).get("command", [""])[0]
+        set_commands = {"bmap", "bm", "osudl", "dl", "反键"}
+        if command in set_commands:
+            url_target = extract_beatmapset_id(arg)
+            if not url_target and (linked_map_id := extract_beatmap_id(arg)):
+                map_data = await osu_api("map", map_id=int(linked_map_id))
+                url_target = str(map_data["beatmapset_id"])
+        else:
+            url_target = extract_beatmap_id(arg)
+        if url_target:
+            state["target"] = url_target
+            arg = re.sub(r"(?:https?://)?osu\.ppy\.sh/\S+", "", arg)
         matches = re.findall(pattern, arg)
         for match in matches:
             if match[0]:
@@ -48,7 +60,8 @@ def split_msg():
             if match[2]:
                 state["day"] = int(match[2])
             if match[3]:
-                state["range"] = match[3]
+                low, high = (int(value.strip()) for value in match[3].split("-"))
+                state["range"] = f"{min(low, high)}-{max(low, high)}"
             if match[4]:
                 source = {"sb": "ppysb", "ppysb": "ppysb"}
                 state["source"] = source.get(match[4], "osu")
@@ -76,13 +89,19 @@ def split_msg():
             except NetworkError:
                 state["error"] = f"在 {state['source']} 服务器没有找到用户: {arg.strip()}"
         if state["source"] == "ppysb":
-            if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 6 or int(state["mode"]) == 8):
+            normalized_mode = parse_mode(state["mode"], allow_special=True)
+            if normalized_mode is None:
                 state["error"] = (
                     "模式应为0-8(没有7)！\n0: std\n1: taiko\n2: ctb\n3: mania\n4-6: SB服 RX 模式\n8: SB服 AP 模式"
                 )
+            else:
+                state["mode"] = normalized_mode
         else:
-            if not state["mode"].isdigit() or not (0 <= int(state["mode"]) <= 3):
-                state["error"] = "模式应为0-3！\n0: std\n1: taiko\n2: ctb\n3: mania"
+            normalized_mode = parse_mode(state["mode"])
+            if normalized_mode is None:
+                state["error"] = "模式应为 std、taiko、catch、mania，或数字 0-3"
+            else:
+                state["mode"] = normalized_mode
         if isinstance(state["day"], str) and (not state["day"].isdigit() or int(state["day"]) < 0):
             state["error"] = "查询的日期应是一个正数"
         if state["user"] == 0:

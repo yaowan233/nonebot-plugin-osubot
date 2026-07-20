@@ -5,12 +5,12 @@ from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from ..utils import FGM
-from ..api import api, get_users, get_user_info
+from ..api import get_osu_user, get_users
 from ..database.models import InfoData, UserData
 
 
 async def bind_user_info(project: str, uid, qid) -> str:
-    info = await get_user_info(f"{api}/users/@{uid}")
+    info = await get_osu_user(str(uid))
     if not info:
         return f'未查询到玩家"{uid}"，请检查是否有多于或缺少的空格'
     elif isinstance(info, str):
@@ -22,7 +22,7 @@ async def bind_user_info(project: str, uid, qid) -> str:
         session.add(UserData(user_id=qid, osu_id=uid, osu_name=name, osu_mode=FGM[playmode]))
         await session.commit()
     await update_users_info([uid])
-    msg = f"成功绑定 {name}\n默认模式为 {playmode}，若更改模式至其他模式，如 mania，请输入 /更新模式 3"
+    msg = f"成功绑定 {name}\n默认模式为 {playmode}，可使用 /mode o、t、c、m 切换"
     return msg
 
 

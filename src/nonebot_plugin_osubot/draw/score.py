@@ -10,6 +10,7 @@ from osu_tools import OsuCalculator
 from nonebot_plugin_htmlrender import get_new_page
 
 from ..info import get_bg
+from ..utils import FGM, NGM, normalize_map_mode
 from ..mods import get_mods_list
 from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
@@ -99,8 +100,10 @@ async def get_score_data(
     source: str = "osu",
 ) -> BytesIO:
     grank = ""
-    task = asyncio.create_task(get_user_info_data(uid, mode, source))
     map_json = await osu_api("map", map_id=mapid)
+    native_mode = int(map_json["mode_int"])
+    mode = NGM[normalize_map_mode(FGM[mode], native_mode, source)]
+    task = asyncio.create_task(get_user_info_data(uid, mode, source))
     if source == "osu":
         if mods:
             score_json = await osu_api("score", uid, mode, mapid, legacy_only=int(not is_lazer))

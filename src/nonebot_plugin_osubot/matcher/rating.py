@@ -5,7 +5,7 @@ from nonebot_plugin_alconna import UniMessage
 
 from ..draw.rating import draw_rating
 
-rating = on_command("rating", priority=11, block=True)
+rating = on_command("rating", aliases={"rt"}, priority=11, block=True)
 
 
 @rating.handle()

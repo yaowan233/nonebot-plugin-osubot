@@ -194,7 +194,7 @@ async def test_bp_network_error(app: App):
 
 @pytest.mark.asyncio
 async def test_pfm_success(app: App):
-    """/pfm ：无范围参数，默认 1-200，调用 draw_bp 回复图片。"""
+    """/pfm：无范围参数时默认查询 BP 1-30。"""
     try:
         from nonebot_plugin_osubot.matcher.bp import pfm
     except ImportError:
@@ -208,7 +208,7 @@ async def test_pfm_success(app: App):
     event = fake_group_message_event_v11(message=Message("/pfm"))
 
     with patch_session(UTILS_MODULE, session):
-        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))):
+        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as mock_draw:
             async with app.test_matcher(pfm) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -216,10 +216,12 @@ async def test_pfm_success(app: App):
                 ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
                 ctx.should_finished()
 
+    assert mock_draw.call_args.args[5:7] == (1, 30)
+
 
 @pytest.mark.asyncio
-async def test_pfm_invalid_range(app: App):
-    """/pfm #200-100 ：low > high，回复范围错误。"""
+async def test_pfm_reversed_range_is_normalized(app: App):
+    """A reversed BP range is automatically normalized."""
     try:
         from nonebot_plugin_osubot.matcher.bp import pfm
     except ImportError:
@@ -230,20 +232,18 @@ async def test_pfm_invalid_range(app: App):
     session = make_mock_session()
     session.scalar.return_value = make_mock_user()
 
-    # split_msg 会解析 200-100 → state["range"] = "200-100"（low > high，不合法）
     event = fake_group_message_event_v11(message=Message("/pfm 200-100"))
 
     with patch_session(UTILS_MODULE, session):
-        async with app.test_matcher(pfm) as ctx:
-            adapter = nonebot.get_adapter(OnebotV11Adapter)
-            bot = ctx.create_bot(base=Bot, adapter=adapter)
-            ctx.receive_event(bot, event)
-            ctx.should_call_send(
-                event,
-                _text_msg(event, "仅支持查询bp1-200"),
-                result={"message_id": 1},
-            )
-            ctx.should_finished()
+        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(pfm) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[5:7] == (100, 200)
 
 
 @pytest.mark.asyncio
@@ -272,7 +272,7 @@ async def test_pfm_network_error(app: App):
                     event,
                     _text_msg(
                         event,
-                        "在查找用户：test_player osu模式 bp1-200 stable模式下时 超时",
+                        "在查找用户：test_player osu模式 bp1-30 stable模式下时 超时",
                     ),
                     result={"message_id": 1},
                 )

@@ -14,7 +14,7 @@ with open(medal_data_path) as file:
     medal_json = json.load(file)
 
 
-medal = on_command("medal", aliases={"成就"}, priority=11, block=True)
+medal = on_command("medal", aliases={"md", "成就"}, priority=11, block=True)
 
 
 @medal.handle()

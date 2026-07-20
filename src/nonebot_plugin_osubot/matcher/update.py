@@ -12,9 +12,11 @@ from .utils import split_msg
 from ..database import UserData
 from ..file import save_info_pic, user_cache_path
 
-update_pic = on_command("更新背景", priority=11, block=True, aliases={"更改背景"})
+update_pic = on_command("更新背景", priority=11, block=True, aliases={"setbg", "更改背景"})
 update_info = on_command("update", priority=11, block=True, aliases={"更新信息"})
-clear_background = on_command("清空背景", priority=11, block=True, aliases={"清除背景", "重置背景"})
+clear_background = on_command(
+    "清空背景", priority=11, block=True, aliases={"clearbg", "清除背景", "重置背景"}
+)
 
 
 @update_pic.handle()

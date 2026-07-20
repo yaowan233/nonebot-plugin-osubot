@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSUBOT 帮助</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-2: #f0f2f5;
+      --text: #252932;
+      --muted: #68707d;
+      --pink: #d94f83;
+      --pink-soft: #b83d6c;
+      --cyan: #4d6b91;
+      --yellow: #f3b61f;
+      --line: #dfe3e8;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 1280px; background: var(--bg); color: var(--text); }
+    body {
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      background: var(--bg);
+    }
+
+    .page { display: none; padding: 42px 58px 38px; }
+    .page.active { display: block; }
+    .hero {
+      display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;
+      padding-bottom: 22px; border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 20px; }
+    .logo {
+      width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+      color: white; font: 700 22px/1 Arial; letter-spacing: -2px;
+      background: var(--pink); border: 0; box-shadow: none;
+    }
+    h1 { font-size: 42px; line-height: 1; margin: 0 0 10px; letter-spacing: -1px; font-weight: 750; }
+    .subtitle { color: var(--muted); font-size: 17px; }
+    .version { color: var(--muted); font: 600 14px/1.4 Consolas, monospace; border: 0; }
+
+    .starter {
+      display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; margin-bottom: 24px;
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 24px 26px;
+      box-shadow: none;
+    }
+    .card.accent { border-color: var(--line); border-left: 4px solid var(--pink); background: var(--panel); color: var(--text); }
+    .card.accent .eyebrow { color: var(--pink-soft); }
+    .card.accent .step p { color: var(--muted); }
+    .card.accent code { color: var(--text); border-color: transparent; background: #f0f2f5; }
+    .eyebrow { color: var(--pink-soft); font-size: 14px; font-weight: 700; letter-spacing: .5px; margin-bottom: 18px; text-transform: none; }
+    .steps { display: grid; gap: 16px; }
+    .step { display: grid; grid-template-columns: 34px 1fr; gap: 13px; align-items: start; }
+    .step-num {
+      width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%;
+      background: #f7e7ed; color: var(--pink-soft); font-weight: 800; font-size: 15px;
+    }
+    .step strong { display: block; font-size: 21px; margin-bottom: 3px; }
+    .step p, .hint { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.55; }
+    code, .cmd {
+      font-family: Consolas, "Microsoft YaHei UI", monospace; color: var(--text);
+      background: #f0f2f5; border: 0; border-radius: 4px; padding: 3px 7px;
+    }
+    .mode-row { display: flex; flex-wrap: wrap; gap: 9px; margin: 13px 0 16px; }
+    .chip { padding: 6px 10px; border-radius: 4px; background: #f4f5f7; border: 1px solid var(--line); color: var(--text); font-size: 14px; }
+    .chip b { color: var(--pink-soft); }
+
+    .section-title { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; font-size: 24px; letter-spacing: 0; }
+    .section-title::before { content: ""; width: 4px; height: 22px; border-radius: 2px; background: var(--pink); color: transparent; }
+    .command-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 18px; }
+    .command {
+      min-height: 98px; background: var(--panel); border: 1px solid var(--line);
+      border-radius: 7px; padding: 16px 18px 17px;
+    }
+    .command-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
+    .command-name { font: 700 20px/1.2 Consolas, "Microsoft YaHei UI", monospace; color: var(--text); }
+    .tag { color: var(--pink-soft); font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .desc { color: var(--muted); font-size: 16px; line-height: 1.45; }
+    .example { color: #555156; font: 13px/1.4 Consolas, "Microsoft YaHei UI", monospace; margin-top: 7px; }
+
+    .footer {
+      display: flex; justify-content: space-between; align-items: center; gap: 20px;
+      margin-top: 25px; padding: 18px 0 5px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px;
+    }
+    .footer strong { color: var(--pink-soft); }
+
+    /* Detail page */
+    #detail { padding-bottom: 38px; }
+    #detail .hero { margin-bottom: 26px; }
+    .syntax {
+      display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; margin-bottom: 22px;
+    }
+    .syntax .card { padding: 21px 24px; }
+    .syntax .card.accent { background: var(--panel); border-color: var(--line); border-left: 4px solid var(--pink); color: var(--text); }
+    .syntax .card.accent .eyebrow { color: var(--pink-soft); }
+    .syntax .card.accent .syntax-note { color: var(--muted); }
+    .syntax .card.accent code { color: var(--text); background: #f0f2f5; border: 0; }
+    .syntax .card.accent .syntax-line span { color: var(--pink-soft); text-decoration: none; }
+    .syntax-line { font: 18px/1.7 Consolas, "Microsoft YaHei UI", monospace; }
+    .syntax-line span { color: var(--pink-soft); }
+    .syntax-note { color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .group-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 17px; }
+    .group { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .group-title { padding: 14px 18px 12px; background: #f0f2f5; font-size: 19px; font-weight: 700; color: var(--text); border-bottom: 1px solid var(--line); }
+    .rows { padding: 5px 18px 9px; }
+    .row { display: grid; grid-template-columns: 255px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .row code { justify-self: start; background: transparent; border: 0; padding: 0; font-size: 15px; color: var(--text); }
+    .row span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .wide { grid-column: 1 / -1; }
+    .wide .rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 34px; }
+    .wide .row { grid-template-columns: 245px 1fr; }
+  </style>
+</head>
+<body>
+  <main id="overview" class="page">
+    <header class="hero">
+      <div class="brand">
+        <div class="logo">osu!</div>
+        <div><h1>OSUBOT 使用指南</h1><div class="subtitle">先绑定，再查询。大多数命令都支持指定玩家、模式与 Mods。</div></div>
+      </div>
+      <div class="version">nonebot_plugin_osubot</div>
+    </header>
+
+    <section class="starter">
+      <div class="card accent">
+        <div class="eyebrow">三步开始</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div><strong><code>/bind 玩家</code></strong><p>支持用户名、UID 或个人主页，例如 <code>/bind peppy</code></p></div></div>
+          <div class="step"><div class="step-num">2</div><div><strong><code>/mode o / t / c / m</code></strong><p>设定默认模式；不带参数可查看当前模式</p></div></div>
+          <div class="step"><div class="step-num">3</div><div><strong><code>/info</code> 或 <code>/bp</code></strong><p>开始查询自己的资料与成绩</p></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">模式与参数</div>
+        <div class="mode-row">
+          <span class="chip"><b>o / 0</b> osu!</span><span class="chip"><b>t / 1</b> taiko</span>
+          <span class="chip"><b>c / 2</b> catch</span><span class="chip"><b>m / 3</b> mania</span>
+        </div>
+        <p class="hint">临时查别人：<code>/info peppy:0</code></p>
+        <p class="hint" style="margin-top:10px">带 Mods 查询：<code>/bp 5 +HDHR</code></p>
+        <p class="hint" style="margin-top:10px">查询范围：<code>/bp 5-10</code></p>
+        <p class="hint" style="margin-top:10px">复用上一张谱面：<code>/m 782309</code> 后直接发送 <code>/sc</code></p>
+        <p class="hint" style="margin-top:10px">非 std 谱面自动使用原生模式；SB RX 自动匹配分类</p>
+        <p class="hint" style="margin-top:10px">SB 服：先 <code>/sbbind 玩家</code>，查询末尾加 <code>&amp;sb</code></p>
+        <p class="hint" style="margin-top:10px">支持 osu! 链接；反向范围 <code>30-1</code> 会自动纠正</p>
+      </div>
+    </section>
+
+    <h2 class="section-title">常用命令</h2>
+    <section class="command-grid">
+      <div class="command"><div class="command-head"><span class="command-name">/info [玩家]:[模式]</span><span class="tag">个人资料</span></div><div class="desc">查看 PP、排名、游玩数据与近期状态</div><div class="example">/info peppy:0</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/bl · /bp</span><span class="tag">最佳成绩</span></div><div class="desc"><b>/bl</b> 默认列出 BP 1–30；<b>/bp</b> 查看单条详情</div><div class="example">/bl　·　/bl 31-60　·　/bp 5</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/rl · /pl</span><span class="tag">最近列表</span></div><div class="desc">最近游玩列表 / 最近通过列表，默认显示 1–30</div><div class="example">/rl　·　/pl　·　/rl 31-60</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/re · /pr</span><span class="tag">单条成绩</span></div><div class="desc">查看某一次最近游玩或最近通过的详细成绩</div><div class="example">/re　·　/re 3　·　/pr 2</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/sc &lt;mapid&gt;</span><span class="tag">谱面成绩</span></div><div class="desc">查询自己或指定玩家在某张谱面的成绩</div><div class="example">/sc 782309 +HDHR</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/m · /bm</span><span class="tag">谱面信息</span></div><div class="desc">查看单张难度或整个谱面集的信息</div><div class="example">/m 782309　·　/bm 355322</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/预览 &lt;mapid&gt;</span><span class="tag">谱面预览</span></div><div class="desc">生成 osu!、taiko、catch 或 mania 谱面预览</div><div class="example">/预览 3903979:3</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/推荐</span><span class="tag">个性推荐</span></div><div class="desc">根据当前账号和模式推荐适合的谱面</div><div class="example">/推荐　·　/推荐 peppy:0</div></div>
+    </section>
+
+    <footer class="footer"><span>主题帮助：<strong>/oh mode</strong>、<strong>/oh score</strong>、<strong>/oh map</strong></span><span>完整命令表：<strong>/oh detail</strong></span></footer>
+  </main>
+
+  <main id="detail" class="page">
+    <header class="hero">
+      <div class="brand">
+        <div class="logo">osu!</div>
+        <div><h1>OSUBOT 完整命令</h1><div class="subtitle">方括号表示可选项，尖括号表示必填项。</div></div>
+      </div>
+      <div class="version">COMMAND REFERENCE</div>
+    </header>
+
+    <section class="syntax">
+      <div class="card accent"><div class="eyebrow">通用查询语法</div><div class="syntax-line">/命令 <span>[玩家]</span> <span>[序号/范围]</span><span>:[模式]</span> <span>[+Mods]</span> <span>[&amp;sb]</span></div><div class="syntax-note">示例：<code>/bp peppy 5-10:o +HDHR</code>　支持 osu! 链接，反向范围会自动纠正。</div></div>
+      <div class="card"><div class="eyebrow">模式名称与简称</div><div class="mode-row"><span class="chip"><b>o / 0</b> osu!</span><span class="chip"><b>t / 1</b> taiko</span><span class="chip"><b>c / 2</b> catch</span><span class="chip"><b>m / 3</b> mania</span></div><div class="syntax-note">未填写时使用绑定账号中保存的默认模式。</div></div>
+    </section>
+
+    <section class="group-grid">
+      <div class="group wide"><div class="group-title">ppysb 服务器查询</div><div class="rows">
+        <div class="row"><code>/sbbind &lt;玩家&gt;</code><span>绑定 ppysb 账号</span></div>
+        <div class="row"><code>/info &amp;sb</code><span>查询已绑定 SB 玩家资料</span></div>
+        <div class="row"><code>/bl:4 &amp;sb</code><span>查询 RX std BP 1–30</span></div>
+        <div class="row"><code>/rl:5 &amp;sb</code><span>查询 RX taiko 最近游玩</span></div>
+        <div class="row"><code>/sc &lt;mapid&gt;:6 &amp;sb</code><span>查询 RX catch 谱面成绩</span></div>
+        <div class="row"><code>/sbunbind</code><span>解除 ppysb 账号绑定</span></div>
+        <div class="row"><code>模式 0 / 1 / 2 / 3</code><span>std / taiko / catch / mania</span></div>
+        <div class="row"><code>模式 4 / 5 / 6 / 8</code><span>RX std / RX taiko / RX catch / AP std</span></div>
+      </div></div>
+
+      <div class="group"><div class="group-title">账号与资料</div><div class="rows">
+        <div class="row"><code>/bind &lt;玩家&gt;</code><span>绑定用户名、UID 或主页链接；纯数字优先视为用户名</span></div>
+        <div class="row"><code>/unbind</code><span>解除账号绑定</span></div>
+        <div class="row"><code>/info [玩家]:[模式]</code><span>查询玩家资料</span></div>
+        <div class="row"><code>/mu</code><span>发送已绑定玩家主页</span></div>
+        <div class="row"><code>/mode [o/t/c/m]</code><span>查看或修改默认模式；也支持全名及数字 0-3</span></div>
+        <div class="row"><code>/lazer</code><span>切换 stable / lazer 成绩；可简写 /lz</span></div>
+        <div class="row"><code>/update</code><span>刷新个人信息缓存</span></div>
+      </div></div>
+
+      <div class="group"><div class="group-title">成绩查询与分析</div><div class="rows">
+        <div class="row"><code>/bp [序号]</code><span>查询单条最佳成绩</span></div>
+        <div class="row"><code>/bl [起始-结束]</code><span>BP 列表；默认 1–30</span></div>
+        <div class="row"><code>/re [序号]</code><span>单条最近游玩，包含未通过</span></div>
+        <div class="row"><code>/rl [起始-结束]</code><span>最近游玩列表；默认 1–30</span></div>
+        <div class="row"><code>/pr [序号]</code><span>单条最近通过成绩</span></div>
+        <div class="row"><code>/pl [起始-结束]</code><span>最近通过列表；默认 1–30</span></div>
+        <div class="row"><code>/sc &lt;mapid&gt;</code><span>查询指定谱面成绩（/score）</span></div>
+        <div class="row"><code>/nb [#天数]</code><span>查询最近新增 BP（/tbp）</span></div>
+        <div class="row"><code>/bpa [玩家]:[模式]</code><span>分析 BP 数据分布</span></div>
+        <div class="row"><code>/hs [#天数]</code><span>查看 PP / 排名变化（/history）</span></div>
+      </div></div>
+
+      <div class="group"><div class="group-title">谱面工具</div><div class="rows">
+        <div class="row"><code>/m &lt;mapid&gt; [+Mods]</code><span>单张难度信息（/map）</span></div>
+        <div class="row"><code>/bm &lt;setid&gt;</code><span>谱面集信息（/bmap）</span></div>
+        <div class="row"><code>/预览 &lt;mapid&gt;:[模式]</code><span>生成谱面预览</span></div>
+        <div class="row"><code>/完整预览 &lt;mapid&gt;</code><span>生成完整谱面预览</span></div>
+        <div class="row"><code>/bg [mapid]</code><span>提取谱面背景（/getbg）；留空复用最近谱面</span></div>
+        <div class="row"><code>/dl [setid]</code><span>下载谱面并上传群文件（/osudl）</span></div>
+        <div class="row"><code>/倍速 &lt;mapid&gt; &lt;速率&gt;</code><span>生成 mania 倍速谱面</span></div>
+        <div class="row"><code>/反键 &lt;setid&gt; [间距] [阈值]</code><span>生成 mania 反键谱面</span></div>
+        <div class="row"><code>/cv --help</code><span>高级 mania 谱面转换（/convert）</span></div>
+      </div></div>
+
+      <div class="group"><div class="group-title">个性化与扩展</div><div class="rows">
+        <div class="row"><code>/推荐 [玩家]:[模式]</code><span>获取个性化谱面推荐</span></div>
+        <div class="row"><code>/setbg</code><span>设置个人信息卡背景（/更新背景）</span></div>
+        <div class="row"><code>/clearbg</code><span>移除自定义背景（/清空背景）</span></div>
+        <div class="row"><code>/md &lt;成就名&gt;</code><span>查询成就达成方式（/medal）</span></div>
+        <div class="row"><code>/mp &lt;matchid&gt;</code><span>查看多人比赛结果（/match）</span></div>
+        <div class="row"><code>/rt &lt;matchid&gt;</code><span>计算多人比赛 rating（/rating）</span></div>
+        <div class="row"><code>/rank</code><span>查看本群 PP 排名（/群内排名）</span></div>
+      </div></div>
+
+      <div class="group wide"><div class="group-title">猜歌小游戏</div><div class="rows">
+        <div class="row"><code>/音频猜歌</code><span>开始音频猜歌</span></div>
+        <div class="row"><code>/音频提示</code><span>获取当前音频题提示</span></div>
+        <div class="row"><code>/图片猜歌</code><span>开始背景图片猜歌</span></div>
+        <div class="row"><code>/图片提示</code><span>获取当前图片题提示</span></div>
+        <div class="row"><code>/谱面猜歌</code><span>开始谱面片段猜歌</span></div>
+        <div class="row"><code>/谱面提示</code><span>获取当前谱面题提示</span></div>
+      </div></div>
+    </section>
+
+    <footer class="footer"><span><strong>主题帮助：</strong>/oh bind · /oh mode · /oh score · /oh map · /oh sb</span><span>返回快速指南：<strong>/oh</strong></span></footer>
+  </main>
+
+  <script>
+    const page = new URLSearchParams(location.search).get('page') === 'detail' ? 'detail' : 'overview';
+    document.getElementById(page).classList.add('active');
+  </script>
+</body>
+</html>

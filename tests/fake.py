@@ -24,6 +24,7 @@ def fake_group_message_event_v11(**field) -> "GroupMessageEventV11":
         group_id: int = 87654321
         message_id: int = 1  # fixed for predictable reply segments in tests
         message: Message = Message("test")
+        original_message: Message = Message("test")
         raw_message: str = "test"
         font: int = 0
         sender: Sender = Sender(

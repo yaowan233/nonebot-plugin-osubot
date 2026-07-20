@@ -135,6 +135,50 @@ async def test_osu_help_detail(app: App):
         ctx.should_finished()
 
 
+@pytest.mark.asyncio
+async def test_osu_help_detail_chinese(app: App):
+    """/osuhelp 详细：中文参数同样发送详情图片。"""
+    try:
+        from nonebot_plugin_osubot.matcher.osu_help import osu_help, img2
+    except ImportError:
+        pytest.skip()
+    import nonebot
+
+    event = fake_group_message_event_v11(message=Message("/osuhelp 详细"))
+
+    async with app.test_matcher(osu_help) as ctx:
+        adapter = nonebot.get_adapter(OnebotV11Adapter)
+        bot = ctx.create_bot(base=Bot, adapter=adapter)
+        ctx.receive_event(bot, event)
+        ctx.should_call_send(
+            event,
+            Message(
+                [
+                    MessageSegment.reply(1),
+                    MessageSegment.image(file=f"base64://{__import__('base64').b64encode(img2).decode()}"),
+                ]
+            ),
+            result={"message_id": 1},
+        )
+        ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_osu_help_topic(app: App):
+    """/oh mode returns focused help instead of the full image."""
+    from nonebot_plugin_osubot.matcher.osu_help import HELP_TOPICS, osu_help
+
+    import nonebot
+
+    event = fake_group_message_event_v11(message=Message("/oh mode"))
+    async with app.test_matcher(osu_help) as ctx:
+        adapter = nonebot.get_adapter(OnebotV11Adapter)
+        bot = ctx.create_bot(base=Bot, adapter=adapter)
+        ctx.receive_event(bot, event)
+        ctx.should_call_send(event, text_msg(event, HELP_TOPICS["mode"]), result={"message_id": 1})
+        ctx.should_finished()
+
+
 # ---------------------------------------------------------------------------
 # /history
 # ---------------------------------------------------------------------------

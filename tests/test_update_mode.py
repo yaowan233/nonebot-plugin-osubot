@@ -50,7 +50,7 @@ async def test_update_mode_not_bound(app: App):
 
 @pytest.mark.asyncio
 async def test_update_mode_no_input(app: App):
-    """'/更新模式' with no number when bound should reply with a prompt."""
+    """'/mode' without an argument displays the current default."""
     try:
         from nonebot_plugin_osubot.matcher.update_mode import update_mode
     except ImportError:
@@ -59,46 +59,9 @@ async def test_update_mode_no_input(app: App):
     import nonebot
 
     session = make_mock_session()
-    session.scalar.return_value = make_mock_user()
+    session.scalar.return_value = make_mock_user(osu_mode=3)
 
-    event = fake_group_message_event_v11(message=Message("/更新模式"))
-
-    with patch_session(MODULE, session):
-        async with app.test_matcher(update_mode) as ctx:
-            adapter = nonebot.get_adapter(OnebotV11Adapter)
-            bot = ctx.create_bot(base=Bot, adapter=adapter)
-            ctx.receive_event(bot, event)
-            ctx.should_call_send(
-                event,
-                Message([MessageSegment.reply(1), MessageSegment.text("请输入需要更新内容的模式")]),
-                result={"message_id": 1},
-            )
-            ctx.should_finished()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("mode_input", "expected_name"),
-    [
-        ("0", "osu"),
-        ("1", "taiko"),
-        ("2", "fruits"),
-        ("3", "mania"),
-    ],
-)
-async def test_update_mode_valid(app: App, mode_input: str, expected_name: str):
-    """'/更新模式 N' with a valid mode number should update the DB and reply."""
-    try:
-        from nonebot_plugin_osubot.matcher.update_mode import update_mode
-    except ImportError:
-        pytest.skip("nonebot_plugin_osubot not available")
-
-    import nonebot
-
-    session = make_mock_session()
-    session.scalar.return_value = make_mock_user()
-
-    event = fake_group_message_event_v11(message=Message(f"/更新模式 {mode_input}"))
+    event = fake_group_message_event_v11(message=Message("/mode"))
 
     with patch_session(MODULE, session):
         async with app.test_matcher(update_mode) as ctx:
@@ -110,7 +73,52 @@ async def test_update_mode_valid(app: App, mode_input: str, expected_name: str):
                 Message(
                     [
                         MessageSegment.reply(1),
-                        MessageSegment.text(f"已将默认模式更改为 {expected_name}"),
+                        MessageSegment.text(
+                            "当前默认模式为 mania（3）\n可使用 /mode o、t、c、m（或完整模式名）修改"
+                        ),
+                    ]
+                ),
+                result={"message_id": 1},
+            )
+            ctx.should_finished()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("mode_input", "expected_name", "expected_mode"),
+    [
+        ("o", "osu", "0"),
+        ("t", "taiko", "1"),
+        ("c", "fruits", "2"),
+        ("m", "mania", "3"),
+        ("mania", "mania", "3"),
+    ],
+)
+async def test_update_mode_valid(app: App, mode_input: str, expected_name: str, expected_mode: str):
+    """Mode names and their one-letter aliases are accepted."""
+    try:
+        from nonebot_plugin_osubot.matcher.update_mode import update_mode
+    except ImportError:
+        pytest.skip("nonebot_plugin_osubot not available")
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+
+    event = fake_group_message_event_v11(message=Message(f"/mode {mode_input}"))
+
+    with patch_session(MODULE, session):
+        async with app.test_matcher(update_mode) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(
+                event,
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text(f"已将默认模式更改为 {expected_name}（{expected_mode}）"),
                     ]
                 ),
                 result={"message_id": 1},
@@ -143,7 +151,12 @@ async def test_update_mode_invalid(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                Message([MessageSegment.reply(1), MessageSegment.text("请输入正确的模式 0-3")]),
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text("请输入正确的模式：std、taiko、catch、mania，或数字 0-3"),
+                    ]
+                ),
                 result={"message_id": 1},
             )
             ctx.should_finished()

@@ -17,7 +17,7 @@ from ..draw.utils import draw_fillet
 from ..draw.static import Torus_Regular_25
 from ..database.models import InfoData, UserData
 
-group_pp_rank = on_command("群内排名", priority=11, block=True)
+group_pp_rank = on_command("群内排名", aliases={"rank"}, priority=11, block=True)
 
 
 @group_pp_rank.handle(parameterless=[split_msg()])

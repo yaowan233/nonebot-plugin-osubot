@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import Any
 from pathlib import Path
-from collections import defaultdict
 
 from langchain.tools import tool
 from sqlalchemy import select
@@ -18,7 +17,7 @@ from nonebot_plugin_alconna import UniMessage
 
 from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext, register_agent_tool
 
-from .api import get_uid_by_name, get_recommend, get_user_scores, get_users, osu_api, safe_async_get
+from .api import get_uid_by_name, get_recommend, get_user_scores, osu_api, safe_async_get
 from .draw import draw_bp, draw_info, draw_score, get_score_data, draw_map_info, draw_bmap_info
 from .info import get_bg
 from .utils import NGM, mods2list
@@ -29,11 +28,12 @@ from .exceptions import NetworkError
 from .draw.score import cal_score_info
 from .draw.rating import draw_rating
 from .draw.recommend import draw_recommend
-from .draw.echarts import draw_bpa_plot, draw_history_plot
+from .draw.echarts import build_bpa_data, draw_bpa_plot, draw_history_plot
 from .draw.osu_preview import draw_osu_preview
 from .draw.match_history import draw_match_history
 from .draw.catch_preview import draw_cath_preview
 from .draw.taiko_preview import map_to_image, parse_map
+from .help_data import get_command_help
 
 ContentBlock = str | dict[str, Any]
 medal_data_path = Path(__file__).parent / "osufile" / "medals" / "medals.json"
@@ -236,6 +236,14 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
 
 @register_agent_tool
 def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
+    @tool("get_osubot_command_help")
+    async def get_osubot_command_help(topic: str = "overview") -> str:
+        """
+        查询 OSUBot 的手动聊天指令、格式、简称和示例，不执行成绩查询。
+        topic 可用 overview、bind、mode、score、map、profile、game、sb、all，也可传中文主题。
+        """
+        return get_command_help(topic)
+
     @tool("send_osu_user_info")
     async def send_osu_user_info(
         username: str | None = None,
@@ -312,7 +320,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     async def send_osu_bp_list(
         username: str | None = None,
         target_user_id: str | None = None,
-        range_text: str = "1-20",
+        range_text: str = "1-30",
         mode: str | None = None,
         mods: str = "",
         source: str = "osu",
@@ -324,7 +332,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         """
         try:
             source = _normalize_source(source)
-            low, high = _normalize_range(range_text, default="1-20")
+            low, high = _normalize_range(range_text, default="1-30")
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
             is_lazer = _resolve_is_lazer(is_lazer, user)
@@ -483,16 +491,6 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             if not score_ls:
                 return f"没有找到 {user.name} 的 bp 成绩"
 
-            rank_color = {
-                "X": "#ffc83a",
-                "XH": "#c7eaf5",
-                "S": "#ffc83a",
-                "SH": "#c7eaf5",
-                "A": "#84d61c",
-                "B": "#e9b941",
-                "C": "#fa8a59",
-                "D": "#f55757",
-            }
             for score in score_ls:
                 if not is_lazer or source == "ppysb":
                     score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
@@ -505,43 +503,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                         setattr(score.beatmap, "total_length", score.beatmap.total_length / 0.75)
 
             score_ls = [cal_score_info(is_lazer, score) for score in score_ls]
-            pp_ls = [round(score.pp or 0, 0) for score in score_ls]
-            length_ls: list[dict[str, Any]] = []
-            for score in score_ls:
-                item_style: dict[str, Any] = {"color": rank_color.get(score.rank, "#ffffff")}
-                if score.rank == "XH":
-                    item_style.update({"shadowBlur": 8, "shadowColor": "#b4ffff"})
-                if score.rank == "X":
-                    item_style.update({"shadowBlur": 8, "shadowColor": "#ffff00"})
-                if score.beatmap:
-                    length_ls.append({"value": score.beatmap.total_length, "itemStyle": item_style})
-
-            mods_pp: defaultdict[str, float] = defaultdict(float)
-            for num, score in enumerate(score_ls):
-                weighted_pp = (score.pp or 0) * 0.95**num
-                if not score.mods:
-                    mods_pp["NM"] += weighted_pp
-                for mod in score.mods:
-                    mods_pp[mod.acronym] += weighted_pp
-            pp_data = [{"name": mod, "value": round(pp, 2)} for mod, pp in mods_pp.items()]
-
-            mapper_pp: defaultdict[Any, float] = defaultdict(float)
-            for num, score in enumerate(score_ls):
-                if not score.beatmap:
-                    continue
-                key = score.beatmap.creator if source == "ppysb" else score.beatmap.user_id
-                mapper_pp[key] += (score.pp or 0) * 0.95**num
-            mapper_pp_items = sorted(mapper_pp.items(), key=lambda item: item[1], reverse=True)[:9]
-            if source == "ppysb":
-                mapper_pp_data = [{"name": mapper, "value": round(pp, 2)} for mapper, pp in mapper_pp_items]
-            else:
-                users = await get_users([mapper for mapper, _ in mapper_pp_items])
-                user_dic = {item.id: item.username for item in users}
-                mapper_pp_data = [
-                    {"name": user_dic.get(mapper, ""), "value": round(pp, 2)} for mapper, pp in mapper_pp_items
-                ]
-
-            image = await draw_bpa_plot(f"{user.name} {NGM[mode]} 模式 ", pp_ls, length_ls, pp_data, mapper_pp_data)
+            data = await build_bpa_data(score_ls, source)
+            image = await draw_bpa_plot(f"{user.name} {NGM[mode]} 模式", **data)
             await _send_image(ctx, image)
             return _image_tool_result(
                 f"已发送 {user.name} 的 {NGM[mode]} bp 分析图。",
@@ -737,6 +700,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     return AgentToolBundle(
         tools=[
+            get_osubot_command_help,
             send_osu_user_info,
             send_osu_bp,
             send_osu_bp_list,
@@ -755,6 +719,10 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             send_osu_beatmapset_info,
         ],
         instructions=[
+            "- 用户询问“怎么用/什么指令/有哪些命令/格式或简称”时，调用 get_osubot_command_help，"
+            "根据问题选择 topic，并原样保留工具返回的斜杠指令和示例。",
+            "- 区分教学和执行：例如“BP 指令怎么用”只查 command help；“帮我查 BP”才调用成绩工具。"
+            "不要为了演示用法而调用会发图或执行查询的工具。",
             "- 未指定玩家、用户说“我/自己/我的”时，不要传 username；工具会使用当前发言用户绑定的 osu 账号。",
             "- 用户想查被 @ 的群友时，不要传 username；工具会自动读取消息中的非 bot @ 目标并使用该群友绑定账号。",
             "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
@@ -764,8 +732,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "看到工具返回的图片后，再基于图片内容给出简短评价。",
             "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
             "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
-            "- send_osu_bp_list: 用户想查 bp 列表、bplist、pfm 或一段 bp 范围时使用。",
-            "- send_osu_recent_or_pr: 用户想查 recent/re 或 pr/最近 best 成绩时使用。",
+            "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm 或一段 bp 范围时使用。默认范围优先用 1-30。",
+            "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。",
             "- send_osu_score: 用户想查某人在指定谱面上的成绩时使用。",
             "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
@@ -774,9 +742,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。",
             "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。",
             "- send_osu_preview: 用户想看谱面预览、preview、完整预览时使用。",
-            "- send_osu_background: 用户想提取谱面背景、getbg、背景图时使用。",
+            "- send_osu_background: 用户想提取谱面背景、bg/getbg、背景图时使用。",
             "- send_osu_medal: 用户想查 medal/成就获得方式时使用。",
-            "- send_osu_map_info: 用户想查单张谱面 map/beatmap 信息时使用。",
-            "- send_osu_beatmapset_info: 用户想查谱面集 beatmapset/bmap 信息时使用。",
+            "- send_osu_map_info: 用户想实际查询单张谱面 m/map/beatmap 信息时使用。",
+            "- send_osu_beatmapset_info: 用户想实际查询谱面集 bm/bmap/beatmapset 信息时使用。",
         ],
     )

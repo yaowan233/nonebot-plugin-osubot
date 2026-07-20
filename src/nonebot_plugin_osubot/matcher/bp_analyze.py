@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from nonebot import on_command
 from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
@@ -11,22 +9,12 @@ from sqlalchemy import select
 from ..utils import NGM
 from .utils import split_msg
 from ..database import UserData
-from ..api import get_user_scores, get_users
+from ..api import get_user_scores
 from ..exceptions import NetworkError
 from ..draw.score import cal_score_info
-from ..draw.echarts import draw_bpa_plot
+from ..draw.echarts import build_bpa_data, draw_bpa_plot
 
 bp_analyze = on_command("bpa", aliases={"bp分析"}, priority=11, block=True)
-rank_color = {
-    "X": "#ffc83a",
-    "XH": "#c7eaf5",
-    "S": "#ffc83a",
-    "SH": "#c7eaf5",
-    "A": "#84d61c",
-    "B": "#e9b941",
-    "C": "#fa8a59",
-    "D": "#f55757",
-}
 
 
 @bp_analyze.handle(parameterless=[split_msg()])
@@ -54,60 +42,7 @@ async def _(event: Event, state: T_State):
             if mod.acronym == "HT":
                 score.beatmap.total_length /= 0.75
     score_ls = [cal_score_info(user.lazer_mode, score) for score in score_ls]
-    pp_ls = [round(i.pp, 0) for i in score_ls]
-    length_ls = []
-    for i in score_ls:
-        if i.rank == "XH":
-            length_ls.append(
-                {
-                    "value": i.beatmap.total_length,
-                    "itemStyle": {
-                        "color": rank_color[i.rank],
-                        "shadowBlur": 8,
-                        "shadowColor": "#b4ffff",
-                    },
-                }
-            )
-        elif i.rank == "X":
-            length_ls.append(
-                {
-                    "value": i.beatmap.total_length,
-                    "itemStyle": {
-                        "color": rank_color[i.rank],
-                        "shadowBlur": 8,
-                        "shadowColor": "#ffff00",
-                    },
-                }
-            )
-        else:
-            length_ls.append(
-                {
-                    "value": i.beatmap.total_length,
-                    "itemStyle": {"color": rank_color[i.rank]},
-                }
-            )
-    mods_pp = defaultdict(int)
-    for num, i in enumerate(score_ls):
-        if not i.mods:
-            mods_pp["NM"] += i.pp * 0.95**num
-        for j in i.mods:
-            mods_pp[j.acronym] += i.pp * 0.95**num
-    pp_data = []
-    for mod, pp in mods_pp.items():
-        pp_data.append({"name": mod, "value": round(pp, 2)})
-    mapper_pp = defaultdict(int)
-    for num, i in enumerate(score_ls):
-        key = i.beatmap.creator if state["source"] == "ppysb" else i.beatmap.user_id
-        mapper_pp[key] += i.pp * 0.95**num
-    mapper_pp = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)[:9]
-    if state["source"] == "ppysb":
-        mapper_pp_data = [{"name": mapper, "value": round(pp, 2)} for mapper, pp in mapper_pp]
-    else:
-        users = await get_users([i[0] for i in mapper_pp])
-        user_dic = {i.id: i.username for i in users}
-        mapper_pp_data = [{"name": user_dic.get(mapper, ""), "value": round(pp, 2)} for mapper, pp in mapper_pp]
-    if len(mapper_pp_data) > 20:
-        mapper_pp_data = mapper_pp_data[:20]
-    name = f"{state['username']} {NGM[state['mode']]} 模式 "
-    byt = await draw_bpa_plot(name, pp_ls, length_ls, pp_data, mapper_pp_data)
+    data = await build_bpa_data(score_ls, state["source"])
+    name = f"{state['username']} {NGM[state['mode']]} 模式"
+    byt = await draw_bpa_plot(name, **data)
     await UniMessage.image(raw=byt).finish(reply_to=True)

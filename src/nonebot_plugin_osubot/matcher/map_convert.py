@@ -11,7 +11,9 @@ from nonebot.params import CommandArg, ShellCommandArgv
 from ..api import get_beatmapsets_info, osu_api
 from ..mania import Options, convert_mania_map
 from ..schema import Beatmap
+from ..utils import extract_beatmap_id, extract_beatmapset_id
 from ..file import upload_file_stream_batch
+from .map_context import get_last_map_id, get_last_set_id, remember_map, remember_set
 
 parser = ArgumentParser("convert", description="变换mania谱面")
 parser.add_argument("--set", type=int, help="要转换的谱面的setid")
@@ -26,7 +28,7 @@ parser.add_argument("--nln", action="store_true", help="移除谱面所有ln")
 parser.add_argument("--gap", nargs="?", default="150", type=float, help="指定反键的间距时间，默认150ms")
 parser.add_argument("--thres", nargs="?", default="100", type=float, help="指定转反键时ln转换为note的阈值，默认100ms")
 
-convert = on_shell_command("convert", parser=parser, block=True, priority=13)
+convert = on_shell_command("convert", aliases={"cv"}, parser=parser, block=True, priority=13)
 
 
 @convert.handle()
@@ -72,8 +74,16 @@ change = on_command("倍速", priority=11, block=True)
 async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ["--map"]
+    last_map_id = get_last_map_id(event)
+    uses_last_map = False
     if not args:
+        if last_map_id:
+            await UniMessage.text("请输入倍速速率，例如 /倍速 1.2").finish(reply_to=True)
         await UniMessage.text("请输入需要倍速的地图mapID").finish(reply_to=True)
+    args[0] = extract_beatmap_id(args[0]) or args[0]
+    if not args[0].isdigit() and last_map_id:
+        args.insert(0, last_map_id)
+        uses_last_map = True
     set_id = args[0]
     if not set_id.isdigit():
         await UniMessage.text("请输入正确的mapID").finish(reply_to=True)
@@ -98,6 +108,8 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     osz_path = await convert_mania_map(options)
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
+    if not uses_last_map:
+        remember_map(event, set_id)
     file_path = osz_path.absolute()
     server_osz_path = await upload_file_stream_batch(bot, file_path)
 
@@ -118,8 +130,19 @@ generate_full_ln = on_command("反键", priority=11, block=True)
 @generate_full_ln.handle()
 async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
+    uses_last_set = False
     if not args:
-        await UniMessage.text("请输入需要转ln的地图setID").finish(reply_to=True)
+        set_id = await get_last_set_id(event)
+        if not set_id:
+            await UniMessage.text("请输入需要转ln的地图setID，或先查询一张谱面").finish(reply_to=True)
+        args = [set_id]
+        uses_last_set = True
+    raw_set_id = args[0]
+    parsed_set_id = extract_beatmapset_id(raw_set_id)
+    if not parsed_set_id and (linked_map_id := extract_beatmap_id(raw_set_id)):
+        map_data = await osu_api("map", map_id=int(linked_map_id))
+        parsed_set_id = str(map_data["beatmapset_id"])
+    args[0] = parsed_set_id or raw_set_id
     set_id = args[0]
     if not set_id.isdigit():
         await UniMessage.text("请输入正确的setID").finish(reply_to=True)
@@ -135,6 +158,8 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
     osz_path = await convert_mania_map(options)
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
+    if not uses_last_set:
+        remember_set(event, set_id)
     file_path = osz_path.absolute()
     server_osz_path = await upload_file_stream_batch(bot, file_path)
     try:

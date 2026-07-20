@@ -1,277 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <title>Awesome-pyecharts</title>
-    <script type="text/javascript" src="./echarts.min.js"></script>
-</head>
-<body >
-    <div id="1" class="chart-container" style="width:900px; height:600px; "></div>
-    <script>
-        const chart = echarts.init(
-            document.getElementById('1'), 'white', {renderer: 'canvas'}
-        );
-        const option = {
-          animation: false,
-          title: [{
-              text: '{{ name }}pp/时长 评价曲线',
-              left: 'center',
-          },
-          {
-              text: 'mod pp分布图',
-              left: '15%',
-              top: '50%'
-          },
-          {
-              text: 'mapper pp分布图',
-              right: '18%',
-              top: '50%'
-          }],
-              grid: [
-    {
-      bottom: '60%'
-    },
-
-  ],
-          legend: [{
-            data: ['pp', 'time'],
-            top: '5%'
-          },
-            {
-              data: ['XH', 'X', 'SH', 'S', 'A', 'B', 'C', 'D'],
-              top: '45%'
-            }
-          ],
-          xAxis: [
-            {
-              type: 'category',
-              data: Array.from({ length: {{length}} }, (_, i) => i),
-              axisLabel: {
-                  interval: 9
-              }
-            }
-          ],
-          yAxis: [
-            {
-              type: 'value',
-              name: 'pp',
-              scale: true,
-              axisLabel: {
-                formatter: '{value} pp'
-              }
-            },
-            {
-              type: 'value',
-              name: 'time',
-              min: 0,
-              max: 'dataMax',
-              alignTicks: true,
-              axisLabel: {
-                  formatter: function (value, index) {
-                      const totalSeconds = Math.floor(value);
-                      const minute = Math.floor(totalSeconds / 60);
-                      const seconds = totalSeconds % 60;
-                      if (seconds.toString().length === 1)
-                          return minute + ':0' + seconds;
-                      return minute + ':' + seconds;
-                    }
-                }
-            }
-          ],
-          series: [
-            {
-              name: 'pp',
-              symbol: 'none',
-              type: 'line',
-              data: {{ pp_ls }},
-           markPoint: {
-        data: [
-          { type: 'max', name: 'Max' },
-          { type: 'min', name: 'Min' }
-        ]
-      },
-      markLine: {
-        data: [{ type: 'average', name: 'Avg', symbol: 'arrow' }],
-          label: {position: 'start', formatter: '{c} pp'},
-
-      }
-            },
-            {
-              name: 'time',
-              type: 'bar',
-              yAxisIndex: 1,
-              data: {{ length_ls }}
-            },
-            {
-              name: 'XH',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#c7eaf5',
-                borderColor: '#b4ffff',
-              }
-            },
-            {
-              name: 'X',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#ffc83a',
-                borderColor: '#ffff00',
-              }
-            },
-            {
-              name: 'SH',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#c7eaf5',
-                borderColor: 'transparent'
-              }
-            },
-            {
-              name: 'S',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#ffc83a',
-                borderColor: 'transparent'
-              }
-            },
-            {
-              name: 'A',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#84d61c',
-                borderColor: 'transparent'
-
-              }
-            },
-            {
-              name: 'B',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#e9b941',
-                borderColor: 'transparent'
-              }
-            },
-            {
-              name: 'C',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#fa8a59',
-                borderColor: 'transparent'
-              }
-            },
-            {
-              name: 'D',
-              type: 'candlestick',
-              yAxisIndex: 1,
-              data: [],
-              itemStyle: {
-                color: '#f55757',
-                borderColor: 'transparent'
-              }
-            },
-        {
-      type: 'pie',
-      left: '0%',
-      center: ['50%', '75%'],
-      radius: [60, 110],
-      width: 400,
-      padAngle: 3,
-      itemStyle: {
-        borderRadius: 10
-      },
-      label: {
-        alignTo: 'edge',
-        formatter: '{name|{b}}\n{pp|{c} pp}',
-        minMargin: 5,
-        edgeDistance: 10,
-        lineHeight: 15,
-        rich: {
-          pp: {
-            fontSize: 12,
-            color: '#999'
-          },
-          name: {
-            fontSize: 10
-            }
-        }
-      },
-      labelLine: {
-        length: 15,
-        length2: 1,
-        maxSurfaceAngle: 80
-      },
-      labelLayout: function (params) {
-        const isLeft = params.labelRect.x < chart.getWidth() / 2;
-        const points = params.labelLinePoints;
-        // Update the end point.
-        points[2][0] = isLeft
-          ? params.labelRect.x
-          : params.labelRect.x + params.labelRect.width;
-        return {
-          labelLinePoints: points
-        };
-      },
-      data: {{ mod_pp_ls }}
-  },
-        {
-      type: 'pie',
-      right: '0%',
-      left: '50%',
-      center: ['50%', '75%'],
-      radius: [60, 110],
-      width: 400,
-      padAngle: 3,
-      itemStyle: {
-        borderRadius: 10
-      },
-      label: {
-        alignTo: 'edge',
-        formatter: '{name|{b}}\n{pp|{c} pp}',
-        minMargin: 5,
-        edgeDistance: 10,
-        lineHeight: 15,
-        rich: {
-          pp: {
-            fontSize: 12,
-            color: '#999'
-          },
-          name: {
-            fontSize: 10
-            }
-        }
-      },
-      labelLine: {
-        length: 15,
-        length2: 1,
-        maxSurfaceAngle: 80
-      },
-      labelLayout: function (params) {
-        const isLeft = params.labelRect.x < chart.getWidth() / 2;
-        const points = params.labelLinePoints;
-        // Update the end point.
-        points[2][0] = isLeft
-          ? params.labelRect.x
-          : params.labelRect.x + params.labelRect.width;
-        return {
-          labelLinePoints: points
-        };
-      },
-      data: {{ mapper_pp_ls }}
+<meta charset="UTF-8">
+<title>BP Analysis</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0e0e1a;
+    --panel: #181828;
+    --panel2: #1f1f33;
+    --border: #2a2a40;
+    --text: #e8e8f0;
+    --sub: #8a8aa8;
+    --pink: #ff66aa;
+    --pink-d: #e63992;
+    --blue: #5b8def;
+    --green: #5eda7c;
+    --yellow: #ffd35e;
+    --purple: #a78bfa;
+    --orange: #ff9f4a;
+    --cyan: #4fd1c5;
   }
-          ]
-        };
-        chart.setOption(option);
-    </script>
+  body {
+    background: var(--bg);
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    width: 980px;
+    padding: 18px;
+    border-radius: 16px;
+    color: var(--text);
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #202038 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .h-top {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .h-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .h-sub {
+    font-size: 11px;
+    color: var(--sub);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+  .stat {
+    background: #12121f;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .stat-val {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stat-val .unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sub);
+    margin-left: 3px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--sub);
+    margin-top: 5px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .s-pp .stat-val { color: var(--pink); }
+  .s-bp .stat-val { color: var(--text); }
+  .s-acc .stat-val { color: var(--green); }
+  .s-star .stat-val { color: var(--yellow); }
+  .s-bpm .stat-val { color: var(--cyan); }
+  .s-mod .stat-val { color: var(--purple); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .grid.full { grid-template-columns: 1fr; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px 8px 14px;
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    padding-left: 2px;
+  }
+  .panel-sub {
+    font-size: 10px;
+    color: var(--sub);
+    margin-bottom: 6px;
+    padding-left: 2px;
+  }
+  .chart { width: 100%; }
+  #c1 { height: 300px; }
+  #c2 { height: 260px; }
+  #c3 { height: 300px; }
+  #c4 { height: 300px; }
+  .footer {
+    text-align: right;
+    font-size: 10px;
+    color: #44445a;
+    padding-right: 4px;
+  }
+</style>
+<script type="text/javascript" src="./echarts.min.js"></script>
+</head>
+<body>
+  <div class="header">
+    <div class="h-top">
+      <div class="h-title">{{ name }}</div>
+      <div class="h-sub">Best Performance Analysis</div>
+    </div>
+    <div class="stats">
+      <div class="stat s-pp">
+        <div class="stat-val">{{ stats.weighted_pp }}<span class="unit">pp</span></div>
+        <div class="stat-label">加权 / {{ stats.total_pp }} raw</div>
+      </div>
+      <div class="stat s-bp">
+        <div class="stat-val">{{ stats.bp_count }}<span class="unit">bp</span></div>
+        <div class="stat-label">BP 数量</div>
+      </div>
+      <div class="stat s-acc">
+        <div class="stat-val">{{ stats.avg_acc }}<span class="unit">%</span></div>
+        <div class="stat-label">平均准确率</div>
+      </div>
+      <div class="stat s-star">
+        <div class="stat-val">{{ stats.avg_stars }}<span class="unit">★</span></div>
+        <div class="stat-label">平均星级</div>
+      </div>
+      <div class="stat s-bpm">
+        <div class="stat-val">{{ stats.avg_bpm }}<span class="unit">bpm</span></div>
+        <div class="stat-label">平均 BPM</div>
+      </div>
+      <div class="stat s-mod">
+        <div class="stat-val">{{ stats.top_mod }}</div>
+        <div class="stat-label">主力 Mod</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid full">
+    <div class="panel">
+      <div class="panel-title">PP 曲线 & 谱面时长</div>
+      <div class="panel-sub">折线为 BP 的 pp，柱状为谱面时长（按 rank 着色）</div>
+      <div id="c1" class="chart"></div>
+    </div>
+  </div>
+
+  <div class="grid full">
+    <div class="panel">
+      <div class="panel-title">星级 vs PP</div>
+      <div class="panel-sub">每个 BP 在星级—pp 平面的分布，按 rank 着色</div>
+      <div id="c2" class="chart"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-title">Mod 贡献</div>
+      <div class="panel-sub">各模组的加权 pp</div>
+      <div id="c3" class="chart"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Mapper 贡献 Top {{ mapper_pp_ls|length }}</div>
+      <div class="panel-sub">加权 pp 贡献最多的谱师</div>
+      <div id="c4" class="chart"></div>
+    </div>
+  </div>
+
+  <div class="footer">osubot · bpa</div>
+
+  <script>
+    const pp_ls = {{ pp_ls }};
+    const length_ls = {{ length_ls }};
+    const star_scatter = {{ star_scatter }};
+    const mod_pp_ls = {{ mod_pp_ls }};
+    const mapper_pp_ls = {{ mapper_pp_ls }};
+    const bp_count = {{ length }};
+
+    const C = {
+      text: '#e8e8f0', sub: '#8a8aa8', border: '#2a2a40',
+      pink: '#ff66aa', blue: '#5b8def', green: '#5eda7c',
+      yellow: '#ffd35e', purple: '#a78bfa', orange: '#ff9f4a', cyan: '#4fd1c5',
+      grid: 'rgba(42,42,64,0.5)'
+    };
+    const rankColor = {
+      XH: '#e0f0ff', X: '#ffd35e', SH: '#e0f0ff', S: '#ffd35e',
+      A: '#5eda7c', B: '#ff9f4a', C: '#ff6b6b', D: '#f55757'
+    };
+    const baseAxis = {
+      axisLine: { lineStyle: { color: C.border } },
+      axisTick: { lineStyle: { color: C.border } },
+      axisLabel: { color: C.sub, fontSize: 11 },
+      splitLine: { lineStyle: { color: C.grid } }
+    };
+    const tooltip = {
+      backgroundColor: 'rgba(18,18,31,0.96)',
+      borderColor: C.border, borderWidth: 1,
+      textStyle: { color: C.text, fontSize: 12 },
+      axisPointer: { type: 'cross', lineStyle: { color: '#3a3a55', type: 'dashed' } }
+    };
+    function timeFmt(v) {
+      const t = Math.floor(v), m = Math.floor(t/60), s = t%60;
+      return m + ':' + (s<10?'0'+s:s);
+    }
+
+    // ===== Chart 1: PP line + length bar =====
+    const c1 = echarts.init(document.getElementById('c1'));
+    c1.setOption({
+      animation: false,
+      tooltip: { trigger: 'axis', ...tooltip },
+      legend: { data: ['PP', '时长'], top: 2, right: 10, textStyle: { color: C.sub, fontSize: 11 }, itemWidth: 12, itemHeight: 8 },
+      grid: { top: 30, bottom: 28, left: 52, right: 52 },
+      xAxis: [{
+        type: 'category',
+        data: Array.from({length: bp_count}, function(_,i){return i+1;}),
+        axisLabel: { interval: Math.max(0, Math.floor(bp_count/12)), color: C.sub, fontSize: 11 },
+        axisLine: { lineStyle: { color: C.border } }, axisTick: { lineStyle: { color: C.border } }, splitLine: { show: false }
+      }],
+      yAxis: [
+        { type: 'value', name: 'pp', scale: true, nameTextStyle: { color: C.sub, fontSize: 11 }, ...baseAxis },
+        { type: 'value', name: '时长', min: 0, max: 'dataMax', alignTicks: true, nameTextStyle: { color: C.sub, fontSize: 11 },
+          axisLine: { lineStyle: { color: C.border } }, axisTick: { lineStyle: { color: C.border } },
+          axisLabel: { color: C.sub, fontSize: 11, formatter: timeFmt }, splitLine: { show: false } }
+      ],
+      series: [
+        {
+          name: 'PP', type: 'line', data: pp_ls, smooth: 0.25, showSymbol: false,
+          symbol: 'circle', symbolSize: 5,
+          lineStyle: { width: 2.5, color: C.pink },
+          itemStyle: { color: C.pink },
+          areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,102,170,0.28)'},{offset:1,color:'rgba(255,102,170,0.01)'}]) },
+          markPoint: {
+            symbol: 'pin', symbolSize: 44,
+            label: { color: '#0e0e1a', fontSize: 10, fontWeight: 700 },
+            itemStyle: { color: C.pink, borderColor: '#0e0e1a', borderWidth: 1 },
+            data: [{type:'max',name:'Max'},{type:'min',name:'Min'}]
+          },
+          markLine: {
+            symbol: 'none', lineStyle: { color: C.purple, type: 'dashed', width: 1.5 },
+            label: { color: C.purple, fontSize: 11, position: 'insideStartTop', formatter: '均 {c} pp' },
+            data: [{type:'average'}]
+          }
+        },
+        {
+          name: '时长', type: 'bar', yAxisIndex: 1, data: length_ls, barWidth: '58%',
+          itemStyle: { borderRadius: [2,2,0,0] }
+        }
+      ]
+    });
+
+    // ===== Chart 2: Star vs PP scatter =====
+    const c2 = echarts.init(document.getElementById('c2'));
+    const scatterSeries = star_scatter.filter(function(s){return s.data.length>0;}).map(function(s){
+      return {
+        name: s.name, type: 'scatter', data: s.data, symbolSize: 8,
+        itemStyle: { color: s.color, opacity: 0.85, shadowBlur: 4, shadowColor: s.color }
+      };
+    });
+    c2.setOption({
+      animation: false,
+      tooltip: { trigger: 'item', ...tooltip, formatter: function(p){ return p.seriesName + '<br/>★ ' + p.value[0] + '<br/>' + p.value[1] + ' pp'; } },
+      legend: { top: 2, right: 10, textStyle: { color: C.sub, fontSize: 10 }, itemWidth: 8, itemHeight: 8, itemGap: 8 },
+      grid: { top: 34, bottom: 30, left: 56, right: 30 },
+      xAxis: { type: 'value', name: '星级', nameTextStyle: { color: C.sub, fontSize: 11 },
+        axisLabel: { color: C.sub, fontSize: 11, formatter: '{value}★' }, ...baseAxis },
+      yAxis: { type: 'value', name: 'pp', scale: true, nameTextStyle: { color: C.sub, fontSize: 11 }, ...baseAxis },
+      series: scatterSeries
+    });
+
+    // ===== Chart 3: Mod bar =====
+    const c3 = echarts.init(document.getElementById('c3'));
+    const modSorted = mod_pp_ls.slice().sort(function(a,b){return a.value-b.value;});
+    c3.setOption({
+      animation: false,
+      tooltip: { trigger: 'axis', ...tooltip, axisPointer: { type: 'shadow' }, formatter: function(p){ return p[0].name + ': ' + p[0].value + ' pp'; } },
+      grid: { top: 10, bottom: 10, left: 10, right: 62, containLabel: true },
+      xAxis: { type: 'value', axisLabel: { color: C.sub, fontSize: 11 }, ...baseAxis },
+      yAxis: {
+        type: 'category', data: modSorted.map(function(d){return d.name;}),
+        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
+        axisLabel: { color: C.text, fontSize: 12 }
+      },
+      series: [{
+        type: 'bar', data: modSorted.map(function(d){return d.value;}), barWidth: '55%',
+        label: { show: true, position: 'right', color: C.sub, fontSize: 10, formatter: '{c} pp' },
+        itemStyle: {
+          borderRadius: [0,4,4,0],
+          color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.blue},{offset:1,color:C.cyan}])
+        }
+      }]
+    });
+
+    // ===== Chart 4: Mapper bar =====
+    const c4 = echarts.init(document.getElementById('c4'));
+    const mapperSorted = mapper_pp_ls.slice().sort(function(a,b){return a.value-b.value;});
+    c4.setOption({
+      animation: false,
+      tooltip: { trigger: 'axis', ...tooltip, axisPointer: { type: 'shadow' }, formatter: function(p){ return p[0].name + ': ' + p[0].value + ' pp'; } },
+      grid: { top: 10, bottom: 10, left: 10, right: 70, containLabel: true },
+      xAxis: { type: 'value', axisLabel: { color: C.sub, fontSize: 11, formatter: '{value}' }, ...baseAxis },
+      yAxis: {
+        type: 'category', data: mapperSorted.map(function(d){return d.name;}),
+        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
+        axisLabel: { color: C.text, fontSize: 12 }
+      },
+      series: [{
+        type: 'bar', data: mapperSorted.map(function(d){return d.value;}), barWidth: '55%',
+        label: { show: true, position: 'right', color: C.sub, fontSize: 10, formatter: '{c} pp' },
+        itemStyle: {
+          borderRadius: [0,4,4,0],
+          color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.purple},{offset:1,color:C.pink}])
+        }
+      }]
+    });
+  </script>
 </body>

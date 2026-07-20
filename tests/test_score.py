@@ -65,7 +65,7 @@ async def test_score_not_bound(app: App):
 
 @pytest.mark.asyncio
 async def test_score_no_target(app: App):
-    """/score ：未提供谱面 ID，回复 '请输入谱面ID'。"""
+    """/score：没有参数或最近谱面时提示用户。"""
     try:
         from nonebot_plugin_osubot.matcher.score import score
     except ImportError:
@@ -85,7 +85,7 @@ async def test_score_no_target(app: App):
             ctx.receive_event(bot, event)
             ctx.should_call_send(
                 event,
-                _text_msg(event, "请输入谱面ID"),
+                _text_msg(event, "请输入谱面ID，或先查询一张谱面"),
                 result={"message_id": 1},
             )
             ctx.should_finished()
@@ -114,6 +114,30 @@ async def test_score_success(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
                 ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_score_uses_last_map_when_target_is_omitted(app: App):
+    from nonebot_plugin_osubot.matcher.score import score
+    from nonebot_plugin_osubot.matcher.map_context import remember_map
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/sc"))
+    remember_map(event, 114514)
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{SCORE_MODULE}.get_score_data", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as get_score:
+            async with app.test_matcher(score) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert get_score.call_args.args[4] == "114514"
 
 
 @pytest.mark.asyncio

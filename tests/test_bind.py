@@ -35,7 +35,9 @@ async def test_bind_no_name(app: App):
         ctx.receive_event(bot, event)
         ctx.should_call_send(
             event,
-            Message([MessageSegment.reply(1), MessageSegment.text("请在指令后输入您的 osuid")]),
+            Message(
+                [MessageSegment.reply(1), MessageSegment.text("请在指令后输入 osu! 用户名、UID 或个人主页链接")]
+            ),
             result={"message_id": 1},
         )
         ctx.should_finished()
@@ -88,7 +90,7 @@ async def test_bind_success(app: App):
     session = make_mock_session()
     session.scalar.return_value = None  # not yet bound
 
-    success_msg = "成功绑定 testuser\n默认模式为 osu，若更改模式至其他模式，如 mania，请输入 /更新模式 3"
+    success_msg = "成功绑定 testuser\n默认模式为 osu，可使用 /mode o、t、c、m 切换"
     event = fake_group_message_event_v11(message=Message("/bind testuser"))
 
     with patch_session(MODULE, session):
@@ -142,22 +144,46 @@ async def test_bind_user_not_found(app: App):
 
 @pytest.mark.asyncio
 async def test_bind_numeric_username_uses_username_lookup():
-    """数字用户名绑定时也应使用 @username 查询，避免被 osu API 当成 uid。"""
+    """bind_user_info uses the unified username/UID resolver."""
     from nonebot_plugin_osubot.info.bind import bind_user_info
 
     session = make_mock_session()
     mock_info = {"id": 114514, "username": "123456", "playmode": "osu"}
 
     with patch_session(INFO_BIND_MODULE, session):
-        with patch(f"{INFO_BIND_MODULE}.get_user_info", new=AsyncMock(return_value=mock_info)) as mock_get_user_info:
+        with patch(f"{INFO_BIND_MODULE}.get_osu_user", new=AsyncMock(return_value=mock_info)) as get_user:
             with patch(f"{INFO_BIND_MODULE}.update_users_info", new=AsyncMock()) as mock_update:
                 msg = await bind_user_info("bind", "123456", "qq-user")
 
-    mock_get_user_info.assert_awaited_once_with("https://osu.ppy.sh/api/v2/users/@123456")
+    get_user.assert_awaited_once_with("123456")
     session.add.assert_called_once()
     session.commit.assert_awaited_once()
     mock_update.assert_awaited_once_with([114514])
-    assert msg == "成功绑定 123456\n默认模式为 osu，若更改模式至其他模式，如 mania，请输入 /更新模式 3"
+    assert msg == "成功绑定 123456\n默认模式为 osu，可使用 /mode o、t、c、m 切换"
+
+
+@pytest.mark.asyncio
+async def test_numeric_username_is_preferred_over_uid():
+    from nonebot_plugin_osubot.api import get_osu_user
+
+    numeric_user = {"id": 114514, "username": "123456"}
+    with patch("nonebot_plugin_osubot.api.get_user_info", new=AsyncMock(return_value=numeric_user)) as request:
+        assert await get_osu_user("123456") == numeric_user
+
+    request.assert_awaited_once_with("https://osu.ppy.sh/api/v2/users/123456?key=username")
+
+
+@pytest.mark.asyncio
+async def test_explicit_uid_and_profile_url_use_id_lookup():
+    from nonebot_plugin_osubot.api import get_osu_user
+
+    user = {"id": 2, "username": "peppy"}
+    with patch("nonebot_plugin_osubot.api.get_user_info", new=AsyncMock(return_value=user)) as request:
+        assert await get_osu_user("id:2") == user
+        assert await get_osu_user("https://osu.ppy.sh/users/2") == user
+
+    assert request.await_args_list[0].args[0] == "https://osu.ppy.sh/api/v2/users/2?key=id"
+    assert request.await_args_list[1].args[0] == "https://osu.ppy.sh/api/v2/users/2?key=id"
 
 
 # ---------------------------------------------------------------------------

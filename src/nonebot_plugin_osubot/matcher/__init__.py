@@ -1,12 +1,12 @@
 from .mu import mu
 from .info import info
-from .bp import bp, tbp
+from .bp import bp, pfm, tbp
 from .getbg import getbg
 from .match import match
 from .medal import medal
 from .score import score
 from .osudl import osudl
-from .pr import pr, recent
+from .pr import pr, pass_list, recent, recent_list
 from .rating import rating
 from .history import history
 from .bind import bind, unbind
@@ -32,7 +32,9 @@ __all__ = [
     "medal",
     "bp_analyze",
     "pr",
+    "pass_list",
     "recent",
+    "recent_list",
     "osu_help",
     "url_match",
     "recommend",
@@ -44,6 +46,7 @@ __all__ = [
     "bind",
     "unbind",
     "bp",
+    "pfm",
     "tbp",
     "info",
     "osu_map",

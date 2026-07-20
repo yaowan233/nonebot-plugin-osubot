@@ -5,7 +5,7 @@ from nonebot_plugin_alconna import UniMessage
 
 from ..draw.match_history import draw_match_history
 
-match = on_command("match", priority=11, block=True)
+match = on_command("match", aliases={"mp"}, priority=11, block=True)
 
 
 @match.handle()

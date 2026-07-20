@@ -23,7 +23,7 @@ lock = asyncio.Lock()
 async def _bind(event: Event, name: Message = CommandArg()):
     name = name.extract_plain_text().strip()
     if not name:
-        await UniMessage.text("请在指令后输入您的 osuid").finish(reply_to=True)
+        await UniMessage.text("请在指令后输入 osu! 用户名、UID 或个人主页链接").finish(reply_to=True)
     async with lock:
         async with get_session() as session:
             user = await session.scalar(select(UserData).where(UserData.user_id == event.get_user_id()))
@@ -40,7 +40,7 @@ async def _bind(event: Event, name: Message = CommandArg()):
 async def _(event: Event, name: Message = CommandArg()):
     name = name.extract_plain_text().strip()
     if not name:
-        await UniMessage.text("请在指令后输入您的 osuid").finish(reply_to=True)
+        await UniMessage.text("请在指令后输入 ppysb 用户名").finish(reply_to=True)
     async with lock:
         async with get_session() as session:
             user = await session.scalar(select(SbUserData).where(SbUserData.user_id == event.get_user_id()))

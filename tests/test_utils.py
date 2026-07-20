@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock
 
+import pytest
+
 
 # ---------------------------------------------------------------------------
 # mods.py
@@ -254,3 +256,47 @@ def test_with_mods_mania_ignores_speed():
     result = with_mods(bmap_mania, None, [Mod(acronym="DT")])
     # mania 模式重置 speed_mul=1，OD 不受速度影响
     assert abs(result.accuracy - 8.0) < 0.01
+
+
+@pytest.mark.parametrize("requested", range(4))
+def test_standard_map_keeps_requested_convert_mode(requested: int):
+    from nonebot_plugin_osubot.utils import normalize_map_mode
+
+    assert normalize_map_mode(requested, native_mode=0) == str(requested)
+
+
+@pytest.mark.parametrize(("native", "requested", "expected"), [(1, 0, "1"), (2, 3, "2"), (3, 1, "3")])
+def test_non_standard_map_forces_native_mode(native: int, requested: int, expected: str):
+    from nonebot_plugin_osubot.utils import normalize_map_mode
+
+    assert normalize_map_mode(requested, native_mode=native) == expected
+
+
+@pytest.mark.parametrize(
+    ("native", "requested", "expected"),
+    [(1, 4, "5"), (1, 6, "5"), (2, 4, "6"), (2, 5, "6"), (3, 4, "3"), (1, 8, "1")],
+)
+def test_ppysb_special_modes_follow_native_ruleset(native: int, requested: int, expected: str):
+    from nonebot_plugin_osubot.utils import normalize_map_mode
+
+    assert normalize_map_mode(requested, native_mode=native, source="ppysb") == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("o", "0"), ("t", "1"), ("c", "2"), ("m", "3"), ("std", "0"), ("catch", "2")],
+)
+def test_parse_mode_names_and_shortcuts(value: str, expected: str):
+    from nonebot_plugin_osubot.utils import parse_mode
+
+    assert parse_mode(value) == expected
+
+
+def test_extract_ids_from_osu_urls():
+    from nonebot_plugin_osubot.utils import extract_beatmap_id, extract_beatmapset_id, extract_user_id
+
+    set_url = "https://osu.ppy.sh/beatmapsets/12345#mania/67890"
+    assert extract_beatmapset_id(set_url) == "12345"
+    assert extract_beatmap_id(set_url) == "67890"
+    assert extract_beatmap_id("https://osu.ppy.sh/beatmaps/67890") == "67890"
+    assert extract_user_id("https://osu.ppy.sh/users/2") == "2"

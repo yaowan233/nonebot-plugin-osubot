@@ -56,3 +56,12 @@ async def after_nonebot_init(after_nonebot_init: None):
         _parent = sys.modules.get(_parent_path)
         if _parent is not None:
             setattr(_parent, _name, _mod)
+
+
+@pytest.fixture(autouse=True)
+def clear_beatmap_context_cache(after_nonebot_init: None):
+    from nonebot_plugin_osubot.matcher.map_context import clear_contexts
+
+    clear_contexts()
+    yield
+    clear_contexts()

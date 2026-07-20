@@ -8,8 +8,8 @@ from ..exceptions import NetworkError
 from ..draw import draw_bp, draw_score
 
 bp = on_command("bp", priority=11, block=True)
-pfm = on_command("pfm", priority=11, block=True, aliases={"bplist"})
-tbp = on_command("tbp", priority=11, block=True, aliases={"todaybp"})
+pfm = on_command("pfm", priority=11, block=True, aliases={"bplist", "bl"})
+tbp = on_command("tbp", priority=11, block=True, aliases={"nb", "todaybp"})
 
 
 @bp.handle(parameterless=[split_msg()])
@@ -54,7 +54,7 @@ async def _pfm(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if not state["range"]:
-        state["range"] = "1-200"
+        state["range"] = "1-30"
     ls = state["range"].split("-")
     low, high = int(ls[0]), int(ls[1])
     if not 0 < low < high <= 200:

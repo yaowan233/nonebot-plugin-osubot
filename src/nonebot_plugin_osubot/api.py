@@ -1,7 +1,7 @@
 import asyncio
 import random
 from io import BytesIO
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from datetime import datetime, timedelta
 from typing import Union, Literal, Optional
 
@@ -12,7 +12,7 @@ from httpx import Response
 
 from .network.manager import network_manager
 from .schema.beatmapsets import BeatmapSets
-from .utils import FGM
+from .utils import FGM, extract_user_id
 from .config import Config
 from .mods import get_mods
 from .network import auto_retry
@@ -156,13 +156,15 @@ async def get_user_scores(
             # 生成 tasks（并发执行）
             tasks = []
             for batch_n in current_batches:
-                offset = batch_n * batch_size
-                actual_batch_size = min(batch_size, limit - len(all_scores) - offset)
+                batch_offset = offset + batch_n * batch_size
+                actual_batch_size = min(batch_size, limit - batch_n * batch_size)
 
                 if actual_batch_size <= 0:
                     continue  # 已获取足够数据
 
-                task = fetch_score_batch(uid, mode, scope, actual_batch_size, offset, legacy_only, include_failed)
+                task = fetch_score_batch(
+                    uid, mode, scope, actual_batch_size, batch_offset, legacy_only, include_failed
+                )
                 tasks.append(task)
             # 并发请求当前批次
             batch_results = await asyncio.gather(*tasks)
@@ -384,12 +386,42 @@ async def make_request(url: str, headers: dict, error_message: str) -> dict:
 
 async def get_uid_by_name(name: str, source: str) -> int:
     if source == "osu":
-        info = await get_user_info(f"{api}/users/@{name}")
+        info = await get_osu_user(name)
         return info["id"]
     else:
         url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={name}"
         data = await make_request(url, {}, "未找到该玩家，请确认玩家ID是否正确")
         return data["player"]["info"]["id"]
+
+
+async def get_osu_user(identifier: str) -> dict:
+    """Resolve a username, UID, or osu! profile URL without losing numeric usernames."""
+    identifier = identifier.strip()
+    profile_id = extract_user_id(identifier)
+    if profile_id:
+        return await get_user_info(f"{api}/users/{profile_id}?key=id")
+
+    key: str | None = None
+    value = identifier
+    if ":" in identifier:
+        prefix, explicit_value = identifier.split(":", 1)
+        if prefix.lower() in {"id", "uid"}:
+            key, value = "id", explicit_value.strip()
+        elif prefix.lower() in {"name", "user"}:
+            key, value = "username", explicit_value.strip()
+
+    if not value:
+        raise NetworkError("用户名或 UID 不能为空")
+    if key:
+        return await get_user_info(f"{api}/users/{quote(value)}?key={key}")
+    if not value.isdigit():
+        return await get_user_info(f"{api}/users/{quote(value)}?key=username")
+
+    # Pure numbers are ambiguous. Prefer an exact numeric username, then fall back to UID.
+    try:
+        return await get_user_info(f"{api}/users/{quote(value)}?key=username")
+    except NetworkError:
+        return await get_user_info(f"{api}/users/{value}?key=id")
 
 
 async def get_ppysb_uid(name: str) -> int:

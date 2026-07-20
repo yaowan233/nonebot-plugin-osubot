@@ -11,7 +11,7 @@ from .utils import split_msg
 from ..database import InfoData, UserData
 from ..draw.echarts import draw_history_plot
 
-history = on_command("history", priority=11, block=True)
+history = on_command("history", aliases={"hs"}, priority=11, block=True)
 
 
 @history.handle(parameterless=[split_msg()])
