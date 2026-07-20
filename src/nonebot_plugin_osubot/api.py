@@ -162,9 +162,7 @@ async def get_user_scores(
                 if actual_batch_size <= 0:
                     continue  # 已获取足够数据
 
-                task = fetch_score_batch(
-                    uid, mode, scope, actual_batch_size, batch_offset, legacy_only, include_failed
-                )
+                task = fetch_score_batch(uid, mode, scope, actual_batch_size, batch_offset, legacy_only, include_failed)
                 tasks.append(task)
             # 并发请求当前批次
             batch_results = await asyncio.gather(*tasks)

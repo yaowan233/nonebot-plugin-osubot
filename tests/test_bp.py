@@ -334,8 +334,6 @@ async def test_tbp_one_day_filter_uses_exact_24_hours(app: App):
             new=AsyncMock(return_value=BytesIO(FAKE_IMG)),
         ) as mock_draw_pfm,
     ):
-        await draw_bp_module.draw_bp(
-            "tbp", 1, False, "osu", [], 1, 200, 1, [], "osu"
-        )
+        await draw_bp_module.draw_bp("tbp", 1, False, "osu", [], 1, 200, 1, [], "osu")
 
     assert mock_draw_pfm.call_args.args[3] == [recent]

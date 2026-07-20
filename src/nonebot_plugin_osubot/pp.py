@@ -53,10 +53,7 @@ def get_pp_components(score: UnifiedScore, path: str, source: str = "osu") -> di
     """
     score = normalize_score_for_pp(score, source)
     mode = score.ruleset_id % 4
-    mods = [
-        {"acronym": mod.acronym, **({"settings": mod.settings} if mod.settings else {})}
-        for mod in score.mods
-    ]
+    mods = [{"acronym": mod.acronym, **({"settings": mod.settings} if mod.settings else {})} for mod in score.mods]
     beatmap = Beatmap(path=path)
     target_mode = (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania)[mode]
     if beatmap.mode != target_mode:

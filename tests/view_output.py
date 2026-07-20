@@ -348,6 +348,7 @@ async def test_bpa_real_ctb(app: App):
     print(f"  [bpa real ctb] JSON -> {json_path}")
 
     from nonebot_plugin_osubot.draw.echarts import draw_bpa_plot
+
     pic = await draw_bpa_plot("3162675 fruits 模式", **data)
     elapsed = time.perf_counter() - t0
     path = OUT / "bpa_real_ctb.png"

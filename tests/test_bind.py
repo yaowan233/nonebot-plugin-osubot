@@ -35,9 +35,7 @@ async def test_bind_no_name(app: App):
         ctx.receive_event(bot, event)
         ctx.should_call_send(
             event,
-            Message(
-                [MessageSegment.reply(1), MessageSegment.text("请在指令后输入 osu! 用户名、UID 或个人主页链接")]
-            ),
+            Message([MessageSegment.reply(1), MessageSegment.text("请在指令后输入 osu! 用户名、UID 或个人主页链接")]),
             result={"message_id": 1},
         )
         ctx.should_finished()

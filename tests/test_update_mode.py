@@ -73,9 +73,7 @@ async def test_update_mode_no_input(app: App):
                 Message(
                     [
                         MessageSegment.reply(1),
-                        MessageSegment.text(
-                            "当前默认模式为 mania（3）\n可使用 /mode o、t、c、m（或完整模式名）修改"
-                        ),
+                        MessageSegment.text("当前默认模式为 mania（3）\n可使用 /mode o、t、c、m（或完整模式名）修改"),
                     ]
                 ),
                 result={"message_id": 1},

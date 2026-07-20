@@ -234,8 +234,9 @@ async def test_history_no_data(app: App):
     event = fake_group_message_event_v11(message=Message("/history"))
 
     with patch_session(UTILS_MODULE, utils_session):
-        with patch_session(HISTORY_MODULE, hist_session), patch(
-            f"{HISTORY_MODULE}.merge_osutrack_history", new=AsyncMock(return_value=([], False))
+        with (
+            patch_session(HISTORY_MODULE, hist_session),
+            patch(f"{HISTORY_MODULE}.merge_osutrack_history", new=AsyncMock(return_value=([], False))),
         ):
             async with app.test_matcher(history) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
@@ -282,13 +283,16 @@ async def test_history_success(app: App):
     event = fake_group_message_event_v11(message=Message("/history"))
 
     with patch_session(UTILS_MODULE, utils_session):
-        with patch_session(HISTORY_MODULE, hist_session), patch(
-            f"{HISTORY_MODULE}.merge_osutrack_history",
-            new=AsyncMock(
-                return_value=(
-                    [(1000.0, "2026-01-01", 10000), (1050.0, "2026-01-08", 9500)],
-                    False,
-                )
+        with (
+            patch_session(HISTORY_MODULE, hist_session),
+            patch(
+                f"{HISTORY_MODULE}.merge_osutrack_history",
+                new=AsyncMock(
+                    return_value=(
+                        [(1000.0, "2026-01-01", 10000), (1050.0, "2026-01-08", 9500)],
+                        False,
+                    )
+                ),
             ),
         ):
             with patch(f"{HISTORY_MODULE}.draw_history_plot", new=AsyncMock(return_value=FAKE_IMG)):

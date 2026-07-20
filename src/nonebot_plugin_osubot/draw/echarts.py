@@ -29,6 +29,7 @@ rank_order = ["XH", "X", "SH", "S", "A", "B", "C", "D"]
 # 影响星数的 mod（需要重新计算难度评级）
 STAR_MODS = {"DT", "NC", "HT", "HR", "EZ", "DC", "DA"}
 
+
 def build_history_data(
     pp_ls,
     date_ls,
@@ -169,6 +170,7 @@ async def _calc_modded_stars(score, source: str) -> float | None:
 
 async def _resolve_stars(score_ls: list, source: str) -> list[float]:
     """返回每个 score 的星数；开了影响星数 mod 的会重新计算，失败则回退原值。"""
+
     async def one(idx, score):
         beatmap = getattr(score, "beatmap", None)
         base = _num(getattr(beatmap, "stars", 0)) if beatmap else 0.0
@@ -212,9 +214,7 @@ async def build_bpa_data(score_ls: list, source: str) -> dict:
             continue
         pp = _num(i.pp)
         rank_data.setdefault(i.rank, []).append([stars_ls[idx], round(pp, 1)])
-    star_scatter = [
-        {"name": r, "color": rank_color[r], "data": rank_data.get(r, [])} for r in rank_order
-    ]
+    star_scatter = [{"name": r, "color": rank_color[r], "data": rank_data.get(r, [])} for r in rank_order]
 
     mods_pp: defaultdict[str, float] = defaultdict(float)
     for num, i in enumerate(score_ls):
@@ -240,9 +240,7 @@ async def build_bpa_data(score_ls: list, source: str) -> dict:
     elif mapper_items:
         users = await get_users([m for m, _ in mapper_items])
         user_dic = {u.id: u.username for u in users}
-        mapper_pp_data = [
-            {"name": user_dic.get(m, str(m)), "value": round(pp, 2)} for m, pp in mapper_items
-        ]
+        mapper_pp_data = [{"name": user_dic.get(m, str(m)), "value": round(pp, 2)} for m, pp in mapper_items]
     else:
         mapper_pp_data = []
 

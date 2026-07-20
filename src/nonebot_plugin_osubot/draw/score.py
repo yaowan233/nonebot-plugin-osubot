@@ -213,6 +213,7 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
         source,
     )
 
+
 def _format_pp(value) -> str:
     try:
         number = float(value)
@@ -450,9 +451,7 @@ async def render_score_template(
     )
     judgement_total = sum(int(value or 0) for _, value in judgements)
     miss_count = int(stats.miss or 0)
-    combo_completion = (
-        score_info.max_combo / pp_info.max_combo * 100 if pp_info.max_combo else 0
-    )
+    combo_completion = score_info.max_combo / pp_info.max_combo * 100 if pp_info.max_combo else 0
     team = info.team.model_dump() if info.team else None
     if team is not None:
         team["icon"] = await _team_icon_data(info)

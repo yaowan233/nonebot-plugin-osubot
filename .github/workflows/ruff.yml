@@ -8,10 +8,13 @@ on:
 
 jobs:
   ruff:
-    name: Ruff Lint
+    name: Ruff Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       - name: Run Ruff Lint
-        uses: chartboost/ruff-action@v1
+        uses: astral-sh/ruff-action@v4
+
+      - name: Check Ruff Formatting
+        run: ruff format --check --diff

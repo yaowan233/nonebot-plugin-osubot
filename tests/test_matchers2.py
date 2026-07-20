@@ -192,9 +192,7 @@ async def test_osu_map_accepts_beatmap_url(app: App):
 
     session = make_mock_session()
     session.scalar.return_value = make_mock_user(osu_id=114514)
-    event = fake_group_message_event_v11(
-        message=Message("/m https://osu.ppy.sh/beatmapsets/12345#mania/67890")
-    )
+    event = fake_group_message_event_v11(message=Message("/m https://osu.ppy.sh/beatmapsets/12345#mania/67890"))
 
     with patch_session(UTILS_MODULE, session):
         with patch(f"{MAP_MODULE}.draw_map_info", new=AsyncMock(return_value=FAKE_MAP_IMG)) as draw:
