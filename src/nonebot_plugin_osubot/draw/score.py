@@ -457,6 +457,7 @@ async def render_score_template(
     judgement_total = sum(int(value or 0) for _, value in judgements)
     miss_count = int(stats.miss or 0)
     combo_completion = score_info.max_combo / pp_info.max_combo * 100 if pp_info.max_combo else 0
+    combo_is_full = bool(pp_info.max_combo and score_info.max_combo >= pp_info.max_combo)
     team = info.team.model_dump() if info.team else None
     if team is not None:
         team["icon"] = await _team_icon_data(info)
@@ -504,6 +505,7 @@ async def render_score_template(
         "pp": _format_pp(display_pp),
         "accuracy": f"{score_info.accuracy:.4f}" if mode == 3 else f"{score_info.accuracy:.2f}",
         "combo": combo,
+        "combo_is_full": combo_is_full,
         "stars": f"{display_stars:.2f}",
         "rank_image": rank_image.as_uri(),
         "score_rank": grank,
@@ -540,6 +542,8 @@ async def render_score_template(
             "...Array.from(document.images, image => image.decode().catch(() => {}))]), "
             "new Promise(resolve => setTimeout(resolve, 8000))])"
         )
+        # 字体就绪后再跑一次自适应，确保标题/艺人名按真实字宽收缩
+        await page.evaluate("fitBeatmapTitle();fitArtistName()")
         elem = await page.query_selector("#score")
         assert elem
         return BytesIO(await elem.screenshot(type="jpeg", quality=92))
