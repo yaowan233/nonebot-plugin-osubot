@@ -40,14 +40,14 @@ async def _(
     member_ids = list(member_names)
     today = datetime.date.today()
 
-    async with get_session() as session:
-        user_data = (await session.scalars(select(UserData).where(UserData.user_id.in_(member_ids)))).all()
+    async with get_session() as db_session:
+        user_data = (await db_session.scalars(select(UserData).where(UserData.user_id.in_(member_ids)))).all()
         bound_osu_ids = list({user.osu_id for user in user_data})
         if not bound_osu_ids:
             await UniMessage.text("本群还没有已绑定 osu! 账号的成员").finish(reply_to=True)
 
         current_infos = (
-            await session.scalars(
+            await db_session.scalars(
                 select(InfoData)
                 .where(
                     InfoData.osu_id.in_(bound_osu_ids),
@@ -70,7 +70,7 @@ async def _(
             .subquery()
         )
         previous_infos = (
-            await session.scalars(
+            await db_session.scalars(
                 select(InfoData)
                 .join(
                     latest_dates,
