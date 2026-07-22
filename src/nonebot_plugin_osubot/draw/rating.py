@@ -1,11 +1,13 @@
 import re
 from io import BytesIO
+from pathlib import Path
 from datetime import datetime
 from collections import Counter
 from statistics import mode, median
 
 from nonebot.log import logger
 from PIL import Image, ImageDraw
+from nonebot_plugin_htmlrender import template_to_pic
 
 from ..api import api_info
 from ..schema.user import UserCompact
@@ -23,7 +25,7 @@ from .static import (
 )
 
 
-async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
+async def draw_rating_legacy(match_id: str, algorithm: str = "osuplus") -> bytes:
     match_info = Match(**(await api_info("matches", f"https://osu.ppy.sh/api/v2/matches/{match_id}")))
     pattern = r"([^:]+): [\(\（](.+?)[\)\）] vs [\(\（](.+?)[\)\）]"
     match_name = re.search(pattern, match_info.match["name"], re.IGNORECASE)
@@ -193,6 +195,126 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
     im.close()
 
     return byt.getvalue()
+
+
+async def draw_rating_card(data: dict) -> bytes:
+    """Render a rating card from prepared match statistics."""
+    template_path = str(Path(__file__).parent / "rating_templates")
+    return await template_to_pic(template_path, "index.html", data, type="png")
+
+
+async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
+    """Render multiplayer rating with a layout matched to the room type."""
+    match_info = Match(**(await api_info("matches", f"https://osu.ppy.sh/api/v2/matches/{match_id}")))
+    games = [
+        event.game
+        for event in match_info.events
+        if event.detail.type == "other" and event.game is not None and event.game.scores
+    ]
+    if not games:
+        raise ValueError("该多人房没有可用于评分的对局")
+
+    team_type = mode([game.team_type for game in games])
+    appeared_user_ids = {
+        score.user_id for game in games for score in game.scores if score.score > 0
+    }
+    users = [user for user in match_info.users if user.id in appeared_user_ids]
+
+    team_size = None
+    red_wins = 0
+    blue_wins = 0
+    if team_type == "team-vs":
+        team_sizes = []
+        for game in games:
+            red_size = sum(score.score > 0 and score.match["team"] == "red" for score in game.scores)
+            blue_size = sum(score.score > 0 and score.match["team"] == "blue" for score in game.scores)
+            if red_size == blue_size and red_size > 0:
+                team_sizes.append(red_size)
+        if team_sizes:
+            team_size = mode(team_sizes)
+            games = [
+                game
+                for game in games
+                if sum(score.score > 0 for score in game.scores) == team_size * 2
+            ]
+        for game in games:
+            red_score = sum(score.score for score in game.scores if score.match["team"] == "red")
+            blue_score = sum(score.score for score in game.scores if score.match["team"] == "blue")
+            if red_score > blue_score:
+                red_wins += 1
+            elif blue_score > red_score:
+                blue_wins += 1
+
+    players = []
+    calculator = PlayerRatingCalculation(match_info)
+    for user in users:
+        stats = PlayerMatchStats(user, games)
+        if stats.total_score == 0:
+            continue
+        rating = calculator.get_rating(user.id, algorithm)
+        player = {
+            "user_id": user.id,
+            "name": user.username,
+            "avatar": f"https://a.ppy.sh/{user.id}",
+            "team": stats.player_team,
+            "rating": rating,
+            "total_score": stats.total_score,
+            "average_score": stats.average_score,
+            "wins": stats.win_and_lose[0],
+            "losses": stats.win_and_lose[1],
+            "played": stats.win_and_lose[2],
+            "win_rate": stats.win_rate,
+            "record_text": f"{stats.win_and_lose[0]}W—{stats.win_and_lose[1]}L · {stats.win_rate:.1%}",
+        }
+        if team_type == "head-to-head":
+            h2h = analyze_head_to_head_history(games, user.id)
+            player.update(
+                {
+                    "top1_count": h2h["number_of_games_top1"],
+                    "played": h2h["number_of_games"],
+                    "top1_rate": h2h["top1_rate"],
+                }
+            )
+        players.append(player)
+
+    if not players:
+        raise ValueError("该多人房没有有效的玩家成绩")
+    players.sort(key=lambda player: player["rating"], reverse=True)
+    for rank, player in enumerate(players, start=1):
+        player["rank"] = rank
+
+    match_pattern = r"([^:]+): [\(（](.+?)[\)）] vs [\(（](.+?)[\)）]"
+    match_name = match_info.match["name"]
+    name_match = re.search(match_pattern, match_name, re.IGNORECASE)
+    title = name_match.group(1) if name_match else match_name
+    red_name = name_match.group(2) if name_match else "红队"
+    blue_name = name_match.group(3) if name_match else "蓝队"
+    start_time = datetime.fromisoformat(match_info.match["start_time"])
+    end_value = match_info.match.get("end_time")
+    end_time = datetime.fromisoformat(end_value).strftime("%H:%M") if end_value else "进行中"
+
+    data = {
+        "match_id": match_id,
+        "title": title,
+        "time_range": f"{start_time.strftime('%Y/%m/%d %H:%M')}—{end_time}",
+        "team_type": team_type,
+        "algorithm": algorithm.upper(),
+        "game_count": len(games),
+        "player_count": len(players),
+        "players": players,
+        "mvp": players[0],
+        "max_top1_count": max((player.get("top1_count", 0) for player in players), default=0),
+        "max_total_score": max(player["total_score"] for player in players),
+        "average_rating": sum(player["rating"] for player in players) / len(players),
+        "red_name": red_name,
+        "blue_name": blue_name,
+        "red_wins": red_wins,
+        "blue_wins": blue_wins,
+        "red_players": [player for player in players if player["team"] == "red"],
+        "blue_players": [player for player in players if player["team"] == "blue"],
+        "team_size": team_size,
+    }
+    return await draw_rating_card(data)
 
 
 def rating_to_wn8_hex(rating: float, win_rate: float) -> tuple[float, str]:

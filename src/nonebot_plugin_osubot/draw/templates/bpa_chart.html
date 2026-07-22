@@ -1,347 +1,296 @@
-<!DOCTYPE html>
-<html lang="zh">
+<!doctype html>
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <title>BP Analysis</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  :root {
-    --bg: #0e0e1a;
-    --panel: #181828;
-    --panel2: #1f1f33;
-    --border: #2a2a40;
-    --text: #e8e8f0;
-    --sub: #8a8aa8;
-    --pink: #ff66aa;
-    --pink-d: #e63992;
-    --blue: #5b8def;
-    --green: #5eda7c;
-    --yellow: #ffd35e;
-    --purple: #a78bfa;
-    --orange: #ff9f4a;
-    --cyan: #4fd1c5;
-  }
-  body {
-    background: var(--bg);
-    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    width: 980px;
-    padding: 18px;
-    border-radius: 16px;
-    color: var(--text);
-  }
-  .header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #202038 100%);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 20px;
-    margin-bottom: 14px;
-  }
-  .h-top {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .h-title {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text);
-  }
-  .h-sub {
-    font-size: 11px;
-    color: var(--sub);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-  }
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-  }
-  .stat {
-    background: #12121f;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-  }
-  .stat-val {
-    font-size: 18px;
-    font-weight: 800;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .stat-val .unit {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--sub);
-    margin-left: 3px;
-  }
-  .stat-label {
-    font-size: 10px;
-    color: var(--sub);
-    margin-top: 5px;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .s-pp .stat-val { color: var(--pink); }
-  .s-bp .stat-val { color: var(--text); }
-  .s-acc .stat-val { color: var(--green); }
-  .s-star .stat-val { color: var(--yellow); }
-  .s-bpm .stat-val { color: var(--cyan); }
-  .s-mod .stat-val { color: var(--purple); }
-
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  .grid.full { grid-template-columns: 1fr; }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 14px 8px 14px;
-  }
-  .panel-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 4px;
-    padding-left: 2px;
-  }
-  .panel-sub {
-    font-size: 10px;
-    color: var(--sub);
-    margin-bottom: 6px;
-    padding-left: 2px;
-  }
-  .chart { width: 100%; }
-  #c1 { height: 300px; }
-  #c2 { height: 260px; }
-  #c3 { height: 300px; }
-  #c4 { height: 300px; }
-  .footer {
-    text-align: right;
-    font-size: 10px;
-    color: #44445a;
-    padding-right: 4px;
-  }
+@font-face{font-family:Torus;src:url('../template_assets/torus-regular.woff')}
+@font-face{font-family:Torus;src:url('../template_assets/torus-semibold.woff');font-weight:600}
+@font-face{font-family:OsuExtra;src:url('../template_assets/extra.woff')}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#e9e6df}
+body{width:1560px;padding:24px;font-family:Torus,"Microsoft YaHei","PingFang SC",sans-serif;color:#1c1c22}
+.report{background:#f5f3ee;border:1px solid #ddd9cf;border-radius:18px;padding:26px 30px 20px}
+.head{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:2px solid #1c1c22}
+.head-player{display:flex;align-items:center;gap:18px;min-width:0}
+.avatar-wrap{position:relative;flex:0 0 76px;width:76px;height:76px}
+.avatar-fallback,.avatar{position:absolute;inset:0;width:76px;height:76px;border-radius:12px}
+.avatar-fallback{display:grid;place-items:center;background:#e7e4dc;color:#4f46e5;font-size:27px;font-weight:600}
+.avatar{z-index:2;object-fit:cover;border:3px solid #fff;box-shadow:0 5px 14px #25232c24}
+.identity{min-width:0}
+.caps{color:#4f46e5;font-size:11px;font-weight:600;letter-spacing:.22em}
+.name-line{display:flex;align-items:center;gap:10px;margin-top:5px}
+.head h1{max-width:760px;font-size:30px;font-weight:600;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mode-icon{flex:none;width:34px;color:#4f46e5;font:30px/1 OsuExtra;text-align:center}
+.player-meta{margin-top:6px;color:#85828a;font-size:11px;letter-spacing:.04em}
+.head-pp{text-align:right}
+.head-pp span{display:block;color:#85828a;font-size:10px;letter-spacing:.14em}
+.head-pp b{display:block;font-size:38px;font-weight:600;color:#4f46e5;line-height:1.12;font-variant-numeric:tabular-nums}
+.head-pp small{color:#85828a;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);margin:16px 0 0;border:1px solid #ddd9cf;border-radius:12px;background:#fff;overflow:hidden}
+.kpi{padding:11px 18px 12px;border-right:1px solid #eeeae1}
+.kpi:last-child{border-right:0}
+.kpi span{display:block;font-size:10px;color:#8b8892;letter-spacing:.06em}
+.kpi b{display:block;font-size:20px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi b em{font-style:normal;font-size:11px;color:#8b8892;margin-left:2px}
+.insights{display:flex;align-items:center;margin:14px 0 18px;padding:0 4px}
+.insight{display:flex;align-items:baseline;gap:8px;font-size:12px;color:#4a4855;white-space:nowrap}
+.insight i{flex:none;width:6px;height:6px;border-radius:50%;align-self:center}
+.insight b{font-variant-numeric:tabular-nums}
+.insight-sep{flex:none;width:1px;height:14px;background:#d8d4ca;margin:0 20px}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.card{background:#fff;border:1px solid #ddd9cf;border-radius:12px;padding:14px 16px 10px;min-width:0;display:flex;flex-direction:column}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.card-head h2{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+.card-head h2 em{font-style:normal;color:#fff;font-size:10px;font-weight:600;width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center}
+.card-head span{font-size:10px;color:#8b8892}
+.span2{grid-column:span 2}
+.span4{grid-column:span 4}
+.chart{width:100%}
+#c-curve{height:268px}
+#c-star,#c-mod,#c-mapper{height:236px}
+#c-time,#c-acc,#c-bpm{height:170px}
+.grade-bar{display:flex;height:26px;border-radius:7px;overflow:hidden;margin:12px 0}
+.grade-bar div{height:100%}
+.grade-row{display:flex;align-items:center;font-size:12px;color:#4a4855;padding:5px 0;border-top:1px solid #f0ede5}
+.grade-row i{flex:none;width:9px;height:9px;border-radius:3px;margin-right:9px}
+.grade-row .g-name{width:34px;font-weight:600;color:#1c1c22}
+.grade-row .g-cnt{width:52px;text-align:right;font-variant-numeric:tabular-nums}
+.grade-row .g-pct{flex:1;text-align:right;color:#8b8892;font-variant-numeric:tabular-nums}
+.grade-row.zero{opacity:.42}
+.foot{display:flex;justify-content:space-between;color:#a3a0a8;font-size:10px;letter-spacing:.14em;padding:10px 2px 0}
 </style>
-<script type="text/javascript" src="./echarts.min.js"></script>
+<script src="./echarts.min.js"></script>
 </head>
 <body>
-  <div class="header">
-    <div class="h-top">
-      <div class="h-title">{{ name }}</div>
-      <div class="h-sub">Best Performance Analysis</div>
-    </div>
-    <div class="stats">
-      <div class="stat s-pp">
-        <div class="stat-val">{{ stats.weighted_pp }}<span class="unit">pp</span></div>
-        <div class="stat-label">加权 / {{ stats.total_pp }} raw</div>
+<main class="report" id="bpa-report">
+  <header class="head">
+    <div class="head-player">
+      <div class="avatar-wrap">
+        <div class="avatar-fallback">{{ initial }}</div>
+        {% if avatar_url %}<img class="avatar" src="{{ avatar_url }}" alt="" onerror="this.remove()">{% endif %}
       </div>
-      <div class="stat s-bp">
-        <div class="stat-val">{{ stats.bp_count }}<span class="unit">bp</span></div>
-        <div class="stat-label">BP 数量</div>
-      </div>
-      <div class="stat s-acc">
-        <div class="stat-val">{{ stats.avg_acc }}<span class="unit">%</span></div>
-        <div class="stat-label">平均准确率</div>
-      </div>
-      <div class="stat s-star">
-        <div class="stat-val">{{ stats.avg_stars }}<span class="unit">★</span></div>
-        <div class="stat-label">平均星级</div>
-      </div>
-      <div class="stat s-bpm">
-        <div class="stat-val">{{ stats.avg_bpm }}<span class="unit">bpm</span></div>
-        <div class="stat-label">平均 BPM</div>
-      </div>
-      <div class="stat s-mod">
-        <div class="stat-val">{{ stats.top_mod }}</div>
-        <div class="stat-label">主力 Mod</div>
+      <div class="identity">
+        <div class="caps">BEST PERFORMANCE ANALYSIS</div>
+        <div class="name-line"><h1>{{ username }}</h1><span class="mode-icon" aria-label="{{ mode_label }}">{{ mode_icon }}</span></div>
+        <div class="player-meta">{% if user_id %}UID {{ user_id }}{% endif %}{% if user_id and source_label %} · {% endif %}{{ source_label }}</div>
       </div>
     </div>
-  </div>
+    <div class="head-pp">
+      <span>加权 PP</span>
+      <b id="p-wpp"></b>
+      <small>raw 合计 <span id="p-tpp"></span></small>
+    </div>
+  </header>
 
-  <div class="grid full">
-    <div class="panel">
-      <div class="panel-title">PP 曲线 & 谱面时长</div>
-      <div class="panel-sub">折线为 BP 的 pp，柱状为谱面时长（按 rank 着色）</div>
-      <div id="c1" class="chart"></div>
-    </div>
-  </div>
-
-  <div class="grid full">
-    <div class="panel">
-      <div class="panel-title">星级 vs PP</div>
-      <div class="panel-sub">每个 BP 在星级—pp 平面的分布，按 rank 着色</div>
-      <div id="c2" class="chart"></div>
-    </div>
-  </div>
+  <section class="kpis" id="kpis"></section>
+  <section class="insights" id="insights"></section>
 
   <div class="grid">
-    <div class="panel">
-      <div class="panel-title">Mod 贡献</div>
-      <div class="panel-sub">各模组的加权 pp</div>
-      <div id="c3" class="chart"></div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Mapper 贡献 Top {{ mapper_pp_ls|length }}</div>
-      <div class="panel-sub">加权 pp 贡献最多的谱师</div>
-      <div id="c4" class="chart"></div>
-    </div>
+    <article class="card span4">
+      <div class="card-head"><h2><em style="background:#4f46e5">01</em>PP 价值曲线</h2><span>阴影为 Top 10 区间</span></div>
+      <div id="c-curve" class="chart"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#e11d48">02</em>评级构成</h2><span id="grade-pct"></span></div>
+      <div class="grade-bar" id="grade-bar"></div>
+      <div id="grade-rows"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#d97706">03</em>星数效率</h2><span>0.5★ 分桶</span></div>
+      <div id="c-star" class="chart"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#0d9488">04</em>Mod 贡献</h2></div>
+      <div id="c-mod" class="chart"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#7c3aed">05</em>Mapper 偏好</h2></div>
+      <div id="c-mapper" class="chart"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#0284c7">06</em>BP 时间分布</h2><span>按季度统计</span></div>
+      <div id="c-time" class="chart"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#059669">07</em>ACC 分布</h2><span>0.5% 分桶</span></div>
+      <div id="c-acc" class="chart"></div>
+    </article>
+
+    <article class="card span2">
+      <div class="card-head"><h2><em style="background:#db2777">08</em>BPM 分布</h2><span id="bpm-peak">10 BPM 分桶</span></div>
+      <div id="c-bpm" class="chart"></div>
+    </article>
   </div>
 
-  <div class="footer">osubot · bpa</div>
+  <footer class="foot"><span>OSUBOT · BP ANALYSIS</span><span id="foot-date"></span></footer>
+</main>
 
-  <script>
-    const pp_ls = {{ pp_ls }};
-    const length_ls = {{ length_ls }};
-    const star_scatter = {{ star_scatter }};
-    const mod_pp_ls = {{ mod_pp_ls }};
-    const mapper_pp_ls = {{ mapper_pp_ls }};
-    const bp_count = {{ length }};
+<script>
+const pp_ls={{ pp_ls|tojson }};
+const length_ls={{ length_ls|tojson }};
+const star_scatter={{ star_scatter|tojson }};
+const mod_pp_ls={{ mod_pp_ls|tojson }};
+const mapper_pp_ls={{ mapper_pp_ls|tojson }};
+const stats={{ stats|tojson }};
+const date_ls={{ date_ls|tojson }};
+const acc_ls={{ acc_ls|tojson }};
+const bpm_ls={{ bpm_ls|tojson }};
+const N=pp_ls.length;
+const weighted=pp_ls.map((v,i)=>+(v*Math.pow(.95,i)).toFixed(1));
+const C={ink:'#1c1c22',muted:'#8b8892',grid:'#eae7e0',indigo:'#4f46e5',rose:'#e11d48',amber:'#d97706',teal:'#0d9488',violet:'#7c3aed',sky:'#0284c7',emerald:'#059669',pink:'#db2777'};
+const rankColor={XH:'#9edcec',X:'#ffc83a',SH:'#9edcec',S:'#ffc83a',A:'#84d61c',B:'#e9b941',C:'#fa8a59',D:'#f55757'};
+const rankOrder=['XH','X','SH','S','A','B','C','D'];
+const fmt=v=>(+v).toLocaleString('en-US',{maximumFractionDigits:1});
+const pct=v=>((Number.isFinite(v)?v:0)*100).toFixed(1)+'%';
+const ax={axisLine:{lineStyle:{color:C.grid}},axisTick:{show:false},axisLabel:{color:C.muted,fontSize:10,fontFamily:'Torus'},splitLine:{lineStyle:{color:C.grid}}};
+const tt={backgroundColor:'#1c1c22',borderWidth:0,textStyle:{color:'#f5f3ee',fontSize:12},padding:[7,11]};
 
-    const C = {
-      text: '#e8e8f0', sub: '#8a8aa8', border: '#2a2a40',
-      pink: '#ff66aa', blue: '#5b8def', green: '#5eda7c',
-      yellow: '#ffd35e', purple: '#a78bfa', orange: '#ff9f4a', cyan: '#4fd1c5',
-      grid: 'rgba(42,42,64,0.5)'
-    };
-    const rankColor = {
-      XH: '#e0f0ff', X: '#ffd35e', SH: '#e0f0ff', S: '#ffd35e',
-      A: '#5eda7c', B: '#ff9f4a', C: '#ff6b6b', D: '#f55757'
-    };
-    const baseAxis = {
-      axisLine: { lineStyle: { color: C.border } },
-      axisTick: { lineStyle: { color: C.border } },
-      axisLabel: { color: C.sub, fontSize: 11 },
-      splitLine: { lineStyle: { color: C.grid } }
-    };
-    const tooltip = {
-      backgroundColor: 'rgba(18,18,31,0.96)',
-      borderColor: C.border, borderWidth: 1,
-      textStyle: { color: C.text, fontSize: 12 },
-      axisPointer: { type: 'cross', lineStyle: { color: '#3a3a55', type: 'dashed' } }
-    };
-    function timeFmt(v) {
-      const t = Math.floor(v), m = Math.floor(t/60), s = t%60;
-      return m + ':' + (s<10?'0'+s:s);
-    }
+document.getElementById('p-wpp').textContent=fmt(stats.weighted_pp);
+document.getElementById('p-tpp').textContent=fmt(stats.total_pp);
+document.getElementById('foot-date').textContent=new Date().toISOString().slice(0,10);
+const lens=length_ls.map(l=>Number(l.value)||0);
+const avgLen=lens.reduce((a,b)=>a+b,0)/(lens.length||1);
+const tfmt=s=>{s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const kpis=[
+ ['BP 数量',stats.bp_count,'张',C.ink],
+ ['平均准确率',stats.avg_acc,'%',C.emerald],
+ ['平均星数',stats.avg_stars,'★',C.amber],
+ ['平均 BPM',stats.avg_bpm,'',C.pink],
+ ['平均时长',tfmt(avgLen),'',C.indigo],
+ ['主力 Mod',stats.top_mod,'',C.ink],
+];
+document.getElementById('kpis').innerHTML=kpis.map(k=>
+ `<div class="kpi"><span>${k[0]}</span><b style="color:${k[3]}">${k[1]}<em>${k[2]}</em></b></div>`).join('');
 
-    // ===== Chart 1: PP line + length bar =====
-    const c1 = echarts.init(document.getElementById('c1'));
-    c1.setOption({
-      animation: false,
-      tooltip: { trigger: 'axis', ...tooltip },
-      legend: { data: ['PP', '时长'], top: 2, right: 10, textStyle: { color: C.sub, fontSize: 11 }, itemWidth: 12, itemHeight: 8 },
-      grid: { top: 30, bottom: 28, left: 52, right: 52 },
-      xAxis: [{
-        type: 'category',
-        data: Array.from({length: bp_count}, function(_,i){return i+1;}),
-        axisLabel: { interval: Math.max(0, Math.floor(bp_count/12)), color: C.sub, fontSize: 11 },
-        axisLine: { lineStyle: { color: C.border } }, axisTick: { lineStyle: { color: C.border } }, splitLine: { show: false }
-      }],
-      yAxis: [
-        { type: 'value', name: 'pp', scale: true, nameTextStyle: { color: C.sub, fontSize: 11 }, ...baseAxis },
-        { type: 'value', name: '时长', min: 0, max: 'dataMax', alignTicks: true, nameTextStyle: { color: C.sub, fontSize: 11 },
-          axisLine: { lineStyle: { color: C.border } }, axisTick: { lineStyle: { color: C.border } },
-          axisLabel: { color: C.sub, fontSize: 11, formatter: timeFmt }, splitLine: { show: false } }
-      ],
-      series: [
-        {
-          name: 'PP', type: 'line', data: pp_ls, smooth: 0.25, showSymbol: false,
-          symbol: 'circle', symbolSize: 5,
-          lineStyle: { width: 2.5, color: C.pink },
-          itemStyle: { color: C.pink },
-          areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,102,170,0.28)'},{offset:1,color:'rgba(255,102,170,0.01)'}]) },
-          markPoint: {
-            symbol: 'pin', symbolSize: 44,
-            label: { color: '#0e0e1a', fontSize: 10, fontWeight: 700 },
-            itemStyle: { color: C.pink, borderColor: '#0e0e1a', borderWidth: 1 },
-            data: [{type:'max',name:'Max'},{type:'min',name:'Min'}]
-          },
-          markLine: {
-            symbol: 'none', lineStyle: { color: C.purple, type: 'dashed', width: 1.5 },
-            label: { color: C.purple, fontSize: 11, position: 'insideStartTop', formatter: '均 {c} pp' },
-            data: [{type:'average'}]
-          }
-        },
-        {
-          name: '时长', type: 'bar', yAxisIndex: 1, data: length_ls, barWidth: '58%',
-          itemStyle: { borderRadius: [2,2,0,0] }
-        }
-      ]
-    });
+const top10=weighted.slice(0,10).reduce((a,b)=>a+b,0);
+const wsum=weighted.reduce((a,b)=>a+b,0);
+const decay=N>1&&pp_ls[0]?1-pp_ls[N-1]/pp_ls[0]:0;
+const starsAll=star_scatter.flatMap(s=>s.data.map(d=>d[0])).filter(Number.isFinite);
+const sMin=starsAll.length?Math.min.apply(null,starsAll):0;
+const sMax=starsAll.length?Math.max.apply(null,starsAll):0;
+const items=[
+ [C.indigo,`<span>Top 10 占加权 PP <b style="color:${C.indigo}">${pct(top10/wsum)}</b>（${fmt(Math.round(top10))} pp）</span>`],
+ [C.rose,`<span>BP#1 → #${N} 单图 PP 衰减 <b style="color:${C.rose}">${pct(decay)}</b></span>`],
+ [C.amber,`<span>难度区间 <b style="color:${C.amber}">${sMin.toFixed(1)}★ ~ ${sMax.toFixed(1)}★</b></span>`],
+];
+document.getElementById('insights').innerHTML=items.map((it,i)=>
+ (i?'<div class="insight-sep"></div>':'')+`<div class="insight"><i style="background:${it[0]}"></i>${it[1]}</div>`).join('');
 
-    // ===== Chart 2: Star vs PP scatter =====
-    const c2 = echarts.init(document.getElementById('c2'));
-    const scatterSeries = star_scatter.filter(function(s){return s.data.length>0;}).map(function(s){
-      return {
-        name: s.name, type: 'scatter', data: s.data, symbolSize: 8,
-        itemStyle: { color: s.color, opacity: 0.85, shadowBlur: 4, shadowColor: s.color }
-      };
-    });
-    c2.setOption({
-      animation: false,
-      tooltip: { trigger: 'item', ...tooltip, formatter: function(p){ return p.seriesName + '<br/>★ ' + p.value[0] + '<br/>' + p.value[1] + ' pp'; } },
-      legend: { top: 2, right: 10, textStyle: { color: C.sub, fontSize: 10 }, itemWidth: 8, itemHeight: 8, itemGap: 8 },
-      grid: { top: 34, bottom: 30, left: 56, right: 30 },
-      xAxis: { type: 'value', name: '星级', nameTextStyle: { color: C.sub, fontSize: 11 },
-        axisLabel: { color: C.sub, fontSize: 11, formatter: '{value}★' }, ...baseAxis },
-      yAxis: { type: 'value', name: 'pp', scale: true, nameTextStyle: { color: C.sub, fontSize: 11 }, ...baseAxis },
-      series: scatterSeries
-    });
+const anchors=[0,Math.floor(N/4),Math.floor(N/2),N-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i&&v<N);
+echarts.init(document.getElementById('c-curve')).setOption({animation:false,
+ tooltip:{trigger:'axis',...tt,axisPointer:{type:'line',lineStyle:{color:'#c7c3f5'}}},
+ grid:{left:46,right:40,top:30,bottom:24},
+ xAxis:{type:'category',data:pp_ls.map((_,i)=>i+1),...ax,boundaryGap:false,axisLabel:{...ax.axisLabel,interval:Math.max(0,Math.floor(N/10))}},
+ yAxis:{type:'value',scale:true,...ax,axisLine:{show:false}},
+ series:[{name:'原始 PP',type:'line',data:pp_ls,smooth:.35,showSymbol:false,lineStyle:{color:C.indigo,width:3},itemStyle:{color:C.indigo},
+  areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(79,70,229,.22)'},{offset:1,color:'rgba(79,70,229,.015)'}])},
+  markArea:{silent:true,itemStyle:{color:'rgba(79,70,229,.07)'},label:{color:C.indigo,fontSize:10,fontWeight:600,position:'insideBottom',offset:[0,-6]},
+   data:N?[[{name:`Top 10 · ${pct(top10/wsum)}`,xAxis:1},{xAxis:Math.min(10,N)}]]:[]},
+  markLine:{symbol:'none',lineStyle:{color:'#b8b5bd',type:'dashed'},label:{color:C.muted,fontSize:9,formatter:'均 {c}'},data:[{type:'average'}]},
+  markPoint:{symbol:'circle',symbolSize:7,itemStyle:{color:C.indigo,borderColor:'#fff',borderWidth:2},
+   label:{show:true,color:C.ink,fontSize:10,fontWeight:600,fontFamily:'Torus',formatter:p=>`#${p.data.coord[0]+1} · ${fmt(p.value)}`},
+   data:anchors.map((i,k)=>({coord:[i,pp_ls[i]],value:pp_ls[i],label:{position:k===0?'right':'top',distance:7}}))}}]});
 
-    // ===== Chart 3: Mod bar =====
-    const c3 = echarts.init(document.getElementById('c3'));
-    const modSorted = mod_pp_ls.slice().sort(function(a,b){return a.value-b.value;});
-    c3.setOption({
-      animation: false,
-      tooltip: { trigger: 'axis', ...tooltip, axisPointer: { type: 'shadow' }, formatter: function(p){ return p[0].name + ': ' + p[0].value + ' pp'; } },
-      grid: { top: 10, bottom: 10, left: 10, right: 62, containLabel: true },
-      xAxis: { type: 'value', axisLabel: { color: C.sub, fontSize: 11 }, ...baseAxis },
-      yAxis: {
-        type: 'category', data: modSorted.map(function(d){return d.name;}),
-        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
-        axisLabel: { color: C.text, fontSize: 12 }
-      },
-      series: [{
-        type: 'bar', data: modSorted.map(function(d){return d.value;}), barWidth: '55%',
-        label: { show: true, position: 'right', color: C.sub, fontSize: 10, formatter: '{c} pp' },
-        itemStyle: {
-          borderRadius: [0,4,4,0],
-          color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.blue},{offset:1,color:C.cyan}])
-        }
-      }]
-    });
+const gradeCnt=rankOrder.map(r=>{const s=star_scatter.find(x=>x.name===r);return [r,s?s.data.length:0]});
+const activeGrades=gradeCnt.filter(g=>g[1]>0);
+const ss=gradeCnt.filter(g=>['XH','X','SH','S'].includes(g[0])).reduce((a,g)=>a+g[1],0);
+document.getElementById('grade-pct').textContent=`S/SS ${pct(ss/(N||1))}`;
+document.getElementById('grade-bar').innerHTML=activeGrades.map(g=>
+ `<div style="width:${g[1]/(N||1)*100}%;background:${rankColor[g[0]]}"></div>`).join('');
+document.getElementById('grade-rows').innerHTML=gradeCnt.map(g=>
+ `<div class="grade-row${g[1]?'':' zero'}"><i style="background:${rankColor[g[0]]}"></i><span class="g-name">${g[0]}</span><span class="g-cnt">${g[1]} 张</span><span class="g-pct">${pct(g[1]/(N||1))}</span></div>`).join('');
 
-    // ===== Chart 4: Mapper bar =====
-    const c4 = echarts.init(document.getElementById('c4'));
-    const mapperSorted = mapper_pp_ls.slice().sort(function(a,b){return a.value-b.value;});
-    c4.setOption({
-      animation: false,
-      tooltip: { trigger: 'axis', ...tooltip, axisPointer: { type: 'shadow' }, formatter: function(p){ return p[0].name + ': ' + p[0].value + ' pp'; } },
-      grid: { top: 10, bottom: 10, left: 10, right: 70, containLabel: true },
-      xAxis: { type: 'value', axisLabel: { color: C.sub, fontSize: 11, formatter: '{value}' }, ...baseAxis },
-      yAxis: {
-        type: 'category', data: mapperSorted.map(function(d){return d.name;}),
-        axisLine: { lineStyle: { color: C.border } }, axisTick: { show: false },
-        axisLabel: { color: C.text, fontSize: 12 }
-      },
-      series: [{
-        type: 'bar', data: mapperSorted.map(function(d){return d.value;}), barWidth: '55%',
-        label: { show: true, position: 'right', color: C.sub, fontSize: 10, formatter: '{c} pp' },
-        itemStyle: {
-          borderRadius: [0,4,4,0],
-          color: new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.purple},{offset:1,color:C.pink}])
-        }
-      }]
-    });
-  </script>
+function emptyChart(id){
+ echarts.init(document.getElementById(id)).setOption({animation:false,title:{text:'暂无数据',left:'center',top:'middle',textStyle:{color:C.muted,fontSize:11,fontWeight:400}}});
+}
+const sp=star_scatter.flatMap(s=>s.data);
+if(sp.length){
+ const sbins={};
+ sp.forEach(p=>{const b=(Math.floor(p[0]*2)/2).toFixed(1);(sbins[b]=sbins[b]||[]).push(p[1]);});
+ const skeys=Object.keys(sbins).map(Number).sort((a,b)=>a-b);
+ const sCnt=skeys.map(k=>sbins[k.toFixed(1)].length);
+ const sAvg=skeys.map(k=>+(sbins[k.toFixed(1)].reduce((a,b)=>a+b,0)/sbins[k.toFixed(1)].length).toFixed(1));
+ const maxCntI=sCnt.indexOf(Math.max.apply(null,sCnt));
+ const maxPpI=sAvg.indexOf(Math.max.apply(null,sAvg));
+ echarts.init(document.getElementById('c-star')).setOption({animation:false,
+  tooltip:{trigger:'axis',...tt,axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}★ 段<br/>BP 数量 ${p[0].value} 张<br/>平均 PP ${fmt(p[1].value)}`},
+  legend:{data:['BP 数量','平均 PP'],top:0,left:'center',textStyle:{color:C.muted,fontSize:10},itemWidth:14,itemHeight:8,icon:'rect'},
+  grid:{left:40,right:44,top:28,bottom:26},
+  xAxis:{type:'category',data:skeys.map(k=>k.toFixed(1)),...ax,axisLabel:{...ax.axisLabel,formatter:'{value}★'}},
+  yAxis:[
+   {type:'value',name:'数量',nameTextStyle:{color:C.muted,fontSize:9},minInterval:1,...ax,axisLine:{show:false}},
+   {type:'value',name:'平均 PP',nameTextStyle:{color:C.muted,fontSize:9},scale:true,...ax,axisLine:{show:false},splitLine:{show:false}}],
+  series:[
+   {name:'BP 数量',type:'bar',data:sCnt,barWidth:'52%',itemStyle:{color:p=>p.dataIndex===maxCntI?C.amber:'#f2d5a7',borderRadius:[4,4,0,0]}},
+   {name:'平均 PP',type:'line',yAxisIndex:1,data:sAvg,smooth:.3,symbol:'circle',symbolSize:7,
+    lineStyle:{color:C.ink,width:2.5},itemStyle:{color:C.ink,borderColor:'#fff',borderWidth:2},
+    label:{show:true,position:'top',color:C.ink,fontSize:9,fontFamily:'Torus',formatter:p=>p.dataIndex===maxPpI?fmt(p.value):''}}]});
+}else emptyChart('c-star');
+
+function hbar(id,rows,color,soft,maxName,labelPct){
+ const data=rows.filter(r=>Math.round(Number(r.value)*10)>0).slice().sort((a,b)=>a.value-b.value);
+ if(!data.length){emptyChart(id);return}
+ const tot=data.reduce((a,b)=>a+b.value,0);
+ echarts.init(document.getElementById(id)).setOption({animation:false,
+  tooltip:{...tt,formatter:p=>`${p.name}<br/>${fmt(p.value)} pp · ${pct(p.value/tot)}`},
+  grid:{left:6,right:74,top:10,bottom:6,containLabel:true},
+  xAxis:{type:'value',...ax,axisLine:{show:false},axisLabel:{show:false},splitLine:{show:false}},
+  yAxis:{type:'category',data:data.map(d=>d.name),...ax,axisLine:{show:false},
+   axisLabel:{color:C.ink,fontSize:11,fontFamily:'Torus',formatter:v=>v.length>maxName?v.slice(0,maxName-1)+'…':v}},
+  series:[{type:'bar',data:data.map((d,i)=>({value:d.value,itemStyle:{color:i===data.length-1?color:soft}})),barWidth:'56%',
+   label:{show:true,position:'right',color:C.muted,fontSize:10,fontFamily:'Torus',formatter:p=>labelPct?`${fmt(p.value)} · ${pct(p.value/tot)}`:fmt(p.value)},
+   itemStyle:{borderRadius:[0,4,4,0]}}]});
+}
+hbar('c-mod',mod_pp_ls,C.teal,'#a7dcd7',10,true);
+hbar('c-mapper',mapper_pp_ls,C.violet,'#d3c3f0',13,false);
+
+function miniHist(id,labels,counts,color,soft,maxI,tipFmt,rotate){
+ if(!labels.length){emptyChart(id);return}
+ echarts.init(document.getElementById(id)).setOption({animation:false,
+  tooltip:{...tt,formatter:p=>tipFmt(p)},
+  grid:{left:34,right:8,top:14,bottom:rotate?38:24},
+  xAxis:{type:'category',data:labels,...ax,axisLabel:{...ax.axisLabel,fontSize:9,rotate:rotate?38:0,interval:Math.max(0,Math.floor(labels.length/8))}},
+  yAxis:{type:'value',minInterval:1,...ax,axisLine:{show:false},axisLabel:{...ax.axisLabel,fontSize:9}},
+  series:[{type:'bar',data:counts.map((c,i)=>({value:c,itemStyle:{color:i===maxI?color:soft}})),barWidth:'60%',itemStyle:{borderRadius:[3,3,0,0]}}]});
+}
+
+const tq={};
+date_ls.forEach(d=>{const k=d.slice(0,4)+'Q'+(Math.floor((+d.slice(5,7)-1)/3)+1);tq[k]=(tq[k]||0)+1});
+const tkeys=Object.keys(tq).sort();
+const tCnt=tkeys.map(k=>tq[k]);
+miniHist('c-time',tkeys,tCnt,C.sky,'#b3d9ef',tCnt.length?tCnt.indexOf(Math.max.apply(null,tCnt)):-1,
+ p=>`${p.name}<br/>${p.value} 张 BP`,tkeys.length>9);
+
+if(acc_ls.length){
+ const amin=Math.min(99.5,Math.floor(Math.min.apply(null,acc_ls)*2)/2);
+ const abins=[];
+ for(let b=amin;b<100;b+=.5)abins.push(+b.toFixed(1));
+ const aCnt=abins.map(()=>0);
+ acc_ls.forEach(a=>{const i=Math.min(abins.length-1,Math.max(0,Math.floor((a-amin)/.5+1e-6)));aCnt[i]++});
+ const avgBinI=Math.min(abins.length-1,Math.max(0,Math.floor((stats.avg_acc-amin)/.5+1e-6)));
+ miniHist('c-acc',abins.map(b=>b.toFixed(1)+'%'),aCnt,C.emerald,'#a9dcc7',avgBinI,
+  p=>`${p.name} ~ ${(parseFloat(p.name)+.5).toFixed(1)}%<br/>${p.value} 张 BP`);
+}else emptyChart('c-acc');
+
+if(bpm_ls.length){
+ const bmin=Math.floor(Math.min.apply(null,bpm_ls)/10)*10;
+ const bmax=Math.floor(Math.max.apply(null,bpm_ls)/10)*10;
+ const bbins=[];
+ for(let b=bmin;b<=bmax;b+=10)bbins.push(b);
+ const bCnt=bbins.map(()=>0);
+ bpm_ls.forEach(v=>{const i=Math.min(bbins.length-1,Math.max(0,Math.floor((v-bmin)/10)));bCnt[i]++});
+ const bPeakI=bCnt.indexOf(Math.max.apply(null,bCnt));
+ document.getElementById('bpm-peak').textContent=`峰值 ${bbins[bPeakI]}–${bbins[bPeakI]+9} BPM · ${bCnt[bPeakI]} 张`;
+ miniHist('c-bpm',bbins.map(b=>String(b)),bCnt,C.pink,'#f0b8d2',bPeakI,
+  p=>`${p.name}–${+p.name+9} BPM<br/>${p.value} 张 BP`);
+}else emptyChart('c-bpm');
+</script>
 </body>
+</html>

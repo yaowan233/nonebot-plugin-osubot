@@ -244,19 +244,28 @@ async def build_bpa_data(score_ls: list, source: str) -> dict:
     else:
         mapper_pp_data = []
 
+    date_ls: list[str] = []
+    for score in score_ls:
+        ended_at = getattr(score, "ended_at", None)
+        if isinstance(ended_at, (datetime.datetime, datetime.date)):
+            date_value = ended_at.date() if isinstance(ended_at, datetime.datetime) else ended_at
+            date_ls.append(date_value.isoformat())
+        elif ended_at:
+            date_ls.append(str(ended_at)[:10])
+
     bp_count = len(score_ls)
     weighted_pp = sum(_num(i.pp) * 0.95**num for num, i in enumerate(score_ls))
     total_pp = sum(_num(i.pp) for i in score_ls)
-    accs = [_num(i.accuracy) for i in score_ls if getattr(i, "accuracy", None) is not None]
+    accs = [round(_num(i.accuracy), 2) for i in score_ls if getattr(i, "accuracy", None) is not None]
     valid_stars = [s for s in stars_ls if s > 0]
-    bpms = [
-        _num(getattr(i.beatmap, "bpm", 0))
+    bpm_ls = [
+        round(_num(getattr(i.beatmap, "bpm", 0)), 1)
         for i in score_ls
         if getattr(i, "beatmap", None) and _num(getattr(i.beatmap, "bpm", 0)) > 0
     ]
     avg_acc = sum(accs) / len(accs) if accs else 0.0
     avg_stars = sum(valid_stars) / len(valid_stars) if valid_stars else 0.0
-    avg_bpm = sum(bpms) / len(bpms) if bpms else 0.0
+    avg_bpm = sum(bpm_ls) / len(bpm_ls) if bpm_ls else 0.0
     top_mod = mod_pp_data[0]["name"] if mod_pp_data else "-"
     top_mapper = mapper_pp_data[0]["name"] if mapper_pp_data else "-"
     stats = {
@@ -276,6 +285,9 @@ async def build_bpa_data(score_ls: list, source: str) -> dict:
         "star_scatter": star_scatter,
         "mod_pp_ls": mod_pp_data,
         "mapper_pp_ls": mapper_pp_data,
+        "date_ls": date_ls,
+        "acc_ls": accs,
+        "bpm_ls": bpm_ls,
         "stats": stats,
     }
 
@@ -288,20 +300,65 @@ async def draw_bpa_plot(
     mod_pp_ls,
     mapper_pp_ls,
     stats,
+    date_ls=None,
+    acc_ls=None,
+    bpm_ls=None,
+    *,
+    username: str | None = None,
+    mode: str | None = None,
+    user_id: int | str | None = None,
+    source: str = "osu",
+    avatar_url: str | None = None,
 ) -> bytes:
     template_name = "bpa_chart.html"
+    display_name = username or str(name).split(" ", 1)[0] or "osu! 玩家"
+    mode_labels = {
+        "osu": "标准模式",
+        "taiko": "太鼓模式",
+        "fruits": "接水果模式",
+        "mania": "键盘模式",
+        "rxosu": "Relax 标准模式",
+        "rxtaiko": "Relax 太鼓模式",
+        "rxfruits": "Relax 接水果模式",
+        "aposu": "Autopilot 标准模式",
+    }
+    mode_icons = {
+        "osu": "\ue800",
+        "fruits": "\ue801",
+        "mania": "\ue802",
+        "taiko": "\ue803",
+        "rxosu": "\ue800",
+        "rxtaiko": "\ue803",
+        "rxfruits": "\ue801",
+        "aposu": "\ue800",
+    }
+    source_label = "ppy.sb" if source == "ppysb" else "osu! official"
+    if avatar_url is None and user_id:
+        avatar_host = "https://a.ppy.sb" if source == "ppysb" else "https://a.ppy.sh"
+        avatar_url = f"{avatar_host}/{user_id}"
     pic = await template_to_pic(
         template_path,
         template_name,
         {
             "name": name,
+            "username": display_name,
+            "initial": display_name[:1].upper(),
+            "mode_label": mode_labels.get(mode or "", mode or "osu! 模式"),
+            "mode_icon": mode_icons.get(mode or "", "\ue800"),
+            "user_id": str(user_id or ""),
+            "avatar_url": avatar_url or "",
+            "source_label": source_label,
             "pp_ls": pp_ls,
             "length_ls": length_ls,
             "star_scatter": star_scatter,
             "mod_pp_ls": mod_pp_ls,
             "mapper_pp_ls": mapper_pp_ls,
+            "date_ls": date_ls or [],
+            "acc_ls": acc_ls or [],
+            "bpm_ls": bpm_ls or [],
             "stats": stats,
             "length": len(pp_ls),
         },
+        pages={"viewport": {"width": 1620, "height": 10}},
     )
     return pic

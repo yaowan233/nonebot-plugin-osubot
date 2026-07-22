@@ -44,5 +44,12 @@ async def _(event: Event, state: T_State):
     score_ls = [cal_score_info(user.lazer_mode, score) for score in score_ls]
     data = await build_bpa_data(score_ls, state["source"])
     name = f"{state['username']} {NGM[state['mode']]} 模式"
-    byt = await draw_bpa_plot(name, **data)
+    byt = await draw_bpa_plot(
+        name,
+        username=state["username"],
+        mode=NGM[state["mode"]],
+        user_id=uid,
+        source=state["source"],
+        **data,
+    )
     await UniMessage.image(raw=byt).finish(reply_to=True)

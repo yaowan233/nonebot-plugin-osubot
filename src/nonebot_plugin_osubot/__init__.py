@@ -8,6 +8,7 @@ require("nonebot_plugin_session")
 require("nonebot_plugin_orm")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_waiter")
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select

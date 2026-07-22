@@ -24,6 +24,7 @@ dependencies = [
     "nonebot-adapter-onebot>=2.4.6",
     "osu-tools-py>=0.1.4",
     "rhythmgame-tools>=2.0.0",
+    "nonebot-plugin-uninfo>=0.11.1",
 ]
 requires-python = ">=3.10,<3.14"
 readme = "README.md"

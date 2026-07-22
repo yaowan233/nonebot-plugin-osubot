@@ -519,7 +519,14 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
             score_ls = [cal_score_info(is_lazer, score) for score in score_ls]
             data = await build_bpa_data(score_ls, source)
-            image = await draw_bpa_plot(f"{user.name} {NGM[mode]} 模式", **data)
+            image = await draw_bpa_plot(
+                f"{user.name} {NGM[mode]} 模式",
+                username=user.name,
+                mode=NGM[mode],
+                user_id=user.user_id,
+                source=source,
+                **data,
+            )
             await _send_image(ctx, image)
             return _image_tool_result(
                 f"已发送 {user.name} 的 {NGM[mode]} bp 分析图。",

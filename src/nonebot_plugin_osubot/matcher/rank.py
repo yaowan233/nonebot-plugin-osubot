@@ -1,107 +1,120 @@
-import asyncio
 import datetime
-from io import BytesIO
 
-from PIL import Image, ImageDraw
+from nonebot import on_command
 from nonebot.params import T_State
-from nonebot import Bot, on_command
 from nonebot_plugin_alconna import UniMessage
-from nonebot_plugin_session import SessionId, SessionIdType
 from nonebot_plugin_orm import get_session
-from sqlalchemy import select
+from nonebot_plugin_uninfo import QryItrface, Uninfo
+from sqlalchemy import and_, func, select
 
+from ..database.models import InfoData, UserData
+from ..draw.rank import draw_group_rank
 from ..utils import NGM
 from .utils import split_msg
-from ..file import get_projectimg
-from ..draw.utils import draw_fillet
-from ..draw.static import Torus_Regular_25
-from ..database.models import InfoData, UserData
+
 
 group_pp_rank = on_command("群内排名", aliases={"rank"}, priority=11, block=True)
 
 
 @group_pp_rank.handle(parameterless=[split_msg()])
-async def _(state: T_State, bot: Bot, session_id: str = SessionId(SessionIdType.GROUP)):
+async def _(
+    state: T_State,
+    session: Uninfo,
+    interface: QryItrface,
+):
     if "error" in state:
-        await UniMessage.text(state["error"]).send(reply_to=True)
-    mode = state["mode"]
-    group_id = session_id
-    if bot.adapter.get_name() == "OneBot V11":
-        group_member = await bot.get_group_member_list(group_id=group_id)
-        user_id_ls = [str(i["user_id"]) for i in group_member]
-    elif bot.adapter.get_name() == "Satori":
-        group_member = await bot.guild_member_list(guild_id=group_id)
-        user_id_ls = [i.user.id for i in group_member]
-    else:
-        raise NotImplementedError
+        await UniMessage.text(state["error"]).finish(reply_to=True)
+
+    if session is None or interface is None:
+        await UniMessage.text("当前平台无法获取会话信息").finish(reply_to=True)
+    scene = session.scene.parent or session.scene
+    if scene.is_private:
+        await UniMessage.text("群内排名只能在群组或频道中使用").finish(reply_to=True)
+
+    members = await interface.get_members(scene.type, scene.id)
+    if not members:
+        await UniMessage.text("当前平台无法获取群成员列表").finish(reply_to=True)
+
+    mode = int(state["mode"])
+    member_names = {
+        member.user.id: member.nick or member.user.nick or member.user.name or "" for member in members
+    }
+    member_ids = list(member_names)
+    today = datetime.date.today()
 
     async with get_session() as session:
-        binded_id = (await session.scalars(select(UserData.osu_id).where(UserData.user_id.in_(user_id_ls)))).all()
-        info_ls = (
+        user_data = (await session.scalars(select(UserData).where(UserData.user_id.in_(member_ids)))).all()
+        bound_osu_ids = list({user.osu_id for user in user_data})
+        if not bound_osu_ids:
+            await UniMessage.text("本群还没有已绑定 osu! 账号的成员").finish(reply_to=True)
+
+        current_infos = (
             await session.scalars(
                 select(InfoData)
                 .where(
-                    InfoData.osu_id.in_(binded_id),
-                    InfoData.osu_mode == int(mode),
-                    InfoData.date == datetime.date.today(),
+                    InfoData.osu_id.in_(bound_osu_ids),
+                    InfoData.osu_mode == mode,
+                    InfoData.date == today,
+                    InfoData.pp >= 100,
                 )
                 .order_by(InfoData.pp.desc())
             )
         ).all()
-        # osu_id -> user_id 映射，一次查完，避免渲染循环中逐行查询
-        user_data_ls = (await session.scalars(select(UserData).where(UserData.user_id.in_(user_id_ls)))).all()
 
-    # 在 session 外构建 osu_id -> 群名片 映射
-    user_id_to_name = {str(m["user_id"]): m["card"] or m.get("nickname", "") for m in group_member}
-    osu_id_to_name = {ud.osu_id: user_id_to_name.get(ud.user_id, "") for ud in user_data_ls}
+        latest_dates = (
+            select(InfoData.osu_id.label("osu_id"), func.max(InfoData.date).label("latest_date"))
+            .where(
+                InfoData.osu_id.in_(bound_osu_ids),
+                InfoData.osu_mode == mode,
+                InfoData.date < today,
+            )
+            .group_by(InfoData.osu_id)
+            .subquery()
+        )
+        previous_infos = (
+            await session.scalars(
+                select(InfoData)
+                .join(
+                    latest_dates,
+                    and_(InfoData.osu_id == latest_dates.c.osu_id, InfoData.date == latest_dates.c.latest_date),
+                )
+                .where(InfoData.osu_mode == mode)
+            )
+        ).all()
 
-    # 网络 I/O 在 session 关闭后执行
-    icon_urls = [f"https://a.ppy.sh/{info.osu_id}" for info in info_ls]
-    icon_ls = await asyncio.gather(*[get_projectimg(u) for u in icon_urls])
+    user_by_osu = {}
+    for user in user_data:
+        user_by_osu.setdefault(user.osu_id, user)
+    previous_by_osu = {info.osu_id: info for info in previous_infos}
+    requester = next((user for user in user_data if user.user_id == session.user.id), None)
 
-    draw_len = len([i for i in info_ls if i.pp >= 100])
-    img = Image.new("RGBA", (1200, 85 + 82 * draw_len), (35, 42, 34, 255))
-    draw = ImageDraw.Draw(img)
-    draw.text((40, 10), f"{NGM[mode]}模式群内排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-    draw.text((880, 10), "pp", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-    draw.text((960, 10), "全球排名", font=Torus_Regular_25, fill=(255, 255, 255, 255))
-    for index, (info, icon) in enumerate(zip(info_ls, icon_ls)):
-        if info.pp < 100:
+    players = []
+    seen = set()
+    for info in current_infos:
+        if info.osu_id in seen or info.osu_id not in user_by_osu:
             continue
-        draw.rounded_rectangle(
-            (20, 55 + 82 * index, 1180, 45 + 82 * (index + 1)),
-            radius=10,
-            fill=(58, 70, 57, 255),
-        )
-        icon_img = Image.open(icon).convert("RGBA").resize((63, 63))
-        icon_img = draw_fillet(icon_img, 10)
-        img.alpha_composite(icon_img, (100, 60 + 82 * index))
-        name = osu_id_to_name.get(info.osu_id, "")
-        draw.text(
-            (43, 70 + 82 * index),
-            f"#{index + 1}",
-            font=Torus_Regular_25,
-            fill=(255, 255, 255, 255),
-        )
-        draw.text(
-            (180, 70 + 82 * index),
-            name,
-            font=Torus_Regular_25,
-            fill=(166, 199, 163, 255),
-        )
-        draw.text(
-            (850, 70 + 82 * index),
-            f"{int(info.pp)}pp",
-            font=Torus_Regular_25,
-            fill=(255, 255, 255, 255),
-        )
-        draw.text(
-            (980, 70 + 82 * index),
-            f"{info.g_rank}",
-            font=Torus_Regular_25,
-            fill=(255, 255, 255, 255),
+        seen.add(info.osu_id)
+        user = user_by_osu[info.osu_id]
+        previous = previous_by_osu.get(info.osu_id)
+        players.append(
+            {
+                "osu_id": info.osu_id,
+                "osu_name": user.osu_name,
+                "qq_name": member_names.get(user.user_id, ""),
+                "avatar_url": f"https://a.ppy.sh/{info.osu_id}",
+                "pp": info.pp,
+                "global_rank": info.g_rank,
+                "delta": info.pp - previous.pp if previous else None,
+            }
         )
 
-    byt = BytesIO()
-    img.save(byt, "png")
-    await UniMessage.image(raw=byt).send(reply_to=True)
+    if not players:
+        await UniMessage.text(f"今天还没有 {NGM[str(mode)]} 模式的群排名数据").finish(reply_to=True)
+
+    image = await draw_group_rank(
+        players,
+        requester.osu_id if requester else None,
+        f"{NGM[str(mode)]}模式",
+        datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
+    )
+    await UniMessage.image(raw=image).finish(reply_to=True)
