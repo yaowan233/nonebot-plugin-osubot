@@ -36,9 +36,7 @@ async def _(
         await UniMessage.text("当前平台无法获取群成员列表").finish(reply_to=True)
 
     mode = int(state["mode"])
-    member_names = {
-        member.user.id: member.nick or member.user.nick or member.user.name or "" for member in members
-    }
+    member_names = {member.user.id: member.nick or member.user.nick or member.user.name or "" for member in members}
     member_ids = list(member_names)
     today = datetime.date.today()
 

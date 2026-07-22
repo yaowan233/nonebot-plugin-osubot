@@ -215,9 +215,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         raise ValueError("该多人房没有可用于评分的对局")
 
     team_type = mode([game.team_type for game in games])
-    appeared_user_ids = {
-        score.user_id for game in games for score in game.scores if score.score > 0
-    }
+    appeared_user_ids = {score.user_id for game in games for score in game.scores if score.score > 0}
     users = [user for user in match_info.users if user.id in appeared_user_ids]
 
     team_size = None
@@ -232,11 +230,7 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
                 team_sizes.append(red_size)
         if team_sizes:
             team_size = mode(team_sizes)
-            games = [
-                game
-                for game in games
-                if sum(score.score > 0 for score in game.scores) == team_size * 2
-            ]
+            games = [game for game in games if sum(score.score > 0 for score in game.scores) == team_size * 2]
         for game in games:
             red_score = sum(score.score for score in game.scores if score.match["team"] == "red")
             blue_score = sum(score.score for score in game.scores if score.match["team"] == "blue")
