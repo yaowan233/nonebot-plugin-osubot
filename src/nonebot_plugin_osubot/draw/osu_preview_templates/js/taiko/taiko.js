@@ -5,8 +5,30 @@ function Taiko(osu)
     for (var i = 0; i < this.HitObjects.length; i++)
     {
         var hitObject = this.HitObjects[i];
-        hitObject.position.x = this.scrollAt(hitObject.time);
-        hitObject.endPosition.x = this.scrollAt(hitObject.endTime);
+        hitObject.position.x = hitObject.time;
+        hitObject.endPosition.x = hitObject.endTime;
+    }
+
+    // osu!taiko uses overlapping scrolling: every object keeps the velocity
+    // active at its own start time. Rebuild bar lines as timestamps instead of
+    // using Scroll's sequential, accumulated positions.
+    this.barLines = [];
+    var endTime = (this.HitObjects.length ? this.HitObjects[this.HitObjects.length - 1].endTime : 0) + 1;
+    var timingPoints = this.TimingPoints.filter(function(timingPoint)
+    {
+        return !timingPoint.parent;
+    });
+    for (var timingPointIndex = 0; timingPointIndex < timingPoints.length; timingPointIndex++)
+    {
+        var timingPoint = timingPoints[timingPointIndex];
+        var barLength = timingPoint.beatLength * timingPoint.meter;
+        var barLineLimit = timingPoints[timingPointIndex + 1]
+            ? timingPoints[timingPointIndex + 1].time
+            : endTime;
+        for (var barTime = timingPoint.time; barTime < barLineLimit; barTime += barLength)
+        {
+            this.barLines.push(barTime);
+        }
     }
 }
 Taiko.prototype = Object.create(Scroll.prototype, {
@@ -22,9 +44,19 @@ Taiko.DEFAULT_COLORS = [
     '#fcb806'
 ];
 Taiko.DIAMETER = 56;
-Taiko.prototype.calcX = function(x, scroll)
+Taiko.PLAYFIELD_LENGTH = Beatmap.WIDTH - 160;
+Taiko.BASE_SCROLL_SPEED = 0.14;
+Taiko.prototype.scrollMultiplierAt = function(time)
 {
-    return (x - scroll) * 20 * (260) / 1000 / (this.SliderMultiplier * 8);
+    var timingPoint = this.timingPointAt(time);
+    return this.SliderMultiplier * 1000 / timingPoint.beatLength;
+};
+Taiko.prototype.calcX = function(time, currentTime, originTime)
+{
+    var multiplier = this.scrollMultiplierAt(
+        typeof originTime == 'undefined' ? time : originTime
+    );
+    return (time - currentTime) * Taiko.BASE_SCROLL_SPEED * multiplier;
 };
 Taiko.prototype.update = function(ctx)
 {
@@ -40,33 +72,27 @@ Taiko.prototype.draw = function(time, ctx)
     if (typeof this.tmp.first == 'undefined')
     {
         this.tmp.first = 0;
-        this.tmp.last = -1;
         this.tmp.barLine = 0;
     }
 
-    var scroll = this.scrollAt(time);
+    var scroll = time;
     while (this.tmp.first < this.HitObjects.length &&
         time > this.HitObjects[this.tmp.first].endTime)
     {
         this.tmp.first++;
-    }
-    while (this.tmp.last + 1 < this.HitObjects.length)
-    {
-        var hitObject = this.HitObjects[this.tmp.last + 1];
-        if (this.calcX(hitObject.position.x, scroll) > Beatmap.WIDTH)
-        {
-            break;
-        }
-        this.tmp.last++;
     }
     while (this.tmp.barLine < this.barLines.length &&
         this.calcX(this.barLines[this.tmp.barLine], scroll) < -Taiko.DIAMETER)
     {
         this.tmp.barLine++;
     }
-    for (var i = this.tmp.barLine; i < this.barLines.length && this.calcX(this.barLines[i], scroll) < Beatmap.WIDTH; i++)
+    for (var i = this.tmp.barLine; i < this.barLines.length; i++)
     {
         var barLine = this.calcX(this.barLines[i], scroll);
+        if (barLine > Taiko.PLAYFIELD_LENGTH)
+        {
+            continue;
+        }
         ctx.beginPath();
         ctx.moveTo(barLine, -Taiko.DIAMETER);
         ctx.lineTo(barLine, Taiko.DIAMETER);
@@ -74,10 +100,17 @@ Taiko.prototype.draw = function(time, ctx)
         ctx.lineWidth = 1;
         ctx.stroke();
     }
-    for (var i = this.tmp.last; i >= this.tmp.first; i--)
+    for (var i = this.HitObjects.length - 1; i >= this.tmp.first; i--)
     {
         var hitObject = this.HitObjects[i];
         if (time > hitObject.endTime)
+        {
+            continue;
+        }
+        var startX = this.calcX(hitObject.position.x, scroll);
+        var endX = this.calcX(hitObject.endPosition.x, scroll, hitObject.position.x);
+        if (startX > Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER &&
+            endX > Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER)
         {
             continue;
         }

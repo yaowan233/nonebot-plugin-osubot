@@ -14,7 +14,7 @@ Drumroll.prototype.draw = function(scroll, ctx)
 
     ctx.beginPath();
     ctx.moveTo(this.beatmap.calcX(this.position.x, scroll), 0);
-    ctx.lineTo(this.beatmap.calcX(this.endPosition.x, scroll), 0);
+    ctx.lineTo(this.beatmap.calcX(this.endPosition.x, scroll, this.position.x), 0);
 
     ctx.strokeStyle = '#333';
     ctx.lineWidth = diam;

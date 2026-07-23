@@ -43,7 +43,11 @@ Shaker.prototype.draw = function(scroll, ctx)
         // Approach
         if (ds < 0 && scroll <= this.endPosition.x)
         {
-            var scale = 1 + ds / this.beatmap.calcX(this.endPosition.x, this.position.x);
+            var scale = 1 + ds / this.beatmap.calcX(
+                this.endPosition.x,
+                this.position.x,
+                this.position.x
+            );
             ctx.beginPath();
             ctx.arc(0, 0,
                 (Spinner.RADIUS - Spinner.BORDER_WIDTH / 2) * scale, -Math.PI, Math.PI);

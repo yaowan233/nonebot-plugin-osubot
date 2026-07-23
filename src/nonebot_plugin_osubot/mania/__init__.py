@@ -8,6 +8,7 @@ from zipfile import ZipFile
 from dataclasses import dataclass
 
 import numpy as np
+from PIL import ImageDraw
 from vsrg_tools.osu.OsuHit import OsuHit
 from vsrg_tools.osu.OsuMap import OsuMap
 from vsrg_tools.algorithms.generate import full_ln
@@ -18,7 +19,6 @@ from vsrg_tools.algorithms.playField.parts import (
     PFDrawSv,
     PFDrawBpm,
     PFDrawLines,
-    PFDrawNotes,
     PFDrawOffsets,
     PFDrawBeatLines,
     PFDrawColumnLines,
@@ -30,6 +30,16 @@ from ..schema.beatmapsets import BeatmapSets
 osu_path = Path() / "data" / "osu"
 if not osu_path.exists():
     osu_path.mkdir(parents=True, exist_ok=True)
+
+PREVIEW_BACKGROUND = "#0a1017"
+PREVIEW_LANE = "#0e1720"
+PREVIEW_LANE_ALT = "#111c26"
+PREVIEW_LINE = "#283744"
+PREVIEW_STRONG_LINE = "#71818d"
+PREVIEW_MUTED = "#677783"
+PREVIEW_NOTE = "#dce4e9"
+PREVIEW_NOTE_ALT = "#579bb4"
+PREVIEW_NOTE_CENTER = "#c2aa69"
 
 
 @dataclass
@@ -48,20 +58,88 @@ class Options:
     thres: float = 100
 
 
+def _preview_note_color(column: int, keys: int) -> str:
+    if keys % 2 and column == keys // 2:
+        return PREVIEW_NOTE_CENTER
+    return PREVIEW_NOTE if column % 2 == 0 else PREVIEW_NOTE_ALT
+
+
+def _draw_preview_note(
+    draw: ImageDraw.ImageDraw,
+    field: PlayField,
+    column: int,
+    offset: float,
+    color: str,
+) -> None:
+    x, y = field.get_pos(offset, column, y_offset=-field.hit_height)
+    draw.rectangle(
+        (x, y, x + field.note_width - 1, y + field.hit_height - 1),
+        fill=color,
+    )
+
+
+def _draw_preview_notes(field: PlayField) -> None:
+    draw = ImageDraw.Draw(field.canvas)
+
+    for hold in field.m.holds:
+        column = int(hold.column)
+        color = _preview_note_color(column, field.keys)
+        x = field.get_pos(hold.offset, column)[0]
+        head_y = field.get_pos(hold.offset, column, y_offset=-field.hit_height)[1]
+        tail_y = field.get_pos(hold.tail_offset, column, y_offset=-field.hit_height)[1]
+        top = min(head_y, tail_y) + field.hit_height // 2
+        bottom = max(head_y, tail_y) + field.hit_height // 2
+        inset = 3
+        draw.rectangle(
+            (x + inset, top, x + field.note_width - inset - 1, bottom),
+            fill=color,
+        )
+
+    for hold in field.m.holds:
+        column = int(hold.column)
+        color = _preview_note_color(column, field.keys)
+        for offset in (hold.offset, hold.tail_offset):
+            _draw_preview_note(draw, field, column, offset, color)
+
+    for hit in field.m.hits:
+        column = int(hit.column)
+        color = _preview_note_color(column, field.keys)
+        _draw_preview_note(draw, field, column, hit.offset, color)
+
+
 async def generate_preview_pic(file: Path, full=False) -> BytesIO:
     m = OsuMap.read_file(str(file.absolute()))
     keys = m.stack().column.max() + 1
     ptn = Pattern.from_note_lists([m.hits, m.holds], include_tails=False)
     grp = ptn.group()
-    pf = (
-        PlayField(m, duration_per_px=5, padding=60)
-        + PFDrawColumnLines()
-        + PFDrawBeatLines()
-        + PFDrawBpm(x_offset=30)
-        + PFDrawSv()
-        + PFDrawNotes()
-        + PFDrawOffsets(interval=2000, decimal_places=0)
+    pf = PlayField(
+        m,
+        duration_per_px=5,
+        note_width=11,
+        hit_height=4,
+        hold_height=4,
+        column_line_width=1,
+        padding=54,
+        background_color=PREVIEW_BACKGROUND,
     )
+    draw = ImageDraw.Draw(pf.canvas)
+    lane_step = pf.note_width + pf.column_line_width
+    for column in range(pf.keys):
+        left = column * lane_step
+        draw.rectangle(
+            (left, 0, left + pf.note_width - 1, pf.canvas_h),
+            fill=PREVIEW_LANE if column % 2 == 0 else PREVIEW_LANE_ALT,
+        )
+
+    pf += PFDrawColumnLines(color=PREVIEW_LINE)
+    pf += PFDrawBeatLines(
+        divisions=(1, 2, 4),
+        division_colors={1: PREVIEW_STRONG_LINE, 2: "#34434f", 4: "#1c2832"},
+    )
+    pf += PFDrawBpm(color="#e65d69", x_offset=28, decimal_places=1)
+    pf += PFDrawSv(color="#789f8f", decimal_places=2)
+    pf += PFDrawOffsets(interval=4000, decimal_places=0, color=PREVIEW_MUTED)
+    _draw_preview_notes(pf)
     if full:
         pf += PFDrawLines.from_combo(
             **PFDrawLines.Colors.RED,
@@ -77,7 +155,11 @@ async def generate_preview_pic(file: Path, full=False) -> BytesIO:
             combo=np.concatenate(PtnCombo(grp).template_jacks(minimum_length=2, keys=keys), axis=0),
         )
     byt = BytesIO()
-    pf.export_fold(max_height=3000).save(byt, "png")
+    pf.export_fold(
+        max_height=3000,
+        stage_line_width=5,
+        stage_line_color="#202d37",
+    ).save(byt, "png")
     return byt
 
 

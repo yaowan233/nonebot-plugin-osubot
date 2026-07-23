@@ -30,7 +30,7 @@ BEAT_WIDTH = int(0.92 * HIT_RADIUS * 2 * 4)
 IMAGE_WIDTH = 1110
 
 
-def map_to_image(map_data) -> BytesIO:
+def _map_to_image_legacy(map_data) -> BytesIO:
     Image.MAX_IMAGE_PIXELS = None
     img = Image.new(mode="RGB", size=(3000, 30000), color=0x121212)
     draw = ImageDraw.Draw(img)
@@ -221,6 +221,149 @@ def map_to_image(map_data) -> BytesIO:
     byt = BytesIO()
     img.save(byt, format="PNG")
     return byt
+
+
+PREVIEW_BACKGROUND = "#0a1017"
+PREVIEW_TRACK = "#0e1720"
+PREVIEW_LINE = "#283744"
+PREVIEW_STRONG_LINE = "#71818d"
+PREVIEW_MUTED = "#677783"
+PREVIEW_DON = "#e65d69"
+PREVIEW_KAT = "#579bb4"
+PREVIEW_ACCENT = "#c2aa69"
+PREVIEW_OUTLINE = "#dce4e9"
+
+
+def _draw_preview_note(draw: ImageDraw.ImageDraw, x: int, y: int, kind: int) -> None:
+    if kind in (HIT_DON, HIT_KAT, BIG_DON, BIG_KAT):
+        color = PREVIEW_DON if kind in (HIT_DON, BIG_DON) else PREVIEW_KAT
+        radius = 7 if kind in (HIT_DON, HIT_KAT) else 11
+        draw.ellipse(
+            (x - radius, y - radius, x + radius, y + radius),
+            fill=color,
+            outline=PREVIEW_OUTLINE,
+            width=1,
+        )
+    elif kind in (SLIDER_START, BLIDER_START):
+        radius = 7 if kind == SLIDER_START else 10
+        draw.rounded_rectangle(
+            (x - radius, y - 5, x + radius, y + 5),
+            radius=4,
+            fill=PREVIEW_ACCENT,
+        )
+    elif kind == SPINNER_START:
+        draw.ellipse(
+            (x - 10, y - 10, x + 10, y + 10),
+            outline=PREVIEW_MUTED,
+            width=2,
+        )
+        draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=PREVIEW_MUTED)
+
+
+def map_to_image(map_data) -> BytesIO:
+    timing_sections = []
+    separating_times = [point[0] for point in map_data.timing_points]
+    separating_times.append(10**10)
+
+    for index, point in enumerate(map_data.timing_points):
+        objects = [
+            item
+            for item in map_data.hit_objects
+            if separating_times[index] - TIME_TOL <= item[0] < separating_times[index + 1] - TIME_TOL
+        ]
+        if objects:
+            timing_sections.append((*point, objects))
+
+    if not timing_sections:
+        image = Image.new("RGB", (IMAGE_WIDTH, 120), PREVIEW_BACKGROUND)
+        draw = ImageDraw.Draw(image)
+        draw.text((LEFT_MARGIN, 45), "No taiko objects", font=Torus_Regular_15, fill=PREVIEW_MUTED)
+        result = BytesIO()
+        image.save(result, "PNG")
+        return result
+
+    layouts = []
+    max_meter = max(section[2] for section in timing_sections)
+    for index, (start, beat_length, meter, objects) in enumerate(timing_sections):
+        end = objects[-1][0] if index == len(timing_sections) - 1 else timing_sections[index + 1][0]
+        duration = max(beat_length, end - start)
+        phrase_length = beat_length * meter * 4
+        row_count = max(1, math.ceil((duration - TIME_TOL) / phrase_length))
+        layouts.append((start, beat_length, meter, objects, duration, phrase_length, row_count))
+
+    row_distance = 58
+    section_gap = 16
+    image_width = LEFT_MARGIN * 2 + BEAT_WIDTH * 4 * max_meter
+    image_height = 28 + sum(layout[-1] * row_distance + section_gap for layout in layouts) + 38
+    image = Image.new("RGB", (image_width, image_height), PREVIEW_BACKGROUND)
+    draw = ImageDraw.Draw(image)
+
+    section_y = 28
+    bar_number = 1
+    for start, beat_length, meter, objects, duration, phrase_length, row_count in layouts:
+        bpm = 60000 / beat_length
+        draw.text(
+            (LEFT_MARGIN + 2, section_y - 25),
+            f"BPM{bpm:g}",
+            font=Torus_Regular_8,
+            fill=PREVIEW_MUTED,
+        )
+
+        full_track_width = BEAT_WIDTH * 4 * meter
+        for row in range(row_count):
+            y = section_y + row * row_distance
+            if row == row_count - 1:
+                remaining = max(beat_length, duration - row * phrase_length)
+                beat_count = min(meter * 4, max(1, math.ceil((remaining - TIME_TOL) / beat_length)))
+            else:
+                beat_count = meter * 4
+            track_width = beat_count * BEAT_WIDTH
+
+            draw.rectangle(
+                (LEFT_MARGIN, y, LEFT_MARGIN + track_width, y + FIELD_HEIGHT),
+                fill=PREVIEW_TRACK,
+            )
+            draw.line(
+                (
+                    LEFT_MARGIN,
+                    y + FIELD_HEIGHT // 2,
+                    LEFT_MARGIN + track_width,
+                    y + FIELD_HEIGHT // 2,
+                ),
+                fill="#22313c",
+            )
+            for beat in range(beat_count + 1):
+                x = LEFT_MARGIN + beat * BEAT_WIDTH
+                is_bar = beat % meter == 0
+                draw.line(
+                    (x, y - (7 if is_bar else 0), x, y + FIELD_HEIGHT),
+                    fill=PREVIEW_STRONG_LINE if is_bar else PREVIEW_LINE,
+                    width=2 if is_bar else 1,
+                )
+                if is_bar and beat < beat_count:
+                    draw.text(
+                        (x + 4, y - 13),
+                        str(bar_number),
+                        font=Torus_Regular_8,
+                        fill=PREVIEW_MUTED,
+                    )
+                    bar_number += 1
+
+        for timestamp, kind in objects:
+            time_difference = timestamp - start
+            row = min(int((time_difference + TIME_TOL) // phrase_length), row_count - 1)
+            within_phrase = time_difference - row * phrase_length
+            x = LEFT_MARGIN + int(within_phrase / phrase_length * full_track_width)
+            y = section_y + row * row_distance + FIELD_HEIGHT // 2
+            _draw_preview_note(draw, x, y, kind)
+
+        section_y += row_count * row_distance + section_gap
+
+    footer = f"{map_data.artist} — {map_data.title} [{map_data.diff}] · OSUBOT FULL MAP"
+    draw.text((LEFT_MARGIN, image.height - 25), footer, font=Torus_Regular_15, fill="#445560")
+    result = BytesIO()
+    image.save(result, "PNG")
+    return result
 
 
 class MapData:
