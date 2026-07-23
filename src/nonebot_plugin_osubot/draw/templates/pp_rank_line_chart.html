@@ -19,7 +19,7 @@
   <div class="footer">nonebot_plugin_osubot · 历史趋势 · <span id="source"></span></div>
 </main>
 <script>
-const d={{payload_json}};
+const d={{ payload | tojson }};
 const num=(v,digits=0)=>Number(v||0).toLocaleString('zh-CN',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 const signed=(v,suffix='')=>`${Number(v)>=0?'+':'−'}${num(Math.abs(v))}${suffix}`;
 document.getElementById('initial').textContent=d.initial;

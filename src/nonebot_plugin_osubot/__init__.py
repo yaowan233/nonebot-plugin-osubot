@@ -10,8 +10,13 @@ require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_waiter")
 require("nonebot_plugin_uninfo")
 from nonebot_plugin_apscheduler import scheduler
+from nonebot_plugin_htmlrender.config import plugin_config as htmlrender_config
+from nonebot_plugin_htmlrender.consts import RenderBackend
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
+
+if htmlrender_config.render_backend is None:
+    htmlrender_config.render_backend = RenderBackend.PLAYWRIGHT
 
 from .config import Config
 from .matcher import *  # noqa

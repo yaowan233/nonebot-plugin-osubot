@@ -1,17 +1,21 @@
 import asyncio
 import datetime
-import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from nonebot_plugin_htmlrender import template_to_pic
+from nonebot_plugin_htmlrender import render_template
 
 from ..api import get_users
 from ..file import download_osu, map_path
 from ..pp import cal_pp
 
-template_path = str(Path(__file__).parent / "templates")
+template_dir = Path(__file__).parent / "templates"
+template_path = str(template_dir)
+template_pages = {
+    "viewport": {"width": 1280, "height": 10},
+    "base_url": template_dir.resolve().as_uri(),
+}
 
 rank_color = {
     "X": "#ffc83a",
@@ -120,11 +124,11 @@ async def draw_history_plot(
         user_id=user_id,
         source_label=source_label,
     )
-    payload_json = json.dumps(payload, ensure_ascii=False).replace("<", "\\u003c")
-    pic = await template_to_pic(
+    pic = await render_template(
         template_path,
-        template_name,
-        {"payload_json": payload_json},
+        template_name=template_name,
+        templates={"payload": payload},
+        pages=template_pages,
     )
     return pic
 
@@ -336,10 +340,10 @@ async def draw_bpa_plot(
     if avatar_url is None and user_id:
         avatar_host = "https://a.ppy.sb" if source == "ppysb" else "https://a.ppy.sh"
         avatar_url = f"{avatar_host}/{user_id}"
-    pic = await template_to_pic(
+    pic = await render_template(
         template_path,
-        template_name,
-        {
+        template_name=template_name,
+        templates={
             "name": name,
             "username": display_name,
             "initial": display_name[:1].upper(),
@@ -359,6 +363,9 @@ async def draw_bpa_plot(
             "stats": stats,
             "length": len(pp_ls),
         },
-        pages={"viewport": {"width": 1620, "height": 10}},
+        pages={
+            "viewport": {"width": 1620, "height": 10},
+            "base_url": template_dir.resolve().as_uri(),
+        },
     )
     return pic
