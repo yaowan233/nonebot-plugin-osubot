@@ -309,11 +309,7 @@ async def draw_full_osu_preview(
                     raise RuntimeError("完整预览渲染时间未向前推进")
                 chunk_start = chunk.actual_end
                 chunk_index += 1
-                if (
-                    progress_callback is not None
-                    and not estimate_sent
-                    and chunk_index >= estimate_sample_chunks
-                ):
+                if progress_callback is not None and not estimate_sent and chunk_index >= estimate_sample_chunks:
                     elapsed = time.perf_counter() - render_started_at
                     remaining_chunks = max(total_chunks - chunk_index, 0)
                     ffmpeg_allowance = max(

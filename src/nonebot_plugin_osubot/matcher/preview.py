@@ -58,6 +58,7 @@ async def _(event: Event, state: T_State):
     if is_video_command or is_gif_preview(state):
         is_full = command == "完整预览" or is_video_command
         if is_full:
+
             async def send_estimate(seconds: float) -> None:
                 if seconds < 15:
                     return
