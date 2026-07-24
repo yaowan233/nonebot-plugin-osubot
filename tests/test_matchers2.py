@@ -651,7 +651,8 @@ async def test_preview_ctb_gif_param_uses_osu_preview_gif(app: App):
 
 
 @pytest.mark.asyncio
-async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path):
+@pytest.mark.parametrize("command", ["/视频预览 12345", "/vp 12345"])
+async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path, command):
     """/视频预览 <id> 在 mania 模式直接使用分段合成后的 MP4。"""
     try:
         from nonebot_plugin_osubot.matcher.preview import generate_preview
@@ -662,7 +663,7 @@ async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path):
     session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=3)
     video = tmp_path / "preview.mp4"
     video.write_bytes(b"video")
-    event = fake_group_message_event_v11(message=Message("/视频预览 12345"))
+    event = fake_group_message_event_v11(message=Message(command))
 
     async def render_full_preview(beatmap_id, beatmapset_id, progress_callback):
         await progress_callback(65)

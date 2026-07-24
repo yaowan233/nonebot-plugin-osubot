@@ -25,7 +25,7 @@ taiko_skin_files = {
 }
 full_preview_chunk_duration = 5_000
 taiko_full_preview_chunk_duration = 10_000
-full_preview_cache_version = 5
+full_preview_cache_version = 8
 plugin_config = get_plugin_config(Config)
 _full_preview_locks: dict[Path, asyncio.Lock] = {}
 

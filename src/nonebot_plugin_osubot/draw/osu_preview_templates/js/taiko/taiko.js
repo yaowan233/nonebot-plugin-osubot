@@ -61,6 +61,9 @@ Taiko.DEFAULT_COLORS = [
 Taiko.DIAMETER = 56;
 Taiko.PLAYFIELD_LENGTH = Beatmap.WIDTH - 160;
 Taiko.BASE_SCROLL_SPEED = 0.14;
+Taiko.HIT_GRAVITY_TIME = 300;
+Taiko.HIT_TRAVEL_HEIGHT = 200;
+Taiko.HIT_ANIMATION_DURATION = Taiko.HIT_GRAVITY_TIME;
 Taiko.prototype.scrollMultiplierAt = function(time)
 {
     var timingPoint = this.timingPointAt(time);
@@ -82,6 +85,12 @@ Taiko.prototype.update = function(ctx)
     ctx.textBaseline = 'middle';
     ctx.translate(160, 200);
 };
+Taiko.prototype.displayEndTime = function(hitObject)
+{
+    return hitObject instanceof DonKat
+        ? hitObject.time + Taiko.HIT_ANIMATION_DURATION
+        : hitObject.endTime;
+};
 Taiko.prototype.draw = function(time, ctx)
 {
     if (typeof this.tmp.first == 'undefined')
@@ -92,7 +101,7 @@ Taiko.prototype.draw = function(time, ctx)
 
     var scroll = time;
     while (this.tmp.first < this.HitObjects.length &&
-        time > this.HitObjects[this.tmp.first].endTime)
+        time > this.displayEndTime(this.HitObjects[this.tmp.first]))
     {
         this.tmp.first++;
     }
@@ -123,7 +132,8 @@ Taiko.prototype.draw = function(time, ctx)
         {
             var hitObject = this.HitObjects[i];
             var isDrumroll = hitObject instanceof Drumroll;
-            if ((layer == 0) != isDrumroll || time > hitObject.endTime)
+            if ((layer == 0) != isDrumroll ||
+                time > this.displayEndTime(hitObject))
             {
                 continue;
             }
