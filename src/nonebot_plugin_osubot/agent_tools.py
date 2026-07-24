@@ -15,7 +15,7 @@ from sqlalchemy import select
 from nonebot_plugin_orm import get_session
 from nonebot_plugin_alconna import UniMessage
 
-from nonebot_plugin_ai_groupmate.agent import AgentSkill, AgentToolBundle, AgentToolContext, register_agent_tool
+from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext, register_agent_tool
 
 from .api import get_uid_by_name, get_recommend, get_user_scores, osu_api, safe_async_get
 from .draw import draw_bp, draw_info, draw_score, get_score_data, draw_map_info, draw_bmap_info
@@ -108,38 +108,6 @@ def _extract_mentioned_user_id(ctx: AgentToolContext) -> str | None:
     return None
 
 
-def _event_user_id(ctx: AgentToolContext) -> str | None:
-    if not ctx.event:
-        return None
-    try:
-        return _clean_user_id(ctx.event.get_user_id())
-    except Exception:
-        return _clean_user_id(getattr(ctx.event, "user_id", None))
-
-
-def _tool_user_id_candidates(ctx: AgentToolContext, target_user_id: str | int | None = None) -> list[str]:
-    bot_ids = {
-        user_id
-        for user_id in (
-            _clean_user_id(ctx.bot_id),
-            _clean_user_id(getattr(ctx.event, "self_id", None) if ctx.event else None),
-        )
-        if user_id
-    }
-    candidates = [
-        _clean_user_id(target_user_id),
-        _extract_mentioned_user_id(ctx),
-        _clean_user_id(ctx.user_id),
-        _event_user_id(ctx),
-    ]
-    result: list[str] = []
-    for candidate in candidates:
-        if not candidate or candidate in bot_ids or candidate in result:
-            continue
-        result.append(candidate)
-    return result
-
-
 def _normalize_mode(mode: str | int | None, source: str) -> str | None:
     if mode is None:
         return None
@@ -176,27 +144,19 @@ async def _resolve_osu_user(
     if name:
         return ResolvedOsuUser(await get_uid_by_name(name, source), name)
 
-    bind_user_ids = _tool_user_id_candidates(ctx, target_user_id)
-    if not bind_user_ids:
+    bind_user_id = _clean_user_id(target_user_id) or _extract_mentioned_user_id(ctx) or ctx.user_id
+    if not bind_user_id:
         raise ValueError("当前没有可用的用户 ID，请指定 osu 用户名")
 
     if source == "ppysb":
         async with get_session() as session:
-            user = None
-            for bind_user_id in bind_user_ids:
-                user = await session.scalar(select(SbUserData).where(SbUserData.user_id == bind_user_id))
-                if user:
-                    break
+            user = await session.scalar(select(SbUserData).where(SbUserData.user_id == bind_user_id))
         if not user:
             raise ValueError("当前用户尚未绑定 osu 账号，请先使用 /sbbind 用户名")
         return ResolvedOsuUser(user.osu_id, user.osu_name)
 
     async with get_session() as session:
-        user = None
-        for bind_user_id in bind_user_ids:
-            user = await session.scalar(select(UserData).where(UserData.user_id == bind_user_id))
-            if user:
-                break
+        user = await session.scalar(select(UserData).where(UserData.user_id == bind_user_id))
 
     if not user:
         raise ValueError("当前用户尚未绑定 osu 账号，请先使用 /bind 用户名")
@@ -592,19 +552,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         username: str | None = None,
         target_user_id: str | None = None,
         mode: str | None = None,
-        target: str | None = "mixed",
         include_image_for_analysis: bool = False,
     ) -> str | list[ContentBlock]:
-        """
-        查询并发送推荐谱面图。
-        target 取值规则：普通推荐/综合/好玩且能打用 mixed；吃分/pp/能上分用 farm；难一点/更难/高难/冲分/peak 用 peak；
-        练习/风格/值得练/practice/style 用 style；均衡/balanced 用 balanced。
-        target_user_id 是 QQ/群用户 ID，不是 osu id；查询当前发言人时不要填写 target_user_id。
-        """
+        """查询并发送推荐谱面图。"""
         try:
             user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
             mode = _resolve_mode(mode, user, "osu")
-            api_task = asyncio.create_task(get_recommend(user.user_id, mode, target))
+            api_task = asyncio.create_task(get_recommend(user.user_id, mode))
             done, _ = await asyncio.wait([api_task], timeout=5)
             if not done:
                 await UniMessage.text("正在获取推荐谱面，请稍候...").send(target=ctx.send_target)
@@ -800,52 +754,33 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             send_osu_map_info,
             send_osu_beatmapset_info,
         ],
-        skills=[
-            AgentSkill(
-                name="osu_tools",
-                description="osu! 查分、玩家信息、bp、recent/pr、谱面、推荐、match、medal 等功能的完整调用规则。",
-                prompt="\n".join(
-                    [
-                        "- 未指定玩家、用户说“我/自己/我的”时，不要传 username；"
-                        "工具会使用当前发言用户绑定的 osu 账号。",
-                        "- 用户想查被 @ 的群友时，不要传 username；"
-                        "工具会自动读取消息中的非 bot @ 目标并使用该群友绑定账号。",
-                        "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
-                        "- target_user_id 是 QQ/群用户 ID，不是 osu id；查询当前发言人时不要填写 target_user_id。",
-                        "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。"
-                        "未指定 lazer/stable 时，不要传 is_lazer。",
-                        "- 如果用户只要求查询/发图，不要传 include_image_for_analysis，发图后调用 finish 或简短结束。",
-                        "- 如果用户问“打得怎么样/发挥如何/分析/评价/看看问题”，传 include_image_for_analysis=true；"
-                        "看到工具返回的图片后，再基于图片内容给出简短评价。",
-                        "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
-                        "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
-                        "- send_osu_bp_list: 用户想查 bp 列表、bplist、pfm 或一段 bp 范围时使用。",
-                        "- send_osu_recent_or_pr: 用户想查 recent/re 或 pr/最近 best 成绩时使用。",
-                        "- send_osu_score: 用户想查某人在指定谱面上的成绩时使用。",
-                        "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
-                        "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
-                        "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
-                        "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"
-                        "想难一点/更难/冲分/高难传 target='peak'，想练习/风格推荐传 target='style'，"
-                        "想均衡传 target='balanced'。",
-                        "- send_osu_profile_url: 用户想要 osu 主页链接、个人主页、mu 时使用。",
-                        "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。",
-                        "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。",
-                        "- send_osu_preview: 用户想看谱面预览、preview、完整预览时使用。",
-                        "- send_osu_background: 用户想提取谱面背景、getbg、背景图时使用。",
-                        "- send_osu_medal: 用户想查 medal/成就获得方式时使用。",
-                        "- send_osu_map_info: 用户想查单张谱面 map/beatmap 信息时使用。",
-                        "- send_osu_beatmapset_info: 用户想查谱面集 beatmapset/bmap 信息时使用。",
-                    ]
-                ),
-            )
-        ],
         instructions=[
             "- 用户询问“怎么用/什么指令/有哪些命令/格式或简称”时，调用 get_osubot_command_help，"
             "根据问题选择 topic，并原样保留工具返回的斜杠指令和示例。",
             "- 区分教学和执行：例如“BP 指令怎么用”只查 command help；“帮我查 BP”才调用成绩工具。"
             "不要为了演示用法而调用会发图或执行查询的工具。",
-            "- 用户要查询 osu!/osu 查分/玩家信息/bp/recent/pr/谱面/推荐/match/medal 时，"
-            "先调用 load_agent_skill('osu_tools') 读取完整规则，再选择 send_osu_* 工具。",
+            "- 未指定玩家、用户说“我/自己/我的”时，不要传 username；工具会使用当前发言用户绑定的 osu 账号。",
+            "- 用户想查被 @ 的群友时，不要传 username；工具会自动读取消息中的非 bot @ 目标并使用该群友绑定账号。",
+            "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
+            "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。未指定 lazer/stable 时，不要传 is_lazer。",
+            "- 如果用户只要求查询/发图，不要传 include_image_for_analysis，发图后调用 finish 或简短结束。",
+            "- 如果用户问“打得怎么样/发挥如何/分析/评价/看看问题”，传 include_image_for_analysis=true；"
+            "看到工具返回的图片后，再基于图片内容给出简短评价。",
+            "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
+            "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
+            "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm 或一段 bp 范围时使用。默认范围优先用 1-30。",
+            "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。",
+            "- send_osu_score: 用户想查某人在指定谱面上的成绩时使用。",
+            "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
+            "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
+            "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用。",
+            "- send_osu_profile_url: 用户想要 osu 主页链接、个人主页、mu 时使用。",
+            "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。",
+            "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。",
+            "- send_osu_preview: 用户想看谱面预览、preview、完整预览时使用。",
+            "- send_osu_background: 用户想提取谱面背景、bg/getbg、背景图时使用。",
+            "- send_osu_medal: 用户想查 medal/成就获得方式时使用。",
+            "- send_osu_map_info: 用户想实际查询单张谱面 m/map/beatmap 信息时使用。",
+            "- send_osu_beatmapset_info: 用户想实际查询谱面集 bm/bmap/beatmapset 信息时使用。",
         ],
     )

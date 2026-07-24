@@ -8,7 +8,7 @@ from typing import Union, Literal, Optional
 from nonebot.log import logger
 from expiringdict import ExpiringDict
 from nonebot import get_plugin_config
-from httpx import HTTPError, Response
+from httpx import Response
 
 from .network.manager import network_manager
 from .schema.beatmapsets import BeatmapSets
@@ -470,7 +470,7 @@ async def get_seasonal_bg() -> Optional[dict]:
     return req.json() if req.status_code == 200 else None
 
 
-async def _get_legacy_recommend(uid, mode):
+async def get_recommend(uid, mode):
     mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
     mode_str = mode_map.get(str(mode), "osu")
     res = await safe_async_get(
@@ -480,142 +480,3 @@ async def _get_legacy_recommend(uid, mode):
     if res is None:
         raise NetworkError("推荐服务繁忙，请稍后再试")
     return RecommendData(**res.json())
-
-
-def _recommend_target(target: str | None) -> str:
-    value = (target or "mixed").strip().lower()
-    aliases = {
-        "farm": "farm",
-        "pp": "farm",
-        "mixed": "mixed",
-        "mix": "mixed",
-        "all": "mixed",
-        "overall": "mixed",
-        "综合": "mixed",
-        "总和": "mixed",
-        "全部": "mixed",
-        "吃分": "farm",
-        "涨pp": "farm",
-        "balanced": "balanced",
-        "balance": "balanced",
-        "normal": "balanced",
-        "推荐": "mixed",
-        "普通": "balanced",
-        "peak": "peak",
-        "hard": "peak",
-        "harder": "peak",
-        "difficult": "peak",
-        "challenge": "peak",
-        "难一点": "peak",
-        "更难": "peak",
-        "高难": "peak",
-        "冲分": "peak",
-        "style": "style",
-        "practice": "style",
-        "train": "style",
-        "training": "style",
-        "风格": "style",
-        "练习": "style",
-        "练图": "style",
-        "练习推荐": "style",
-        "难": "peak",
-    }
-    return aliases.get(value, "mixed")
-
-
-async def _get_recommend_beatmapset_ids(items: list[dict]) -> dict[int, int]:
-    missing_map_ids = [
-        int(item["beatmap_id"]) for item in items if item.get("beatmap_id") and not item.get("beatmapset_id")
-    ]
-    if not missing_map_ids:
-        return {}
-
-    async def fetch_beatmapset_id(map_id: int) -> tuple[int, int | None]:
-        client = await network_manager.get_client()
-        try:
-            res = await client.get(f"https://osu.ppy.sh/b/{map_id}", timeout=15)
-            url = str(res.url)
-            if "/beatmapsets/" in url:
-                beatmapset_id = url.split("/beatmapsets/", 1)[1].split("#", 1)[0].split("/", 1)[0]
-                return map_id, int(beatmapset_id)
-        except Exception as e:
-            logger.debug(f"failed to fetch beatmapset id by redirect for recommended map {map_id}: {e}")
-
-        try:
-            data = await osu_api("map", map_id=map_id)
-            beatmapset_id = data.get("beatmapset_id") or (data.get("beatmapset") or {}).get("id")
-            return map_id, int(beatmapset_id) if beatmapset_id else None
-        except Exception as e:
-            logger.debug(f"failed to fetch beatmapset id for recommended map {map_id}: {e}")
-            return map_id, None
-
-    results = await asyncio.gather(*(fetch_beatmapset_id(map_id) for map_id in missing_map_ids))
-    return {map_id: beatmapset_id for map_id, beatmapset_id in results if beatmapset_id}
-
-
-async def get_recommend(uid, mode, target: str | None = "mixed"):
-    mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
-    mode_str = mode_map.get(str(mode), "osu")
-    target_str = _recommend_target(target)
-    base_url = plugin_config.osu_recommend_api.rstrip("/")
-    client = await network_manager.get_client()
-    try:
-        res = await client.get(
-            f"{base_url}/recommend/{mode_str}/{uid}",
-            params={
-                "target": target_str,
-                "candidate_limit": plugin_config.osu_recommend_candidate_limit,
-                "result_limit": plugin_config.osu_recommend_result_limit,
-            },
-            timeout=plugin_config.osu_recommend_timeout,
-        )
-    except HTTPError as e:
-        detail = str(e) or e.__class__.__name__
-        raise NetworkError(f"推荐服务请求失败: {detail}") from e
-    if res is None or res.status_code >= 500:
-        raise NetworkError("推荐服务繁忙，请稍后再试")
-    if res.status_code >= 400:
-        raise NetworkError(f"推荐服务返回 {res.status_code}: {res.text[:120]}")
-
-    data = res.json()
-    items = data.get("items", [])
-    section_items = [item for section in data.get("sections", []) or [] for item in section.get("items", []) or []]
-    beatmapset_ids = await _get_recommend_beatmapset_ids(items + section_items)
-
-    def convert_item(item: dict) -> dict:
-        map_id = item.get("beatmap_id")
-        artist = item.get("artist") or ""
-        title = item.get("title") or f"Map {map_id}"
-        version = item.get("version") or "Unknown"
-        display_title = f"{artist} - {title} [{version}]" if artist else f"{title} [{version}]"
-        return {
-            "map_id": map_id,
-            "mod": item.get("mod_int", 0),
-            "mod_str": item.get("mods") or "NM",
-            "stars": item.get("stars", 0.0),
-            "pred_pp": item.get("pred_pp", 0.0),
-            "pred_acc": item.get("pred_acc", 0.0),
-            "final_score": item.get("ranking_score", 0.0),
-            "title": display_title,
-            "beatmapset_id": item.get("beatmapset_id") or beatmapset_ids.get(map_id) or 0,
-            "url": item.get("url"),
-            "evidence_count": item.get("evidence_count"),
-            "target": item.get("target"),
-        }
-
-    recommendations = [convert_item(item) for item in items]
-    sections = [
-        {
-            "key": section.get("key", ""),
-            "title": section.get("title", ""),
-            "items": [convert_item(item) for item in section.get("items", []) or []],
-        }
-        for section in data.get("sections", []) or []
-    ]
-    return RecommendData(
-        player_id=data.get("player_id", uid),
-        mode=data.get("mode", mode_str),
-        target=data.get("target", target_str),
-        recommendations=recommendations,
-        sections=sections,
-    )
