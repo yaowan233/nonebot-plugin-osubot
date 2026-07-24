@@ -164,18 +164,26 @@ async def test_osu_help_detail_chinese(app: App):
 
 
 @pytest.mark.asyncio
-async def test_osu_help_topic(app: App):
-    """/oh mode returns focused help instead of the full image."""
+@pytest.mark.parametrize(
+    ("command", "topic"),
+    [
+        ("/oh mode", "mode"),
+        ("/oh /vp", "map"),
+        ("/oh bpa", "score"),
+    ],
+)
+async def test_osu_help_topic(app: App, command: str, topic: str):
+    """/oh accepts both topic names and concrete commands."""
     from nonebot_plugin_osubot.matcher.osu_help import HELP_TOPICS, osu_help
 
     import nonebot
 
-    event = fake_group_message_event_v11(message=Message("/oh mode"))
+    event = fake_group_message_event_v11(message=Message(command))
     async with app.test_matcher(osu_help) as ctx:
         adapter = nonebot.get_adapter(OnebotV11Adapter)
         bot = ctx.create_bot(base=Bot, adapter=adapter)
         ctx.receive_event(bot, event)
-        ctx.should_call_send(event, text_msg(event, HELP_TOPICS["mode"]), result={"message_id": 1})
+        ctx.should_call_send(event, text_msg(event, HELP_TOPICS[topic]), result={"message_id": 1})
         ctx.should_finished()
 
 

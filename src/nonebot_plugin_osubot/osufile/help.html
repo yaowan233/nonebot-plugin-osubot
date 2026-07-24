@@ -143,7 +143,7 @@
         </div>
         <p class="hint">临时查别人：<code>/info peppy:0</code></p>
         <p class="hint" style="margin-top:10px">带 Mods 查询：<code>/bp 5 +HDHR</code></p>
-        <p class="hint" style="margin-top:10px">查询范围：<code>/bp 5-10</code></p>
+        <p class="hint" style="margin-top:10px">查询范围：<code>/bl 5-10</code></p>
         <p class="hint" style="margin-top:10px">复用上一张谱面：<code>/m 782309</code> 后直接发送 <code>/sc</code></p>
         <p class="hint" style="margin-top:10px">非 std 谱面自动使用原生模式；SB RX 自动匹配分类</p>
         <p class="hint" style="margin-top:10px">SB 服：先 <code>/sbbind 玩家</code>，查询末尾加 <code>&amp;sb</code></p>
@@ -159,11 +159,11 @@
       <div class="command"><div class="command-head"><span class="command-name">/re · /pr</span><span class="tag">单条成绩</span></div><div class="desc">查看某一次最近游玩或最近通过的详细成绩</div><div class="example">/re　·　/re 3　·　/pr 2</div></div>
       <div class="command"><div class="command-head"><span class="command-name">/sc &lt;mapid&gt;</span><span class="tag">谱面成绩</span></div><div class="desc">查询自己或指定玩家在某张谱面的成绩</div><div class="example">/sc 782309 +HDHR</div></div>
       <div class="command"><div class="command-head"><span class="command-name">/m · /bm</span><span class="tag">谱面信息</span></div><div class="desc">查看单张难度或整个谱面集的信息</div><div class="example">/m 782309　·　/bm 355322</div></div>
-      <div class="command"><div class="command-head"><span class="command-name">/预览 &lt;mapid&gt;</span><span class="tag">谱面预览</span></div><div class="desc">生成 osu!、taiko、catch 或 mania 谱面预览</div><div class="example">/预览 3903979:3</div></div>
+      <div class="command"><div class="command-head"><span class="command-name">/预览 · /vp</span><span class="tag">谱面预览</span></div><div class="desc">普通图片、短动态预览或完整视频</div><div class="example">/预览 3903979:3　·　/预览 3903979 +gif　·　/vp 3903979</div></div>
       <div class="command"><div class="command-head"><span class="command-name">/推荐</span><span class="tag">个性推荐</span></div><div class="desc">根据当前账号和模式推荐适合的谱面</div><div class="example">/推荐　·　/推荐 peppy:0</div></div>
     </section>
 
-    <footer class="footer"><span>主题帮助：<strong>/oh mode</strong>、<strong>/oh score</strong>、<strong>/oh map</strong></span><span>完整命令表：<strong>/oh detail</strong></span></footer>
+    <footer class="footer"><span>输入命令查帮助：<strong>/oh bp</strong>、<strong>/oh vp</strong>、<strong>/oh bg</strong></span><span>完整命令表：<strong>/oh detail</strong></span></footer>
   </main>
 
   <main id="detail" class="page">
@@ -176,7 +176,7 @@
     </header>
 
     <section class="syntax">
-      <div class="card accent"><div class="eyebrow">通用查询语法</div><div class="syntax-line">/命令 <span>[玩家]</span> <span>[序号/范围]</span><span>:[模式]</span> <span>[+Mods]</span> <span>[&amp;sb]</span></div><div class="syntax-note">示例：<code>/bp peppy 5-10:o +HDHR</code>　支持 osu! 链接，反向范围会自动纠正。</div></div>
+      <div class="card accent"><div class="eyebrow">通用查询语法</div><div class="syntax-line">/命令 <span>[玩家]</span> <span>[序号/范围]</span><span>:[模式]</span> <span>[+Mods]</span> <span>[&amp;sb]</span></div><div class="syntax-note">示例：<code>/bl peppy 5-10:o +HDHR</code>　支持 osu! 链接，反向范围会自动纠正。</div></div>
       <div class="card"><div class="eyebrow">模式名称与简称</div><div class="mode-row"><span class="chip"><b>o / 0</b> osu!</span><span class="chip"><b>t / 1</b> taiko</span><span class="chip"><b>c / 2</b> catch</span><span class="chip"><b>m / 3</b> mania</span></div><div class="syntax-note">未填写时使用绑定账号中保存的默认模式。</div></div>
     </section>
 
@@ -218,9 +218,10 @@
       <div class="group"><div class="group-title">谱面工具</div><div class="rows">
         <div class="row"><code>/m &lt;mapid&gt; [+Mods]</code><span>单张难度信息（/map）</span></div>
         <div class="row"><code>/bm &lt;setid&gt;</code><span>谱面集信息（/bmap）</span></div>
-        <div class="row"><code>/预览 &lt;mapid&gt;:[模式]</code><span>生成谱面预览</span></div>
-        <div class="row"><code>/完整预览 &lt;mapid&gt;</code><span>生成完整谱面图片</span></div>
-        <div class="row"><code>/视频预览 &lt;mapid&gt;</code><span>生成完整谱面视频（简称 /vp）</span></div>
+        <div class="row"><code>/预览 &lt;mapid&gt;:[模式]</code><span>生成普通谱面预览图</span></div>
+        <div class="row"><code>/预览 &lt;mapid&gt; +gif</code><span>生成约 10 秒的动态预览</span></div>
+        <div class="row"><code>/完整预览 &lt;mapid&gt;</code><span>生成完整预览图片</span></div>
+        <div class="row"><code>/vp &lt;mapid&gt;</code><span>生成完整预览视频（/视频预览，耗时较长）</span></div>
         <div class="row"><code>/bg [mapid]</code><span>提取谱面背景（/getbg）；留空复用最近谱面</span></div>
         <div class="row"><code>/dl [setid]</code><span>下载谱面并上传群文件（/osudl）</span></div>
         <div class="row"><code>/倍速 &lt;mapid&gt; &lt;速率&gt;</code><span>生成 mania 倍速谱面</span></div>
@@ -230,8 +231,6 @@
 
       <div class="group"><div class="group-title">个性化与扩展</div><div class="rows">
         <div class="row"><code>/推荐 [玩家]:[模式]</code><span>获取个性化谱面推荐</span></div>
-        <div class="row"><code>/setbg</code><span>设置个人信息卡背景（/更新背景）</span></div>
-        <div class="row"><code>/clearbg</code><span>移除自定义背景（/清空背景）</span></div>
         <div class="row"><code>/md &lt;成就名&gt;</code><span>查询成就达成方式（/medal）</span></div>
         <div class="row"><code>/mp &lt;matchid&gt;</code><span>查看多人比赛结果（/match）</span></div>
         <div class="row"><code>/rt &lt;matchid&gt;</code><span>计算多人比赛 rating（/rating）</span></div>
@@ -248,7 +247,7 @@
       </div></div>
     </section>
 
-    <footer class="footer"><span><strong>主题帮助：</strong>/oh bind · /oh mode · /oh score · /oh map · /oh sb</span><span>返回快速指南：<strong>/oh</strong></span></footer>
+    <footer class="footer"><span><strong>输入命令查帮助：</strong>/oh bp · /oh vp · /oh bg · /oh rank</span><span>返回快速指南：<strong>/oh</strong></span></footer>
   </main>
 
   <script>

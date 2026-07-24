@@ -800,7 +800,7 @@ async def test_recommend_taiko_mode(app: App):
 
 
 # ============================================================
-# update_info / clear_background
+# update_info
 # ============================================================
 
 UPDATE_MODULE = "nonebot_plugin_osubot.matcher.update"
@@ -856,69 +856,6 @@ async def test_update_info_success(app: App):
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(event, text_msg(event, "个人信息更新成功"), result={"message_id": 1})
-
-
-@pytest.mark.asyncio
-async def test_clear_background_no_file(app: App):
-    """/清空背景 文件不存在 → 提示还没有设置背景"""
-    try:
-        from nonebot_plugin_osubot.matcher.update import clear_background
-    except ImportError:
-        pytest.skip()
-
-    session = make_mock_session()
-    session.scalar.return_value = make_mock_user(osu_id=114514)
-
-    mock_info_path = MagicMock()
-    mock_info_path.exists.return_value = False
-    mock_user_dir = MagicMock()
-    mock_user_dir.__truediv__ = MagicMock(return_value=mock_info_path)
-    mock_cache_path = MagicMock()
-    mock_cache_path.__truediv__ = MagicMock(return_value=mock_user_dir)
-
-    event = fake_group_message_event_v11(message=Message("/清空背景"))
-
-    with patch_session(UTILS_MODULE, session):
-        with patch(f"{UPDATE_MODULE}.user_cache_path", mock_cache_path):
-            async with app.test_matcher(clear_background) as ctx:
-                adapter = nonebot.get_adapter(OnebotV11Adapter)
-                bot = ctx.create_bot(base=Bot, adapter=adapter)
-                ctx.receive_event(bot, event)
-                ctx.should_call_send(
-                    event,
-                    text_msg(event, "您还没有设置背景或已成功清除背景"),
-                    result={"message_id": 1},
-                )
-
-
-@pytest.mark.asyncio
-async def test_clear_background_success(app: App):
-    """/清空背景 文件存在 → 删除并回复成功"""
-    try:
-        from nonebot_plugin_osubot.matcher.update import clear_background
-    except ImportError:
-        pytest.skip()
-
-    session = make_mock_session()
-    session.scalar.return_value = make_mock_user(osu_id=114514)
-
-    mock_info_path = MagicMock()
-    mock_info_path.exists.return_value = True
-    mock_info_path.unlink = MagicMock()
-    mock_user_dir = MagicMock()
-    mock_user_dir.__truediv__ = MagicMock(return_value=mock_info_path)
-    mock_cache_path = MagicMock()
-    mock_cache_path.__truediv__ = MagicMock(return_value=mock_user_dir)
-
-    event = fake_group_message_event_v11(message=Message("/清空背景"))
-
-    with patch_session(UTILS_MODULE, session):
-        with patch(f"{UPDATE_MODULE}.user_cache_path", mock_cache_path):
-            async with app.test_matcher(clear_background) as ctx:
-                adapter = nonebot.get_adapter(OnebotV11Adapter)
-                bot = ctx.create_bot(base=Bot, adapter=adapter)
-                ctx.receive_event(bot, event)
-                ctx.should_call_send(event, text_msg(event, "背景图片清除成功"), result={"message_id": 1})
 
 
 # ============================================================

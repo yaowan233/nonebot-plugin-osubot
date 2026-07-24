@@ -39,17 +39,19 @@ HELP_TOPICS = {
         "/m [mapid] [+Mods]：单张难度信息\n"
         "/bm [setid]：谱面集信息\n"
         "/sc [mapid]：查询玩家在谱面上的成绩\n"
-        "/bg [mapid]：获取背景；/预览 [mapid]:[模式]：生成预览\n"
+        "/bg [mapid]：获取背景\n"
+        "/预览 [mapid]:[模式]：生成普通预览图\n"
+        "/预览 [mapid] +gif：生成约 10 秒的动态预览\n"
+        "/完整预览 [mapid]：生成完整预览图片；/vp [mapid]：生成完整预览视频\n"
         "/dl [setid]：下载谱面集；/倍速、/反键：谱面转换\n"
         "支持 osu! 谱面链接。先查询一张谱面后，/m、/bm、/sc、/bg、/预览、/dl 等可省略 ID，复用最近谱面。\n"
-        "非 std 谱面会自动使用原生模式，不能强制转成其他模式。"
+        "非 std 谱面会自动使用原生模式，不能强制转成其他模式。完整视频渲染可能需要等待。"
     ),
     "profile": (
         "账号资料与设置\n"
         "/info [玩家]:[模式]：玩家资料\n"
         "/mu：已绑定玩家主页；/update：刷新个人信息缓存\n"
-        "/rank：群内 PP 排名；/推荐：个性化谱面推荐\n"
-        "/setbg：设置个人背景；/clearbg：清除个人背景"
+        "/rank：群内 PP 排名；/推荐：个性化谱面推荐"
     ),
     "game": (
         "多人和其他功能\n"
@@ -75,28 +77,67 @@ TOPIC_ALIASES = {
     "lazer": "mode",
     "成绩": "score",
     "bp": "score",
+    "bl": "score",
+    "bplist": "score",
+    "pfm": "score",
+    "re": "score",
     "recent": "score",
     "最近": "score",
+    "rl": "score",
+    "pr": "score",
+    "pl": "score",
+    "score": "score",
+    "sc": "score",
+    "nb": "score",
+    "tbp": "score",
+    "bpa": "score",
+    "bp分析": "score",
+    "hs": "score",
+    "history": "score",
     "谱面": "map",
     "地图": "map",
     "beatmap": "map",
+    "m": "map",
+    "bm": "map",
+    "bmap": "map",
+    "bg": "map",
+    "getbg": "map",
+    "dl": "map",
+    "osudl": "map",
+    "预览": "map",
+    "preview": "map",
+    "完整预览": "map",
+    "视频预览": "map",
+    "vp": "map",
     "资料": "profile",
     "设置": "profile",
     "用户": "profile",
+    "info": "profile",
+    "mu": "profile",
+    "rank": "profile",
+    "推荐": "profile",
     "多人": "game",
     "比赛": "game",
     "match": "game",
     "游戏": "game",
+    "mp": "game",
+    "rating": "game",
+    "rt": "game",
+    "medal": "game",
+    "md": "game",
     "ppysb": "sb",
     "sb服": "sb",
+    "sbbind": "sb",
+    "sbunbind": "sb",
+    "lz": "mode",
 }
 
-TOPIC_LABELS = "overview、bind、mode、score、map、profile、game、sb、all"
+TOPIC_LABELS = "概览、绑定、模式、成绩、谱面、资料、多人、SB服、全部"
 
 
 def get_command_help(topic: str | None = "overview") -> str:
     """Return exact manual command help for matchers and LLM tools."""
-    normalized = (topic or "overview").strip().lower()
+    normalized = (topic or "overview").strip().lower().lstrip("/")
     normalized = TOPIC_ALIASES.get(normalized, normalized)
     if normalized in {"all", "全部", "完整", "所有指令"}:
         return "\n\n".join(HELP_TOPICS[name] for name in HELP_TOPICS if name != "overview")

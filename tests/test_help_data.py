@@ -9,13 +9,19 @@ get_command_help = HELP_DATA["get_command_help"]
 
 def test_help_topic_aliases():
     assert get_command_help("BP") == HELP_TOPICS["score"]
+    assert get_command_help("/bpa") == HELP_TOPICS["score"]
+    assert get_command_help("hs") == HELP_TOPICS["score"]
     assert get_command_help("谱面") == HELP_TOPICS["map"]
+    assert get_command_help("vp") == HELP_TOPICS["map"]
+    assert get_command_help("/bg") == HELP_TOPICS["map"]
+    assert get_command_help("预览") == HELP_TOPICS["map"]
+    assert get_command_help("rank") == HELP_TOPICS["profile"]
     assert get_command_help("SB服") == HELP_TOPICS["sb"]
 
 
 def test_all_help_contains_important_short_commands():
     help_text = get_command_help("all")
-    for command in ("/bind", "/mode", "/bl", "/rl", "/pl", "/sc", "/m", "/bm", "/bg"):
+    for command in ("/bind", "/mode", "/bl", "/rl", "/pl", "/sc", "/m", "/bm", "/bg", "/vp"):
         assert command in help_text
 
 

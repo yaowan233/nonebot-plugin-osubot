@@ -17,7 +17,7 @@ with open(Path(__file__).parent.parent / "osufile" / "detail.png", "rb") as f:
 
 @osu_help.handle()
 async def _help(arg: Message = CommandArg()):
-    arg = arg.extract_plain_text().strip().lower()
+    arg = arg.extract_plain_text().strip().lower().lstrip("/")
     if arg in {"detail", "详细", "详情"}:
         await UniMessage.image(raw=img2).finish(reply_to=True)
     if arg in {"", "overview", "概览"}:

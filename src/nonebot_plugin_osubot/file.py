@@ -156,14 +156,6 @@ async def make_badge_cache_file(badge: Badge):
         f.write(badge_icon.getvalue())
 
 
-# 保存个人信息界面背景
-async def save_info_pic(user: str, byt: bytes):
-    path = user_cache_path / user
-    path.mkdir(parents=True, exist_ok=True)
-    with open(path / "info.png", "wb") as f:
-        f.write(BytesIO(byt).getvalue())
-
-
 def calculate_file_chunks(file_path: str, chunk_size: int = 1024 * 64) -> tuple[list[bytes], str, int]:
     """
     计算文件分片和 SHA256
