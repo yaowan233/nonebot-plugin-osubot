@@ -10,7 +10,17 @@ function Slider(data, beatmap)
         points[i] = new Point(points[i].split(':'));
     }
     this.repeat = data[6] | 0;
-    this.pixelLength = +data[7];
+    this.pixelLength = Math.max(0, +data[7]);
+    var pathLength = this.pixelLength;
+    if (!(pathLength > 0))
+    {
+        // Keep the legacy zero duration while still providing a usable length
+        // to the curve parser.
+        for (var pointIndex = 1; pointIndex < points.length; pointIndex++)
+        {
+            pathLength += points[pointIndex - 1].distanceTo(points[pointIndex]);
+        }
+    }
 
     var sliderTime = this.beatmap.timingPointAt(this.time).beatLength * (
             this.pixelLength / this.beatmap.SliderMultiplier
@@ -18,7 +28,7 @@ function Slider(data, beatmap)
     this.endTime += sliderTime * this.repeat;
     this.duration = this.endTime - this.time;
 
-    this.curve = Curve.parse(sliderType, points, this.pixelLength);
+    this.curve = Curve.parse(sliderType, points, pathLength);
 
     this.endPosition = this.curve.pointAt(1);
 }

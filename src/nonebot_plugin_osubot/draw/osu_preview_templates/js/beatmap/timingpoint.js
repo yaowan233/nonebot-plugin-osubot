@@ -9,11 +9,17 @@ function TimingPoint(line)
     this.time = data[0] | 0;
     this.beatLength = +data[1];
     this.meter = (data[2] | 0) || 4;
-    this.kiai = (data[7] | 0) % 2;
+    var effects = data[7] | 0;
+    this.kiai = effects & 1;
+    this.omitFirstBarLine = !!(effects & 8);
 
     // this is non-inherited timingPoint
     if (this.beatLength >= 0)
     {
+        // osu!stable constrains uninherited timing points to this range.
+        // Gimmick maps sometimes store values such as 1E-300; applying those
+        // literally makes the accumulated taiko scroll overflow.
+        this.beatLength = Math.max(6, Math.min(this.beatLength, 60000));
         TimingPoint.parent = this;
         this.sliderVelocity = 1;
     }

@@ -1,3 +1,5 @@
+import importlib.util
+
 from nonebot import require
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
@@ -23,17 +25,10 @@ from .matcher import *  # noqa
 from .info import update_users_info
 from .database.models import UserData
 
-try:
-    require("nonebot_plugin_ai_groupmate")
-except ModuleNotFoundError as e:
-    if e.name != "nonebot_plugin_ai_groupmate":
-        raise
-    logger.debug(f"ai-groupmate agent tools not enabled: {e}")
-except RuntimeError as e:
-    if "nonebot_plugin_ai_groupmate" not in str(e):
-        raise
-    logger.debug(f"ai-groupmate agent tools not enabled: {e}")
+if importlib.util.find_spec("nonebot_plugin_ai_groupmate") is None:
+    logger.debug("ai-groupmate agent tools not enabled: nonebot_plugin_ai_groupmate is not installed")
 else:
+    require("nonebot_plugin_ai_groupmate")
     from . import agent_tools as agent_tools  # noqa: F401
 
 usage = "发送/osuhelp 查看帮助"

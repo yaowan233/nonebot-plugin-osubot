@@ -25,9 +25,24 @@ function Taiko(osu)
         var barLineLimit = timingPoints[timingPointIndex + 1]
             ? timingPoints[timingPointIndex + 1].time
             : endTime;
-        for (var barTime = timingPoint.time; barTime < barLineLimit; barTime += barLength)
+        var firstBarTime = timingPoint.time;
+        if (timingPoint.omitFirstBarLine)
+        {
+            firstBarTime += barLength;
+            if (firstBarTime <= timingPoint.time)
+            {
+                continue;
+            }
+        }
+        for (var barTime = firstBarTime; barTime < barLineLimit;)
         {
             this.barLines.push(barTime);
+            var nextBarTime = barTime + barLength;
+            if (!isFinite(nextBarTime) || nextBarTime <= barTime)
+            {
+                break;
+            }
+            barTime = nextBarTime;
         }
     }
 }
@@ -100,21 +115,31 @@ Taiko.prototype.draw = function(time, ctx)
         ctx.lineWidth = 1;
         ctx.stroke();
     }
-    for (var i = this.HitObjects.length - 1; i >= this.tmp.first; i--)
+    // Drumroll bodies are a background element and must not cover hit notes
+    // which occur while the roll is active.
+    for (var layer = 0; layer < 2; layer++)
     {
-        var hitObject = this.HitObjects[i];
-        if (time > hitObject.endTime)
+        for (var i = this.HitObjects.length - 1; i >= this.tmp.first; i--)
         {
-            continue;
+            var hitObject = this.HitObjects[i];
+            var isDrumroll = hitObject instanceof Drumroll;
+            if ((layer == 0) != isDrumroll || time > hitObject.endTime)
+            {
+                continue;
+            }
+            var startX = this.calcX(hitObject.position.x, scroll);
+            var endX = this.calcX(
+                hitObject.endPosition.x,
+                scroll,
+                hitObject.position.x
+            );
+            if (startX > Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER &&
+                endX > Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER)
+            {
+                continue;
+            }
+            hitObject.draw(scroll, ctx);
         }
-        var startX = this.calcX(hitObject.position.x, scroll);
-        var endX = this.calcX(hitObject.endPosition.x, scroll, hitObject.position.x);
-        if (startX > Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER &&
-            endX > Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER)
-        {
-            continue;
-        }
-        hitObject.draw(scroll, ctx);
     }
     ctx.clearRect(-160, -200, Taiko.DIAMETER * 2, 400);
 };

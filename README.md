@@ -79,6 +79,14 @@ _✨ NoneBot osubot ✨_
 | OSU_KEY | 是 | 无 | 客户端密钥 |
 | SQLALCHEMY_DATABASE_URL | 否 | sqlite+aiosqlite:///db.sqlite3 | 数据库地址，详见 [NoneBot 数据库配置](https://nonebot.dev/docs/best-practice/database/) |
 | INFO_BG | 否 | ['https://example.com'] | 随机背景api地址，需要打开网页后随机获得一张图片 |
+| OSU_PREVIEW_TAIKO_SKIN_PATH | 否 | 无 | 全局 Taiko 皮肤目录；支持 `taiko-roll-middle.png`、`taiko-roll-end.png` 及其 `@2x` 版本，未配置时使用内置矢量样式 |
+| OSU_PREVIEW_FFMPEG_PATH | 否 | PATH 中的 ffmpeg | FFmpeg 可执行文件路径，用于将分段渲染结果合成为完整预览视频 |
+| OSU_PREVIEW_FULL_SCALE | 否 | 0.75 | 完整视频缩放倍率，限制为 0.5–1.0；0.75 对应 480×360，1.0 对应 640×480 |
+| OSU_PREVIEW_FULL_FRAME_INTERVAL | 否 | 30 | 完整视频帧间隔（毫秒），限制为 20–50；30ms 约 33 FPS，20ms 为 50 FPS |
+| OSU_PREVIEW_TAIKO_FULL_SCALE | 否 | 0.5 | Taiko 完整视频缩放倍率；默认 0.5 对应 320×240 |
+| OSU_PREVIEW_TAIKO_FULL_FRAME_INTERVAL | 否 | 30 | Taiko 完整视频帧间隔（毫秒）；默认 30ms 约 33 FPS |
+| OSU_PREVIEW_STD_CATCH_FULL_SCALE | 否 | 0.5 | Std/Catch 完整视频缩放倍率；默认 0.5 对应 320×240 |
+| OSU_PREVIEW_STD_CATCH_FULL_FRAME_INTERVAL | 否 | 30 | Std/Catch 完整视频帧间隔（毫秒）；默认 30ms 约 33 FPS |
 
 ## ⚠️ 从 v6 升级到 v7
 

@@ -642,15 +642,98 @@ async def test_preview_ctb_gif_param_uses_osu_preview_gif(app: App):
                     ctx.receive_event(bot, event)
                     ctx.should_call_send(
                         event,
-                        img_msg(event, b"gif")
-                        + MessageSegment.text(
-                            "点击预览：\nhttps://beatmap.try-z.net/?b=12345\nhttps://beatmap.try-z.net/dev/?b=12345"
-                        ),
+                        img_msg(event, b"gif"),
                         result={"message_id": 1},
                     )
                     ctx.should_finished()
 
                 draw.assert_awaited_once_with(12345, 67890, False)
+
+
+@pytest.mark.asyncio
+async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path):
+    """/视频预览 <id> 在 mania 模式直接使用分段合成后的 MP4。"""
+    try:
+        from nonebot_plugin_osubot.matcher.preview import generate_preview
+    except ImportError:
+        pytest.skip()
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=3)
+    video = tmp_path / "preview.mp4"
+    video.write_bytes(b"video")
+    event = fake_group_message_event_v11(message=Message("/视频预览 12345"))
+
+    async def render_full_preview(beatmap_id, beatmapset_id, progress_callback):
+        await progress_callback(65)
+        return video
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(
+            f"{PREVIEW_MODULE}.osu_api",
+            new=AsyncMock(return_value={"beatmapset_id": 67890, "mode_int": 3}),
+        ):
+            with patch(
+                f"{PREVIEW_MODULE}.draw_full_osu_preview",
+                new=AsyncMock(side_effect=render_full_preview),
+            ) as draw:
+                async with app.test_matcher(generate_preview) as ctx:
+                    adapter = nonebot.get_adapter(OnebotV11Adapter)
+                    bot = ctx.create_bot(base=Bot, adapter=adapter)
+                    ctx.receive_event(bot, event)
+                    ctx.should_call_send(
+                        event,
+                        text_msg(event, "正在生成完整预览，预计还需约1分10秒，请稍候…"),
+                        result={"message_id": 1},
+                    )
+                    ctx.should_call_send(
+                        event,
+                        Message(MessageSegment.video(file=video.read_bytes())),
+                        result={"message_id": 1},
+                    )
+                    ctx.should_finished()
+
+                draw.assert_awaited_once()
+                assert draw.await_args.args == (12345, 67890)
+                assert callable(draw.await_args.kwargs["progress_callback"])
+
+
+@pytest.mark.asyncio
+async def test_full_preview_without_gif_keeps_mania_image(app: App, tmp_path):
+    """/完整预览 <id> 不带 +gif 时保留 Mania 完整图片。"""
+    try:
+        from nonebot_plugin_osubot.matcher.preview import generate_preview
+    except ImportError:
+        pytest.skip()
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=3)
+    osu_file = tmp_path / "map.osu"
+    osu_file.write_text("osu file format v14", encoding="utf-8")
+    event = fake_group_message_event_v11(message=Message("/完整预览 12345"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(
+            f"{PREVIEW_MODULE}.osu_api",
+            new=AsyncMock(return_value={"beatmapset_id": 67890, "mode_int": 3}),
+        ):
+            with patch(f"{PREVIEW_MODULE}.download_osu", new=AsyncMock(return_value=osu_file)):
+                with patch(
+                    f"{PREVIEW_MODULE}.generate_preview_pic",
+                    new=AsyncMock(return_value=b"full-image"),
+                ) as draw:
+                    async with app.test_matcher(generate_preview) as ctx:
+                        adapter = nonebot.get_adapter(OnebotV11Adapter)
+                        bot = ctx.create_bot(base=Bot, adapter=adapter)
+                        ctx.receive_event(bot, event)
+                        ctx.should_call_send(
+                            event,
+                            img_msg(event, b"full-image"),
+                            result={"message_id": 1},
+                        )
+                        ctx.should_finished()
+
+                    draw.assert_awaited_once_with(osu_file, True)
 
 
 # ============================================================

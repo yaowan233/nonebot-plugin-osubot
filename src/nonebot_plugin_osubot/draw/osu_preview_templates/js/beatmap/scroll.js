@@ -27,9 +27,24 @@ function Scroll(osu)
             barLength = base.beatLength * base.meter,
             next = this.TimingPoints[i + 1],
             barLineLimit = next ? (next.parent || next).time : endTime;
-        for (var barTime = base.time; barTime < barLineLimit; barTime += barLength)
+        var firstBarTime = base.time;
+        if (base.omitFirstBarLine)
+        {
+            firstBarTime += barLength;
+            if (firstBarTime <= base.time)
+            {
+                continue;
+            }
+        }
+        for (var barTime = firstBarTime; barTime < barLineLimit;)
         {
             this.barLines.push(this.scrollAt(barTime));
+            var nextBarTime = barTime + barLength;
+            if (!isFinite(nextBarTime) || nextBarTime <= barTime)
+            {
+                break;
+            }
+            barTime = nextBarTime;
         }
     }
 }

@@ -13,7 +13,7 @@ from ..exceptions import NetworkError
 from ..database import UserData, SbUserData
 
 pattern = (
-    r"[:：]\s*(\w+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
+    r"[:：]\s*(\w+)|[\+＋]\s*([\w,，]+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
     r"title\s*([=~]+)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*([><=~]+)\s*[\w\.]+|$))|"
     r"(\w+)\s*([><=~]+)\s*([\w\.]+)"
 )
@@ -29,6 +29,9 @@ def split_msg():
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
         state["username"] = user_data.osu_name if user_data else ""
+        state["bound_user"] = state["user"]
+        state["bound_mode"] = state["mode"]
+        state["bound_username"] = state["username"]
         state["mods"] = []
         state["range"] = None
         state["day"] = 0

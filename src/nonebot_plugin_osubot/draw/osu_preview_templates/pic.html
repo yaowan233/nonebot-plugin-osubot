@@ -54,18 +54,49 @@
     <script src="gif.js/gif.js"></script>
 
     <script>
-        const scaleValue = 0.5;
+        const scaleValue = {{ scale }};
         const durationValue = {{ duration }};
+        const startTimeValue = {{ start_time | tojson }};
+        const useMapStartValue = {{ use_map_start | tojson }};
         const qualityValue = 10;
         const timeSpanValue = 50;
+        const taikoTimeSpanValue = 20;
+        const configuredTimeSpanValue = {{ frame_time_span | tojson }};
+        const taikoSkinAssets = {{ taiko_skin_assets | tojson }};
+
+        const loadTaikoSkin = async function (assets) {
+            const skin = {};
+            await Promise.all(Object.entries(assets).map(function ([name, source]) {
+                return new Promise(function (resolve) {
+                    const image = new Image();
+                    image.onload = function () {
+                        skin[name] = image;
+                        resolve();
+                    };
+                    image.onerror = resolve;
+                    image.src = source;
+                });
+            }));
+            return skin;
+        };
 
         const createImg = function () {
             let preview = new Preview(scaleValue);
             const osufile = `{{ osu_file }}`;
-            preview.load(osufile, function () {
+            preview.load(osufile, async function () {
+                if (preview.beatmap instanceof Taiko) {
+                    preview.beatmap.skin = await loadTaikoSkin(taikoSkinAssets);
+                }
                 let actualStartTime;
                 const previewEndTime = preview.previewTime + durationValue;
-                if (previewEndTime <= preview.endTime) {
+                if (startTimeValue !== null) {
+                    actualStartTime = Math.max(preview.startTime, startTimeValue);
+                } else if (useMapStartValue) {
+                    actualStartTime = preview.startTime;
+                } else if (
+                    preview.previewTime >= preview.startTime &&
+                    previewEndTime <= preview.endTime
+                ) {
                     // 使用谱面预览时间
                     actualStartTime = preview.previewTime;
                 } else {
@@ -73,6 +104,10 @@
                     actualStartTime = preview.startTime;
                 }
                 const actualEndTime = durationValue === -1 ? preview.endTime : Math.min(actualStartTime + durationValue, preview.endTime);
+                document.documentElement.dataset.previewStart = String(preview.startTime);
+                document.documentElement.dataset.previewEnd = String(preview.endTime);
+                document.documentElement.dataset.actualStart = String(actualStartTime);
+                document.documentElement.dataset.actualEnd = String(actualEndTime);
                 let gif = new GIF({
                     workers: 4,
                     workerScript: "{{ worker_data_uri }}",
@@ -82,20 +117,78 @@
                     //transparent: "0x000000",
                 });
 
-                const totalFrames = Math.ceil((actualEndTime - actualStartTime) / timeSpanValue);
-                let currentFrame = 0;
+                const frames = [];
+                if (preview.beatmap instanceof Taiko) {
+                    const frameTimeSpanValue =
+                        configuredTimeSpanValue ?? taikoTimeSpanValue;
+                    let currentFrame = 0;
+                    while (
+                        actualStartTime + currentFrame * frameTimeSpanValue <
+                        actualEndTime
+                    ) {
+                        frames.push({
+                            time: actualStartTime + currentFrame * frameTimeSpanValue,
+                            delay: frameTimeSpanValue
+                        });
+                        currentFrame++;
+                    }
+
+                    // Replace the nearest regular sample for objects which
+                    // cross the whole playfield in less than one frame. The
+                    // cadence stays fixed at 50 FPS, but a sudden SV note is
+                    // still represented by one frame at its hit time.
+                    preview.beatmap.HitObjects.forEach(function (hitObject) {
+                        if (
+                            hitObject.time < actualStartTime ||
+                            hitObject.time >= actualEndTime
+                        ) {
+                            return;
+                        }
+                        const visibleDuration =
+                            (Taiko.PLAYFIELD_LENGTH + Taiko.DIAMETER) /
+                            (
+                                Taiko.BASE_SCROLL_SPEED *
+                                preview.beatmap.scrollMultiplierAt(hitObject.time)
+                            );
+                        if (visibleDuration >= frameTimeSpanValue) {
+                            return;
+                        }
+                        const frameIndex = Math.round(
+                            (hitObject.time - actualStartTime) / frameTimeSpanValue
+                        );
+                        if (frames[frameIndex]) {
+                            frames[frameIndex].time = hitObject.time;
+                        }
+                    });
+                } else {
+                    const frameTimeSpanValue =
+                        configuredTimeSpanValue ?? (
+                            preview.beatmap instanceof Mania
+                            ? taikoTimeSpanValue
+                            : timeSpanValue
+                        );
+                    let currentFrame = 0;
+                    while (
+                        actualStartTime + currentFrame * frameTimeSpanValue <
+                        actualEndTime
+                    ) {
+                        frames.push({
+                            time: actualStartTime + currentFrame * frameTimeSpanValue,
+                            delay: frameTimeSpanValue
+                        });
+                        currentFrame++;
+                    }
+                }
 
                 // 添加帧
-                while (currentFrame <= totalFrames) {
-                    const t = actualStartTime + currentFrame * timeSpanValue;
-                    preview.at(t);
+                frames.forEach(function (frame) {
+                    preview.at(frame.time);
 
                     gif.addFrame(preview.ctx, {
                         copy: true,
-                        delay: timeSpanValue
+                        delay: frame.delay
                     });
-                    currentFrame++;
-                }
+                });
                 gif.on('finished', function (blob) {
                     document.getElementById("img").src = URL.createObjectURL(blob);
                 });
