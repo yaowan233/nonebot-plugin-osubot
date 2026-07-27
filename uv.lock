@@ -1527,7 +1527,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-osubot"
-version = "7.2.7"
+version = "7.2.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "expiringdict" },
