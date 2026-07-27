@@ -14,9 +14,6 @@ from ..schema.user import UserCompact
 from ..schema.match import Game, Match
 from .utils import crop_bg, draw_fillet, open_user_icon, draw_rounded_rectangle
 from .static import (
-    MpLink,
-    TeamRed,
-    TeamBlue,
     Torus_SemiBold_20,
     Torus_SemiBold_25,
     Torus_SemiBold_30,
@@ -68,7 +65,6 @@ async def draw_rating_legacy(match_id: str, algorithm: str = "osuplus") -> bytes
     )
 
     draw = ImageDraw.Draw(im)
-    im.alpha_composite(MpLink, (0, 0))
 
     if team_type == "team-vs":
         match_title = match_name.group(1)
@@ -110,10 +106,10 @@ async def draw_rating_legacy(match_id: str, algorithm: str = "osuplus") -> bytes
             continue
         if player_stats.player_team == "red":
             fill = "#d32f2e"
-            background = TeamRed
+            background = Image.new("RGBA", (650, 110), fill)
         else:
             fill = "#00a0e8"
-            background = TeamBlue
+            background = Image.new("RGBA", (650, 110), fill)
         rating_color = rating_to_wn8_hex(rating, player_stats.win_rate)
 
         # 左右列的判断

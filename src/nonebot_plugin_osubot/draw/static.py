@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib as mpl
-from PIL import Image, ImageFont
+from PIL import ImageFont
 import matplotlib.colors as mcolors
 
 osufile = Path(__file__).parent.parent / "osufile"
@@ -16,16 +16,13 @@ Torus_Regular_40 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf
 Torus_Regular_45 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 45)
 Torus_Regular_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 50)
 Torus_Regular_60 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 60)
-Torus_SemiBold_15 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 15)
-Torus_SemiBold_20 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 20)
-Torus_SemiBold_25 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 25)
-Torus_SemiBold_30 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 30)
-Torus_SemiBold_40 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 40)
-Torus_SemiBold_45 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 45)
-Torus_SemiBold_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus SemiBold.otf"), 50)
-TeamBlue = Image.open(osufile / "match" / "team_blue.png").convert("RGBA")
-TeamRed = Image.open(osufile / "match" / "team_red.png").convert("RGBA")
-MpLink = Image.open(osufile / "match" / "mplink.png").convert("RGBA")
+Torus_SemiBold_15 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 15)
+Torus_SemiBold_20 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 20)
+Torus_SemiBold_25 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 25)
+Torus_SemiBold_30 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 30)
+Torus_SemiBold_40 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 40)
+Torus_SemiBold_45 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 45)
+Torus_SemiBold_50 = ImageFont.truetype(str(osufile / "fonts" / "Torus Regular.otf"), 50)
 
 
 # 颜色取色参考 https://github.com/ppy/osu-web/blob/97997d9c7b7f9c49f9b3cdd776c71afb9872c34b/resources/js/utils/beatmap-helper.ts#L20

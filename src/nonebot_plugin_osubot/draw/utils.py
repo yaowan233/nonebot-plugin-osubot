@@ -3,16 +3,18 @@ import re
 import random
 import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Union, Optional
 from difflib import SequenceMatcher
 
+import numpy as np
 from PIL.ImageFile import ImageFile
-from PIL import ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError, ImageSequence
+from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageError, ImageSequence
 
 from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
 from ..api import safe_async_get, get_seasonal_bg
-from .static import Path, Image, ColorArr, np
+from .static import ColorArr
 from ..file import map_path, download_osu, get_projectimg, user_cache_path, team_cache_path
 
 

@@ -6,6 +6,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 
 import jinja2
+from PIL import Image
 from osu_tools import OsuCalculator
 from nonebot_plugin_htmlrender import get_new_page
 
@@ -26,10 +27,7 @@ from .utils import (
     open_user_icon,
     filter_scores_with_regex,
 )
-from .static import (
-    Image,
-    osufile,
-)
+from .static import osufile
 
 
 async def draw_score(
@@ -433,8 +431,6 @@ async def render_score_template(
             mod_data.append({"name": mod.acronym, "icon": icon.as_uri()})
 
     rank_image = osufile / "ranking" / f"legacy-ranking-{score_info.rank}@2x.png"
-    if not rank_image.exists():
-        rank_image = osufile / "ranking" / f"ranking-{score_info.rank}.png"
 
     try:
         cover_image = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
