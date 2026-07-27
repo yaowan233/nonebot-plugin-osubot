@@ -8,7 +8,7 @@
 
 # nonebot-plugin-osubot
 
-_✨ NoneBot osubot ✨_
+_✨ 面向 NoneBot2 的 osu! 查询与谱面工具插件 ✨_
 
 
 <a href="./License">
@@ -27,17 +27,25 @@ _✨ NoneBot osubot ✨_
 
 ## 📖 介绍
 
-本项目修改自[osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，适配了nonebot2，并且在此之上修改了命令的响应逻辑并修改了一些bug使之更易于使用
+nonebot-plugin-osubot 提供 osu! 四种模式的玩家资料、成绩、BP 分析、群内排名、多人比赛分析、谱面信息与谱面预览等功能。查询结果以适合聊天场景的图片呈现，并通过 `nonebot-plugin-uninfo` 获取跨适配器的用户、群组与频道信息。
 
-变速功能依赖ffmpeg，需要[自行安装ffmpeg](https://docs.go-cqhttp.org/guide/quick_start.html#%E5%AE%89%E8%A3%85-ffmpeg)才能正常使用
+项目修改自 [osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，并针对 NoneBot2 的命令交互、绘图和多平台使用进行了持续维护。
+
+> [!IMPORTANT]
+> 谱面变速和完整视频预览依赖 [FFmpeg](https://ffmpeg.org/download.html)。请先安装 FFmpeg 并确保可从 `PATH` 调用，或通过 `OSU_PREVIEW_FFMPEG_PATH` 指定可执行文件。
 
 ## 💿 安装
 
+运行环境：Python 3.10–3.13、NoneBot2 2.3.0 及以上版本。
+
 <details>
 <summary>使用 nb-cli 安装（推荐）</summary>
+
 在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装
 
-    nb plugin install nonebot-plugin-osubot
+```bash
+nb plugin install nonebot-plugin-osubot
+```
 
 </details>
 
@@ -48,45 +56,71 @@ _✨ NoneBot osubot ✨_
 <details>
 <summary>pip</summary>
 
-    pip install nonebot-plugin-osubot
+```bash
+pip install nonebot-plugin-osubot
+```
+
 </details>
 <details>
 <summary>pdm</summary>
 
-    pdm add nonebot-plugin-osubot
+```bash
+pdm add nonebot-plugin-osubot
+```
+
 </details>
 <details>
 <summary>poetry</summary>
 
-    poetry add nonebot-plugin-osubot
+```bash
+poetry add nonebot-plugin-osubot
+```
+
 </details>
 
 
 打开 nonebot2 项目的 `bot.py` 文件, 在其中写入
 
-    nonebot.load_plugin('nonebot_plugin_osubot')
+```python
+nonebot.load_plugin("nonebot_plugin_osubot")
+```
 
 </details>
 
 
 ## ⚙️ 配置
-你需要至[OSU个人设置](https://osu.ppy.sh/home/account/edit)申请新的OAuth应用，然后将得到的客户端ID与客户端密钥填入nonebot2 项目的`.env`文件中
 
-配置说明
+前往 [osu! 账号设置](https://osu.ppy.sh/home/account/edit) 创建 OAuth 应用，将客户端 ID 和客户端密钥写入 NoneBot 项目的 `.env` 文件：
+
+```dotenv
+OSU_CLIENT=你的客户端ID
+OSU_KEY=你的客户端密钥
+```
+
+### 基础配置
+
 | 配置项 | 必填 | 默认值 | 说明 |
-|:-----:|:----:|:----:|:----:|
-| OSU_CLIENT | 是 | 无 | 客户端ID |
-| OSU_KEY | 是 | 无 | 客户端密钥 |
-| SQLALCHEMY_DATABASE_URL | 否 | sqlite+aiosqlite:///db.sqlite3 | 数据库地址，详见 [NoneBot 数据库配置](https://nonebot.dev/docs/best-practice/database/) |
-| INFO_BG | 否 | ['https://example.com'] | 随机背景api地址，需要打开网页后随机获得一张图片 |
-| OSU_PREVIEW_TAIKO_SKIN_PATH | 否 | 无 | 全局 Taiko 皮肤目录；支持 `taiko-roll-middle.png`、`taiko-roll-end.png` 及其 `@2x` 版本，未配置时使用内置矢量样式 |
-| OSU_PREVIEW_FFMPEG_PATH | 否 | PATH 中的 ffmpeg | FFmpeg 可执行文件路径，用于将分段渲染结果合成为完整预览视频 |
-| OSU_PREVIEW_FULL_SCALE | 否 | 0.75 | 完整视频缩放倍率，限制为 0.5–1.0；0.75 对应 480×360，1.0 对应 640×480 |
-| OSU_PREVIEW_FULL_FRAME_INTERVAL | 否 | 30 | 完整视频帧间隔（毫秒），限制为 20–50；30ms 约 33 FPS，20ms 为 50 FPS |
-| OSU_PREVIEW_TAIKO_FULL_SCALE | 否 | 0.5 | Taiko 完整视频缩放倍率；默认 0.5 对应 320×240 |
-| OSU_PREVIEW_TAIKO_FULL_FRAME_INTERVAL | 否 | 30 | Taiko 完整视频帧间隔（毫秒）；默认 30ms 约 33 FPS |
-| OSU_PREVIEW_STD_CATCH_FULL_SCALE | 否 | 0.5 | Std/Catch 完整视频缩放倍率；默认 0.5 对应 320×240 |
-| OSU_PREVIEW_STD_CATCH_FULL_FRAME_INTERVAL | 否 | 30 | Std/Catch 完整视频帧间隔（毫秒）；默认 30ms 约 33 FPS |
+| --- | :---: | --- | --- |
+| `OSU_CLIENT` | 是 | 无 | osu! OAuth 客户端 ID |
+| `OSU_KEY` | 是 | 无 | osu! OAuth 客户端密钥 |
+| `SQLALCHEMY_DATABASE_URL` | 否 | `sqlite+aiosqlite:///db.sqlite3` | 数据库地址，详见 [NoneBot ORM 配置](https://nonebot.dev/docs/best-practice/database/) |
+| `INFO_BG` | 否 | 内置随机图 API | 玩家资料图的随机背景 API 地址列表 |
+| `OSU_PROXY` | 否 | 无 | 请求 osu! API 时使用的代理地址或代理配置 |
+| `OSUTRACK_ENABLED` | 否 | `true` | 是否启用玩家信息定时追踪 |
+| `OSUTRACK_DEFAULT_DAYS` | 否 | `365` | 历史查询的默认追踪天数 |
+
+### 完整预览配置
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `OSU_PREVIEW_FFMPEG_PATH` | `PATH` 中的 FFmpeg | FFmpeg 可执行文件路径 |
+| `OSU_PREVIEW_TAIKO_SKIN_PATH` | 无 | Taiko 皮肤目录，支持滚轮素材及其 `@2x` 版本；留空时使用内置样式 |
+| `OSU_PREVIEW_FULL_SCALE` | `0.75` | Mania 完整视频缩放倍率，范围 0.5–1.0 |
+| `OSU_PREVIEW_FULL_FRAME_INTERVAL` | `30` | Mania 完整视频帧间隔（毫秒），范围 20–50 |
+| `OSU_PREVIEW_TAIKO_FULL_SCALE` | `0.5` | Taiko 完整视频缩放倍率 |
+| `OSU_PREVIEW_TAIKO_FULL_FRAME_INTERVAL` | `30` | Taiko 完整视频帧间隔（毫秒） |
+| `OSU_PREVIEW_STD_CATCH_FULL_SCALE` | `0.5` | osu!/Catch 完整视频缩放倍率 |
+| `OSU_PREVIEW_STD_CATCH_FULL_FRAME_INTERVAL` | `30` | osu!/Catch 完整视频帧间隔（毫秒） |
 
 ## ⚠️ 从 v6 升级到 v7
 
@@ -116,9 +150,50 @@ nb orm stamp 68a04ea31d05
 4. 升级插件后重启 bot
 
 ## 🎉 使用
-### 指令
 
-![image](https://github.com/yaowan233/nonebot-plugin-osubot/assets/30517062/41fd8326-7b97-4de9-be83-c38b31453ea1)
+首次使用请发送 `/bind <用户名、UID 或主页链接>` 绑定账号。发送 `/osuhelp` 可查看交互式帮助，发送 `/osuhelp 全部` 可查看完整指令说明。
+
+通用格式：
+
+```text
+/命令 [玩家] [序号或范围]:[模式] [+Mods] [&sb]
+```
+
+模式简称：`o`/`0` = osu!、`t`/`1` = Taiko、`c`/`2` = Catch、`m`/`3` = Mania。未指定玩家或模式时，使用当前用户绑定账号的默认设置。
+
+### 常用指令
+
+| 分类 | 指令 | 说明 |
+| --- | --- | --- |
+| 账号 | `/bind`、`/unbind`、`/mode`、`/lazer` | 绑定账号，设置默认模式与 stable/lazer 成绩来源 |
+| 资料 | `/info`、`/mu`、`/rank`、`/update` | 玩家资料、主页、群内 PP 排名和资料刷新 |
+| 最佳成绩 | `/bp`、`/bl`、`/nb`、`/bpa` | 单条 BP、BP 列表、新增 BP 与 BP 分析 |
+| 最近成绩 | `/re`、`/rl`、`/pr`、`/pl` | 最近游玩、最近通过成绩及其列表 |
+| 谱面成绩 | `/sc [mapid]` | 查询玩家在指定谱面上的成绩 |
+| 历史 | `/hs [#天数]` | 查询 PP 与排名历史 |
+| 谱面 | `/m`、`/bm`、`/bg`、`/dl` | 难度信息、谱面集、背景与谱面下载 |
+| 预览 | `/预览`、`/完整预览`、`/vp` | 普通预览、全谱预览和完整预览视频 |
+| 多人 | `/mp <matchid>`、`/rt <matchid>` | 多人比赛详情与多人房评分 |
+| 其他 | `/推荐`、`/md`、猜歌指令 | 谱面推荐、成就查询与猜歌游戏 |
+
+示例：
+
+```text
+/bind peppy
+/bp 5:o +HDHR
+/bl 31-60:m
+/sc 3783810
+/bpa
+/预览 3783810 +gif
+/完整预览 3783810
+/mp 123456789
+```
+
+查询过一张谱面后，`/m`、`/bm`、`/sc`、`/bg`、`/预览`、`/dl` 等指令可以省略 ID，复用最近查询的谱面。
+
+### ppysb 查询
+
+使用 `/sbbind <玩家>` 绑定 ppysb 账号，然后在普通查询末尾添加 `&sb`，例如 `/info &sb`、`/bl:4 &sb`。SB 模式 `0`–`3` 对应四种常规模式，`4`–`6` 对应 Relax，`8` 对应 Autopilot。
 
 ### AI 自然语言调用（可选）
 

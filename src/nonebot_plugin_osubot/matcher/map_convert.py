@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent
 from nonebot.rule import ArgumentParser
-from nonebot.internal.adapter import Message
+from nonebot.internal.adapter import Event, Message
 from nonebot_plugin_alconna import UniMessage
 from nonebot import on_command, on_shell_command
 from nonebot.exception import ParserExit, ActionFailed
@@ -12,7 +11,6 @@ from ..api import get_beatmapsets_info, osu_api
 from ..mania import Options, convert_mania_map
 from ..schema import Beatmap
 from ..utils import extract_beatmap_id, extract_beatmapset_id
-from ..file import upload_file_stream_batch
 from .map_context import get_last_map_id, get_last_set_id, remember_map, remember_set
 
 parser = ArgumentParser("convert", description="变换mania谱面")
@@ -56,8 +54,7 @@ async def _(argv: list[str] = ShellCommandArgv()):
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
     file_path = osz_file.absolute()
     try:
-        with open(file_path, "rb") as f:
-            await UniMessage.file(raw=f.read()).send()
+        await UniMessage.file(path=file_path, name=osz_file.name).send()
     except ActionFailed:
         await UniMessage.text("上传文件失败，可能是群空间满或没有权限导致的").send(reply_to=True)
     finally:
@@ -71,7 +68,7 @@ change = on_command("倍速", priority=11, block=True)
 
 
 @change.handle()
-async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+async def _(event: Event, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ["--map"]
     last_map_id = get_last_map_id(event)
@@ -110,11 +107,8 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
     if not uses_last_map:
         remember_map(event, set_id)
-    file_path = osz_path.absolute()
-    server_osz_path = await upload_file_stream_batch(bot, file_path)
-
     try:
-        await bot.call_api("upload_group_file", group_id=event.group_id, file=server_osz_path, name=osz_path.name)
+        await UniMessage.file(path=osz_path.absolute(), name=osz_path.name).send()
     except ActionFailed:
         await UniMessage.text("上传文件失败，可能是群空间满或没有权限导致的").send(reply_to=True)
     finally:
@@ -128,7 +122,7 @@ generate_full_ln = on_command("反键", priority=11, block=True)
 
 
 @generate_full_ln.handle()
-async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
+async def _(event: Event, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     uses_last_set = False
     if not args:
@@ -160,10 +154,8 @@ async def _(bot: Bot, event: GroupMessageEvent, msg: Message = CommandArg()):
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
     if not uses_last_set:
         remember_set(event, set_id)
-    file_path = osz_path.absolute()
-    server_osz_path = await upload_file_stream_batch(bot, file_path)
     try:
-        await bot.call_api("upload_group_file", group_id=event.group_id, file=server_osz_path, name=osz_path.name)
+        await UniMessage.file(path=osz_path.absolute(), name=osz_path.name).send()
     except ActionFailed:
         await UniMessage.text("上传文件失败，可能是群空间满或没有权限导致的").send(reply_to=True)
     finally:
