@@ -131,3 +131,9 @@ class UnifiedScore(Base):
     passed: bool
     pp: Optional[float] = None
     beatmapset: Optional[Beatmapset] = None
+    score_version: Optional[Literal["stable", "lazer"]] = None
+
+
+def get_score_version(legacy_score_id: Optional[int]) -> Literal["stable", "lazer"]:
+    """Return the official client generation that submitted a score."""
+    return "stable" if legacy_score_id is not None else "lazer"

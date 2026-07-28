@@ -35,10 +35,9 @@ async def _draw_recent_list(state: T_State, include_fails: bool, project: str):
             high if state["source"] == "ppysb" else high - low + 1,
         )
     except NetworkError as e:
-        lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {mode}模式 {lazer_mode}{mods} 最近{state['range']}成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {mode}模式{mods} 最近{state['range']}成绩时 {str(e)}"
         ).finish(reply_to=True)
     for score in scores:
         cal_score_info(state["is_lazer"], score, state["source"])
@@ -88,11 +87,10 @@ async def _recent(event: Event, state: T_State):
             return_context=True,
         )
     except NetworkError as e:
-        lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f" {lazer_mode}{mods} 最近第{state['day']}个成绩时 {str(e)}"
+            f"{mods} 最近第{state['day']}个成绩时 {str(e)}"
         ).finish(reply_to=True)
     remember_map(event, map_id, set_id)
     await UniMessage.image(raw=data).finish(reply_to=True)
@@ -121,11 +119,10 @@ async def _pr(event: Event, state: T_State):
             return_context=True,
         )
     except NetworkError as e:
-        lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f" {lazer_mode}{mods} 最近第{state['day']}个成绩时 {str(e)}"
+            f"{mods} 最近第{state['day']}个成绩时 {str(e)}"
         ).finish(reply_to=True)
     remember_map(event, map_id, set_id)
     await UniMessage.image(raw=data).finish(reply_to=True)

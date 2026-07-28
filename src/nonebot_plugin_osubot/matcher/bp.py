@@ -44,10 +44,9 @@ async def _bp(event: Event, state: T_State):
             return_context=True,
         )
     except NetworkError as e:
-        lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 bp{best} {lazer_mode}{mods}时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 bp{best}{mods} 时 {str(e)}"
         ).finish(reply_to=True)
     remember_map(event, map_id, set_id)
     await UniMessage.image(raw=data).finish(reply_to=True)
@@ -77,10 +76,9 @@ async def _pfm(state: T_State):
             state["source"],
         )
     except NetworkError as e:
-        lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 bp{state['range']} {lazer_mode}{mods}时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 bp{state['range']}{mods} 时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
 
@@ -111,10 +109,9 @@ async def _tbp(state: T_State):
             state["source"],
         )
     except NetworkError as e:
-        lazer_mode = "lazer模式下" if state["is_lazer"] else "stable模式下"
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f"{lazer_mode}{mods} {state['day']}日内最佳成绩时 {str(e)}"
+            f"{mods} {state['day']}日内最佳成绩时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)

@@ -46,6 +46,7 @@ class DrawBestPlay(BaseModel):
     stars: float
     rank: str
     mods: list[str]
+    speed_changes: dict[str, str] = Field(default_factory=dict)
     ended_at: datetime
 
 

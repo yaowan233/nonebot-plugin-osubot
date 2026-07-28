@@ -4,7 +4,7 @@ from .bp import bp, pfm, tbp
 from .getbg import getbg
 from .match import match
 from .medal import medal
-from .score import score
+from .score import score, score_history
 from .osudl import osudl
 from .pr import pr, pass_list, recent, recent_list
 from .rating import rating
@@ -51,6 +51,7 @@ __all__ = [
     "bmap",
     "mu",
     "score",
+    "score_history",
     "update_mode",
     "history",
     "convert",

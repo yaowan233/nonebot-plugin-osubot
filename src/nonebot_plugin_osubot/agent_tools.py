@@ -47,7 +47,6 @@ class ResolvedOsuUser:
     user_id: int
     name: str
     default_mode: str = "0"
-    default_is_lazer: bool = True
 
 
 def _normalize_source(source: str) -> str:
@@ -165,7 +164,6 @@ async def _resolve_osu_user(
         user.osu_id,
         user.osu_name,
         default_mode=str(user.osu_mode),
-        default_is_lazer=True if user.lazer_mode is None else user.lazer_mode,
     )
 
 
@@ -173,8 +171,8 @@ def _resolve_mode(mode: str | int | None, user: ResolvedOsuUser, source: str) ->
     return _normalize_mode(mode, source) or _normalize_mode(user.default_mode, source) or "0"
 
 
-def _resolve_is_lazer(is_lazer: bool | None, user: ResolvedOsuUser) -> bool:
-    return user.default_is_lazer if is_lazer is None else is_lazer
+def _resolve_is_lazer(is_lazer: bool | None) -> bool:
+    return True if is_lazer is None else is_lazer
 
 
 async def _send_image(ctx: AgentToolContext, raw: bytes | BytesIO) -> str:
@@ -304,7 +302,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
-            is_lazer = _resolve_is_lazer(is_lazer, user)
+            is_lazer = _resolve_is_lazer(is_lazer)
             data = await draw_score(
                 "bp",
                 user.user_id,
@@ -345,7 +343,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             low, high = _normalize_range(range_text, default="1-30")
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
-            is_lazer = _resolve_is_lazer(is_lazer, user)
+            is_lazer = _resolve_is_lazer(is_lazer)
             data = await draw_bp(
                 "bp",
                 user.user_id,
@@ -390,7 +388,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
-            is_lazer = _resolve_is_lazer(is_lazer, user)
+            is_lazer = _resolve_is_lazer(is_lazer)
             data = await draw_score(score_type, user.user_id, is_lazer, NGM[mode], [], [], source, index)
             await _send_image(ctx, data)
             label = "最近 best" if score_type == "pr" else "最近"
@@ -423,7 +421,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
-            is_lazer = _resolve_is_lazer(is_lazer, user)
+            is_lazer = _resolve_is_lazer(is_lazer)
             data = await get_score_data(
                 user.user_id,
                 is_lazer,
@@ -510,7 +508,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
-            is_lazer = _resolve_is_lazer(is_lazer, user)
+            is_lazer = _resolve_is_lazer(is_lazer)
             score_ls = await get_user_scores(user.user_id, NGM[mode], "best", source, legacy_only=not is_lazer)
             if not score_ls:
                 return f"没有找到 {user.name} 的 bp 成绩"
@@ -762,7 +760,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- 未指定玩家、用户说“我/自己/我的”时，不要传 username；工具会使用当前发言用户绑定的 osu 账号。",
             "- 用户想查被 @ 的群友时，不要传 username；工具会自动读取消息中的非 bot @ 目标并使用该群友绑定账号。",
             "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
-            "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。未指定 lazer/stable 时，不要传 is_lazer。",
+            "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。官网成绩默认查询 lazer + stable。",
             "- 如果用户只要求查询/发图，不要传 include_image_for_analysis，发图后调用 finish 或简短结束。",
             "- 如果用户问“打得怎么样/发挥如何/分析/评价/看看问题”，传 include_image_for_analysis=true；"
             "看到工具返回的图片后，再基于图片内容给出简短评价。",

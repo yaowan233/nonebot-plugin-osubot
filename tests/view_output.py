@@ -36,7 +36,7 @@ async def test_bp1_real(app: App, mode_name, uid, mode):
     data = await draw_score(
         project="bp",
         uid=uid,
-        is_lazer=False,
+        is_lazer=True,
         mode=mode,
         mods=[],
         search_condition=[],
@@ -59,7 +59,7 @@ async def test_pfm_real(app: App, mode_name, uid, mode):
     data = await draw_bp(
         project="bp",
         uid=uid,
-        is_lazer=False,
+        is_lazer=True,
         mode=mode,
         mods=[],
         low_bound=1,
@@ -72,6 +72,60 @@ async def test_pfm_real(app: App, mode_name, uid, mode):
     path = OUT / f"pfm_{mode_name}.png"
     path.write_bytes(data.getvalue())
     print(f"\n  [{mode_name}] {elapsed:.2f}s -> {path.name}")
+
+
+@pytest.mark.asyncio
+async def test_pfm_speed_change_preview(app: App):
+    """基于真实 BP 数据预览非默认 DT 倍率标签。"""
+    from nonebot_plugin_osubot.api import get_user_scores
+    from nonebot_plugin_osubot.draw.bp import draw_pfm
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    uid, mode = USERS["osu"]
+    scores = await get_user_scores(uid, mode, "best", source="osu", legacy_only=False, limit=20)
+    preview_scores = [score.model_copy(deep=True) for score in scores]
+
+    def set_speed(score, rate: float):
+        speed_mods = [mod for mod in score.mods if mod.acronym in {"DT", "NC", "HT"}]
+        if not speed_mods:
+            speed_mods = [Mod(acronym="DT")]
+            score.mods.append(speed_mods[0])
+        for mod in speed_mods:
+            mod.settings = {**(mod.settings or {}), "speed_change": rate}
+
+    set_speed(preview_scores[0], 1.2)
+    set_speed(preview_scores[1], 1.5)
+    data = await draw_pfm("bp", uid, preview_scores, preview_scores, mode, "osu", 1, 20, 0)
+    path = OUT / "pfm_speed_change_preview.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [speed preview] -> {path.name}")
+
+
+@pytest.mark.asyncio
+async def test_bp1_speed_change_preview(app: App):
+    """基于真实 BP1 数据预览单条成绩的非默认 DT 倍率标签。"""
+    from nonebot_plugin_osubot.api import get_user_info_data, get_user_scores, osu_api
+    from nonebot_plugin_osubot.draw.score import draw_score_pic
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    uid, mode = USERS["osu"]
+    score = (await get_user_scores(uid, mode, "best", source="osu", legacy_only=False, limit=1))[0]
+    score = score.model_copy(deep=True)
+    speed_mods = [mod for mod in score.mods if mod.acronym in {"DT", "NC", "HT"}]
+    if not speed_mods:
+        speed_mods = [Mod(acronym="DT")]
+        score.mods.append(speed_mods[0])
+    for mod in speed_mods:
+        mod.settings = {**(mod.settings or {}), "speed_change": 1.2}
+
+    info, map_json = await asyncio.gather(
+        get_user_info_data(uid, mode, "osu"),
+        osu_api("map", map_id=score.beatmap.id),
+    )
+    data = await draw_score_pic(score, info, map_json, "", "osu")
+    path = OUT / "bp1_speed_change_preview.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [single speed preview] -> {path.name}")
 
 
 @pytest.mark.asyncio
@@ -295,6 +349,7 @@ async def test_bpa_synthetic_render(app: App):
                 pp=round(pp, 1),
                 rank=r,
                 accuracy=round(acc, 2),
+                ended_at=date(2022, 1, 1) + timedelta(days=i * 12),
                 mods=mods,
                 beatmap=SimpleNamespace(
                     total_length=length,
@@ -307,7 +362,14 @@ async def test_bpa_synthetic_render(app: App):
         )
 
     data = await build_bpa_data(score_ls, "ppysb")
-    pic = await draw_bpa_plot("TestPlayer osu 模式", **data)
+    pic = await draw_bpa_plot(
+        "TestPlayer osu 模式",
+        username="TestPlayer",
+        mode="osu",
+        user_id=2,
+        source="ppysb",
+        **data,
+    )
     path = OUT / "bpa_synthetic.png"
     path.write_bytes(pic)
     print(f"\n  [bpa synthetic] -> {path.name}  stats={data['stats']}")
@@ -349,8 +411,196 @@ async def test_bpa_real_ctb(app: App):
 
     from nonebot_plugin_osubot.draw.echarts import draw_bpa_plot
 
-    pic = await draw_bpa_plot("3162675 fruits 模式", **data)
+    pic = await draw_bpa_plot(
+        "3162675 fruits 模式",
+        username="3162675",
+        mode="fruits",
+        user_id=uid,
+        source="osu",
+        **data,
+    )
     elapsed = time.perf_counter() - t0
     path = OUT / "bpa_real_ctb.png"
     path.write_bytes(pic)
     print(f"  [bpa real ctb] {elapsed:.2f}s -> {path.name}  stats={data['stats']}")
+
+
+@pytest.mark.asyncio
+async def test_rank_synthetic(app: App):
+    """群内排名场景：3 人自适应高度，以及 100 人的前三、前 20 与榜外本人。"""
+    from nonebot_plugin_osubot.draw.rank import draw_group_rank
+
+    avatar_files = [
+        OUT.parent.parent / "design" / "score" / "assets" / "player-mrekk.png",
+        *sorted((OUT.parent.parent / "design" / "score" / "assets" / "collab").glob("mapper-*.png")),
+    ]
+    players = []
+    for index in range(1, 101):
+        players.append(
+            {
+                "osu_id": index,
+                "osu_name": f"player_{index:03d}",
+                "qq_name": f"群成员 {index:03d}",
+                "avatar_url": avatar_files[(index - 1) % len(avatar_files)].as_uri(),
+                "pp": 25_000 - index * 115.7,
+                "global_rank": index * 893,
+                "delta": None if index % 4 == 0 else index / 3,
+            }
+        )
+
+    pic = await draw_group_rank(players, requester_osu_id=76, mode_name="标准模式", updated_at="2026/07/22 16:40")
+    path = OUT / "rank_podium.png"
+    path.write_bytes(pic)
+    print(f"  [rank synthetic] -> {path.name}")
+
+    small_pic = await draw_group_rank(
+        players[:3],
+        requester_osu_id=2,
+        mode_name="标准模式",
+        updated_at="2026/07/22 16:40",
+    )
+    small_path = OUT / "rank_small.png"
+    small_path.write_bytes(small_pic)
+    print(f"  [rank small] -> {small_path.name}")
+
+
+def _rating_players() -> list[dict]:
+    avatar_files = [
+        OUT.parent.parent / "design" / "score" / "assets" / "player-mrekk.png",
+        *sorted((OUT.parent.parent / "design" / "score" / "assets" / "collab").glob("mapper-*.png")),
+    ]
+    names = ["Aster", "Kestrel", "Mikan", "Rin", "Yuzu", "Noir", "Sora", "Lumen"]
+    players = []
+    for index, name in enumerate(names):
+        wins = 9 - index // 2
+        losses = 3 + index // 2
+        played = wins + losses
+        players.append(
+            {
+                "user_id": index + 1,
+                "name": name,
+                "avatar": avatar_files[index % len(avatar_files)].as_uri(),
+                "team": "red" if index % 2 == 0 else "blue",
+                "rating": 2.34 - index * 0.11,
+                "total_score": 8_920_000 - index * 417_000,
+                "average_score": 743_333 - index * 22_500,
+                "wins": wins,
+                "losses": losses,
+                "played": played,
+                "win_rate": wins / played,
+                "record_text": f"{wins}W—{losses}L · {wins / played:.1%}",
+                "top1_count": max(0, 5 - index),
+                "top1_rate": max(0, 5 - index) / played,
+            }
+        )
+    return players
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("team_type", ["team-vs", "head-to-head"])
+async def test_rating_synthetic(app: App, team_type: str):
+    """多人评分正式模板：分别渲染团队赛与个人赛。"""
+    from nonebot_plugin_osubot.draw.rating import draw_rating_card
+
+    players = _rating_players()
+    data = {
+        "match_id": "1145141919",
+        "title": "OSUBOT Summer Cup Finals",
+        "time_range": "2026/07/22 19:30—21:08",
+        "team_type": team_type,
+        "algorithm": "OSUPLUS",
+        "game_count": 12,
+        "player_count": len(players),
+        "players": players,
+        "mvp": players[0],
+        "max_top1_count": max(player["top1_count"] for player in players),
+        "max_total_score": max(player["total_score"] for player in players),
+        "average_rating": sum(player["rating"] for player in players) / len(players),
+        "red_name": "Crimson Nova",
+        "blue_name": "Azure Echo",
+        "red_wins": 7,
+        "blue_wins": 5,
+        "red_players": [player for player in players if player["team"] == "red"],
+        "blue_players": [player for player in players if player["team"] == "blue"],
+        "team_size": 4,
+    }
+    pic = await draw_rating_card(data)
+    path = OUT / f"rating_{team_type}.png"
+    path.write_bytes(pic)
+    print(f"  [rating {team_type}] -> {path.name}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_team", [True, False])
+async def test_match_history_synthetic(app: App, is_team: bool):
+    """多人战报正式模板：团队赛与窄版个人赛。"""
+    from nonebot_plugin_osubot.draw.match_history import draw_match_card
+
+    players = _rating_players()
+    covers = [
+        OUT.parent.parent / "design" / "score" / "assets" / "beatmap-cover.jpg",
+        OUT.parent.parent / "design" / "score" / "assets" / "collab" / "cover.jpg",
+    ]
+    games = []
+    for game_index in range(1, 4):
+        rows = []
+        for player_index, player in enumerate(players):
+            score = 1_050_000 - player_index * 59_000 - game_index * 21_000
+            if game_index == 3 and player["team"] == "blue":
+                score += 170_000
+            rows.append(
+                {
+                    "user_id": player["user_id"],
+                    "name": player["name"],
+                    "avatar": player["avatar"],
+                    "team": player["team"],
+                    "score": score,
+                    "accuracy": 99.5 - player_index * 0.45,
+                    "combo": 1_220 - player_index * 64,
+                    "mods": [["HD"], ["HR"], ["DT"], [], ["HD", "HR"]][player_index % 5],
+                }
+            )
+        rows.sort(key=lambda player: player["score"], reverse=True)
+        red_players = [player for player in rows if player["team"] == "red"]
+        blue_players = [player for player in rows if player["team"] == "blue"]
+        red_score = sum(player["score"] for player in red_players)
+        blue_score = sum(player["score"] for player in blue_players)
+        games.append(
+            {
+                "index": game_index,
+                "map_id": game_index,
+                "title": ["Save Me", "Chronostasis", "The Pretender"][game_index - 1],
+                "version": ["Nightmare", "Collab Extra", "Rebellion"][game_index - 1],
+                "creator": "osu! community",
+                "cover": covers[(game_index - 1) % 2].as_uri(),
+                "stars": [6.42, 7.08, 6.76][game_index - 1],
+                "winner": "red" if red_score > blue_score else "blue",
+                "red_score": red_score,
+                "blue_score": blue_score,
+                "players": rows,
+                "red_players": red_players,
+                "blue_players": blue_players,
+            }
+        )
+    data = {
+        "match_id": "1145141919",
+        "title": "OSUBOT Summer Cup Finals" if is_team else "Weekend Lobby",
+        "team_type": "team-vs" if is_team else "head-to-head",
+        "is_team": is_team,
+        "red_name": "Crimson Nova",
+        "blue_name": "Azure Echo",
+        "red_wins": 2,
+        "blue_wins": 1,
+        "game_count": len(games),
+        "player_count": len(players),
+        "team_size": 4,
+        "duration": "1h 38m",
+        "time_range": "2026/07/22 19:30—21:08",
+        "complete": True,
+        "games": games,
+    }
+    pic = await draw_match_card(data)
+    suffix = "team" if is_team else "h2h"
+    path = OUT / f"match_history_{suffix}.png"
+    path.write_bytes(pic)
+    print(f"  [match history {suffix}] -> {path.name}")

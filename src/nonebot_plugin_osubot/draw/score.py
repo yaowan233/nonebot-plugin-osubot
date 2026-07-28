@@ -12,13 +12,13 @@ from nonebot_plugin_htmlrender import get_new_page
 
 from ..info import get_bg
 from ..utils import FGM, NGM, normalize_map_mode
-from ..mods import get_mods_list
+from ..mods import get_mods_list, get_speed_change_label
 from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
 from ..schema import Beatmap, NewScore
 from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components
-from ..schema.score import Mod, UnifiedScore, NewStatistics
+from ..schema.score import Mod, UnifiedScore, NewStatistics, get_score_version
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
 from ..file import map_path, download_osu, user_cache_path, team_cache_path, get_projectimg
 from .utils import (
@@ -127,6 +127,7 @@ async def get_score_data(
                 statistics=i.statistics,
                 legacy_total_score=i.legacy_total_score,
                 passed=i.passed,
+                score_version=get_score_version(i.legacy_score_id),
             )
             for i in score_ls
         ]
@@ -428,7 +429,13 @@ async def render_score_template(
     for mod in score_info.mods:
         icon = osufile / "mods" / f"{mod.acronym}.png"
         if icon.exists():
-            mod_data.append({"name": mod.acronym, "icon": icon.as_uri()})
+            mod_data.append(
+                {
+                    "name": mod.acronym,
+                    "icon": icon.as_uri(),
+                    "speed_change": get_speed_change_label(mod),
+                }
+            )
 
     rank_image = osufile / "ranking" / f"legacy-ranking-{score_info.rank}@2x.png"
 
@@ -498,6 +505,7 @@ async def render_score_template(
         "owners": owner_data,
         "mods": mod_data,
         "score": f"{(score_info.legacy_total_score or score_info.total_score):,}",
+        "score_version": score_info.score_version if source == "osu" else None,
         "pp": _format_pp(display_pp),
         "accuracy": f"{score_info.accuracy:.4f}" if mode == 3 else f"{score_info.accuracy:.2f}",
         "combo": combo,

@@ -35,7 +35,8 @@ def split_msg():
         state["source"] = "osu"
         state["query"] = []
         state["target"] = None
-        state["is_lazer"] = True if not user_data else user_data.lazer_mode
+        # 官网查询统一使用当前成绩集合（lazer + stable）。
+        state["is_lazer"] = True
         arg = (
             arg.extract_plain_text().strip().replace("＝", "=").replace("：", ":").replace("＆", "&").replace("＃", "#")
         )

@@ -94,7 +94,7 @@ async def test_bp_success(app: App):
         with patch(
             f"{BP_MODULE}.draw_score",
             new=AsyncMock(return_value=(BytesIO(FAKE_IMG), 24680, 13579)),
-        ):
+        ) as draw_score:
             async with app.test_matcher(bp) as ctx:
                 adapter = nonebot.get_adapter(OnebotV11Adapter)
                 bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -144,6 +144,7 @@ async def test_bp_success(app: App):
     draw_map.assert_awaited_once_with("24680", [])
     get_map.assert_awaited_once_with("map", map_id=24680)
     draw_preview.assert_awaited_once_with(24680, 13579)
+    assert draw_score.call_args.args[2] is True
 
 
 @pytest.mark.asyncio
@@ -228,7 +229,7 @@ async def test_bp_network_error(app: App):
                     event,
                     _text_msg(
                         event,
-                        "在查找用户：test_player osu模式 bp1 stable模式下时 连接超时",
+                        "在查找用户：test_player osu模式 bp1 时 连接超时",
                     ),
                     result={"message_id": 1},
                 )
@@ -320,7 +321,7 @@ async def test_pfm_network_error(app: App):
                     event,
                     _text_msg(
                         event,
-                        "在查找用户：test_player osu模式 bp1-30 stable模式下时 超时",
+                        "在查找用户：test_player osu模式 bp1-30 时 超时",
                     ),
                     result={"message_id": 1},
                 )

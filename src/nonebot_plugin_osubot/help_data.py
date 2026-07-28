@@ -17,12 +17,12 @@ HELP_TOPICS = {
         "纯数字用户名会优先按用户名查找；需要明确使用 UID 时写 id:<UID>。"
     ),
     "mode": (
-        "模式与版本\n"
+        "模式设置\n"
         "/mode：查看当前默认模式\n"
         "/mode <模式>：修改默认模式，例如 /mode m\n"
-        "/lazer（简写 /lz）：切换 stable / lazer 成绩\n"
         "简称：o/0=osu!，t/1=taiko，c/2=catch，m/3=mania。\n"
-        "临时指定模式可写 /info:m、/bl:c；未指定时使用绑定账号的默认模式。"
+        "临时指定模式可写 /info:m、/bl:c；未指定时使用绑定账号的默认模式。\n"
+        "官网成绩查询默认包含 lazer 与 stable 成绩，无需切换；成绩图会逐条标注来源。"
     ),
     "score": (
         "成绩查询\n"
@@ -31,6 +31,7 @@ HELP_TOPICS = {
         "/re [序号]、/rl [范围]：单条/列表最近游玩，包含未通过\n"
         "/pr [序号]、/pl [范围]：单条/列表最近通过成绩\n"
         "/sc [mapid]：指定谱面成绩；查询过谱面后可省略 mapid\n"
+        "/sl [mapid] [范围]：该谱面各 Mod 组合的最佳成绩列表\n"
         "/nb [#天数]：最近新增 BP；/bpa：BP 分析；/hs [#天数]：PP/排名历史\n"
         "可附加玩家、模式和 Mods，例如 /bp peppy 5:o +HDHR。"
     ),
@@ -74,7 +75,6 @@ TOPIC_ALIASES = {
     "绑定": "bind",
     "账号": "bind",
     "模式": "mode",
-    "lazer": "mode",
     "成绩": "score",
     "bp": "score",
     "bl": "score",
@@ -88,6 +88,10 @@ TOPIC_ALIASES = {
     "pl": "score",
     "score": "score",
     "sc": "score",
+    "sl": "score",
+    "scorelist": "score",
+    "scorehistory": "score",
+    "历史成绩": "score",
     "nb": "score",
     "tbp": "score",
     "bpa": "score",
@@ -129,7 +133,6 @@ TOPIC_ALIASES = {
     "sb服": "sb",
     "sbbind": "sb",
     "sbunbind": "sb",
-    "lz": "mode",
 }
 
 TOPIC_LABELS = "概览、绑定、模式、成绩、谱面、资料、多人、SB服、全部"

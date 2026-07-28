@@ -13,7 +13,8 @@ class UserData(Model):
     osu_id: Mapped[int] = mapped_column(Integer)
     osu_name: Mapped[str] = mapped_column(Text)
     osu_mode: Mapped[int] = mapped_column(Integer)
-    lazer_mode: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
+    # 已弃用：仅保留该列以兼容现有数据库，查询逻辑不再读取它。
+    lazer_mode: Mapped[Optional[bool]] = mapped_column(Boolean, default=True)
 
 
 class InfoData(Model):

@@ -1,4 +1,8 @@
+import math
+
 from .schema.score import Mod, UnifiedScore
+
+DEFAULT_SPEED_CHANGE = {"DT": 1.5, "NC": 1.5, "HT": 0.75}
 
 mods_dic = {
     "CL": 0,
@@ -60,3 +64,27 @@ def calc_mods(mods: list[Mod]) -> int:
     for mod in mods:
         num ^= mods_dic.get(mod.acronym, 0)
     return num
+
+
+def get_speed_change_label(mod: Mod) -> str | None:
+    """Return a compact label only for a non-default speed-changing mod."""
+    default = DEFAULT_SPEED_CHANGE.get(mod.acronym)
+    if default is None or not mod.settings:
+        return None
+    value = mod.settings.get("speed_change")
+    try:
+        rate = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(rate) or rate <= 0 or math.isclose(rate, default, abs_tol=1e-6):
+        return None
+    return f"{rate:.2f}×"
+
+
+def get_speed_change_labels(mods: list[Mod]) -> dict[str, str]:
+    """Collect visible speed labels, preserving DT settings when NC replaces DT."""
+    labels = {mod.acronym: label for mod in mods if (label := get_speed_change_label(mod))}
+    acronyms = {mod.acronym for mod in mods}
+    if "NC" in acronyms and "NC" not in labels and "DT" in labels:
+        labels["NC"] = labels["DT"]
+    return labels

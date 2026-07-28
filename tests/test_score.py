@@ -190,7 +190,54 @@ async def test_score_network_error(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    _text_msg(event, "在查找用户：test_player osu模式 stable模式下 成绩时 连接超时"),
+                    _text_msg(event, "在查找用户：test_player osu模式 成绩时 连接超时"),
                     result={"message_id": 1},
                 )
                 ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_score_list_success(app: App):
+    from nonebot_plugin_osubot.matcher.score import score_history
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/sl 114514 2-5"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{SCORE_MODULE}.draw_score_history", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(score_history) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[4] == "114514"
+    assert draw.call_args.args[6] == "2-5"
+
+
+@pytest.mark.asyncio
+async def test_score_list_uses_last_map(app: App):
+    from nonebot_plugin_osubot.matcher.score import score_history
+    from nonebot_plugin_osubot.matcher.map_context import remember_map
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/sl"))
+    remember_map(event, 1919810)
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{SCORE_MODULE}.draw_score_history", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(score_history) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[4] == "1919810"

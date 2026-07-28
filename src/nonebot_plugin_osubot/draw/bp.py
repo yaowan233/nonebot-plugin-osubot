@@ -11,7 +11,7 @@ from nonebot_plugin_htmlrender import get_new_page
 from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
 from ..file import download_osu, get_pfm_img, map_path
-from ..mods import get_mods_list
+from ..mods import get_mods_list, get_speed_change_labels
 from ..pp import cal_pp
 from ..schema.score import UnifiedScore
 from .score import cal_score_info
@@ -96,6 +96,7 @@ async def draw_pfm(
                     pp_value = pp_info.pp
             except Exception:
                 pass
+        speed_changes = get_speed_change_labels(score.mods)
         mods = [mod.acronym for mod in score.mods]
         if "NC" in mods and "DT" in mods:
             mods.remove("DT")
@@ -116,7 +117,9 @@ async def draw_pfm(
                 "accuracy": score.accuracy,
                 "stars": stars,
                 "mods": mods,
+                "speed_changes": speed_changes,
                 "date": score.ended_at.strftime("%Y.%m.%d"),
+                "score_version": getattr(score, "score_version", None) if source == "osu" else None,
             }
         )
 

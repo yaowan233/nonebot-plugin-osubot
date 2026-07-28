@@ -242,6 +242,6 @@ async def test_recommend_network_error(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "在查找用户：TestPlayer taiko模式 stable模式下时 连接超时"),
+                    text_msg(event, "在查找用户：TestPlayer taiko模式时 连接超时"),
                     result={"message_id": 1},
                 )

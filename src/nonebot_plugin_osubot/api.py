@@ -19,7 +19,7 @@ from .network import auto_retry
 from .exceptions import NetworkError
 from .network.first_response import get_first_response
 from .schema import User, NewScore, RecommendData
-from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap
+from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap, get_score_version
 from .schema.ppysb import InfoResponse, ScoresResponse, V2ScoresResponse
 from .schema.user import Level, GradeCounts, UnifiedUser, UserStatistics
 
@@ -106,6 +106,7 @@ async def fetch_score_batch(
             legacy_total_score=i.legacy_total_score,
             passed=i.passed,
             pp=i.pp,
+            score_version=get_score_version(i.legacy_score_id),
             beatmap=UnifiedBeatmap(
                 id=i.beatmap_id,
                 user_id=i.beatmap.user_id,

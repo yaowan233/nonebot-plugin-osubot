@@ -12,6 +12,7 @@ from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from .utils import info_calc
+from ..mods import get_speed_change_labels
 from ..pp import cal_pp
 from ..utils import FGM, GMN
 from ..file import user_cache_path, get_projectimg, download_osu, map_path
@@ -161,6 +162,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
                 stars = cal_pp(score, str(osu_file.absolute()), source).stars
             except Exception:
                 pass
+        speed_changes = get_speed_change_labels(score.mods)
         mods = [mod.acronym for mod in score.mods]
         if "NC" in mods and "DT" in mods:
             mods.remove("DT")
@@ -180,6 +182,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
                 stars=stars,
                 rank=score.rank,
                 mods=mods,
+                speed_changes=speed_changes,
                 ended_at=score.ended_at,
             )
         )

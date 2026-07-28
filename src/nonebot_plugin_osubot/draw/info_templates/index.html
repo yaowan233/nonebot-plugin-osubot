@@ -213,8 +213,13 @@
         .bp-grade svg { width:38px; height:20px; }
         .bp-star { position:absolute; z-index:3; right:7px; top:7px; display:flex; align-items:center; justify-content:center; min-width:45px; height:22px; padding:0 8px; border-radius:11px; background:var(--star-color); color:var(--star-text); border:1px solid #ffffff3d; box-shadow:0 2px 7px #0004; font-size:8px; font-weight:800; }
         .bp-mod-icons { position:absolute; z-index:3; left:7px; bottom:7px; display:flex; align-items:center; }
-        .bp-mod-icons img { width:25px; height:25px; object-fit:contain; filter:drop-shadow(0 2px 5px #0005); }
-        .bp-mod-icons img+img { margin-left:-3px; }
+        .bp-mod-mark { position:relative; display:flex; flex:0 0 auto; align-items:center; width:25px; height:25px; }
+        .bp-mod-mark+.bp-mod-mark { margin-left:-3px; }
+        .bp-mod-mark.has-speed { width:auto; padding-right:2px; }
+        .bp-mod-mark.has-speed+.bp-mod-mark { margin-left:0; }
+        .bp-mod-mark.has-speed:before { content:""; position:absolute; z-index:0; left:12px; right:0; top:2px; bottom:2px; background:color(srgb 0.263 0.1052 0.1052); clip-path:polygon(0 50%,5px 0,calc(100% - 5px) 0,100% 50%,calc(100% - 5px) 100%,5px 100%); filter:drop-shadow(0 2px 5px #0007); }
+        .bp-mod-mark img { position:relative; z-index:2; width:25px; height:25px; object-fit:contain; filter:drop-shadow(0 2px 5px #0005); }
+        .bp-speed-change { position:relative; z-index:3; display:flex; box-sizing:border-box; align-items:center; justify-content:center; min-width:30px; height:21px; margin-left:-2px; padding-right:4px; color:#ff7184; font-size:7px; font-weight:800; line-height:normal; text-align:center; text-shadow:0 1px 2px #000; }
         .bp-pp { position:absolute; z-index:3; right:7px; bottom:7px; display:flex; align-items:center; gap:3px; height:21px; padding:0 8px; border-radius:10px; background:linear-gradient(135deg,#ffe78d,#eeb957); border:1px solid #fff6c966; box-shadow:0 3px 9px #0004; }
         .bp-pp strong { font-size:9px; color:#17202b; }
         .bp-pp small { font-size:7px; font-weight:800; color:#6d4b13; }
@@ -228,7 +233,8 @@
         .bp-detail span { max-width:70%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .bp-detail time { color:#20a2b1; font-weight:800; white-space:nowrap; }
         .empty { color:#87919a; font-size:13px; padding-top:28px; }
-    </style>
+        .bp-speed-change { min-width:33px; padding:0; font-size:8px; transform:translateX(2px); }
+</style>
 </head>
 <body><div id="userInfo"></div>
 <script>
@@ -526,6 +532,22 @@
 
     // 页面加载时渲染用户信息
     displayUserInfo(userData);
+    document.querySelectorAll('.bp').forEach((card,index)=>{
+        const rates=(bps[index]&&bps[index].speed_changes)||{};
+        card.querySelectorAll('.bp-mod-icons img').forEach(icon=>{
+            const rate=rates[icon.alt];
+            const mark=document.createElement('span');
+            mark.className=`bp-mod-mark${rate?' has-speed':''}`;
+            icon.replaceWith(mark);
+            mark.appendChild(icon);
+            if(rate){
+                const label=document.createElement('small');
+                label.className='bp-speed-change';
+                label.textContent=rate;
+                mark.appendChild(label);
+            }
+        });
+    });
 </script>
 </body>
 </html>

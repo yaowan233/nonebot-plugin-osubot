@@ -26,9 +26,7 @@ async def _(state: T_State):
     try:
         recommend_data = await api_task
     except NetworkError as e:
-        await UniMessage.text(f"在查找用户：{state['username']} {NGM[mode]}模式 stable模式下时 {str(e)}").send(
-            reply_to=True
-        )
+        await UniMessage.text(f"在查找用户：{state['username']} {NGM[mode]}模式时 {str(e)}").send(reply_to=True)
         return
     if not recommend_data.recommendations:
         await UniMessage.text("暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧").send(reply_to=True)

@@ -389,7 +389,7 @@ async def test_bp_network_error(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "在查找用户：testuser osu模式 bp1 stable模式下时 超时"),
+                    text_msg(event, "在查找用户：testuser osu模式 bp1 时 超时"),
                     result={"message_id": 1},
                 )
                 ctx.should_finished()
@@ -550,7 +550,7 @@ async def test_pr_network_error(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "在查找用户：testuser osu模式 stable模式下 最近第1个成绩时 超时"),
+                    text_msg(event, "在查找用户：testuser osu模式 最近第1个成绩时 超时"),
                     result={"message_id": 1},
                 )
                 ctx.should_finished()
@@ -921,24 +921,20 @@ async def test_bpa_network_error(app: App):
     utils_session = make_mock_session()
     utils_session.scalar.return_value = make_mock_user(osu_id=114514, osu_name="testuser", lazer_mode=False)
 
-    bpa_session = make_mock_session()
-    bpa_session.scalar.return_value = make_mock_user(osu_id=114514, lazer_mode=False)
-
     event = fake_group_message_event_v11(message=Message("/bpa"))
 
     with patch_session(UTILS_MODULE, utils_session):
-        with patch_session(BPA_MODULE, bpa_session):
-            with patch(f"{BPA_MODULE}.get_user_scores", new=AsyncMock(side_effect=NetworkError("超时"))):
-                async with app.test_matcher(bp_analyze) as ctx:
-                    adapter = nonebot.get_adapter(OnebotV11Adapter)
-                    bot = ctx.create_bot(base=Bot, adapter=adapter)
-                    ctx.receive_event(bot, event)
-                    ctx.should_call_send(
-                        event,
-                        text_msg(event, "在查找用户：testuser osu模式 stable模式下时 超时"),
-                        result={"message_id": 1},
-                    )
-                    ctx.should_finished()
+        with patch(f"{BPA_MODULE}.get_user_scores", new=AsyncMock(side_effect=NetworkError("超时"))):
+            async with app.test_matcher(bp_analyze) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(
+                    event,
+                    text_msg(event, "在查找用户：testuser osu模式时 超时"),
+                    result={"message_id": 1},
+                )
+                ctx.should_finished()
 
 
 @pytest.mark.asyncio
@@ -951,10 +947,6 @@ async def test_bpa_success(app: App):
 
     utils_session = make_mock_session()
     utils_session.scalar.return_value = make_mock_user(osu_id=114514, osu_name="testuser", lazer_mode=False)
-
-    bpa_user = make_mock_user(osu_id=114514, lazer_mode=False)
-    bpa_session = make_mock_session()
-    bpa_session.scalar.return_value = bpa_user
 
     mock_score = MagicMock()
     mock_score.mods = []
@@ -973,14 +965,13 @@ async def test_bpa_success(app: App):
     event = fake_group_message_event_v11(message=Message("/bpa"))
 
     with patch_session(UTILS_MODULE, utils_session):
-        with patch_session(BPA_MODULE, bpa_session):
-            with patch(f"{BPA_MODULE}.get_user_scores", new=AsyncMock(return_value=[mock_score])):
-                with patch(f"{BPA_MODULE}.cal_score_info", side_effect=fake_cal):
-                    with patch(f"{BPA_MODULE}.build_bpa_data", new=AsyncMock(return_value=FAKE_BPA_DATA)):
-                        with patch(f"{BPA_MODULE}.draw_bpa_plot", new=AsyncMock(return_value=FAKE_BPA_IMG)):
-                            async with app.test_matcher(bp_analyze) as ctx:
-                                adapter = nonebot.get_adapter(OnebotV11Adapter)
-                                bot = ctx.create_bot(base=Bot, adapter=adapter)
-                                ctx.receive_event(bot, event)
-                                ctx.should_call_send(event, img_msg(event, FAKE_BPA_IMG), result={"message_id": 1})
-                                ctx.should_finished()
+        with patch(f"{BPA_MODULE}.get_user_scores", new=AsyncMock(return_value=[mock_score])):
+            with patch(f"{BPA_MODULE}.cal_score_info", side_effect=fake_cal):
+                with patch(f"{BPA_MODULE}.build_bpa_data", new=AsyncMock(return_value=FAKE_BPA_DATA)):
+                    with patch(f"{BPA_MODULE}.draw_bpa_plot", new=AsyncMock(return_value=FAKE_BPA_IMG)):
+                        async with app.test_matcher(bp_analyze) as ctx:
+                            adapter = nonebot.get_adapter(OnebotV11Adapter)
+                            bot = ctx.create_bot(base=Bot, adapter=adapter)
+                            ctx.receive_event(bot, event)
+                            ctx.should_call_send(event, img_msg(event, FAKE_BPA_IMG), result={"message_id": 1})
+                            ctx.should_finished()
