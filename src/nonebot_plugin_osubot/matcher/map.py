@@ -24,8 +24,7 @@ async def _map(event: Event, state: T_State):
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图mapid:{map_id}{mods}时 {str(e)}").finish(reply_to=True)
-    if explicit_map_id:
-        remember_map(event, map_id)
+    remember_map(event, map_id)
     await UniMessage.image(raw=m).finish(reply_to=True)
 
 
@@ -42,6 +41,5 @@ async def _bmap(event: Event, state: T_State):
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图setid:{set_id}{mods}时 {str(e)}").finish(reply_to=True)
-    if explicit_set_id:
-        remember_set(event, set_id)
+    remember_set(event, set_id)
     await UniMessage.image(raw=m).finish(reply_to=True)

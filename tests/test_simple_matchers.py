@@ -1,7 +1,7 @@
 """简单 matcher 测试：mu / osu_help / history / url_match / match / rating"""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
 from nonebug import App
 
@@ -379,6 +379,49 @@ async def test_url_match_success(app: App):
                 result={"message_id": 1},
             )
             ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_direct_beatmap_url_is_resolved_and_remembered(app: App):
+    from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, get_last_set_id
+    from nonebot_plugin_osubot.matcher.url_match import url_match
+
+    import nonebot
+
+    event = fake_group_message_event_v11(message=Message("https://osu.ppy.sh/beatmaps/67890"))
+
+    with patch(f"{URL_MODULE}.osu_api", new=AsyncMock(return_value={"beatmapset_id": 12345})):
+        with patch(f"{URL_MODULE}.draw_map_info", new=AsyncMock(return_value=b"map")):
+            async with app.test_matcher(url_match) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, ANY, result={"message_id": 1})
+                ctx.should_finished()
+
+    assert get_last_map_id(event) == "67890"
+    assert await get_last_set_id(event) == "12345"
+
+
+@pytest.mark.asyncio
+async def test_beatmapset_url_is_remembered(app: App):
+    from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, get_last_set_id
+    from nonebot_plugin_osubot.matcher.url_match import url_match
+
+    import nonebot
+
+    event = fake_group_message_event_v11(message=Message("https://osu.ppy.sh/beatmapsets/12345"))
+
+    with patch(f"{URL_MODULE}.draw_bmap_info", new=AsyncMock(return_value=b"set")):
+        async with app.test_matcher(url_match) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(event, ANY, result={"message_id": 1})
+            ctx.should_finished()
+
+    assert get_last_map_id(event) is None
+    assert await get_last_set_id(event) == "12345"
 
 
 # ---------------------------------------------------------------------------

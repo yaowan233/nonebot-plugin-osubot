@@ -22,8 +22,7 @@ async def _get_bg(event: Event, bg: Message = CommandArg()):
         img = await get_bg(bg)
     except NetworkError as e:
         await UniMessage.text(f"获取图片时 {str(e)}").finish(reply_to=True)
-    if explicit_map_id:
-        remember_map(event, bg)
+    remember_map(event, bg)
     from io import BytesIO
 
     byt = BytesIO()

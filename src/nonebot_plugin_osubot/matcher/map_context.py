@@ -20,16 +20,24 @@ def _context_key(event: Event) -> str:
 
 
 def remember_map(event: Event, map_id: int | str, set_id: int | str | None = None) -> None:
-    """Remember a beatmap and discard any set id that may belong to an older map."""
-    _contexts[_context_key(event)] = BeatmapContext(
-        map_id=str(map_id),
-        set_id=str(set_id) if set_id is not None else None,
+    """Remember a beatmap, preserving its known set id when refreshing the same map."""
+    key = _context_key(event)
+    normalized_map_id = str(map_id)
+    context = _contexts.get(key)
+    preserved_set_id = context.set_id if context and context.map_id == normalized_map_id else None
+    _contexts[key] = BeatmapContext(
+        map_id=normalized_map_id,
+        set_id=str(set_id) if set_id is not None else preserved_set_id,
     )
 
 
 def remember_set(event: Event, set_id: int | str) -> None:
-    """Remember a beatmapset and discard any map id from an older set."""
-    _contexts[_context_key(event)] = BeatmapContext(set_id=str(set_id))
+    """Remember a beatmapset, preserving its known map id when refreshing the same set."""
+    key = _context_key(event)
+    normalized_set_id = str(set_id)
+    context = _contexts.get(key)
+    preserved_map_id = context.map_id if context and context.set_id == normalized_set_id else None
+    _contexts[key] = BeatmapContext(map_id=preserved_map_id, set_id=normalized_set_id)
 
 
 def remember_map_and_set(event: Event, map_id: int | str, set_id: int | str) -> None:

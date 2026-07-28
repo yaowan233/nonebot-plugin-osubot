@@ -23,8 +23,7 @@ async def _osudl(event: Event, setid: Message = CommandArg()):
     if not setid or not setid.isdigit():
         await UniMessage.text("请输入正确的setID，或先查询一张谱面").finish(reply_to=True)
     osz_path = await download_map(int(setid))
-    if explicit_set_id:
-        remember_set(event, setid)
+    remember_set(event, setid)
     try:
         await UniMessage.file(path=osz_path.absolute(), name=osz_path.name).send()
     except Exception:

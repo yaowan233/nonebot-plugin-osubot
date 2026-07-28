@@ -40,8 +40,7 @@ async def _score(event: Event, state: T_State):
         await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} 成绩时 {str(e)}").finish(
             reply_to=True
         )
-    if explicit_map_id:
-        remember_map(event, map_id)
+    remember_map(event, map_id)
     await UniMessage.image(raw=data).finish(reply_to=True)
 
 
@@ -68,6 +67,5 @@ async def _score_history(event: Event, state: T_State):
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} 谱面成绩列表时 {str(e)}"
         ).finish(reply_to=True)
-    if explicit_map_id:
-        remember_map(event, map_id)
+    remember_map(event, map_id)
     await UniMessage.image(raw=data).finish(reply_to=True)

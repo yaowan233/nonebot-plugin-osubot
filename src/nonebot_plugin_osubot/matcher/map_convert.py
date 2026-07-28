@@ -72,7 +72,6 @@ async def _(event: Event, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
     argv = ["--map"]
     last_map_id = get_last_map_id(event)
-    uses_last_map = False
     if not args:
         if last_map_id:
             await UniMessage.text("请输入倍速速率，例如 /倍速 1.2").finish(reply_to=True)
@@ -80,7 +79,6 @@ async def _(event: Event, msg: Message = CommandArg()):
     args[0] = extract_beatmap_id(args[0]) or args[0]
     if not args[0].isdigit() and last_map_id:
         args.insert(0, last_map_id)
-        uses_last_map = True
     set_id = args[0]
     if not set_id.isdigit():
         await UniMessage.text("请输入正确的mapID").finish(reply_to=True)
@@ -105,8 +103,7 @@ async def _(event: Event, msg: Message = CommandArg()):
     osz_path = await convert_mania_map(options)
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
-    if not uses_last_map:
-        remember_map(event, set_id)
+    remember_map(event, set_id)
     try:
         await UniMessage.file(path=osz_path.absolute(), name=osz_path.name).send()
     except ActionFailed:
@@ -124,13 +121,11 @@ generate_full_ln = on_command("反键", priority=11, block=True)
 @generate_full_ln.handle()
 async def _(event: Event, msg: Message = CommandArg()):
     args = msg.extract_plain_text().strip().split()
-    uses_last_set = False
     if not args:
         set_id = await get_last_set_id(event)
         if not set_id:
             await UniMessage.text("请输入需要转ln的地图setID，或先查询一张谱面").finish(reply_to=True)
         args = [set_id]
-        uses_last_set = True
     raw_set_id = args[0]
     parsed_set_id = extract_beatmapset_id(raw_set_id)
     if not parsed_set_id and (linked_map_id := extract_beatmap_id(raw_set_id)):
@@ -152,8 +147,7 @@ async def _(event: Event, msg: Message = CommandArg()):
     osz_path = await convert_mania_map(options)
     if not osz_path:
         await UniMessage.text("未找到该地图，请检查是否搞混了mapID与setID").finish(reply_to=True)
-    if not uses_last_set:
-        remember_set(event, set_id)
+    remember_set(event, set_id)
     try:
         await UniMessage.file(path=osz_path.absolute(), name=osz_path.name).send()
     except ActionFailed:
