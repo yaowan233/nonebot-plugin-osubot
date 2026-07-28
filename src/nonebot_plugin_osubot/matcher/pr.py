@@ -89,8 +89,7 @@ async def _recent(event: Event, state: T_State):
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f"{mods} 最近第{state['day']}个成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} 最近第{state['day']}个成绩时 {str(e)}"
         ).finish(reply_to=True)
     remember_map(event, map_id, set_id)
     await UniMessage.image(raw=data).finish(reply_to=True)
@@ -121,8 +120,7 @@ async def _pr(event: Event, state: T_State):
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f"{mods} 最近第{state['day']}个成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} 最近第{state['day']}个成绩时 {str(e)}"
         ).finish(reply_to=True)
     remember_map(event, map_id, set_id)
     await UniMessage.image(raw=data).finish(reply_to=True)

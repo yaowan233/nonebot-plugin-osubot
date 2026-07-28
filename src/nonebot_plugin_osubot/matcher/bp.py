@@ -111,7 +111,6 @@ async def _tbp(state: T_State):
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
-            f"在查找用户：{state['username']} {NGM[state['mode']]}模式"
-            f"{mods} {state['day']}日内最佳成绩时 {str(e)}"
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} {state['day']}日内最佳成绩时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)
