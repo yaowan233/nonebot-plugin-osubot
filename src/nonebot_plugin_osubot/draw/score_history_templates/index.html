@@ -19,13 +19,27 @@
 .grade img{display:block;max-width:42px;max-height:42px;object-fit:contain;filter:drop-shadow(0 2px 3px #1114)}
 .score-origin{display:inline-flex!important;align-items:center;justify-content:flex-end;gap:5px;color:#7e8991!important;font-size:9px!important;font-weight:800;letter-spacing:.03em}.score-origin:before{content:"";flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:#98a2a8}.score-origin.lazer{color:#168f9b!important}.score-origin.lazer:before{background:#20a9b8;box-shadow:0 0 0 2px #20a9b824}
 .speed-change{min-width:43px;padding:0;font-size:10px;transform:translateX(2px)}
+.user-meta{color:#111a25}
+.map-head{color:#fff}
+.map-sub{color:#fff}
+.fact{color:#fff}
+.summary span{color:#111a25;font-weight:800}
+.columns{color:#111a25;font-weight:800}
+.index{color:#111a25}
+.value small{color:#111a25}
+.judge span{color:#111a25}
+.nomod{color:#111a25}
+.time small{color:#168f9b;font-weight:800}
+.footer{color:#111a25}
+.score-origin{color:#111a25!important}
+.score-origin:before{background:#de3b81;box-shadow:0 0 0 2px #de3b8124}
 </style>
 </head>
 <body>
 <main id="history" class="page">
   <header class="top">
     <section class="profile"><img class="avatar" src="{{ d.user.avatar }}"><div class="profile-copy"><div class="overline">OSU! 谱面成绩档案</div><div class="username">{{ d.user.name }}</div><div class="user-meta">{{ d.user.country }}{% if d.user.global_rank %} · 全球 #{{ "{:,}".format(d.user.global_rank) }}{% endif %}<br>{{ "{:,.1f}".format(d.user.pp or 0) }} pp · UID {{ d.user.id }}</div></div></section>
-    <section class="map"><div class="map-bg"></div><div class="map-shade"></div><div class="map-content"><div class="map-head"><b>BEATMAP MOD SCORES</b><span>{{ d.source }} · {{ d.score_version }}</span></div><h1 class="map-title">{{ d.map.title }}</h1><div class="map-sub"><span>{{ d.map.artist }}</span><span class="version">{{ d.map.version }}</span></div><div class="map-facts"><span class="star-pill" style="--star-color:{{ d.map.star_color }};--star-text:{{ d.map.star_text }}">★ {{ "%.2f"|format(d.map.stars) }}</span><span class="fact">{{ "%g"|format(d.map.bpm or 0) }} BPM</span><span class="fact">谱师 {{ d.map.creator }}</span><span class="fact">BID {{ d.map.id }}</span></div></div></section>
+    <section class="map"><div class="map-bg"></div><div class="map-shade"></div><div class="map-content"><div class="map-head"><b>BEATMAP MOD SCORES</b></div><h1 class="map-title">{{ d.map.title }}</h1><div class="map-sub"><span>{{ d.map.artist }}</span><span class="version">{{ d.map.version }}</span></div><div class="map-facts"><span class="star-pill" style="--star-color:{{ d.map.star_color }};--star-text:{{ d.map.star_text }}">★ {{ "%.2f"|format(d.map.stars) }}</span><span class="fact">{{ "%g"|format(d.map.bpm or 0) }} BPM</span><span class="fact">谱师 {{ d.map.creator }}</span><span class="fact">BID {{ d.map.id }}</span></div></div></section>
   </header>
   <section class="content">
     <div class="columns"><span>#</span><span>评级</span><span>分数</span><span>PP</span><span>准确率</span><span>连击</span><span>判定</span><span>MODS</span><span>星数</span><span style="text-align:right">游玩时间</span></div>

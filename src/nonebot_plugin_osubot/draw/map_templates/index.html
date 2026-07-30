@@ -713,6 +713,7 @@
   </section>
 
   <script>
+    (() => {
     const DATA = {{ payload_json | safe }};
     const root = document.documentElement;
     const $ = (selector, scope = document) => scope.querySelector(selector);
@@ -884,6 +885,7 @@
     $('.metrics-grid').innerHTML = metrics.map(([label, value, color]) =>
       `<div class="metric-cell" style="--accent:${color}"><span>${label}</span><b>${value}</b></div>`
     ).join('');
-  </script>
+  })();
+</script>
 </body>
 </html>

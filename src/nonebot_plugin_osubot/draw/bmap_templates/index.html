@@ -536,6 +536,12 @@
     .metric span, .pass-rate span { font-size: 9px; }
     .metric b, .pass-rate b { font-size: 14px; }
     .params span { font-size: 10px; }
+
+    /* De-grey pass: 说明文字去灰，标签一律纯白 */
+    :root { --muted: #fff; }
+    .masthead span, .cover-range span, .cover-note, .tags, .title-copy h2,
+    .column-head, .index, .version small, .params span,
+    .summary-item span, .metric span, .pass-rate span { color: #fff; }
   </style>
 </head>
 <body>
@@ -598,6 +604,7 @@
   </section>
 
   <script>
+    (() => {
     const DATA = {{ payload_json | safe }};
     const root = document.documentElement;
     const $ = (selector, scope = document) => scope.querySelector(selector);
@@ -722,6 +729,7 @@
           <div class="params"><span>CS ${item.cs}</span><span>AR ${item.ar}</span><span>OD ${item.od}</span><span>HP ${item.hp}</span></div>
         </article>`;
     }).join('');
-  </script>
+  })();
+</script>
 </body>
 </html>
