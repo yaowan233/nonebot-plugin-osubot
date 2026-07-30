@@ -3,10 +3,11 @@ from pathlib import Path
 from datetime import datetime
 from statistics import mode
 
-from nonebot_plugin_htmlrender import template_to_pic
+import jinja2
 
 from ..api import api_info
 from ..schema.match import Match
+from .browser import persistent_page
 
 
 TEMPLATE_PATH = Path(__file__).parent / "match_templates"
@@ -141,7 +142,21 @@ def prepare_match_data(match_info: Match, match_id: str) -> dict:
 
 
 async def draw_match_card(data: dict) -> bytes:
-    return await template_to_pic(str(TEMPLATE_PATH), "index.html", data, type="png")
+    template = jinja2.Environment(  # noqa: S701
+        loader=jinja2.FileSystemLoader(str(TEMPLATE_PATH)), enable_async=True
+    ).get_template("index.html")
+    async with persistent_page(
+        "match_history", (TEMPLATE_PATH / "index.html").as_uri(), {"width": 1280, "height": 900}
+    ) as page:
+        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
+        await page.evaluate(
+            "Promise.race([Promise.all([document.fonts.ready,"
+            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
+            "new Promise(resolve=>setTimeout(resolve,8000))])"
+        )
+        element = await page.query_selector(".card")
+        assert element
+        return await element.screenshot(type="png")
 
 
 async def draw_match_history(match_id: str) -> bytes:

@@ -1,10 +1,11 @@
 from pathlib import Path
 from typing import Any
 
-from nonebot_plugin_htmlrender import template_to_pic
+import jinja2
 
+from .browser import persistent_page
 
-template_path = str(Path(__file__).parent / "rank_templates")
+template_path = Path(__file__).parent / "rank_templates"
 
 
 def prepare_rank_display(players: list[dict[str, Any]], requester_osu_id: int | None) -> dict[str, Any]:
@@ -40,4 +41,16 @@ async def draw_group_rank(
 ) -> bytes:
     data = prepare_rank_display(players, requester_osu_id)
     data.update({"mode_name": mode_name, "updated_at": updated_at})
-    return await template_to_pic(template_path, "index.html", data, type="png")
+    template = jinja2.Environment(  # noqa: S701
+        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
+    ).get_template("index.html")
+    async with persistent_page("rank", (template_path / "index.html").as_uri(), {"width": 1280, "height": 900}) as page:
+        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
+        await page.evaluate(
+            "Promise.race([Promise.all([document.fonts.ready,"
+            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
+            "new Promise(resolve=>setTimeout(resolve,8000))])"
+        )
+        element = await page.query_selector(".rank")
+        assert element
+        return await element.screenshot(type="png")

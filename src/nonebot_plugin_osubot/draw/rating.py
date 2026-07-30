@@ -5,14 +5,15 @@ from datetime import datetime
 from collections import Counter
 from statistics import mode, median
 
+import jinja2
 from nonebot.log import logger
 from PIL import Image, ImageDraw
-from nonebot_plugin_htmlrender import template_to_pic
 
 from ..api import api_info
 from ..schema.user import UserCompact
 from ..schema.match import Game, Match
 from .utils import crop_bg, draw_fillet, open_user_icon, draw_rounded_rectangle
+from .browser import persistent_page
 from .static import (
     Torus_SemiBold_20,
     Torus_SemiBold_25,
@@ -195,8 +196,22 @@ async def draw_rating_legacy(match_id: str, algorithm: str = "osuplus") -> bytes
 
 async def draw_rating_card(data: dict) -> bytes:
     """Render a rating card from prepared match statistics."""
-    template_path = str(Path(__file__).parent / "rating_templates")
-    return await template_to_pic(template_path, "index.html", data, type="png")
+    template_path = Path(__file__).parent / "rating_templates"
+    template = jinja2.Environment(  # noqa: S701
+        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
+    ).get_template("index.html")
+    async with persistent_page(
+        "rating", (template_path / "index.html").as_uri(), {"width": 1280, "height": 900}
+    ) as page:
+        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
+        await page.evaluate(
+            "Promise.race([Promise.all([document.fonts.ready,"
+            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
+            "new Promise(resolve=>setTimeout(resolve,8000))])"
+        )
+        element = await page.query_selector(".card")
+        assert element
+        return await element.screenshot(type="png")
 
 
 async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:

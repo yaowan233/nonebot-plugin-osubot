@@ -18,6 +18,14 @@ from nonebug import App
 OUT = Path(__file__).parent / "output"
 OUT.mkdir(exist_ok=True)
 
+DESIGN_ASSETS = Path(__file__).parent.parent / "design" / "score" / "assets"
+
+
+def require_design_assets() -> None:
+    """design/ 是本地素材目录，不随仓库分发；缺失时跳过依赖它的合成渲染测试。"""
+    if not (DESIGN_ASSETS / "player-mrekk.png").exists():
+        pytest.skip("design/ 素材目录不存在")
+
 USERS = {
     "osu": (7562902, "osu"),
     "taiko": (31148838, "taiko"),
@@ -430,9 +438,10 @@ async def test_rank_synthetic(app: App):
     """群内排名场景：3 人自适应高度，以及 100 人的前三、前 20 与榜外本人。"""
     from nonebot_plugin_osubot.draw.rank import draw_group_rank
 
+    require_design_assets()
     avatar_files = [
-        OUT.parent.parent / "design" / "score" / "assets" / "player-mrekk.png",
-        *sorted((OUT.parent.parent / "design" / "score" / "assets" / "collab").glob("mapper-*.png")),
+        DESIGN_ASSETS / "player-mrekk.png",
+        *sorted((DESIGN_ASSETS / "collab").glob("mapper-*.png")),
     ]
     players = []
     for index in range(1, 101):
@@ -465,9 +474,10 @@ async def test_rank_synthetic(app: App):
 
 
 def _rating_players() -> list[dict]:
+    require_design_assets()
     avatar_files = [
-        OUT.parent.parent / "design" / "score" / "assets" / "player-mrekk.png",
-        *sorted((OUT.parent.parent / "design" / "score" / "assets" / "collab").glob("mapper-*.png")),
+        DESIGN_ASSETS / "player-mrekk.png",
+        *sorted((DESIGN_ASSETS / "collab").glob("mapper-*.png")),
     ]
     names = ["Aster", "Kestrel", "Mikan", "Rin", "Yuzu", "Noir", "Sora", "Lumen"]
     players = []
@@ -538,8 +548,8 @@ async def test_match_history_synthetic(app: App, is_team: bool):
 
     players = _rating_players()
     covers = [
-        OUT.parent.parent / "design" / "score" / "assets" / "beatmap-cover.jpg",
-        OUT.parent.parent / "design" / "score" / "assets" / "collab" / "cover.jpg",
+        DESIGN_ASSETS / "beatmap-cover.jpg",
+        DESIGN_ASSETS / "collab" / "cover.jpg",
     ]
     games = []
     for game_index in range(1, 4):
