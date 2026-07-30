@@ -6,20 +6,20 @@ from typing import Union
 from datetime import date, datetime, timedelta
 
 from PIL import UnidentifiedImageError
-from nonebot_plugin_htmlrender import get_new_page
 
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from .utils import info_calc
+from .browser import persistent_page
 from ..mods import get_speed_change_labels
 from ..pp import cal_pp
 from ..utils import FGM, GMN
-from ..file import user_cache_path, get_projectimg, download_osu, map_path
+from ..file import user_cache_path, download_osu, map_path
 from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
-from ..api import get_random_bg, get_user_info_data, get_user_scores
+from ..api import get_user_info_data, get_user_scores
 
 
 async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> bytes:
@@ -97,9 +97,8 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
             bg_path.unlink()
             raise NetworkError("自定义背景图片读取错误，请重新上传！")
     else:
-        bg_img = await get_projectimg(get_random_bg())
-        encoded_string = base64.b64encode(bg_img.getvalue()).decode("utf-8")
-        bg = f"data:image/png;base64,{encoded_string}"
+        # 无自定义背景时留空：随机图在深色面板下几乎不可见，且下载接口异常会卡住出图
+        bg = ""
     if day != 0 and user:
         day_delta = date.today() - user.date
         time = day_delta.days
@@ -227,9 +226,9 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
         enable_async=True,
     )
     template = template_env.get_template(template_name)
-    async with get_new_page(2) as page:
-        await page.set_viewport_size({"width": 1800, "height": 1200})
-        await page.goto((Path(template_path) / template_name).as_uri(), wait_until="load")
+    async with persistent_page(
+        "info", (Path(template_path) / template_name).as_uri(), {"width": 1800, "height": 1200}
+    ) as page:
         await page.set_content(
             await template.render_async(user_json=draw_user.model_dump_json(), bg=bg),
             wait_until="domcontentloaded",

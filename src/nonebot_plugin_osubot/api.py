@@ -1,5 +1,4 @@
 import asyncio
-import random
 from io import BytesIO
 from urllib.parse import quote, urlencode
 from datetime import datetime, timedelta
@@ -25,11 +24,12 @@ from .schema.user import Level, GradeCounts, UnifiedUser, UserStatistics
 
 api = "https://osu.ppy.sh/api/v2"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
+# 谱面元信息变化极少，缓存 1 小时避免每次出图都重新请求
+map_cache = ExpiringDict(max_len=500, max_age_seconds=3600)
 plugin_config = get_plugin_config(Config)
 
 key = plugin_config.osu_key
 client_id = plugin_config.osu_client
-bg_url = plugin_config.info_bg
 
 
 @auto_retry
@@ -351,6 +351,13 @@ async def osu_api(
         query_params["mode"] = mode
 
     url = f"{endpoint}?{urlencode(query_params)}" if query_params else endpoint
+    if project == "map":
+        cache_key = f"{map_id}:{mode}"
+        if cached := map_cache.get(cache_key):
+            return cached
+        data = await api_info(project, url)
+        map_cache[cache_key] = data
+        return data
     return await api_info(project, url)
 
 
@@ -437,11 +444,6 @@ async def get_users(users: list[int]):
     headers = await get_headers()
     req = await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users})
     return [User(**i) for i in req.json()["users"]] if req else []
-
-
-def get_random_bg() -> str:
-    res = random.choice(bg_url)
-    return res
 
 
 async def get_beatmapsets_info(sid) -> BeatmapSets:

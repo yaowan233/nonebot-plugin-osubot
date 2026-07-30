@@ -1,6 +1,5 @@
 import re
 import urllib
-import random
 import asyncio
 from pathlib import Path
 from typing import Union, Optional
@@ -10,7 +9,7 @@ from nonebot.log import logger
 
 from .schema import Badge
 from .network import auto_retry
-from .api import bg_url, safe_async_get
+from .api import safe_async_get
 from .network.first_response import get_first_response
 
 osufile = Path(__file__).parent / "osufile"
@@ -107,10 +106,7 @@ async def get_projectimg(url: str) -> BytesIO:
         url = "https://osu.ppy.sh/images/layout/avatar-guest.png"
     req = await safe_async_get(url)
     if not req or req.status_code >= 400:
-        # todo 加个自创的错误图片
-        req = await safe_async_get(random.choice(bg_url))
-        if not req or req.status_code >= 400:
-            raise Exception("图片下载失败")
+        raise Exception("图片下载失败")
     data = req.read()
     im = BytesIO(data)
     return im

@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 import jinja2
 from PIL import Image
 from osu_tools import OsuCalculator
-from nonebot_plugin_htmlrender import get_new_page
 
 from ..info import get_bg
 from ..utils import FGM, NGM, normalize_map_mode
@@ -28,6 +27,7 @@ from .utils import (
     filter_scores_with_regex,
 )
 from .static import osufile
+from .browser import persistent_page
 
 
 async def draw_score(
@@ -235,8 +235,29 @@ def _format_stat(value) -> str:
 def _image_data_uri(image: Image.Image, image_format: str = "PNG") -> str:
     output = BytesIO()
     frame = image.convert("RGBA" if image_format == "PNG" else "RGB")
-    frame.save(output, image_format, optimize=True)
+    # 不开 optimize：多轮压缩每次出图要多花几百毫秒，体积差距对内嵌 data uri 不值得
+    frame.save(output, image_format)
     return f"data:image/{image_format.lower()};base64,{base64.b64encode(output.getvalue()).decode()}"
+
+
+async def _cover_data_uri(map_id: int, set_id: int) -> str:
+    try:
+        cover_image = await get_bg(map_id, set_id)
+        cover = _image_data_uri(cover_image, "JPEG")
+        cover_image.close()
+        return cover
+    except Exception:
+        return _image_data_uri(Image.new("RGB", (640, 360), (9, 18, 29)), "JPEG")
+
+
+async def _player_avatar_data_uri(info: UnifiedUser, source: str) -> str:
+    try:
+        player_image = await open_user_icon(info, source)
+        avatar = _image_data_uri(player_image)
+        player_image.close()
+        return avatar
+    except Exception:
+        return _image_data_uri(Image.new("RGBA", (128, 128), (30, 45, 58, 255)))
 
 
 async def _owner_avatar_data(owner_id: int) -> str:
@@ -284,6 +305,11 @@ async def render_score_template(
     osu_path: str,
     source: str,
 ) -> BytesIO:
+    # 封面/玩家头像/team 图标互不依赖，与 pp 计算、数据组装并行下载
+    cover_task = asyncio.create_task(_cover_data_uri(mapinfo.id, mapinfo.beatmapset_id))
+    avatar_task = asyncio.create_task(_player_avatar_data_uri(info, source))
+    team_icon_task = asyncio.create_task(_team_icon_data(info))
+
     mode = score_info.ruleset_id % 4
     mode_names = ["标准模式", "太鼓模式", "接水果模式", "键盘模式"]
     mode_codes = ["OSU", "TAIKO", "CATCH", "MANIA"]
@@ -439,18 +465,7 @@ async def render_score_template(
 
     rank_image = osufile / "ranking" / f"legacy-ranking-{score_info.rank}@2x.png"
 
-    try:
-        cover_image = await get_bg(mapinfo.id, mapinfo.beatmapset_id)
-        cover = _image_data_uri(cover_image, "JPEG")
-        cover_image.close()
-    except Exception:
-        cover = _image_data_uri(Image.new("RGB", (640, 360), (9, 18, 29)), "JPEG")
-    try:
-        player_image = await open_user_icon(info, source)
-        player_avatar = _image_data_uri(player_image)
-        player_image.close()
-    except Exception:
-        player_avatar = _image_data_uri(Image.new("RGBA", (128, 128), (30, 45, 58, 255)))
+    cover, player_avatar = await asyncio.gather(cover_task, avatar_task)
     total_objects = mapinfo.count_circles + mapinfo.count_sliders + mapinfo.count_spinners
     combo = (
         f"{score_info.max_combo:,} / {pp_info.max_combo:,}x"
@@ -463,7 +478,9 @@ async def render_score_template(
     combo_is_full = bool(pp_info.max_combo and score_info.max_combo >= pp_info.max_combo)
     team = info.team.model_dump() if info.team else None
     if team is not None:
-        team["icon"] = await _team_icon_data(info)
+        team["icon"] = await team_icon_task
+    else:
+        team_icon_task.cancel()
     profile_third_label = "成绩排名" if grank else "玩家等级"
     profile_third_value = (
         f"#{grank}"
@@ -536,10 +553,11 @@ async def render_score_template(
     template_path = Path(__file__).parent / "score_templates"
     template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path), enable_async=True)  # noqa: S701
     template = template_env.get_template("index.html")
-    async with get_new_page(2) as page:
-        await page.set_viewport_size({"width": 1440, "height": 900})
-        await page.goto((template_path / "index.html").as_uri(), wait_until="load")
-        await page.set_content(await template.render_async(d=data), wait_until="domcontentloaded")
+    html = await template.render_async(d=data)
+    async with persistent_page(
+        "score", (template_path / "index.html").as_uri(), {"width": 1440, "height": 900}
+    ) as page:
+        await page.set_content(html, wait_until="domcontentloaded")
         await page.evaluate("colourStarBadge()")
         await page.evaluate(
             "Promise.race([Promise.all([document.fonts.ready, "

@@ -104,7 +104,6 @@ OSU_KEY=你的客户端密钥
 | `OSU_CLIENT` | 是 | 无 | osu! OAuth 客户端 ID |
 | `OSU_KEY` | 是 | 无 | osu! OAuth 客户端密钥 |
 | `SQLALCHEMY_DATABASE_URL` | 否 | `sqlite+aiosqlite:///db.sqlite3` | 数据库地址，详见 [NoneBot ORM 配置](https://nonebot.dev/docs/best-practice/database/) |
-| `INFO_BG` | 否 | 内置随机图 API | 玩家资料图的随机背景 API 地址列表 |
 | `OSU_PROXY` | 否 | 无 | 请求 osu! API 时使用的代理地址或代理配置 |
 | `OSUTRACK_ENABLED` | 否 | `true` | 是否启用玩家信息定时追踪 |
 | `OSUTRACK_DEFAULT_DAYS` | 否 | `365` | 历史查询的默认追踪天数 |

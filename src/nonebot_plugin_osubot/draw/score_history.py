@@ -4,7 +4,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 import jinja2
-from nonebot_plugin_htmlrender import get_new_page
 
 from ..pp import cal_pp
 from ..utils import FGM, NGM, normalize_map_mode
@@ -16,6 +15,7 @@ from ..api import osu_api, get_user_info_data, get_ppysb_map_scores
 from ..file import download_osu, get_pfm_img, map_path
 from .score import cal_score_info
 from .static import ColorArr
+from .browser import persistent_page
 
 
 def _to_datetime(value: str) -> datetime:
@@ -204,9 +204,9 @@ async def draw_score_history(
     template = jinja2.Environment(  # noqa: S701
         loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
     ).get_template("index.html")
-    async with get_new_page(1) as page:
-        await page.set_viewport_size({"width": 1240, "height": 900})
-        await page.goto((template_path / "index.html").as_uri(), wait_until="load")
+    async with persistent_page(
+        "score_history", (template_path / "index.html").as_uri(), {"width": 1240, "height": 900}, device_scale_factor=1
+    ) as page:
         await page.set_content(await template.render_async(d=data), wait_until="domcontentloaded")
         await page.evaluate(
             "Promise.race([Promise.all([document.fonts.ready,"

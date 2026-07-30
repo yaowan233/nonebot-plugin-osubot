@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any
 
 import jinja2
-from nonebot_plugin_htmlrender import get_new_page
 from PIL import Image
 
 from ..info import get_bg
 from ..file import get_projectimg
+from .browser import persistent_page
 
 
 ASSET_PATH = Path(__file__).parent / "template_assets"
@@ -69,8 +69,7 @@ async def render_map_template(
         torus_regular_url=file_data_uri(ASSET_PATH / "torus-regular.woff", "font/woff"),
         torus_semibold_url=file_data_uri(ASSET_PATH / "torus-semibold.woff", "font/woff"),
     )
-    async with get_new_page(2) as page:
-        await page.set_viewport_size({"width": 1500, "height": viewport_height})
+    async with persistent_page("map_render", None, {"width": 1500, "height": viewport_height}) as page:
         await page.set_content(html, wait_until="networkidle")
         await page.evaluate(
             "Promise.all([document.fonts.ready,...Array.from(document.images,x=>x.decode().catch(()=>{}))])"

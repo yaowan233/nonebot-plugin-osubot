@@ -9,6 +9,9 @@ require("nonebot_plugin_orm")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_waiter")
 require("nonebot_plugin_uninfo")
+import asyncio
+
+from nonebot import get_driver
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_htmlrender.config import plugin_config as htmlrender_config
 from nonebot_plugin_htmlrender.consts import RenderBackend
@@ -63,3 +66,14 @@ async def update_info():
     for group in groups:
         await update_users_info(group)
     logger.info(f"已更新{len(result)}位玩家数据")
+
+
+driver = get_driver()
+
+
+@driver.on_startup
+async def _warm_up_pp_calculator():
+    # 后台预热，不阻塞启动；首次 pp 计算有近 2s 的初始化开销
+    from .pp import warm_up_pp_calculator
+
+    asyncio.create_task(warm_up_pp_calculator())

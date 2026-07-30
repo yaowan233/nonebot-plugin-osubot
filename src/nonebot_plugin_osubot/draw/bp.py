@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, Union
 
 import jinja2
-from nonebot_plugin_htmlrender import get_new_page
 
 from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
@@ -16,6 +15,7 @@ from ..pp import cal_pp
 from ..schema.score import UnifiedScore
 from .score import cal_score_info
 from .utils import filter_scores_with_regex
+from .browser import persistent_page
 
 
 async def draw_bp(
@@ -154,9 +154,9 @@ async def draw_pfm(
     template = jinja2.Environment(  # noqa: S701
         loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
     ).get_template("index.html")
-    async with get_new_page(1) as page:
-        await page.set_viewport_size({"width": 1440, "height": 900})
-        await page.goto((template_path / "index.html").as_uri(), wait_until="load")
+    async with persistent_page(
+        "bp", (template_path / "index.html").as_uri(), {"width": 1440, "height": 900}, device_scale_factor=1
+    ) as page:
         await page.set_content(
             await template.render_async(payload_json=json.dumps(payload, ensure_ascii=False)),
             wait_until="domcontentloaded",

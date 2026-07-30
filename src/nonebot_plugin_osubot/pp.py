@@ -1,5 +1,6 @@
 from rosu_pp_py import Beatmap, GameMode, Strains, Performance
 from osu_tools import OsuCalculator, CalculationResult
+from nonebot.log import logger
 
 from .exceptions import NetworkError
 from .schema.score import Mod, UnifiedScore
@@ -164,3 +165,24 @@ def get_strains(path: str, mods: int) -> Strains:
     c = Performance(accuracy=100, mods=mods)
     strains = c.difficulty().strains(beatmap)
     return strains
+
+
+async def warm_up_pp_calculator():
+    """后台预热 pp 计算器：osu_tools/rosu_pp 首次调用有近 2s 初始化开销，提前到启动时完成。"""
+    import asyncio
+
+    from .file import map_path
+
+    try:
+        osu_files = sorted(map_path.glob("*/*.osu"))
+        if not osu_files:
+            return
+        path = str(osu_files[0].absolute())
+
+        def _warm():
+            Beatmap(path=path)
+            OsuCalculator().calculate(path, 0, [], 100)
+
+        await asyncio.to_thread(_warm)
+    except Exception as e:
+        logger.debug(f"pp 计算器预热失败（不影响使用）: {e}")

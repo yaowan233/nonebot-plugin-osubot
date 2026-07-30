@@ -604,3 +604,29 @@ async def test_match_history_synthetic(app: App, is_team: bool):
     path = OUT / f"match_history_{suffix}.png"
     path.write_bytes(pic)
     print(f"  [match history {suffix}] -> {path.name}")
+
+
+@pytest.mark.asyncio
+async def test_sl_real(app: App):
+    """sl 谱面成绩列表 真实图片输出"""
+    from nonebot_plugin_osubot.draw.score_history import draw_score_history
+
+    t0 = time.perf_counter()
+    data = await draw_score_history(7562902, True, "osu", [], 1475722, "osu")
+    elapsed = time.perf_counter() - t0
+    path = OUT / "sl_osu.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [sl osu] {elapsed:.2f}s -> {path.name}")
+
+
+@pytest.mark.asyncio
+async def test_bmap_real(app: App):
+    """bmap 谱面组信息 真实图片输出"""
+    from nonebot_plugin_osubot.draw.bmap import draw_bmap_info
+
+    t0 = time.perf_counter()
+    data = await draw_bmap_info(691220)
+    elapsed = time.perf_counter() - t0
+    path = OUT / "bmap_osu.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [bmap osu] {elapsed:.2f}s -> {path.name}")
