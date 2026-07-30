@@ -89,7 +89,7 @@ def _draw_preview_notes(field: PlayField) -> None:
         tail_y = field.get_pos(hold.tail_offset, column, y_offset=-field.hit_height)[1]
         top = min(head_y, tail_y) + field.hit_height // 2
         bottom = max(head_y, tail_y) + field.hit_height // 2
-        inset = 3
+        inset = 1
         draw.rectangle(
             (x + inset, top, x + field.note_width - inset - 1, bottom),
             fill=color,
