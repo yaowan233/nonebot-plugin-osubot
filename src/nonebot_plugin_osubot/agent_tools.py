@@ -7,7 +7,7 @@ import base64
 import datetime
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Any
+from typing import Any, Annotated
 from pathlib import Path
 
 from langchain.tools import tool
@@ -37,6 +37,27 @@ from .help_data import get_command_help
 from .history_data import merge_osutrack_history
 
 ContentBlock = str | dict[str, Any]
+UsernameArg = Annotated[
+    str | None,
+    "osu 用户名。查询当前发言用户或用户说“我/我的/自己”时必须省略；不要填写 QQ/user_id。",
+]
+TargetUserIdArg = Annotated[
+    str | None,
+    "群友的 QQ/平台 user_id。仅当用户明确给出该 ID 时填写；查询当前发言用户时必须省略，禁止猜测或追问。",
+]
+_SELF_REFERENCE_VALUES = {
+    "我",
+    "自己",
+    "本人",
+    "当前用户",
+    "当前用户id",
+    "绑定用户",
+    "current_user",
+    "current user",
+    "current-user",
+    "request_user",
+    "requester",
+}
 medal_data_path = Path(__file__).parent / "osufile" / "medals" / "medals.json"
 with open(medal_data_path, encoding="utf-8") as file:
     medal_json = json.load(file)
@@ -64,7 +85,7 @@ def _clean_optional_text(value: str | None) -> str | None:
         return None
     if value.lower() in {"none", "null", "nil", "undefined"}:
         return None
-    if value in {"我", "自己", "本人", "当前用户", "绑定用户"}:
+    if value.lower() in _SELF_REFERENCE_VALUES:
         return None
     return value
 
@@ -73,7 +94,14 @@ def _clean_user_id(value: str | int | None) -> str | None:
     if value is None:
         return None
     value = str(value).strip()
-    if not value or value.lower() in {"none", "null", "nil", "undefined", "all"}:
+    if not value or value.lower() in {
+        "none",
+        "null",
+        "nil",
+        "undefined",
+        "all",
+        *_SELF_REFERENCE_VALUES,
+    }:
         return None
     return value
 
@@ -254,8 +282,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_user_info")
     async def send_osu_user_info(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         day: int = 0,
         source: str = "osu",
@@ -284,8 +312,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_bp")
     async def send_osu_bp(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         best: int = 1,
         mode: str | None = None,
         mods: str = "",
@@ -326,8 +354,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_bp_list")
     async def send_osu_bp_list(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         range_text: str = "1-30",
         mode: str | None = None,
         mods: str = "",
@@ -369,8 +397,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_recent_or_pr")
     async def send_osu_recent_or_pr(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         kind: str = "recent",
         index: int = 1,
         mode: str | None = None,
@@ -406,8 +434,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     @tool("send_osu_score")
     async def send_osu_score(
         beatmap_id: str,
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         mods: str = "",
         source: str = "osu",
@@ -443,8 +471,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_history")
     async def send_osu_history(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         day: int = 0,
         source: str = "osu",
@@ -496,8 +524,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_bp_analysis")
     async def send_osu_bp_analysis(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         source: str = "osu",
         is_lazer: bool | None = None,
@@ -547,8 +575,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_recommend")
     async def send_osu_recommend(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         include_image_for_analysis: bool = False,
     ) -> str | list[ContentBlock]:
@@ -577,8 +605,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
     @tool("send_osu_profile_url")
     async def send_osu_profile_url(
-        username: str | None = None,
-        target_user_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
         source: str = "osu",
     ) -> str:
         """发送玩家 osu 主页链接。"""
@@ -757,7 +785,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "根据问题选择 topic，并原样保留工具返回的斜杠指令和示例。",
             "- 区分教学和执行：例如“BP 指令怎么用”只查 command help；“帮我查 BP”才调用成绩工具。"
             "不要为了演示用法而调用会发图或执行查询的工具。",
-            "- 未指定玩家、用户说“我/自己/我的”时，不要传 username；工具会使用当前发言用户绑定的 osu 账号。",
+            "- 当前请求的发言用户 ID 已由系统在工具上下文中绑定，不会展示给你，也不需要你知道。",
+            "- 未指定玩家、用户说“我/自己/我的”时，禁止追问或猜测个人 ID；不要传 username 或 target_user_id，"
+            "直接调用工具，工具会使用当前发言用户绑定的 osu 账号。",
             "- 用户想查被 @ 的群友时，不要传 username；工具会自动读取消息中的非 bot @ 目标并使用该群友绑定账号。",
             "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
             "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。官网成绩默认查询 lazer + stable。",
