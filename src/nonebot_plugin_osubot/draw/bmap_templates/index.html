@@ -431,6 +431,43 @@
       line-height: 1;
       text-shadow: 0 0 9px color-mix(in srgb, var(--diff) 42%, transparent);
     }
+    .version-wrap {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+    }
+    .difficulty-area.show-mappers .version-wrap {
+      grid-template-columns: minmax(0, 1fr) 94px;
+    }
+    .mapper-avatars {
+      flex: 0 0 auto;
+      display: none;
+      align-items: center;
+      justify-content: flex-start;
+      padding-left: 1px;
+    }
+    .difficulty-area.show-mappers .mapper-avatars { display: flex; }
+    .mapper-avatar,
+    .mapper-more {
+      width: 30px;
+      height: 30px;
+      border: 2px solid color-mix(in srgb, var(--diff) 55%, #101b28);
+      border-radius: 50%;
+      background: #152430;
+      box-shadow: 0 3px 9px rgba(0, 0, 0, .35);
+    }
+    .mapper-avatar { display: block; object-fit: cover; }
+    .mapper-avatar + .mapper-avatar,
+    .mapper-more { margin-left: -9px; }
+    .mapper-more {
+      display: grid;
+      place-items: center;
+      color: #e8eef2;
+      font-size: 8px;
+      font-weight: 700;
+    }
     .version { min-width: 0; }
     .version b {
       display: block;
@@ -595,7 +632,7 @@
 
         <section class="difficulty-area">
           <div class="column-head">
-            <span>#</span><span>模式</span><span>难度名称</span><span>星数</span>
+            <span>#</span><span>模式</span><span class="difficulty-heading">难度名称</span><span>星数</span>
             <span>最大连击</span><span>通过率</span><span>谱面参数</span>
           </div>
           <div class="difficulty-list"></div>
@@ -610,6 +647,9 @@
     const root = document.documentElement;
     const $ = (selector, scope = document) => scope.querySelector(selector);
     const fmt = value => Number(value).toLocaleString('zh-CN');
+    const escapeAttribute = value => String(value).replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[character]);
     const starStops = [
       [.1, '#4290FB'], [1.25, '#4FC0FF'], [2, '#4FFFD5'], [2.5, '#7CFF4F'],
       [3.3, '#F6F05C'], [4.2, '#FF8068'], [4.9, '#FF4E6F'], [5.8, '#C645B8'],
@@ -649,6 +689,10 @@
 
     const allDifficulties = DATA.difficulties;
     const difficulties = allDifficulties.slice(0, 20);
+    if (DATA.show_difficulty_owners) {
+      $('.difficulty-area').classList.add('show-mappers');
+      $('.difficulty-heading').textContent = '难度 / 谱师';
+    }
     const extraRows = Math.max(0, difficulties.length - 9);
     const sheetHeight = difficulties.length === 1 ? 700 : 900 + extraRows * 65;
     document.documentElement.style.height = `${sheetHeight}px`;
@@ -719,11 +763,17 @@
       const color = starColor(item.stars);
       const passRate = item.plays ? item.passes / item.plays * 100 : 0;
       const peak = index === difficulties.length - 1 ? ' is-peak' : '';
+      const visibleOwners = item.owners.slice(0, 3);
+      const ownerAvatars = visibleOwners.map(owner =>
+        `<img class="mapper-avatar" src="${owner.avatar}" title="${escapeAttribute(owner.username)}" alt="">`
+      ).join('');
+      const remainingOwners = item.owners.length - visibleOwners.length;
+      const ownerMore = remainingOwners > 0 ? `<span class="mapper-more">+${remainingOwners}</span>` : '';
       return `
         <article class="difficulty-row${peak}" style="--diff:${color};--diff-text:${item.stars >= 6.5 ? '#ffd966' : color}">
           <span class="index">${String(index + 1).padStart(2, '0')}</span>
           <span class="mode">${modeGlyph[item.mode] || modeGlyph[0]}</span>
-          <div class="version"><b>${item.version}</b><small>谱面 ${item.id} · ${item.length}</small></div>
+          <div class="version-wrap"><div class="version"><b>${item.version}</b><small>谱面 ${item.id} · ${item.length}</small></div><div class="mapper-avatars">${ownerAvatars}${ownerMore}</div></div>
           <span class="stars">★ ${item.stars.toFixed(2)}</span>
           <div class="metric"><span>最大连击</span><b>${fmt(item.combo)}x</b></div>
           <div class="pass-rate"><span>通过率</span><b>${passRate.toFixed(1)}%</b><div class="pass-bar"><i style="width:${Math.min(passRate, 100)}%"></i></div></div>

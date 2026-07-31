@@ -1,4 +1,6 @@
 from typing import Optional
+
+from .beatmap import Gds
 from .basemodel import Base
 
 
@@ -18,6 +20,8 @@ class BidData(Base):
     max_combo: Optional[int] = None
     playcount: int
     passcount: int
+    user_id: Optional[int] = None
+    owners: Optional[list[Gds]] = None
 
 
 class BeatmapSets(Base):
