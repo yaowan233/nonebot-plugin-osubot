@@ -60,9 +60,7 @@ async def test_send_osu_bp_returns_structured_analysis_and_only_sends_once(monke
             bpm=180,
             total_length=120,
         ),
-        statistics=SimpleNamespace(
-            model_dump=lambda **_: {"great": 1000, "miss": 1}
-        ),
+        statistics=SimpleNamespace(model_dump=lambda **_: {"great": 1000, "miss": 1}),
         rank="A",
         pp=321.456,
         accuracy=98.76543,

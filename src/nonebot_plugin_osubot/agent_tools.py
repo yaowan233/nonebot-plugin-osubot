@@ -389,9 +389,7 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
 def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     bp_delivery_lock = asyncio.Lock()
     delivered_bp_keys: set[tuple[Any, ...]] = set()
-    bp_artifact_cache: dict[
-        tuple[Any, ...], tuple[bytes | BytesIO, dict[str, Any]]
-    ] = {}
+    bp_artifact_cache: dict[tuple[Any, ...], tuple[bytes | BytesIO, dict[str, Any]]] = {}
 
     async def deliver_bp_once(
         delivery_key: tuple[Any, ...], image: bytes | BytesIO
