@@ -89,6 +89,11 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Install Playwright browser
+        run: |
+          PLAYWRIGHT_BROWSERS_PATH="$HOME/.local/share/nonebot2/nonebot_plugin_htmlrender" \
+            uv run playwright install --with-deps chromium
+
       - name: Create test environment file
         run: |
           cat > .env.test << EOF

@@ -42,10 +42,16 @@ async def _create_page(
     )
     try:
         page = await lease.__aenter__()
+    except BaseException:
+        # __aenter__ 失败时 context manager 尚未进入，不能调用 __aexit__。
+        # 否则 asynccontextmanager 会收到 athrow，并可能再次 yield，最终掩盖
+        # 原始 ProviderLifecycleError 为 "generator didn't stop after athrow()"。
+        raise
+    try:
         if goto_uri:
             await page.goto(goto_uri, wait_until="load")
-    except BaseException as error:
-        await lease.__aexit__(type(error), error, error.__traceback__)
+    except BaseException:
+        await lease.__aexit__(None, None, None)
         raise
     _pages[key] = _PersistentPage(lease, page, goto_uri, viewport.copy(), device_scale_factor)
     return page

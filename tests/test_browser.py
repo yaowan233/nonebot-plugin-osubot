@@ -20,11 +20,14 @@ class FakePage:
 
 
 class FakeLease:
-    def __init__(self):
+    def __init__(self, enter_error=None):
         self.page = FakePage()
         self.exit_count = 0
+        self.enter_error = enter_error
 
     async def __aenter__(self):
+        if self.enter_error is not None:
+            raise self.enter_error
         return self.page
 
     async def __aexit__(self, *_args):
@@ -36,9 +39,11 @@ class FakePlaywright:
     def __init__(self):
         self.leases = []
         self.options = []
+        self.next_enter_error = None
 
     def page(self, **options):
-        lease = FakeLease()
+        lease = FakeLease(self.next_enter_error)
+        self.next_enter_error = None
         self.leases.append(lease)
         self.options.append(options)
         return lease
@@ -92,3 +97,16 @@ async def test_persistent_page_drops_failed_page_and_recreates(browser_pool):
 
     await browser.close_persistent_pages()
     assert playwright.leases[1].exit_count == 1
+
+
+@pytest.mark.asyncio
+async def test_persistent_page_does_not_exit_lease_when_enter_fails(browser_pool):
+    browser, playwright = browser_pool
+    playwright.next_enter_error = RuntimeError("browser startup failed")
+
+    with pytest.raises(RuntimeError, match="browser startup failed"):
+        async with browser.persistent_page("score", None, {"width": 100, "height": 100}):
+            pass
+
+    assert playwright.leases[0].exit_count == 0
+    assert "score" not in browser._pages
