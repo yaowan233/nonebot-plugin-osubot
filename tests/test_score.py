@@ -43,6 +43,43 @@ async def test_draw_score_can_return_selected_beatmap_context(tmp_path):
     assert set_id == 13579
 
 
+@pytest.mark.asyncio
+async def test_draw_score_can_return_selected_bp_and_fetch_enough_for_mod_filter(tmp_path):
+    from nonebot_plugin_osubot.draw.score import draw_score
+
+    score = SimpleNamespace(
+        beatmap=SimpleNamespace(id=24680, set_id=13579),
+        mods=[SimpleNamespace(acronym="HD")],
+    )
+    user = SimpleNamespace(id=114514)
+    module = "nonebot_plugin_osubot.draw.score"
+    get_scores = AsyncMock(return_value=[score])
+
+    with (
+        patch(f"{module}.map_path", tmp_path),
+        patch(f"{module}.get_user_scores", new=get_scores),
+        patch(f"{module}.get_user_info_data", new=AsyncMock(return_value=user)),
+        patch(f"{module}.osu_api", new=AsyncMock(return_value={})),
+        patch(f"{module}.download_osu", new=AsyncMock()),
+        patch(f"{module}.cal_score_info", side_effect=lambda _, value, __: value),
+        patch(f"{module}.draw_score_pic", new=AsyncMock(return_value=BytesIO(FAKE_IMG))),
+    ):
+        image, selected_score = await draw_score(
+            "bp",
+            114514,
+            True,
+            "osu",
+            ["HD"],
+            [],
+            best=1,
+            return_score=True,
+        )
+
+    assert image.getvalue() == FAKE_IMG
+    assert selected_score is score
+    assert get_scores.call_args.kwargs["limit"] == 200
+
+
 def _img_msg(event):
     return Message(
         [

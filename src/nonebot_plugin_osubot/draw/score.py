@@ -41,10 +41,18 @@ async def draw_score(
     best: int = 1,
     *,
     return_context: bool = False,
-) -> BytesIO | tuple[BytesIO, int, int]:
+    return_score: bool = False,
+) -> BytesIO | tuple[BytesIO, int, int] | tuple[BytesIO, UnifiedScore]:
     task1 = asyncio.create_task(get_user_info_data(uid, mode, source))
     if project == "bp":
-        scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer, limit=best)
+        scores = await get_user_scores(
+            uid,
+            mode,
+            "best",
+            source=source,
+            legacy_only=not is_lazer,
+            limit=200 if mods else best,
+        )
 
     else:
         if project == "pr":
@@ -91,6 +99,8 @@ async def draw_score(
     image = await draw_score_pic(score, info, map_json, "", source)
     if return_context:
         return image, score.beatmap.id, score.beatmap.set_id
+    if return_score:
+        return image, score
     return image
 
 

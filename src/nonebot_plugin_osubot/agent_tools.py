@@ -7,7 +7,7 @@ import base64
 import datetime
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Any, Annotated
+from typing import Any, Literal, Annotated
 from pathlib import Path
 
 from langchain.tools import tool
@@ -16,15 +16,18 @@ from nonebot_plugin_orm import get_session
 from nonebot_plugin_alconna import UniMessage
 
 from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext, register_agent_tool
+from nonebot_plugin_ai_groupmate.reply_guard import is_request_active
 
 from .api import get_uid_by_name, get_recommend, get_user_scores, osu_api, safe_async_get
 from .draw import draw_bp, draw_info, draw_score, get_score_data, draw_map_info, draw_bmap_info
 from .info import get_bg
 from .utils import NGM, mods2list
+from .mods import get_mods_list
 from .file import download_osu
 from .mania import generate_preview_pic
 from .database import InfoData, UserData, SbUserData
 from .exceptions import NetworkError
+from .schema.score import UnifiedScore
 from .draw.score import cal_score_info
 from .draw.rating import draw_rating
 from .draw.recommend import draw_recommend
@@ -44,6 +47,10 @@ UsernameArg = Annotated[
 TargetUserIdArg = Annotated[
     str | None,
     "群友的 QQ/平台 user_id。仅当用户明确给出该 ID 时填写；查询当前发言用户时必须省略，禁止猜测或追问。",
+]
+BpPurposeArg = Annotated[
+    Literal["view", "analyze"],
+    "用户目的。只想查询或看图时填 view；要求评价、分析发挥或找问题时填 analyze。",
 ]
 _SELF_REFERENCE_VALUES = {
     "我",
@@ -224,6 +231,114 @@ def _image_tool_result(text: str, raw: bytes | BytesIO, include_image: bool) -> 
     ]
 
 
+def _normalize_bp_indices(best_indices: list[int]) -> list[int]:
+    normalized: list[int] = []
+    for index in best_indices:
+        if index < 1 or index > 200:
+            raise ValueError("BP 序号必须在 1-200 之间")
+        if index not in normalized:
+            normalized.append(index)
+    if not normalized:
+        raise ValueError("至少需要一个 BP 序号")
+    if len(normalized) > 20:
+        raise ValueError("单次最多比较 20 个 BP")
+    return normalized
+
+
+def _score_to_bp_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]:
+    beatmap = score.beatmap
+    statistics: dict[str, Any] = {}
+    if score.statistics:
+        if hasattr(score.statistics, "model_dump"):
+            statistics = score.statistics.model_dump(exclude_none=True)
+        else:
+            statistics = score.statistics.dict(exclude_none=True)
+    return {
+        "bp_index": bp_index,
+        "beatmap": {
+            "id": beatmap.id if beatmap else None,
+            "set_id": beatmap.set_id if beatmap else None,
+            "artist": beatmap.artist if beatmap else None,
+            "title": beatmap.title if beatmap else None,
+            "difficulty": beatmap.version if beatmap else None,
+            "mapper": beatmap.creator if beatmap else None,
+            "stars": round(beatmap.stars, 2) if beatmap else None,
+            "bpm": beatmap.bpm if beatmap else None,
+            "length_seconds": beatmap.total_length if beatmap else None,
+        },
+        "score": {
+            "rank": score.rank,
+            "pp": round(score.pp, 2) if score.pp is not None else None,
+            "accuracy": round(score.accuracy, 4),
+            "combo": score.max_combo,
+            "miss": statistics.get("miss", 0),
+            "mods": [mod.acronym for mod in score.mods] or ["NM"],
+            "total_score": score.total_score,
+            "played_at": score.ended_at.isoformat(),
+            "client": score.score_version,
+            "statistics": statistics,
+        },
+    }
+
+
+def _bp_tool_result(
+    status: Literal["sent", "already_sent", "ok", "expired", "failed"],
+    message: str,
+    *,
+    player: str | None = None,
+    mode: str | None = None,
+    purpose: Literal["view", "analyze"] | None = None,
+    scores: list[dict[str, Any]] | None = None,
+) -> str:
+    result: dict[str, Any] = {"status": status, "message": message}
+    if player is not None:
+        result["player"] = player
+    if mode is not None:
+        result["mode"] = mode
+    if purpose is not None:
+        result["purpose"] = purpose
+        result["next_action"] = "finish" if purpose == "view" else "reply_with_analysis"
+    if scores is not None:
+        result["scores"] = scores
+    return json.dumps(result, ensure_ascii=False)
+
+
+async def _is_context_request_active(ctx: AgentToolContext) -> bool:
+    if ctx.request_id is None:
+        return True
+    return await is_request_active(ctx.session_id, ctx.request_id)
+
+
+async def _query_bp_scores(
+    user: ResolvedOsuUser,
+    mode: str,
+    mods: list[str],
+    source: str,
+    is_lazer: bool,
+    best_indices: list[int],
+) -> list[dict[str, Any]]:
+    indices = _normalize_bp_indices(best_indices)
+    scores = await get_user_scores(
+        user.user_id,
+        NGM[mode],
+        "best",
+        source=source,
+        legacy_only=not is_lazer,
+        limit=200 if mods else max(indices),
+    )
+    filtered_indices = get_mods_list(scores, mods)
+    if len(filtered_indices) < max(indices):
+        raise NetworkError("未查询到指定的 BP 成绩")
+
+    summaries: list[dict[str, Any]] = []
+    for bp_index in indices:
+        score = scores[filtered_indices[bp_index - 1]]
+        if source == "osu":
+            score = cal_score_info(is_lazer, score, source)
+        summaries.append(_score_to_bp_summary(score, bp_index))
+    return summaries
+
+
 def _strip_medal_html(text: str) -> str:
     table_match = re.search(r"<table[^>]*>(.*?)</table>", text, re.DOTALL)
     if table_match:
@@ -272,6 +387,24 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
 
 @register_agent_tool
 def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
+    bp_delivery_lock = asyncio.Lock()
+    delivered_bp_keys: set[tuple[Any, ...]] = set()
+    bp_artifact_cache: dict[
+        tuple[Any, ...], tuple[bytes | BytesIO, dict[str, Any]]
+    ] = {}
+
+    async def deliver_bp_once(
+        delivery_key: tuple[Any, ...], image: bytes | BytesIO
+    ) -> Literal["sent", "already_sent", "expired"]:
+        async with bp_delivery_lock:
+            if delivery_key in delivered_bp_keys:
+                return "already_sent"
+            if not await _is_context_request_active(ctx):
+                return "expired"
+            await _send_image(ctx, image)
+            delivered_bp_keys.add(delivery_key)
+            return "sent"
+
     @tool("get_osubot_command_help")
     async def get_osubot_command_help(topic: str = "overview") -> str:
         """
@@ -319,38 +452,113 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         mods: str = "",
         source: str = "osu",
         is_lazer: bool | None = None,
-        include_image_for_analysis: bool = False,
-    ) -> str | list[ContentBlock]:
+        purpose: BpPurposeArg = "view",
+    ) -> str:
         """
-        查询并发送 osu 玩家指定 bp 成绩图。best 为 bp 序号，范围 1-200；mods 可填 HDHR、DT、HD 等。
+        查询并发送 osu 玩家指定 BP 成绩图。
+        best 为 BP 序号，范围 1-200；mods 可填 HDHR、DT、HD 等。
+        purpose=view 只展示查询结果；purpose=analyze 会同时返回结构化成绩供分析。
+        同一请求使用相同参数重复调用时不会重复发送图片。
         """
         try:
             if best < 1 or best > 200:
-                return "best 必须在 1-200 之间"
+                return _bp_tool_result("failed", "best 必须在 1-200 之间")
+            if not await _is_context_request_active(ctx):
+                return _bp_tool_result("expired", "请求已过期，已取消查询和发送。")
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
             is_lazer = _resolve_is_lazer(is_lazer)
-            data = await draw_score(
-                "bp",
+            mod_list = mods2list(mods) if mods else []
+            delivery_key = (
                 user.user_id,
-                is_lazer,
-                NGM[mode],
-                mods2list(mods) if mods else [],
-                [],
                 source,
-                best=best,
+                mode,
+                is_lazer,
+                tuple(mod_list),
+                best,
             )
-            await _send_image(ctx, data)
-            return _image_tool_result(
-                f"已发送 {user.name} 的 bp{best}。图片中包含成绩、pp、acc、combo、miss、mods、谱面等信息。",
-                data,
-                include_image_for_analysis,
+
+            artifact = bp_artifact_cache.get(delivery_key)
+            if artifact is None:
+                data, score = await draw_score(
+                    "bp",
+                    user.user_id,
+                    is_lazer,
+                    NGM[mode],
+                    mod_list,
+                    [],
+                    source,
+                    best=best,
+                    return_score=True,
+                )
+                summary = _score_to_bp_summary(score, best)
+                artifact = (data, summary)
+                bp_artifact_cache[delivery_key] = artifact
+
+            data, summary = artifact
+            delivery_status = await deliver_bp_once(delivery_key, data)
+            if delivery_status == "expired":
+                return _bp_tool_result("expired", "请求已过期，已取消发送。")
+            message = (
+                f"已发送 {user.name} 的 BP{best}。"
+                if delivery_status == "sent"
+                else f"{user.name} 的 BP{best} 已在本轮发送过，不再重复发送。"
+            )
+            return _bp_tool_result(
+                delivery_status,
+                message,
+                player=user.name,
+                mode=NGM[mode],
+                purpose=purpose,
+                scores=[summary] if purpose == "analyze" else None,
             )
         except NetworkError as e:
-            return f"查询 bp 失败: {e}"
+            return _bp_tool_result("failed", f"查询 BP 失败: {e}")
         except Exception as e:
-            return f"发送 bp 失败: {e}"
+            return _bp_tool_result("failed", f"发送 BP 失败: {e}")
+
+    @tool("get_osu_bp_data")
+    async def get_osu_bp_data(
+        best_indices: list[int],
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
+        mode: str | None = None,
+        mods: str = "",
+        source: str = "osu",
+        is_lazer: bool | None = None,
+    ) -> str:
+        """
+        读取一个或多个 BP 的结构化成绩，不发送图片。
+        仅用于比较多个 BP 或进行复杂分析；普通查询应使用 send_osu_bp。
+        best_indices 最多包含 20 个 1-200 范围内的 BP 序号。
+        """
+        try:
+            if not await _is_context_request_active(ctx):
+                return _bp_tool_result("expired", "请求已过期，已取消查询。")
+            source = _normalize_source(source)
+            user = await _resolve_osu_user(ctx, username, source, target_user_id)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer)
+            summaries = await _query_bp_scores(
+                user,
+                mode,
+                mods2list(mods) if mods else [],
+                source,
+                is_lazer,
+                best_indices,
+            )
+            return _bp_tool_result(
+                "ok",
+                f"已读取 {user.name} 的 {len(summaries)} 条 BP 数据，未发送图片。",
+                player=user.name,
+                mode=NGM[mode],
+                scores=summaries,
+            )
+        except (NetworkError, ValueError) as e:
+            return _bp_tool_result("failed", f"查询 BP 数据失败: {e}")
+        except Exception as e:
+            return _bp_tool_result("failed", f"读取 BP 数据失败: {e}")
 
     @tool("send_osu_bp_list")
     async def send_osu_bp_list(
@@ -765,6 +973,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             get_osubot_command_help,
             send_osu_user_info,
             send_osu_bp,
+            get_osu_bp_data,
             send_osu_bp_list,
             send_osu_recent_or_pr,
             send_osu_score,
@@ -791,11 +1000,17 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- 用户想查被 @ 的群友时，不要传 username；工具会自动读取消息中的非 bot @ 目标并使用该群友绑定账号。",
             "- 用户明确给出群友 QQ/user_id 时，传 target_user_id；这会查询该群友绑定的 osu 账号。",
             "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。官网成绩默认查询 lazer + stable。",
-            "- 如果用户只要求查询/发图，不要传 include_image_for_analysis，发图后调用 finish 或简短结束。",
-            "- 如果用户问“打得怎么样/发挥如何/分析/评价/看看问题”，传 include_image_for_analysis=true；"
-            "看到工具返回的图片后，再基于图片内容给出简短评价。",
+            "- send_osu_bp 会直接发送一张结果图。只要求查询/看图时 purpose=view，成功后调用 finish，"
+            "不要再发送同义文字。",
+            "- 用户问单个 BP“打得怎么样/发挥如何/分析/评价/看看问题”时，调用 send_osu_bp 并传 purpose=analyze；"
+            "根据工具返回的结构化成绩给出简短评价，不要重复发图。",
+            "- 比较多个 BP、分析多个指定 BP 的差异时，调用 get_osu_bp_data；它只返回结构化数据且不会发图。"
+            "不要用它处理普通的单个 BP 看图请求。",
+            "- 对 send_osu_user_info、send_osu_bp_list、send_osu_recent_or_pr 等其他图片工具，"
+            "用户明确要求分析图片时才传 include_image_for_analysis=true。",
             "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
             "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
+            "- get_osu_bp_data: 仅用于读取多个指定 BP 的数据以进行比较或复杂分析，不发送图片。",
             "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm 或一段 bp 范围时使用。默认范围优先用 1-30。",
             "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。",
             "- send_osu_score: 用户想查某人在指定谱面上的成绩时使用。",
