@@ -26,6 +26,7 @@ def require_design_assets() -> None:
     if not (DESIGN_ASSETS / "player-mrekk.png").exists():
         pytest.skip("design/ 素材目录不存在")
 
+
 USERS = {
     "osu": (7562902, "osu"),
     "taiko": (31148838, "taiko"),
