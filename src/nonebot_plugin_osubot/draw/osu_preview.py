@@ -12,10 +12,10 @@ from collections.abc import Awaitable, Callable
 
 from nonebot import get_plugin_config
 from nonebot.log import logger
-from nonebot_plugin_htmlrender import get_new_page
 
 from ..config import Config
 from ..file import map_path
+from .browser import persistent_page
 from .utils import load_osu_file_and_setup_template
 
 template_path = str(Path(__file__).parent / "osu_preview_templates")
@@ -118,7 +118,7 @@ async def _render_gif_chunk(
         frame_time_span=frame_time_span,
     )
 
-    async with get_new_page(2) as page:
+    async with persistent_page("osu_preview", None, {"width": 1280, "height": 720}) as page:
         await page.goto(f"file://{template_path}")
         await page.set_content(html, wait_until="networkidle")
         await page.wait_for_function(

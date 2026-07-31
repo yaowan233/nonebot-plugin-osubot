@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <title>BP Analysis</title>
 <style>
-@font-face{font-family:Torus;src:url('../template_assets/torus-regular.woff')}
-@font-face{font-family:Torus;src:url('../template_assets/torus-semibold.woff');font-weight:600}
-@font-face{font-family:OsuExtra;src:url('../template_assets/extra.woff')}
+@font-face{font-family:Torus;src:url('{{ torus_regular_url }}')}
+@font-face{font-family:Torus;src:url('{{ torus_semibold_url }}');font-weight:600}
+@font-face{font-family:OsuExtra;src:url('{{ extra_font_url }}')}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#e9e6df}
 body{width:1560px;padding:24px;font-family:Torus,"Microsoft YaHei","PingFang SC",sans-serif;color:#1c1c22}
@@ -60,7 +60,7 @@ body{width:1560px;padding:24px;font-family:Torus,"Microsoft YaHei","PingFang SC"
 .grade-row.zero{opacity:.42}
 .foot{display:flex;justify-content:space-between;color:#a3a0a8;font-size:10px;letter-spacing:.14em;padding:10px 2px 0}
 </style>
-<script src="./echarts.min.js"></script>
+<script src="{{ echarts_url }}"></script>
 </head>
 <body>
 <main class="report" id="bpa-report">

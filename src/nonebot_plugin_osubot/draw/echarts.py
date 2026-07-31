@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -9,13 +10,22 @@ from nonebot_plugin_htmlrender import render_template
 from ..api import get_users
 from ..file import download_osu, map_path
 from ..pp import cal_pp
+from .map_render import file_data_uri
 
 template_dir = Path(__file__).parent / "templates"
 template_path = str(template_dir)
-template_pages = {
-    "viewport": {"width": 1280, "height": 10},
-    "base_url": template_dir.resolve().as_uri(),
-}
+template_asset_dir = Path(__file__).parent / "template_assets"
+
+
+@lru_cache(maxsize=1)
+def _template_assets() -> dict[str, str]:
+    return {
+        "echarts_url": file_data_uri(template_dir / "echarts.min.js", "application/javascript"),
+        "torus_regular_url": file_data_uri(template_asset_dir / "torus-regular.woff", "font/woff"),
+        "torus_semibold_url": file_data_uri(template_asset_dir / "torus-semibold.woff", "font/woff"),
+        "extra_font_url": file_data_uri(template_asset_dir / "extra.woff", "font/woff"),
+    }
+
 
 rank_color = {
     "X": "#ffc83a",
@@ -127,10 +137,10 @@ async def draw_history_plot(
     pic = await render_template(
         template_path,
         template_name=template_name,
-        templates={"payload": payload},
-        pages=template_pages,
+        variables={**_template_assets(), "payload": payload},
+        width=1280,
     )
-    return pic
+    return bytes(pic)
 
 
 def _num(value: Any, default: float = 0.0) -> float:
@@ -343,7 +353,8 @@ async def draw_bpa_plot(
     pic = await render_template(
         template_path,
         template_name=template_name,
-        templates={
+        variables={
+            **_template_assets(),
             "name": name,
             "username": display_name,
             "initial": display_name[:1].upper(),
@@ -363,9 +374,6 @@ async def draw_bpa_plot(
             "stats": stats,
             "length": len(pp_ls),
         },
-        pages={
-            "viewport": {"width": 1620, "height": 10},
-            "base_url": template_dir.resolve().as_uri(),
-        },
+        width=1620,
     )
-    return pic
+    return bytes(pic)

@@ -1,57 +1,96 @@
-"""跨模板复用的 playwright 持久页面池。
-
-每个模板一个持久 page：避免每次出图都新建 context/page（约 0.3s），
-goto 模板文件也只需在页面创建时执行一次（建立 file:// 源，
-让字体等相对路径资源以模板目录为基准）。
-"""
+"""HTMLRender 0.8 Playwright lease 上的持久页面池。"""
 
 import asyncio
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Any
 
-from nonebot_plugin_htmlrender import get_render
+from nonebot.log import logger
+from nonebot_plugin_htmlrender import get_default_application
 
-_pages = {}  # key -> page
-_contexts = {}  # key -> context
-_locks = {}  # key -> asyncio.Lock
+_pages: dict[str, "_PersistentPage"] = {}
+_locks: dict[str, asyncio.Lock] = {}
+_closing = False
 
 
-async def _create_page(key, goto_uri, viewport, device_scale_factor):
-    session = await get_render()
-    context = await session.handle.new_context(viewport=viewport, device_scale_factor=device_scale_factor)
-    page = await context.new_page()
-    if goto_uri:
-        await page.goto(goto_uri, wait_until="load")
-    _contexts[key] = context
-    _pages[key] = page
+@dataclass(slots=True)
+class _PersistentPage:
+    lease: Any
+    page: Any
+    goto_uri: str | None
+    viewport: dict
+    device_scale_factor: float
+
+
+async def _drop_page(key: str) -> None:
+    entry = _pages.pop(key, None)
+    if entry is None:
+        return
+    await entry.lease.__aexit__(None, None, None)
+
+
+async def _create_page(
+    key: str,
+    goto_uri: str | None,
+    viewport: dict,
+    device_scale_factor: float,
+):
+    app = get_default_application()
+    lease = app.extensions.playwright.page(
+        viewport=viewport,
+        device_scale_factor=device_scale_factor,
+    )
+    try:
+        page = await lease.__aenter__()
+        if goto_uri:
+            await page.goto(goto_uri, wait_until="load")
+    except BaseException as error:
+        await lease.__aexit__(type(error), error, error.__traceback__)
+        raise
+    _pages[key] = _PersistentPage(lease, page, goto_uri, viewport.copy(), device_scale_factor)
     return page
 
 
-async def _drop_page(key):
-    context = _contexts.pop(key, None)
-    page = _pages.pop(key, None)
-    try:
-        if context is not None:
-            await context.close()
-        elif page is not None:
-            await page.close()
-    except Exception:
-        pass
-
-
 @asynccontextmanager
-async def persistent_page(key: str, goto_uri: str | None, viewport: dict, device_scale_factor: float = 2):
-    """获取某个模板的持久页面；同一模板并发渲染会串行，页面异常时自动丢弃下次重建。"""
+async def persistent_page(
+    key: str,
+    goto_uri: str | None,
+    viewport: dict,
+    device_scale_factor: float = 2,
+):
+    """复用模板页面；同一模板串行渲染，异常或参数变化时自动重建。"""
+    if _closing:
+        raise RuntimeError("Playwright 持久页面池正在关闭")
     lock = _locks.setdefault(key, asyncio.Lock())
     async with lock:
-        page = _pages.get(key)
-        if page is None or page.is_closed():
+        entry = _pages.get(key)
+        if entry is not None and (
+            entry.page.is_closed() or entry.goto_uri != goto_uri or entry.device_scale_factor != device_scale_factor
+        ):
             await _drop_page(key)
+            entry = None
+        if entry is None:
             page = await _create_page(key, goto_uri, viewport, device_scale_factor)
         else:
-            # viewport 可能随调用变化（如 bmap 高度自适应），重设成本可忽略
-            await page.set_viewport_size(viewport)
+            page = entry.page
         try:
+            if entry is not None and entry.viewport != viewport:
+                await page.set_viewport_size(viewport)
+                entry.viewport = viewport.copy()
             yield page
-        except Exception:
+        except BaseException:
             await _drop_page(key)
             raise
+
+
+async def close_persistent_pages() -> None:
+    """在 HTMLRender Application 关闭前释放所有长期持有的页面 lease。"""
+    global _closing
+    _closing = True
+    for key in list(_pages):
+        lock = _locks.setdefault(key, asyncio.Lock())
+        async with lock:
+            try:
+                await _drop_page(key)
+            except Exception:
+                logger.exception(f"关闭 Playwright 持久页面失败: {key}")
