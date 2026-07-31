@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import asyncio
 from io import BytesIO
@@ -10,7 +11,10 @@ from dataclasses import dataclass
 import numpy as np
 from PIL import ImageDraw
 from vsrg_tools.osu.OsuHit import OsuHit
+from vsrg_tools.osu.OsuHold import OsuHold
 from vsrg_tools.osu.OsuMap import OsuMap
+from vsrg_tools.osu.lists.notes.OsuHitList import OsuHitList
+from vsrg_tools.osu.lists.notes.OsuHoldList import OsuHoldList
 from vsrg_tools.algorithms.generate import full_ln
 from vsrg_tools.algorithms.playField import PlayField
 from vsrg_tools.algorithms.pattern.Pattern import Pattern
@@ -56,6 +60,164 @@ class Options:
     step: float = 0.05
     gap: float = 150
     thres: float = 100
+
+
+def _section_lines(osu_file: str, section: str) -> list[str]:
+    match = re.search(
+        rf"(?ms)^\[{re.escape(section)}\]\s*$\n(.*?)(?=^\[|\Z)",
+        osu_file.replace("\r\n", "\n").replace("\r", "\n"),
+    )
+    if match is None:
+        return []
+    return [line.strip() for line in match.group(1).splitlines() if line.strip() and not line.startswith("//")]
+
+
+def _difficulty_value(osu_file: str, name: str, default: float) -> float:
+    match = re.search(rf"(?m)^{re.escape(name)}\s*:\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*$", osu_file)
+    return float(match.group(1)) if match else default
+
+
+def _mania_convert_key_count(osu_file: str, hit_object_lines: list[str]) -> int:
+    """Match osu!'s stable-compatible key-count selection for std converts."""
+    circle_size = round(_difficulty_value(osu_file, "CircleSize", 5))
+    overall_difficulty = round(_difficulty_value(osu_file, "OverallDifficulty", 5))
+    object_types = []
+    for line in hit_object_lines:
+        fields = line.split(",")
+        if len(fields) < 5:
+            continue
+        try:
+            object_types.append(int(fields[3]))
+        except ValueError:
+            continue
+
+    if object_types:
+        special_count = sum(bool(object_type & (2 | 8)) for object_type in object_types)
+        special_ratio = special_count / len(object_types)
+        if special_ratio < 0.2:
+            return 7
+        if special_ratio < 0.3 or circle_size >= 5:
+            return 7 if overall_difficulty > 5 else 6
+        if special_ratio > 0.6:
+            return 5 if overall_difficulty > 4 else 4
+    return max(4, min(overall_difficulty + 1, 7))
+
+
+def _slider_duration(
+    start_time: float,
+    repeats: int,
+    pixel_length: float,
+    timing_points: list[tuple[float, float, bool]],
+    slider_multiplier: float,
+) -> float:
+    beat_length = 500.0
+    velocity_multiplier = 1.0
+    for offset, value, uninherited in timing_points:
+        if offset > start_time:
+            break
+        if uninherited:
+            beat_length = value
+            velocity_multiplier = 1.0
+        elif value < 0:
+            velocity_multiplier = max(0.1, min(10.0, -100.0 / value))
+    scoring_distance = max(slider_multiplier, 0.1) * 100 * velocity_multiplier
+    return max(0.0, pixel_length / scoring_distance * beat_length * max(repeats, 1))
+
+
+def convert_standard_to_mania_preview(osu_file: str) -> OsuMap:
+    """Build a deterministic Mania preview map from an osu!standard file."""
+    normalized = osu_file.replace("\r\n", "\n").replace("\r", "\n")
+    beatmap = OsuMap.read(normalized.splitlines())
+    hit_object_lines = _section_lines(normalized, "HitObjects")
+    key_count = _mania_convert_key_count(normalized, hit_object_lines)
+    slider_multiplier = _difficulty_value(normalized, "SliderMultiplier", 1.4)
+
+    timing_points: list[tuple[float, float, bool]] = []
+    for line in _section_lines(normalized, "TimingPoints"):
+        fields = line.split(",")
+        if len(fields) < 2:
+            continue
+        try:
+            timing_points.append(
+                (
+                    float(fields[0]),
+                    float(fields[1]),
+                    len(fields) < 7 or fields[6].strip() == "1",
+                )
+            )
+        except ValueError:
+            continue
+    timing_points.sort(key=lambda point: point[0])
+
+    hits: list[OsuHit] = []
+    holds: list[OsuHold] = []
+    occupied: dict[int, set[int]] = {}
+    for index, line in enumerate(hit_object_lines):
+        fields = line.split(",")
+        if len(fields) < 5:
+            continue
+        try:
+            x = float(fields[0])
+            start_time = float(fields[2])
+            object_type = int(fields[3])
+        except ValueError:
+            continue
+
+        timestamp = round(start_time)
+        preferred_column = max(0, min(key_count - 1, int(x * key_count / 512)))
+        used_columns = occupied.setdefault(timestamp, set())
+        column = next(
+            (
+                (preferred_column + offset) % key_count
+                for offset in range(key_count)
+                if (preferred_column + offset) % key_count not in used_columns
+            ),
+            (preferred_column + index) % key_count,
+        )
+        used_columns.add(column)
+
+        duration = 0.0
+        if object_type & 2 and len(fields) >= 8:
+            try:
+                duration = _slider_duration(
+                    start_time,
+                    int(fields[6]),
+                    float(fields[7]),
+                    timing_points,
+                    slider_multiplier,
+                )
+            except ValueError:
+                duration = 0.0
+        elif object_type & 8 and len(fields) >= 6:
+            try:
+                duration = max(0.0, float(fields[5]) - start_time)
+            except ValueError:
+                duration = 0.0
+
+        if duration >= 100:
+            holds.append(OsuHold(start_time, column, duration))
+        else:
+            hits.append(OsuHit(start_time, column))
+
+    if not hits and not holds:
+        raise ValueError("谱面没有可用于 Mania 转谱预览的物件")
+
+    # PlayField infers the lane count from the largest used column.
+    last_object = holds[-1] if holds else hits[-1]
+    last_object.column = key_count - 1
+    beatmap.mode = 3
+    beatmap.circle_size = key_count
+    beatmap.hits = OsuHitList(hits)
+    beatmap.holds = OsuHoldList(holds)
+    return beatmap
+
+
+def prepare_mania_preview_map(file: Path) -> OsuMap:
+    osu_file = file.read_text(encoding="utf-8-sig")
+    mode_match = re.search(r"(?m)^Mode\s*:\s*(\d+)\s*$", osu_file)
+    if mode_match is None or int(mode_match.group(1)) == 0:
+        return convert_standard_to_mania_preview(osu_file)
+    return OsuMap.read(osu_file.replace("\r\n", "\n").replace("\r", "\n").splitlines())
 
 
 def _preview_note_color(column: int, keys: int) -> str:
@@ -108,7 +270,7 @@ def _draw_preview_notes(field: PlayField) -> None:
 
 
 async def generate_preview_pic(file: Path, full=False) -> BytesIO:
-    m = OsuMap.read_file(str(file.absolute()))
+    m = prepare_mania_preview_map(file)
     keys = m.stack().column.max() + 1
     ptn = Pattern.from_note_lists([m.hits, m.holds], include_tails=False)
     grp = ptn.group()

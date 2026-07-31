@@ -25,7 +25,7 @@ taiko_skin_files = {
 }
 full_preview_chunk_duration = 5_000
 taiko_full_preview_chunk_duration = 10_000
-full_preview_cache_version = 8
+full_preview_cache_version = 9
 plugin_config = get_plugin_config(Config)
 _full_preview_locks: dict[Path, asyncio.Lock] = {}
 
@@ -37,6 +37,27 @@ class RenderedPreviewChunk:
     preview_end: int
     actual_start: int
     actual_end: int
+
+
+def _preview_mode(osu_file: str) -> int:
+    match = re.search(r"(?m)^Mode\s*:\s*(\d+)\s*$", osu_file)
+    return int(match.group(1)) if match else 0
+
+
+def _convert_preview_mode(osu_file: str, target_mode: int | None) -> str:
+    source_mode = _preview_mode(osu_file)
+    if target_mode is None or target_mode == source_mode or source_mode != 0:
+        return osu_file
+    if target_mode == 3:
+        from ..mania import convert_standard_to_mania_preview
+
+        return "\n".join(convert_standard_to_mania_preview(osu_file).write())
+    if target_mode in {1, 2}:
+        mode_line = f"Mode: {target_mode}"
+        if re.search(r"(?m)^Mode\s*:", osu_file):
+            return re.sub(r"(?m)^Mode\s*:\s*\d+\s*$", mode_line, osu_file, count=1)
+        return osu_file.replace("[General]", f"[General]\n{mode_line}", 1)
+    return osu_file
 
 
 def _configured_taiko_skin_path() -> Path | None:
@@ -222,11 +243,12 @@ async def draw_full_osu_preview(
     beatmap_id: int,
     beatmapset_id: int,
     progress_callback: Callable[[float], Awaitable[None]] | None = None,
+    target_mode: int | None = None,
 ) -> Path:
     osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
+    osu_file = _convert_preview_mode(osu_file, target_mode)
     taiko_skin_assets = {}
-    mode_match = re.search(r"(?m)^Mode\s*:\s*(\d+)\s*$", osu_file)
-    mode = int(mode_match.group(1)) if mode_match else 0
+    mode = _preview_mode(osu_file)
     is_taiko = mode == 1
     if is_taiko:
         taiko_skin_assets = await load_taiko_skin_assets()
@@ -251,7 +273,7 @@ async def draw_full_osu_preview(
         cache_dir
         / (
             f"{beatmap_id}-full-v{full_preview_cache_version}-"
-            f"{_skin_cache_key(taiko_skin_assets)}-{width}x{height}-{frame_interval}ms.mp4"
+            f"mode{mode}-{_skin_cache_key(taiko_skin_assets)}-{width}x{height}-{frame_interval}ms.mp4"
         )
     ).resolve()
     if cache_path.is_file() and cache_path.stat().st_size:
@@ -336,11 +358,17 @@ async def draw_full_osu_preview(
     return cache_path
 
 
-async def draw_osu_preview(beatmap_id: int, beatmapset_id: int, full: bool = False) -> bytes | Path:
+async def draw_osu_preview(
+    beatmap_id: int,
+    beatmapset_id: int,
+    full: bool = False,
+    target_mode: int | None = None,
+) -> bytes | Path:
     if full:
-        return await draw_full_osu_preview(beatmap_id, beatmapset_id)
+        return await draw_full_osu_preview(beatmap_id, beatmapset_id, target_mode=target_mode)
 
     osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
+    osu_file = _convert_preview_mode(osu_file, target_mode)
     taiko_skin_assets = {}
     if re.search(r"(?m)^Mode\s*:\s*1\s*$", osu_file):
         taiko_skin_assets = await load_taiko_skin_assets()

@@ -69,10 +69,16 @@ async def _(event: Event, state: T_State):
                 int(osu_id),
                 data["beatmapset_id"],
                 progress_callback=send_estimate,
+                target_mode=int(state["mode"]),
             )
             msg = UniMessage.video(raw=video.read_bytes(), name=video.name)
         else:
-            pic = await draw_osu_preview(int(osu_id), data["beatmapset_id"], False)
+            pic = await draw_osu_preview(
+                int(osu_id),
+                data["beatmapset_id"],
+                False,
+                target_mode=int(state["mode"]),
+            )
             msg = UniMessage.image(raw=pic)
         if state["mode"] == "0":
             msg += UniMessage.text(

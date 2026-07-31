@@ -647,7 +647,7 @@ async def test_preview_ctb_gif_param_uses_osu_preview_gif(app: App):
                     )
                     ctx.should_finished()
 
-                draw.assert_awaited_once_with(12345, 67890, False)
+                draw.assert_awaited_once_with(12345, 67890, False, target_mode=2)
 
 
 @pytest.mark.asyncio
@@ -665,7 +665,8 @@ async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path, com
     video.write_bytes(b"video")
     event = fake_group_message_event_v11(message=Message(command))
 
-    async def render_full_preview(beatmap_id, beatmapset_id, progress_callback):
+    async def render_full_preview(beatmap_id, beatmapset_id, progress_callback, target_mode):
+        assert target_mode == 3
         await progress_callback(65)
         return video
 
@@ -697,6 +698,7 @@ async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path, com
                 draw.assert_awaited_once()
                 assert draw.await_args.args == (12345, 67890)
                 assert callable(draw.await_args.kwargs["progress_callback"])
+                assert draw.await_args.kwargs["target_mode"] == 3
 
 
 @pytest.mark.asyncio
