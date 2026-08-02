@@ -1,6 +1,7 @@
+from collections.abc import Mapping
 from pathlib import Path
 
-from nonebot import get_driver, require
+from nonebot import get_driver, get_loaded_plugins, require
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
@@ -12,10 +13,17 @@ require("nonebot_plugin_orm")
 # OSUBot 的绘图功能依赖 Playwright，并需要读取自身模板资源。用户显式选择
 # 其他 Provider 时保持其配置；未配置时沿用插件此前的 Playwright 默认值。
 driver = get_driver()
+htmlrender_preloaded = any(plugin.name == "nonebot_plugin_htmlrender" for plugin in get_loaded_plugins())
 render_config = getattr(driver.config, "render", None)
-if render_config is None or isinstance(render_config, dict):
-    render_values = dict(render_config or {})
-    render_values.setdefault("provider", "playwright")
+if render_config is None or isinstance(render_config, Mapping) or callable(getattr(render_config, "model_dump", None)):
+    if render_config is None:
+        render_values = {}
+    elif isinstance(render_config, Mapping):
+        render_values = dict(render_config)
+    else:
+        render_values = render_config.model_dump(mode="python")
+    if render_values.get("provider") is None:
+        render_values["provider"] = "playwright"
 
     resources = dict(render_values.get("resources") or {})
     local_access = dict(resources.get("local_access") or {})
@@ -29,6 +37,13 @@ if render_config is None or isinstance(render_config, dict):
     driver.config.render = render_values
 
 require("nonebot_plugin_htmlrender")
+if htmlrender_preloaded:
+    # HTMLRender 0.8 在首次导入时固定默认 Application 的 composition。
+    # 如果其他插件先导入了它，仅修改 NoneBot 配置并不会更新旧 composition，
+    # 需要在补齐 Playwright 配置后重新初始化默认 Application。
+    from nonebot_plugin_htmlrender import initialize_plugin
+
+    initialize_plugin()
 require("nonebot_plugin_waiter")
 require("nonebot_plugin_uninfo")
 import asyncio
