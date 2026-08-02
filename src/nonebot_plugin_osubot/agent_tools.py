@@ -38,6 +38,7 @@ from .draw.catch_preview import draw_cath_preview
 from .draw.taiko_preview import map_to_image, parse_map
 from .help_data import get_command_help
 from .history_data import merge_osutrack_history
+from .matcher.utils import parse_bp_filter_text
 
 ContentBlock = str | dict[str, Any]
 UsernameArg = Annotated[
@@ -51,6 +52,13 @@ TargetUserIdArg = Annotated[
 BpPurposeArg = Annotated[
     Literal["view", "analyze"],
     "用户目的。只想查询或看图时填 view；要求评价、分析发挥或找问题时填 analyze。",
+]
+BpFiltersArg = Annotated[
+    str,
+    (
+        "BP 列表筛选表达式，多个条件用空格连接（AND）。例如 `300pp+ 98a+ 5-7* fc -DT`，或 "
+        '`p>=300 a>=98 s=5..7 m=0 mp~kanon t~"Freedom Dive" cl=l`。'
+    ),
 ]
 _SELF_REFERENCE_VALUES = {
     "我",
@@ -562,19 +570,29 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     async def send_osu_bp_list(
         username: UsernameArg = None,
         target_user_id: TargetUserIdArg = None,
-        range_text: str = "1-30",
+        range_text: str | None = None,
         mode: str | None = None,
         mods: str = "",
+        filters: BpFiltersArg = "",
         source: str = "osu",
         is_lazer: bool | None = None,
         include_image_for_analysis: bool = False,
     ) -> str | list[ContentBlock]:
         """
-        查询并发送 osu 玩家 bp 列表图。range_text 为范围，例如 1-20、20-50，最大到 200。
+        查询并发送 osu 玩家 BP 列表图。
+        range_text 是 BP 范围，例如 1-20；不筛选时默认 1-30，筛选时默认搜索 1-200。
+        mods 是必须包含的 Mods，例如 HDHR；filters 使用 /bl 相同的筛选语法，多个条件为 AND。
+        常用 filters：300pp+、98a+、5-7*、7d、24h、fc、nofc、-DT、=HDHR。
+        完整字段支持 pp/acc/stars/miss/combo/bpm/length/mapper/title/version/rank/client/date/days/speed/mods 等；
+        可简写为 p/a/s/m/c/b/len/mp/t/v/r/cl/sp/mod，文本有空格时使用引号。
         """
         try:
             source = _normalize_source(source)
-            low, high = _normalize_range(range_text, default="1-30")
+            search_conditions, invalid_filter = parse_bp_filter_text(filters)
+            if invalid_filter:
+                return f"无法识别 BP 筛选条件: {invalid_filter}"
+            default_range = "1-200" if search_conditions else "1-30"
+            low, high = _normalize_range(range_text, default=default_range)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
             is_lazer = _resolve_is_lazer(is_lazer)
@@ -587,12 +605,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 low,
                 high,
                 0,
-                [],
+                search_conditions,
                 source,
             )
             await _send_image(ctx, data)
             return _image_tool_result(
-                f"已发送 {user.name} 的 bp{low}-{high}。图片中包含 bp 列表，可用于分析成绩分布和整体表现。",
+                f"已发送 {user.name} 的 bp{low}-{high}"
+                f"{'（筛选：' + filters + '）' if filters else ''}。图片中包含 bp 列表，可用于分析成绩分布和整体表现。",
                 data,
                 include_image_for_analysis,
             )
@@ -1009,7 +1028,16 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
             "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
             "- get_osu_bp_data: 仅用于读取多个指定 BP 的数据以进行比较或复杂分析，不发送图片。",
-            "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm 或一段 bp 范围时使用。默认范围优先用 1-30。",
+            "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm、一段 bp 范围或筛选 BP 时使用。"
+            "无筛选默认 1-30；有 filters 且用户没指定范围时省略 range_text，让工具自动搜索 1-200。",
+            "- BP 筛选要写入 send_osu_bp_list.filters，不要把筛选文本放进 username，也不要传完整的 `/bl` 指令。"
+            "多个条件以空格连接且为 AND：pp/acc/stars/miss/combo/bpm/length/mapper/title/version/rank/client/date/"
+            "days/hours/speed/mods；简写 p/a/s/m/c/b/len/mp/t/v/r/cl/sp/mod。",
+            "- 将自然语言 BP 条件转换为 filters：‘300pp以上’=`300pp+`，‘98acc以上’=`98a+`，"
+            "‘5到7星’=`5-7*`，‘最近7天’=`7d`，‘24小时内’=`24h`，‘FC/零失误’=`fc`，"
+            "‘非FC’=`nofc`，‘不要DT’=`-DT`，‘仅HDHR’=`=HDHR`。",
+            "- Mods 参数语义：mods='HDHR' 表示成绩至少包含 HD 和 HR；精确 Mods 或排除 Mods 应写 filters："
+            "mods=HDHR / =HDHR、mods!=DT / -DT。标题、谱师等文本搜索使用 t~关键词、mp~谱师；含空格时加引号。",
             "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。",
             "- send_osu_score: 用户想查某人在指定谱面上的成绩时使用。",
             "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",

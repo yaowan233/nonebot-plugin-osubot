@@ -51,10 +51,12 @@ def get_mods_list(score_ls: list[UnifiedScore], mods: list[str]) -> list[int]:
     if not mods:
         return list(range(len(score_ls)))
     # Optimize: create the set once instead of on every iteration
-    mods_set = set(mods)
+    mods_set = {mod.upper() for mod in mods}
     mods_index_ls = []
     for i, score in enumerate(score_ls):
-        if score.mods and mods_set.issubset(j.acronym for j in score.mods):
+        score_mods = {mod.acronym.upper() for mod in (score.mods or [])}
+        matched = not (score_mods - {"CL"}) if mods_set == {"NM"} else mods_set.issubset(score_mods)
+        if matched:
             mods_index_ls.append(i)
     return mods_index_ls
 

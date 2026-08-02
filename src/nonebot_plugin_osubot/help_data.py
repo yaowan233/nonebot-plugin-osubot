@@ -33,7 +33,13 @@ HELP_TOPICS = {
         "/sc [mapid]：指定谱面成绩；查询过谱面后可省略 mapid\n"
         "/sl [mapid] [范围]：该谱面各 Mod 组合的最佳成绩列表\n"
         "/nb [#天数]：最近新增 BP；/bpa：BP 分析；/hs [#天数]：PP/排名历史\n"
-        "可附加玩家、模式和 Mods，例如 /bp peppy 5:o +HDHR。"
+        "可附加玩家、模式和 Mods，例如 /bp peppy 5:o +HDHR。\n"
+        "BP 列表支持组合筛选：pp、acc、星数、长度、bpm、谱师、标题、难度名、miss、rank、客户端等。\n"
+        '示例：/bl pp>=300 acc>=98 星数=5..7；/bl 标题~"Freedom Dive" mods!=HD。\n'
+        "比较符支持 >、>=、<、<=、=、!=；文本用 ~ 搜索、~= 模糊匹配，带空格时加引号。\n"
+        "常用简写：p=pp、a=acc、s=星数、m=miss、c=combo、b=bpm、len=长度、mp=谱师、t=标题、v=难度名。\n"
+        "快速写法：300pp+、98a+、5-7*、7d、24h、fc、nofc、-DT、=HDHR。\n"
+        "+HDHR 表示包含 Mods；mods=HDHR 表示完全一致；mods!=HD 表示排除；+NM 查询无玩法 Mod 成绩。"
     ),
     "map": (
         "谱面工具\n"

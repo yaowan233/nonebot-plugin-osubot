@@ -57,7 +57,7 @@ async def _pfm(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
     if not state["range"]:
-        state["range"] = "1-30"
+        state["range"] = "1-200" if state["query"] else "1-30"
     ls = state["range"].split("-")
     low, high = int(ls[0]), int(ls[1])
     if not 0 < low < high <= 200:

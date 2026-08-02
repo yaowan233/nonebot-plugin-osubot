@@ -31,17 +31,17 @@ async def draw_bp(
     source: str,
 ) -> BytesIO:
     scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
+    candidates = scores
+    if project == "tbp":
+        cutoff = datetime.now() - timedelta(days=day)
+        candidates = [score for score in candidates if score.ended_at > cutoff]
     if mods:
-        mods_ls = get_mods_list(scores, mods)
+        mods_ls = get_mods_list(candidates, mods)
         if low_bound > len(mods_ls):
             raise NetworkError(f"未找到开启 {'|'.join(mods)} Mods的成绩")
-        selected = [scores[i] for i in mods_ls[low_bound - 1 : high_bound]]
+        selected = [candidates[i] for i in mods_ls[low_bound - 1 : high_bound]]
     else:
-        selected = scores[low_bound - 1 : high_bound]
-    if project == "tbp":
-        selected = [score for score in scores if score.ended_at > datetime.now() - timedelta(days=day)]
-        if not selected:
-            raise NetworkError("未查询到游玩记录")
+        selected = candidates[low_bound - 1 : high_bound]
     for index, score in enumerate(selected):
         if score.mods and any(mod.acronym == "NC" for mod in score.mods):
             score.mods = [mod for mod in score.mods if mod.acronym != "DT"]

@@ -1,13 +1,14 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from nonebot.adapters.onebot.v11 import Message
 
-from fake import fake_group_message_event_v11
+from fake import fake_group_message_event_v11, fake_private_message_event_v11
 
 CONTEXT_MODULE = "nonebot_plugin_osubot.matcher.map_context"
 
 
-def test_remember_map_is_scoped_by_user():
+def test_group_context_is_shared_by_all_members_and_uses_latest_map():
     from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, remember_map
 
     first = fake_group_message_event_v11(user_id=10001)
@@ -16,7 +17,49 @@ def test_remember_map_is_scoped_by_user():
     remember_map(first, 12345)
 
     assert get_last_map_id(first) == "12345"
+    assert get_last_map_id(second) == "12345"
+
+    remember_map(second, 54321)
+
+    assert get_last_map_id(first) == "54321"
+    assert get_last_map_id(second) == "54321"
+
+
+def test_different_groups_have_independent_contexts():
+    from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, remember_map
+
+    first = fake_group_message_event_v11(group_id=10001)
+    second = fake_group_message_event_v11(group_id=10002)
+    remember_map(first, 12345)
+
+    assert get_last_map_id(first) == "12345"
     assert get_last_map_id(second) is None
+
+
+def test_private_contexts_remain_scoped_by_user():
+    from nonebot_plugin_osubot.matcher.map_context import get_last_map_id, remember_map
+
+    first = fake_private_message_event_v11(user_id=10001, original_message=Message("test"))
+    second = fake_private_message_event_v11(user_id=10002, original_message=Message("test"))
+    remember_map(first, 12345)
+
+    assert get_last_map_id(first) == "12345"
+    assert get_last_map_id(second) is None
+
+
+@pytest.mark.asyncio
+async def test_shared_context_resolves_and_caches_set_id():
+    from nonebot_plugin_osubot.matcher.map_context import get_last_set_id, remember_map
+
+    first = fake_group_message_event_v11(user_id=10001)
+    second = fake_group_message_event_v11(user_id=10002)
+    remember_map(first, 12345)
+
+    with patch(f"{CONTEXT_MODULE}.osu_api", new=AsyncMock(return_value={"beatmapset_id": 67890})) as api:
+        assert await get_last_set_id(second) == "67890"
+        assert await get_last_set_id(second) == "67890"
+
+    api.assert_awaited_once_with("map", map_id=12345)
 
 
 @pytest.mark.asyncio

@@ -320,13 +320,83 @@ def draw_rounded_rectangle(
 
 
 map_dict = {
+    "p": "pp",
     "mapper": "creator",
+    "mp": "creator",
+    "谱师": "creator",
     "length": "total_length",
+    "len": "total_length",
+    "l": "total_length",
+    "长度": "total_length",
     "acc": "accuracy",
-    "hp": "drain",
-    "star": "difficulty_rating",
+    "a": "accuracy",
+    "准确率": "accuracy",
+    "精度": "accuracy",
+    "drain": "hp",
+    "star": "stars",
+    "sr": "stars",
+    "s": "stars",
+    "diff": "stars",
+    "difficulty": "stars",
+    "星": "stars",
+    "星数": "stars",
     "combo": "max_combo",
+    "cb": "max_combo",
+    "c": "max_combo",
+    "连击": "max_combo",
     "keys": "cs",
+    "key": "cs",
+    "k": "cs",
+    "键位": "cs",
+    "score": "total_score",
+    "sc": "total_score",
+    "分数": "total_score",
+    "评级": "rank",
+    "r": "rank",
+    "标题": "title",
+    "歌名": "title",
+    "t": "title",
+    "难度名": "version",
+    "v": "version",
+    "ver": "version",
+    "art": "artist",
+    "b": "bpm",
+    "mapid": "id",
+    "bid": "id",
+    "id": "id",
+    "sid": "set_id",
+    "setid": "set_id",
+    "set": "set_id",
+    "失误": "miss",
+    "misses": "miss",
+    "m": "miss",
+    "nmiss": "miss",
+    "n300": "great",
+    "300": "great",
+    "n100": "ok",
+    "100": "ok",
+    "n50": "meh",
+    "50": "meh",
+    "ngeki": "perfect",
+    "geki": "perfect",
+    "nkatu": "good",
+    "katu": "good",
+    "日期": "date",
+    "after": "date",
+    "since": "date",
+    "之后": "date",
+    "before": "date",
+    "until": "date",
+    "之前": "date",
+    "天数": "days",
+    "客户端": "client",
+    "cl": "client",
+    "关键词": "keyword",
+    "搜索": "keyword",
+    "q": "keyword",
+    "kw": "keyword",
+    "mod": "mods",
+    "sp": "speed",
 }
 
 
@@ -334,50 +404,175 @@ def matches_condition_with_regex(score, key, operator, value):
     """
     匹配条件，支持正则与模糊搜索。
     """
+    key = key.lower()
+    if key in {"after", "since", "之后"} and operator == "=":
+        operator = ">="
+    elif key in {"before", "until", "之前"} and operator == "=":
+        operator = "<="
     key = map_dict.get(key, key)
+    value = value.strip().strip("\"'")
     beatmap = getattr(score, "beatmap", None)
     beatmapset = getattr(score, "beatmapset", None)
     statistics = getattr(score, "statistics", None)
-    attr = getattr(score, key, None)
-    attr1 = getattr(beatmap, key, None)
-    attr2 = getattr(beatmapset, key, None)
-    attr3 = getattr(statistics, key, None)
-    if not bool(attr or attr1 or attr2 or attr3):
+
+    if key == "keyword":
+        text = " ".join(
+            str(item)
+            for item in (
+                getattr(beatmap, "title", None),
+                getattr(beatmap, "artist", None),
+                getattr(beatmap, "version", None),
+                getattr(beatmap, "creator", None),
+            )
+            if item is not None
+        )
+        return _compare_text(text, "~" if operator == "=" else operator, value)
+
+    if key == "mods":
+        actual_mods = {
+            mod.acronym.upper() for mod in (getattr(score, "mods", None) or []) if mod.acronym.upper() != "CL"
+        }
+        if "NC" in actual_mods:
+            actual_mods.discard("DT")
+        if "PF" in actual_mods:
+            actual_mods.discard("SD")
+        expected_mods = _parse_mods(value)
+        if operator == "=":
+            return actual_mods == expected_mods
+        if operator == "!=":
+            return actual_mods.isdisjoint(expected_mods)
+        if operator in {"~", "~="}:
+            return expected_mods.issubset(actual_mods)
         return False
-    if not attr and attr1:
-        attr = attr1
-    if not attr and attr2:
-        attr = attr2
-    if not attr and attr3:
-        attr = attr3
-    if key == "accuracy":
-        attr = float(attr)
+
+    if key == "client":
+        value = {"l": "lazer", "s": "stable"}.get(value.lower(), value)
+        key = "score_version"
+    if key == "date":
+        ended_at = getattr(score, "ended_at", None)
+        attr = ended_at.date().isoformat() if ended_at is not None else None
+    elif key == "days":
+        ended_at = getattr(score, "ended_at", None)
+        attr = (datetime.datetime.now(ended_at.tzinfo) - ended_at).total_seconds() / 86400 if ended_at else None
+    elif key == "hours":
+        ended_at = getattr(score, "ended_at", None)
+        attr = (datetime.datetime.now(ended_at.tzinfo) - ended_at).total_seconds() / 3600 if ended_at else None
+    elif key == "fc":
+        miss = getattr(statistics, "miss", None)
+        attr = miss == 0 if miss is not None else None
+    elif key == "speed":
+        attr = 1.0
+        for mod in getattr(score, "mods", None) or []:
+            if mod.acronym not in {"DT", "NC", "HT"}:
+                continue
+            default = 0.75 if mod.acronym == "HT" else 1.5
+            try:
+                attr = float((mod.settings or {}).get("speed_change", default))
+            except (TypeError, ValueError):
+                attr = default
+            break
+    else:
+        attr = next(
+            (
+                candidate
+                for owner in (score, beatmap, beatmapset, statistics)
+                if owner is not None and (candidate := getattr(owner, key, None)) is not None
+            ),
+            None,
+        )
+    if attr is None:
+        return False
+
+    if isinstance(attr, bool):
+        expected = value.lower() in {"1", "true", "yes", "y", "是", "fc"}
+        return attr == expected if operator == "=" else attr != expected if operator == "!=" else False
     # 正则和模糊匹配
     if isinstance(attr, str):
-        if operator == "=":
-            return attr.lower() == value.lower()
-        elif operator == "!=":
-            return attr.lower() != value.lower()
-        elif operator == "~":  # 正则匹配
-            return re.search(value, attr, re.IGNORECASE) is not None
-        elif operator == "~=":  # 模糊匹配
-            return SequenceMatcher(None, attr.lower(), value.lower()).ratio() >= 0.5
+        return _compare_text(attr, operator, value)
 
     # 数值比较
     elif isinstance(attr, (int, float)):
-        value = float(value)
+        if operator == "=" and ".." in value:
+            low_text, high_text = value.split("..", 1)
+            try:
+                low, high = sorted((_parse_number(low_text, key), _parse_number(high_text, key)))
+            except ValueError:
+                return False
+            return low <= attr <= high
+        numeric_range = re.fullmatch(r"(-?[\d.]+)-(-?[\d.]+)", value)
+        if numeric_range and operator == "=":
+            low, high = sorted(float(item) for item in numeric_range.groups())
+            return low <= attr <= high
+        try:
+            number = _parse_number(value, key)
+        except ValueError:
+            return False
         if operator == ">":
-            return attr > value
+            return attr > number
         elif operator == "<":
-            return attr < value
+            return attr < number
         elif operator == ">=":
-            return attr >= value
+            return attr >= number
         elif operator == "<=":
-            return attr <= value
+            return attr <= number
         elif operator == "=":
-            return attr == value
+            return attr == number
+        elif operator == "!=":
+            return attr != number
 
     return False
+
+
+def _parse_number(value: str, key: str) -> float:
+    value = value.strip().lower().replace(",", "").removesuffix("%").removesuffix("x")
+    multiplier = 1.0
+    if key == "total_length" and value.endswith("m"):
+        multiplier = 60.0
+        value = value[:-1]
+    elif key == "total_length" and value.endswith("s"):
+        value = value[:-1]
+    elif value.endswith("k"):
+        multiplier = 1_000.0
+        value = value[:-1]
+    elif value.endswith("w"):
+        multiplier = 10_000.0
+        value = value[:-1]
+    elif value.endswith("m"):
+        multiplier = 1_000_000.0
+        value = value[:-1]
+    return float(value) * multiplier
+
+
+def _compare_text(attr: str, operator: str, value: str) -> bool:
+    folded_attr = attr.casefold()
+    folded_value = value.casefold()
+    if operator == "=":
+        return folded_attr == folded_value
+    if operator == "!=":
+        return folded_attr != folded_value
+    if operator == ">":
+        return folded_attr > folded_value
+    if operator == "<":
+        return folded_attr < folded_value
+    if operator == ">=":
+        return folded_attr >= folded_value
+    if operator == "<=":
+        return folded_attr <= folded_value
+    if operator == "~":
+        try:
+            return re.search(value, attr, re.IGNORECASE) is not None
+        except re.error:
+            return folded_value in folded_attr
+    if operator == "~=":
+        return SequenceMatcher(None, folded_attr, folded_value).ratio() >= 0.5
+    return False
+
+
+def _parse_mods(value: str) -> set[str]:
+    compact = value.upper().replace("+", "").replace(",", "").replace("，", "").replace(" ", "")
+    if compact in {"", "NM", "NOMOD"}:
+        return set()
+    return {compact[index : index + 2] for index in range(0, len(compact), 2)}
 
 
 def filter_scores_with_regex(scores_with_index, conditions):

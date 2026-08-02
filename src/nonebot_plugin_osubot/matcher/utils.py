@@ -12,11 +12,70 @@ from ..api import get_uid_by_name, osu_api
 from ..exceptions import NetworkError
 from ..database import UserData, SbUserData
 
-pattern = (
-    r"[:：]\s*(\w+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|"
-    r"title\s*([=~]+)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*([><=~]+)\s*[\w\.]+|$))|"
-    r"(\w+)\s*([><=~]+)\s*([\w\.]+)"
+FILTER_PATTERN = (
+    r"title\s*(!=|~=|=|~)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*(?:!=|>=|<=|~=|=|>|<|~)|$))|"
+    r"(\w+)\s*(!=|>=|<=|~=|=|>|<|~)\s*(\"[^\"]*\"|'[^']*'|[^\s,，]+)"
 )
+pattern = r"[:：]\s*(\w+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|" + FILTER_PATTERN
+
+BP_COMMANDS = {"bp", "pfm", "bplist", "bl", "tbp", "nb", "todaybp"}
+
+
+def extract_bp_shorthands(arg: str, conditions: list[tuple[str, str, str]]) -> str:
+    """Extract compact, whole-token BP filters and return the remaining arguments."""
+
+    def add(pattern: str, callback) -> None:
+        nonlocal arg
+
+        def replace(match: re.Match) -> str:
+            conditions.append(callback(match))
+            return " "
+
+        arg = re.sub(pattern, replace, arg, flags=re.IGNORECASE)
+
+    add(
+        r"(?<!\S)(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\*(?!\S)",
+        lambda match: ("stars", "=", f"{match[1]}..{match[2]}"),
+    )
+
+    metric_fields = {
+        "pp": "pp",
+        "p": "pp",
+        "acc": "accuracy",
+        "a": "accuracy",
+        "star": "stars",
+        "sr": "stars",
+        "s": "stars",
+        "*": "stars",
+    }
+
+    def metric_condition(match: re.Match) -> tuple[str, str, str]:
+        operator = {"+": ">=", "-": "<="}.get(match[3], "=")
+        return metric_fields[match[2].lower()], operator, match[1]
+
+    add(
+        r"(?<!\S)(\d+(?:\.\d+)?)(pp|acc|star|sr|p|a|s|\*)([+-]?)(?!\S)",
+        metric_condition,
+    )
+    add(r"(?<!\S)(\d+(?:\.\d+)?)d(?!\S)", lambda match: ("days", "<=", match[1]))
+    add(r"(?<!\S)(\d+(?:\.\d+)?)h(?!\S)", lambda match: ("hours", "<=", match[1]))
+    add(r"(?<!\S)fc(?!\S)", lambda _match: ("fc", "=", "true"))
+    add(r"(?<!\S)nofc(?!\S)", lambda _match: ("fc", "=", "false"))
+    add(r"(?<!\S)-([a-z0-9]{2,})(?!\S)", lambda match: ("mods", "!=", match[1]))
+    add(r"(?<!\S)=([a-z0-9]{2,})(?!\S)", lambda match: ("mods", "=", match[1]))
+    return arg
+
+
+def parse_bp_filter_text(arg: str) -> tuple[list[tuple[str, str, str]], str]:
+    """Parse the same filter expressions accepted by /bp and /bl."""
+    conditions: list[tuple[str, str, str]] = []
+    arg = extract_bp_shorthands(arg, conditions)
+    for match in re.findall(FILTER_PATTERN, arg):
+        if match[1]:
+            conditions.append(("title", match[0], match[1].strip().strip("\"'")))
+        elif match[2]:
+            conditions.append((match[2], match[3], match[4].strip().strip("\"'")))
+    return conditions, re.sub(FILTER_PATTERN, "", arg).strip()
 
 
 def split_msg():
@@ -41,6 +100,8 @@ def split_msg():
             arg.extract_plain_text().strip().replace("＝", "=").replace("：", ":").replace("＆", "&").replace("＃", "#")
         )
         command = state.get("_prefix", {}).get("command", [""])[0]
+        if command in BP_COMMANDS:
+            arg = extract_bp_shorthands(arg, state["query"])
         set_commands = {"bmap", "bm", "osudl", "dl", "反键"}
         if command in set_commands:
             url_target = extract_beatmapset_id(arg)
@@ -67,14 +128,10 @@ def split_msg():
                 source = {"sb": "ppysb", "ppysb": "ppysb"}
                 state["source"] = source.get(match[4], "osu")
             if match[6]:
-                state["query"].append(("title", match[5], match[6]))
-            if match[8]:
-                state["query"].append((match[8], match[9], match[10]))
-                if match[9] in [">", "<", ">=", "<="]:
-                    try:
-                        float(match[10]) if "." in match[10] else int(match[10])
-                    except ValueError:
-                        state["error"] = f"'{match[10]}' 不能进行数值比较"
+                state["query"].append(("title", match[5], match[6].strip().strip("\"'")))
+            if match[7]:
+                value = match[9].strip().strip("\"'")
+                state["query"].append((match[7], match[8], value))
         arg = re.sub(pattern, "", arg)
         arg = " " + arg
         matches = re.findall(r"(?<=\s)\d+(?=\s|$)", arg)

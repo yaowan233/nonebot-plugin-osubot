@@ -61,7 +61,7 @@ def test_get_mods_list_with_filter():
 
     assert get_mods_list([s_hd_dt, s_hd, s_none], ["HD"]) == [0, 1]
     assert get_mods_list([s_hd_dt, s_hd, s_none], ["HD", "DT"]) == [0]
-    assert get_mods_list([s_hd_dt, s_hd, s_none], ["NM"]) == []
+    assert get_mods_list([s_hd_dt, s_hd, s_none], ["NM"]) == [2]
 
 
 def test_get_mods_list_no_scores():

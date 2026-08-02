@@ -503,6 +503,9 @@ async def test_pr_success(app: App):
 
     assert get_last_map_id(event) == "24680"
     assert await get_last_set_id(event) == "13579"
+    groupmate_event = fake_group_message_event_v11(user_id=87654321, message=Message("/预览"))
+    assert get_last_map_id(groupmate_event) == "24680"
+    assert await get_last_set_id(groupmate_event) == "13579"
 
 
 @pytest.mark.asyncio

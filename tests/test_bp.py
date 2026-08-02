@@ -296,6 +296,61 @@ async def test_pfm_reversed_range_is_normalized(app: App):
 
 
 @pytest.mark.asyncio
+async def test_pfm_parses_convenient_filter_syntax(app: App):
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message('/bl 星数=5..7 标题~"Freedom Dive" mods!=HD'))
+
+    from nonebot_plugin_osubot.matcher.bp import pfm
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(pfm) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[8] == [
+        ("星数", "=", "5..7"),
+        ("标题", "~", "Freedom Dive"),
+        ("mods", "!=", "HD"),
+    ]
+    assert draw.call_args.args[5:7] == (1, 200)
+
+
+@pytest.mark.asyncio
+async def test_pfm_parses_compact_filters(app: App):
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/bl 300pp+ 98a+ 5-7* fc -DT"))
+
+    from nonebot_plugin_osubot.matcher.bp import pfm
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(pfm) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[8] == [
+        ("stars", "=", "5..7"),
+        ("pp", ">=", "300"),
+        ("accuracy", ">=", "98"),
+        ("fc", "=", "true"),
+        ("mods", "!=", "DT"),
+    ]
+
+
+@pytest.mark.asyncio
 async def test_pfm_network_error(app: App):
     """/pfm ：draw_bp 抛出 NetworkError，回复错误消息。"""
     try:
@@ -386,3 +441,35 @@ async def test_tbp_one_day_filter_uses_exact_24_hours(app: App):
         await draw_bp_module.draw_bp("tbp", 1, False, "osu", [], 1, 200, 1, [], "osu")
 
     assert mock_draw_pfm.call_args.args[3] == [recent]
+
+
+@pytest.mark.asyncio
+async def test_tbp_applies_date_mods_and_range_in_order(app: App):
+    """Recent BP queries keep their Mods and BP range filters."""
+    draw_bp_module = importlib.import_module("nonebot_plugin_osubot.draw.bp")
+    recent_hd = SimpleNamespace(
+        ended_at=datetime.now() - timedelta(hours=1),
+        mods=[SimpleNamespace(acronym="HD")],
+    )
+    recent_nm = SimpleNamespace(ended_at=datetime.now() - timedelta(hours=2), mods=[])
+    expired_hd = SimpleNamespace(
+        ended_at=datetime.now() - timedelta(days=2),
+        mods=[SimpleNamespace(acronym="HD")],
+    )
+
+    with (
+        patch.object(
+            draw_bp_module,
+            "get_user_scores",
+            new=AsyncMock(return_value=[recent_hd, recent_nm, expired_hd]),
+        ),
+        patch.object(draw_bp_module, "cal_score_info", side_effect=lambda _, score, __: score),
+        patch.object(
+            draw_bp_module,
+            "draw_pfm",
+            new=AsyncMock(return_value=BytesIO(FAKE_IMG)),
+        ) as mock_draw_pfm,
+    ):
+        await draw_bp_module.draw_bp("tbp", 1, False, "osu", ["HD"], 1, 1, 1, [], "osu")
+
+    assert mock_draw_pfm.call_args.args[3] == [recent_hd]

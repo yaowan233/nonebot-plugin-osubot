@@ -16,7 +16,13 @@ _contexts: ExpiringDict = ExpiringDict(max_len=10000, max_age_seconds=30 * 60)
 
 
 def _context_key(event: Event) -> str:
-    return f"{event.get_session_id()}:{event.get_user_id()}"
+    adapter_scope = f"{event.__class__.__module__}:{getattr(event, 'self_id', '')}"
+    if group_id := getattr(event, "group_id", None):
+        return f"{adapter_scope}:group:{group_id}"
+    if channel_id := getattr(event, "channel_id", None):
+        guild_id = getattr(event, "guild_id", None)
+        return f"{adapter_scope}:channel:{guild_id}:{channel_id}"
+    return f"{adapter_scope}:private:{event.get_session_id()}"
 
 
 def remember_map(event: Event, map_id: int | str, set_id: int | str | None = None) -> None:
@@ -50,7 +56,8 @@ def get_last_map_id(event: Event) -> str | None:
 
 
 async def get_last_set_id(event: Event) -> str | None:
-    context = _contexts.get(_context_key(event))
+    key = _context_key(event)
+    context = _contexts.get(key)
     if not context:
         return None
     if context.set_id:
@@ -60,7 +67,7 @@ async def get_last_set_id(event: Event) -> str | None:
 
     data = await osu_api("map", map_id=int(context.map_id))
     context.set_id = str(data["beatmapset_id"])
-    _contexts[_context_key(event)] = context
+    _contexts[key] = context
     return context.set_id
 
 
