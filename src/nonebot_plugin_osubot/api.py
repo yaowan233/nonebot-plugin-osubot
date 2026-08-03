@@ -517,9 +517,7 @@ def _recommend_target(target: str | None) -> str:
 async def _get_recommend_beatmapset_ids(items: list[dict]) -> dict[int, int]:
     missing_map_ids = list(
         dict.fromkeys(
-            int(item["beatmap_id"])
-            for item in items
-            if item.get("beatmap_id") and not item.get("beatmapset_id")
+            int(item["beatmap_id"]) for item in items if item.get("beatmap_id") and not item.get("beatmapset_id")
         )
     )
     if not missing_map_ids:
