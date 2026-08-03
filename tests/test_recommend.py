@@ -2,6 +2,7 @@
 
 import base64
 import pytest
+from httpx import Response
 from unittest.mock import AsyncMock, patch
 import nonebot
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -48,6 +49,69 @@ def make_recommend_data(player_id=3162675, mode="taiko", count=3):
         for i in range(count)
     ]
     return RecommendData(player_id=player_id, mode=mode, recommendations=items)
+
+
+def recommend_response(status_code: int = 200) -> Response:
+    return Response(
+        status_code,
+        json={
+            "player_id": 3162675,
+            "mode": "taiko",
+            "target": "mixed",
+            "items": [
+                {
+                    "beatmap_id": 4571494,
+                    "beatmapset_id": 1927114,
+                    "mods": "NM",
+                    "stars": 4.2,
+                    "pred_pp": 165.0,
+                    "pred_acc": 98.2,
+                    "ranking_score": 160.0,
+                    "artist": "Test Artist",
+                    "title": "Test Song",
+                    "version": "Oni",
+                }
+            ],
+            "sections": [],
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_recommend_api_retries_transient_server_error(app: App):
+    from nonebot_plugin_osubot.api import get_recommend
+
+    client = AsyncMock()
+    client.get.side_effect = [recommend_response(503), recommend_response()]
+
+    with (
+        patch("nonebot_plugin_osubot.api.network_manager.get_client", new=AsyncMock(return_value=client)),
+        patch("nonebot_plugin_osubot.api.asyncio.sleep", new=AsyncMock()) as sleep,
+    ):
+        data = await get_recommend(3162675, 1)
+
+    assert len(data.recommendations or []) == 1
+    assert client.get.await_count == 2
+    sleep.assert_awaited_once_with(1.0)
+
+
+@pytest.mark.asyncio
+async def test_recommend_api_stops_after_repeated_server_errors(app: App):
+    from nonebot_plugin_osubot.api import get_recommend
+    from nonebot_plugin_osubot.exceptions import NetworkError
+
+    client = AsyncMock()
+    client.get.side_effect = [recommend_response(500), recommend_response(502), recommend_response(503)]
+
+    with (
+        patch("nonebot_plugin_osubot.api.network_manager.get_client", new=AsyncMock(return_value=client)),
+        patch("nonebot_plugin_osubot.api.asyncio.sleep", new=AsyncMock()) as sleep,
+        pytest.raises(NetworkError, match="推荐服务繁忙"),
+    ):
+        await get_recommend(3162675, 1)
+
+    assert client.get.await_count == 3
+    assert sleep.await_count == 2
 
 
 # ============================================================

@@ -546,27 +546,49 @@ async def _get_recommend_beatmapset_ids(items: list[dict]) -> dict[int, int]:
     return {map_id: beatmapset_id for map_id, beatmapset_id in results if beatmapset_id}
 
 
+async def _request_recommend(url: str, params: dict) -> Response:
+    client = await network_manager.get_client()
+    max_attempts = 3
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = await client.get(
+                url,
+                params=params,
+                timeout=plugin_config.osu_recommend_timeout,
+            )
+        except HTTPError as e:
+            if attempt == max_attempts:
+                detail = str(e) or e.__class__.__name__
+                raise NetworkError(f"推荐服务请求失败: {detail}") from e
+            logger.warning(f"recommend request failed ({attempt}/{max_attempts}): {e}")
+        else:
+            if response.status_code < 500:
+                return response
+            if attempt == max_attempts:
+                raise NetworkError("推荐服务繁忙，请稍后再试")
+            logger.warning(
+                f"recommend service returned HTTP {response.status_code} ({attempt}/{max_attempts}), retrying"
+            )
+
+        await asyncio.sleep(float(attempt))
+
+    raise NetworkError("推荐服务繁忙，请稍后再试")
+
+
 async def get_recommend(uid, mode, target: str | None = "mixed"):
     mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
     mode_str = mode_map.get(str(mode), "osu")
     target_str = _recommend_target(target)
     base_url = plugin_config.osu_recommend_api.rstrip("/")
-    client = await network_manager.get_client()
-    try:
-        res = await client.get(
-            f"{base_url}/recommend/{mode_str}/{uid}",
-            params={
-                "target": target_str,
-                "candidate_limit": plugin_config.osu_recommend_candidate_limit,
-                "result_limit": plugin_config.osu_recommend_result_limit,
-            },
-            timeout=plugin_config.osu_recommend_timeout,
-        )
-    except HTTPError as e:
-        detail = str(e) or e.__class__.__name__
-        raise NetworkError(f"推荐服务请求失败: {detail}") from e
-    if res is None or res.status_code >= 500:
-        raise NetworkError("推荐服务繁忙，请稍后再试")
+    res = await _request_recommend(
+        f"{base_url}/recommend/{mode_str}/{uid}",
+        params={
+            "target": target_str,
+            "candidate_limit": plugin_config.osu_recommend_candidate_limit,
+            "result_limit": plugin_config.osu_recommend_result_limit,
+        },
+    )
     if res.status_code >= 400:
         raise NetworkError(f"推荐服务返回 {res.status_code}: {res.text[:120]}")
 
