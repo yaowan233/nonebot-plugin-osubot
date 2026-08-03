@@ -6,120 +6,153 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    background: #1a1a2e;
+    background: #18182b;
     font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     padding: 24px;
-    width: 820px;
+    width: 1080px;
     border-radius: 16px;
     overflow: hidden;
+    color: #f8f8f2;
   }
 
   .user-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 20px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     background: #16213e;
-    border-radius: 18px;
+    border-radius: 16px;
     border: 1px solid #2a2a4a;
   }
 
   .avatar {
-    width: 48px;
-    height: 48px;
+    width: 54px;
+    height: 54px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #ff79c6;
   }
 
-  .user-info {
-    flex: 1;
-  }
+  .user-info { flex: 1; min-width: 0; }
 
   .username {
-    font-size: 18px;
-    font-weight: 700;
-    color: #f8f8f2;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
   }
 
   .user-sub {
     font-size: 12px;
-    color: #8888aa;
-    margin-top: 2px;
+    color: #8d8db3;
+    margin-top: 4px;
   }
 
   .mode-badge {
     background: #ff79c6;
-    color: #1a1a2e;
+    color: #17172a;
     font-size: 12px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 999px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
 
   .section-title {
     font-size: 14px;
-    font-weight: 600;
-    color: #6272a4;
-    margin-bottom: 10px;
+    font-weight: 700;
+    color: #7282bd;
+    margin: 14px 0 12px;
     letter-spacing: 0.5px;
   }
 
-  .card {
-    display: flex;
-    align-items: stretch;
-    background: #16213e;
-    border-radius: 18px;
-    margin-bottom: 10px;
-    overflow: hidden;
-    border: 1px solid #2a2a4a;
-    height: 80px;
+  .sections-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
   }
 
-  .card:nth-child(odd) {
-    background: #1a1a3a;
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 14px 0 8px;
   }
+
+  .section-header:first-child { margin-top: 0; }
+
+  .section-name {
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .section-hint {
+    font-size: 11px;
+    color: #7282bd;
+  }
+
+  .section-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: 34px 68px minmax(0, 1fr) 78px;
+    align-items: stretch;
+    min-width: 0;
+    height: 72px;
+    background: #16213e;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #2a2a4a;
+  }
+
+  .card:nth-child(even) { background: #1d1b3b; }
 
   .rank-col {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    min-width: 44px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #6272a4;
+    font-size: 13px;
+    font-weight: 800;
+    color: #7282bd;
+  }
+
+  .cover,
+  .cover-placeholder {
+    width: 68px;
+    height: 68px;
+    margin: 2px 0;
+    border-radius: 10px;
   }
 
   .cover {
-    width: 80px;
-    min-width: 80px;
-    height: 80px;
     object-fit: cover;
     display: block;
     background: #0d0d1a;
-    border-radius: 12px;
   }
 
   .cover-placeholder {
-    width: 80px;
-    min-width: 80px;
-    height: 80px;
     background: linear-gradient(135deg, #282850, #1a1a3a);
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     color: #444466;
-    border-radius: 12px;
   }
 
   .info {
-    flex: 1;
-    padding: 10px 14px;
+    padding: 9px 10px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -127,9 +160,8 @@
   }
 
   .title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -138,15 +170,16 @@
 
   .tags {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
   }
 
   .tag {
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-weight: 600;
+    font-size: 10px;
+    line-height: 1.1;
+    padding: 3px 6px;
+    border-radius: 5px;
+    font-weight: 700;
   }
 
   .tag-stars {
@@ -162,7 +195,7 @@
 
   .tag-mod {
     background: #ff79c6;
-    color: #1a1a2e;
+    color: #17172a;
   }
 
   .stats {
@@ -170,28 +203,28 @@
     flex-direction: column;
     justify-content: center;
     align-items: flex-end;
-    padding: 10px 16px;
-    gap: 4px;
-    min-width: 140px;
+    padding: 8px 10px 8px 0;
+    gap: 3px;
+    min-width: 0;
   }
 
   .pp-value {
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 18px;
+    font-weight: 900;
     color: #ffb86c;
     line-height: 1;
   }
 
   .pp-label {
-    font-size: 10px;
-    color: #6272a4;
+    font-size: 9px;
+    color: #7282bd;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
   }
 
   .acc-value {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 800;
     color: #50fa7b;
   }
 
@@ -208,7 +241,7 @@
     <img class="avatar" src="{{ avatar_url }}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 font-size=%2240%22 x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22>?</text></svg>'">
     <div class="user-info">
       <div class="username">{{ username }}</div>
-      <div class="user-sub">共 {{ recommendations|length }} 张推荐谱面 · player #{{ player_id }}</div>
+      <div class="user-sub">共 {{ total_count }} 张推荐谱面 · player #{{ player_id }}</div>
     </div>
     <div>
       <span class="mode-badge">{{ mode }}</span>
@@ -217,19 +250,19 @@
 
   <div class="section-title">推荐列表</div>
 
-  {% for item in recommendations %}
+  {% macro card(item, rank) -%}
   <div class="card">
-    <div class="rank-col">#{{ loop.index }}</div>
+    <div class="rank-col">#{{ rank }}</div>
     <img class="cover"
          src="https://assets.ppy.sh/beatmaps/{{ item.beatmapset_id }}/covers/list.jpg"
          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
          loading="eager">
-    <div class="cover-placeholder">♪</div>
+    <div class="cover-placeholder">?</div>
     <div class="info">
       <div class="title">{{ item.title }}</div>
       <div class="tags">
         <span class="tag tag-mapid">#{{ item.map_id }}</span>
-        <span class="tag tag-stars">⭐ {{ "%.2f"|format(item.stars) }}</span>
+        <span class="tag tag-stars">★ {{ "%.2f"|format(item.stars) }}</span>
         <span class="tag tag-mod">{{ item.mod_str }}</span>
       </div>
     </div>
@@ -239,8 +272,46 @@
       <div class="acc-value">{{ "%.2f"|format(item.pred_acc) }}%</div>
     </div>
   </div>
-  {% endfor %}
+  {%- endmacro %}
 
-  <div class="footer">powered by mayumi.xyz</div>
+  {% if overall_section %}
+  <div class="sections-layout">
+    <div class="main-column">
+      <div class="section-header">
+        <div class="section-name">{{ overall_section.title }}</div>
+        <div class="section-hint">{{ overall_section["items"]|length }} maps</div>
+      </div>
+      <div class="section-grid">
+        {% for item in overall_section["items"] %}
+        {{ card(item, loop.index) }}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="side-column">
+      {% for section in side_sections %}
+      <div class="side-section">
+        <div class="section-header">
+          <div class="section-name">{{ section.title }}</div>
+          <div class="section-hint">{{ section["items"]|length }} maps</div>
+        </div>
+        <div class="section-grid">
+          {% for item in section["items"] %}
+          {{ card(item, loop.index) }}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="section-grid">
+    {% for item in recommendations %}
+    {{ card(item, loop.index) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer">powered by osu recommender</div>
 </body>
 </html>

@@ -150,6 +150,38 @@ def _extract_mentioned_user_id(ctx: AgentToolContext) -> str | None:
     return None
 
 
+def _event_user_id(ctx: AgentToolContext) -> str | None:
+    if not ctx.event:
+        return None
+    try:
+        return _clean_user_id(ctx.event.get_user_id())
+    except Exception:
+        return _clean_user_id(getattr(ctx.event, "user_id", None))
+
+
+def _tool_user_id_candidates(ctx: AgentToolContext, target_user_id: str | int | None = None) -> list[str]:
+    bot_ids = {
+        user_id
+        for user_id in (
+            _clean_user_id(ctx.bot_id),
+            _clean_user_id(getattr(ctx.event, "self_id", None) if ctx.event else None),
+        )
+        if user_id
+    }
+    candidates = [
+        _clean_user_id(target_user_id),
+        _extract_mentioned_user_id(ctx),
+        _clean_user_id(ctx.user_id),
+        _event_user_id(ctx),
+    ]
+    result: list[str] = []
+    for candidate in candidates:
+        if not candidate or candidate in bot_ids or candidate in result:
+            continue
+        result.append(candidate)
+    return result
+
+
 def _normalize_mode(mode: str | int | None, source: str) -> str | None:
     if mode is None:
         return None
@@ -186,19 +218,27 @@ async def _resolve_osu_user(
     if name:
         return ResolvedOsuUser(await get_uid_by_name(name, source), name)
 
-    bind_user_id = _clean_user_id(target_user_id) or _extract_mentioned_user_id(ctx) or ctx.user_id
-    if not bind_user_id:
+    bind_user_ids = _tool_user_id_candidates(ctx, target_user_id)
+    if not bind_user_ids:
         raise ValueError("当前没有可用的用户 ID，请指定 osu 用户名")
 
     if source == "ppysb":
         async with get_session() as session:
-            user = await session.scalar(select(SbUserData).where(SbUserData.user_id == bind_user_id))
+            user = None
+            for bind_user_id in bind_user_ids:
+                user = await session.scalar(select(SbUserData).where(SbUserData.user_id == bind_user_id))
+                if user:
+                    break
         if not user:
             raise ValueError("当前用户尚未绑定 osu 账号，请先使用 /sbbind 用户名")
         return ResolvedOsuUser(user.osu_id, user.osu_name)
 
     async with get_session() as session:
-        user = await session.scalar(select(UserData).where(UserData.user_id == bind_user_id))
+        user = None
+        for bind_user_id in bind_user_ids:
+            user = await session.scalar(select(UserData).where(UserData.user_id == bind_user_id))
+            if user:
+                break
 
     if not user:
         raise ValueError("当前用户尚未绑定 osu 账号，请先使用 /bind 用户名")
@@ -803,13 +843,19 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         username: UsernameArg = None,
         target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
+        target: str | None = "mixed",
         include_image_for_analysis: bool = False,
     ) -> str | list[ContentBlock]:
-        """查询并发送推荐谱面图。"""
+        """
+        查询并发送推荐谱面图。
+        target 取值规则：普通推荐/综合/好玩且能打用 mixed；吃分/pp/能上分用 farm；难一点/更难/高难/冲分/peak 用 peak；
+        练习/风格/值得练/practice/style 用 style；均衡/balanced 用 balanced。
+        target_user_id 是 QQ/群用户 ID，不是 osu id；查询当前发言人时不要填写 target_user_id。
+        """
         try:
             user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
             mode = _resolve_mode(mode, user, "osu")
-            api_task = asyncio.create_task(get_recommend(user.user_id, mode))
+            api_task = asyncio.create_task(get_recommend(user.user_id, mode, target))
             done, _ = await asyncio.wait([api_task], timeout=5)
             if not done:
                 await UniMessage.text("正在获取推荐谱面，请稍候...").send(target=ctx.send_target)
@@ -1042,7 +1088,10 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_score: 用户想查某人在指定谱面上的成绩时使用。",
             "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
-            "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用。",
+            "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
+            "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"
+            "想难一点/更难/冲分/高难传 target='peak'，想练习/风格推荐传 target='style'，"
+            "想均衡传 target='balanced'。",
             "- send_osu_profile_url: 用户想要 osu 主页链接、个人主页、mu 时使用。",
             "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。",
             "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。",

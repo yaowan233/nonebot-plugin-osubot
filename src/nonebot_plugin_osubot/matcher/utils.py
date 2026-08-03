@@ -16,7 +16,7 @@ FILTER_PATTERN = (
     r"title\s*(!=|~=|=|~)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*(?:!=|>=|<=|~=|=|>|<|~)|$))|"
     r"(\w+)\s*(!=|>=|<=|~=|=|>|<|~)\s*(\"[^\"]*\"|'[^']*'|[^\s,，]+)"
 )
-pattern = r"[:：]\s*(\w+)|[\+＋]\s*(\w+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|" + FILTER_PATTERN
+pattern = r"[:：]\s*(\w+)|[\+＋]\s*([\w,，]+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|" + FILTER_PATTERN
 
 BP_COMMANDS = {"bp", "pfm", "bplist", "bl", "tbp", "nb", "todaybp"}
 
@@ -88,6 +88,9 @@ def split_msg():
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
         state["username"] = user_data.osu_name if user_data else ""
+        state["bound_user"] = state["user"]
+        state["bound_mode"] = state["mode"]
+        state["bound_username"] = state["username"]
         state["mods"] = []
         state["range"] = None
         state["day"] = 0
