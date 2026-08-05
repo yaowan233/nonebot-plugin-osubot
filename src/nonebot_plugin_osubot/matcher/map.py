@@ -20,7 +20,10 @@ async def _map(event: Event, state: T_State):
     if not map_id:
         await UniMessage.text("请输入地图ID，或先查询一张谱面").finish(reply_to=True)
     try:
-        m = await draw_map_info(map_id, mods)
+        if state["mode_explicit"]:
+            m = await draw_map_info(map_id, mods, int(state["mode"]))
+        else:
+            m = await draw_map_info(map_id, mods)
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图mapid:{map_id}{mods}时 {str(e)}").finish(reply_to=True)

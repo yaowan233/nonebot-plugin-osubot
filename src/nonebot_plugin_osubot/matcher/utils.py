@@ -91,6 +91,7 @@ def split_msg():
         state["bound_user"] = state["user"]
         state["bound_mode"] = state["mode"]
         state["bound_username"] = state["username"]
+        state["mode_explicit"] = False
         state["mods"] = []
         state["range"] = None
         state["day"] = 0
@@ -120,6 +121,7 @@ def split_msg():
         for match in matches:
             if match[0]:
                 state["mode"] = match[0]
+                state["mode_explicit"] = True
             if match[1]:
                 state["mods"] = mods2list(match[1])
             if match[2]:

@@ -1004,12 +1004,18 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             return f"查询 medal 失败: {e}"
 
     @tool("send_osu_map_info")
-    async def send_osu_map_info(map_id: str, mods: str = "") -> str:
+    async def send_osu_map_info(map_id: str, mods: str = "", mode: str | None = None) -> str:
         """
-        查询并发送 osu beatmap 信息图。map_id 是单张谱面 ID；mods 可填 HDHR、DT 等。
+        查询并发送 osu beatmap 信息图。map_id 是单张谱面 ID；mods 可填 HDHR、DT 等；
+        mode 可指定 std 谱面的转谱模式：0=std、1=taiko、2=ctb、3=mania。
         """
         try:
-            data = await draw_map_info(int(map_id), mods2list(mods) if mods else [])
+            target_mode = _normalize_mode(mode, "osu") if mode is not None else None
+            data = await draw_map_info(
+                int(map_id),
+                mods2list(mods) if mods else [],
+                int(target_mode) if target_mode is not None else None,
+            )
             await _send_image(ctx, data)
             return f"已发送谱面 {map_id} 信息图"
         except NetworkError as e:

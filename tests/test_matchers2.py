@@ -187,6 +187,26 @@ async def test_osu_map_success(app: App):
 
 
 @pytest.mark.asyncio
+async def test_osu_map_passes_explicit_convert_mode_and_mods(app: App):
+    from nonebot_plugin_osubot.matcher.map import osu_map
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=0)
+    event = fake_group_message_event_v11(message=Message("/map 12345 :mania +HDHR"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{MAP_MODULE}.draw_map_info", new=AsyncMock(return_value=FAKE_MAP_IMG)) as draw:
+            async with app.test_matcher(osu_map) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, img_msg(event, FAKE_MAP_IMG), result={"message_id": 1})
+                ctx.should_finished()
+
+    draw.assert_awaited_once_with("12345", ["HD", "HR"], 3)
+
+
+@pytest.mark.asyncio
 async def test_osu_map_accepts_beatmap_url(app: App):
     from nonebot_plugin_osubot.matcher.map import osu_map
 

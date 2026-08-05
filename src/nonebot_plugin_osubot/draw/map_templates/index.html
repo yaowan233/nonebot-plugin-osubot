@@ -722,9 +722,9 @@
             <div class="obj-label"><span>物件总数</span><b class="obj-total"></b></div>
             <div class="obj-bar"></div>
             <div class="obj-legend">
-              <span><i style="background:var(--cyan)"></i>圆圈<b class="lg-c"></b></span>
-              <span><i style="background:var(--pink)"></i>滑条<b class="lg-s"></b></span>
-              <span><i style="background:#ffc24d"></i>转盘<b class="lg-p"></b></span>
+              <span><i style="background:var(--cyan)"></i><span class="obj-name-c">圆圈</span><b class="lg-c"></b></span>
+              <span><i style="background:var(--pink)"></i><span class="obj-name-s">滑条</span><b class="lg-s"></b></span>
+              <span><i style="background:#ffc24d"></i><span class="obj-name-p">转盘</span><b class="lg-p"></b></span>
             </div>
           </div>
         </section>
@@ -893,6 +893,10 @@
     const total = M.objects || 1;
     $('.obj-total').textContent = fmt(M.objects);
     $('.obj-bar').innerHTML = [M.circles, M.sliders, M.spinners].map(n => `<i style="width:${n / total * 100}%"></i>`).join('');
+    const objectLabels = M.object_labels || ['圆圈', '滑条', '转盘'];
+    $('.obj-name-c').textContent = objectLabels[0];
+    $('.obj-name-s').textContent = objectLabels[1];
+    $('.obj-name-p').textContent = objectLabels[2];
     $('.lg-c').textContent = fmt(M.circles);
     $('.lg-s').textContent = fmt(M.sliders);
     $('.lg-p').textContent = fmt(M.spinners);
@@ -904,7 +908,7 @@
       ['时长', M.duration, '#ff4d96'],
       ['最大连击', `${fmt(M.max_combo)}x`, '#43d5df'],
       ['物件总数', fmt(M.objects), '#ff4d96'],
-      ['圆圈 / 滑条 / 转盘', `${fmt(M.circles)} / ${fmt(M.sliders)} / ${fmt(M.spinners)}`, '#43d5df'],
+      [objectLabels.join(' / '), `${fmt(M.circles)} / ${fmt(M.sliders)} / ${fmt(M.spinners)}`, '#43d5df'],
       ['通过率', `${passRate.toFixed(1)}%`, '#ff4d96'],
     ];
     $('.metrics-grid').innerHTML = metrics.map(([label, value, color]) =>
