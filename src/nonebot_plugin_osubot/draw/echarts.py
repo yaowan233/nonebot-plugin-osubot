@@ -39,6 +39,10 @@ async def _render_chart_template(
     ) as page:
         await page.set_content(html, wait_until="domcontentloaded")
         await wait_for_page_assets(page)
+        await page.wait_for_function(
+            "() => document.querySelectorAll('canvas').length > 0",
+            timeout=10_000,
+        )
         return await page.screenshot(full_page=True, type="png")
 
 

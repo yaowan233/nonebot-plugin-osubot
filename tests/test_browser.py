@@ -7,6 +7,7 @@ class FakePage:
     def __init__(self):
         self.closed = False
         self.goto_calls = []
+        self.reload_calls = []
         self.viewport_calls = []
         self.evaluate_calls = []
 
@@ -18,6 +19,9 @@ class FakePage:
 
     async def set_viewport_size(self, viewport):
         self.viewport_calls.append(viewport)
+
+    async def reload(self, *, wait_until):
+        self.reload_calls.append(wait_until)
 
     async def evaluate(self, script, argument):
         self.evaluate_calls.append((script, argument))
@@ -81,6 +85,7 @@ async def test_persistent_page_reuses_lease_and_updates_viewport(browser_pool):
     assert first is second
     assert len(playwright.leases) == 1
     assert first.goto_calls == [("file:///score.html", "domcontentloaded")]
+    assert first.reload_calls == ["domcontentloaded"]
     assert first.viewport_calls == [{"width": 200, "height": 120}]
 
     await browser.close_persistent_pages()

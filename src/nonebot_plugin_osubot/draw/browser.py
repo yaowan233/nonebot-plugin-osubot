@@ -96,9 +96,14 @@ async def persistent_page(
         else:
             page = entry.page
         try:
-            if entry is not None and entry.viewport != viewport:
-                await page.set_viewport_size(viewport)
-                entry.viewport = viewport.copy()
+            if entry is not None:
+                # set_content 使用 document.write，不会创建新的 Window。
+                # 模板中的顶层 const/let 会残留到下一次渲染，重复声明后
+                # 整段脚本停止执行；reload 用来重建 JavaScript 执行环境。
+                await page.reload(wait_until="domcontentloaded")
+                if entry.viewport != viewport:
+                    await page.set_viewport_size(viewport)
+                    entry.viewport = viewport.copy()
             yield page
         except BaseException:
             await _drop_page(key)
