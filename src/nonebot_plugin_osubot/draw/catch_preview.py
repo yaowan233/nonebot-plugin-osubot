@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from .utils import load_osu_file_and_setup_template
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 template_path = str(Path(__file__).parent / "catch_preview_templates")
 
@@ -17,6 +17,7 @@ async def draw_cath_preview(beatmap_id, beatmapset_id, mods) -> bytes:
             await template.render_async(
                 beatmap_id=beatmap_id, osu_file=osu_file, is_hr=is_hr, is_ez=is_ez, is_dt=is_dt, is_ht=is_ht
             ),
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
+        await wait_for_page_assets(page)
         return await page.screenshot(full_page=True, type="jpeg", quality=60, omit_background=True)

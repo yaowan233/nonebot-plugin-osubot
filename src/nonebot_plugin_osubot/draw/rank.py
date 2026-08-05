@@ -3,7 +3,7 @@ from typing import Any
 
 import jinja2
 
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 template_path = Path(__file__).parent / "rank_templates"
 
@@ -46,11 +46,7 @@ async def draw_group_rank(
     ).get_template("index.html")
     async with persistent_page("rank", (template_path / "index.html").as_uri(), {"width": 1280, "height": 900}) as page:
         await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
+        await wait_for_page_assets(page)
         element = await page.query_selector(".rank")
         assert element
         return await element.screenshot(type="png")

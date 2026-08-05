@@ -11,7 +11,7 @@ from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from .utils import info_calc
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 from ..mods import get_speed_change_labels
 from ..pp import cal_pp
 from ..utils import FGM, GMN
@@ -233,11 +233,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
             await template.render_async(user_json=draw_user.model_dump_json(), bg=bg),
             wait_until="domcontentloaded",
         )
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready, "
-            "...Array.from(document.images, image => image.decode().catch(() => {}))]), "
-            "new Promise(resolve => setTimeout(resolve, 8000))])"
-        )
+        await wait_for_page_assets(page)
         elem = await page.query_selector("#display")
         assert elem
         return await elem.screenshot(type="jpeg", quality=92)

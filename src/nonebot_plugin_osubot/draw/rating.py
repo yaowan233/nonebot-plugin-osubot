@@ -13,7 +13,7 @@ from ..api import api_info
 from ..schema.user import UserCompact
 from ..schema.match import Game, Match
 from .utils import crop_bg, draw_fillet, open_user_icon, draw_rounded_rectangle
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 from .static import (
     Torus_SemiBold_20,
     Torus_SemiBold_25,
@@ -204,11 +204,7 @@ async def draw_rating_card(data: dict) -> bytes:
         "rating", (template_path / "index.html").as_uri(), {"width": 1280, "height": 900}
     ) as page:
         await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
+        await wait_for_page_assets(page)
         element = await page.query_selector(".card")
         assert element
         return await element.screenshot(type="png")

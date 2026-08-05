@@ -8,6 +8,7 @@ class FakePage:
         self.closed = False
         self.goto_calls = []
         self.viewport_calls = []
+        self.evaluate_calls = []
 
     def is_closed(self):
         return self.closed
@@ -17,6 +18,9 @@ class FakePage:
 
     async def set_viewport_size(self, viewport):
         self.viewport_calls.append(viewport)
+
+    async def evaluate(self, script, argument):
+        self.evaluate_calls.append((script, argument))
 
 
 class FakeLease:
@@ -76,7 +80,7 @@ async def test_persistent_page_reuses_lease_and_updates_viewport(browser_pool):
 
     assert first is second
     assert len(playwright.leases) == 1
-    assert first.goto_calls == [("file:///score.html", "load")]
+    assert first.goto_calls == [("file:///score.html", "domcontentloaded")]
     assert first.viewport_calls == [{"width": 200, "height": 120}]
 
     await browser.close_persistent_pages()
@@ -110,3 +114,16 @@ async def test_persistent_page_does_not_exit_lease_when_enter_fails(browser_pool
 
     assert playwright.leases[0].exit_count == 0
     assert "score" not in browser._pages
+
+
+@pytest.mark.asyncio
+async def test_wait_for_page_assets_uses_bounded_wait(browser_pool):
+    browser, playwright = browser_pool
+
+    async with browser.persistent_page("score", None, {"width": 100, "height": 100}) as page:
+        await browser.wait_for_page_assets(page, timeout_ms=2500)
+
+    script, timeout = playwright.leases[0].page.evaluate_calls[0]
+    assert "Promise.race" in script
+    assert "document.fonts.ready" in script
+    assert timeout == 2500

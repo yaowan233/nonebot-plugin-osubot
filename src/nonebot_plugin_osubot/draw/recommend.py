@@ -3,7 +3,7 @@ from pathlib import Path
 import jinja2
 
 from ..schema.alphaosu import RecommendData
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 template_path = Path(__file__).parent / "templates"
 
@@ -53,11 +53,7 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
             ),
             wait_until="domcontentloaded",
         )
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
+        await wait_for_page_assets(page)
         body = await page.query_selector("body")
         assert body
         return await body.screenshot(type="jpeg", quality=60)

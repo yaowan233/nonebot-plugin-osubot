@@ -7,7 +7,7 @@ import jinja2
 
 from ..api import api_info
 from ..schema.match import Match
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 
 TEMPLATE_PATH = Path(__file__).parent / "match_templates"
@@ -149,11 +149,7 @@ async def draw_match_card(data: dict) -> bytes:
         "match_history", (TEMPLATE_PATH / "index.html").as_uri(), {"width": 1280, "height": 900}
     ) as page:
         await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
+        await wait_for_page_assets(page)
         element = await page.query_selector(".card")
         assert element
         return await element.screenshot(type="png")

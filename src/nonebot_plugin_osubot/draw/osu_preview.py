@@ -140,8 +140,7 @@ async def _render_gif_chunk(
     )
 
     async with persistent_page("osu_preview", None, {"width": 1280, "height": 720}) as page:
-        await page.goto(f"file://{template_path}")
-        await page.set_content(html, wait_until="networkidle")
+        await page.set_content(html, wait_until="domcontentloaded")
         await page.wait_for_function(
             f"() => document.querySelector('{img_selector}') &&"
             f" document.querySelector('{img_selector}').src.startsWith('blob:')",

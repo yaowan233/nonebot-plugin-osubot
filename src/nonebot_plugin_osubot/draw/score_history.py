@@ -15,7 +15,7 @@ from ..api import osu_api, get_user_info_data, get_ppysb_map_scores
 from ..file import download_osu, get_pfm_img, map_path
 from .score import cal_score_info
 from .static import ColorArr
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 
 def _to_datetime(value: str) -> datetime:
@@ -208,11 +208,7 @@ async def draw_score_history(
         "score_history", (template_path / "index.html").as_uri(), {"width": 1240, "height": 900}, device_scale_factor=1
     ) as page:
         await page.set_content(await template.render_async(d=data), wait_until="domcontentloaded")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
+        await wait_for_page_assets(page)
         element = await page.query_selector("#history")
         assert element
         return BytesIO(await element.screenshot(type="jpeg", quality=92))

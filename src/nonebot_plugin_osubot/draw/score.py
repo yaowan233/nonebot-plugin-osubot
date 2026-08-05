@@ -27,7 +27,7 @@ from .utils import (
     filter_scores_with_regex,
 )
 from .static import osufile
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 
 async def draw_score(
@@ -569,11 +569,7 @@ async def render_score_template(
     ) as page:
         await page.set_content(html, wait_until="domcontentloaded")
         await page.evaluate("colourStarBadge()")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready, "
-            "...Array.from(document.images, image => image.decode().catch(() => {}))]), "
-            "new Promise(resolve => setTimeout(resolve, 8000))])"
-        )
+        await wait_for_page_assets(page)
         # 字体就绪后再跑一次自适应，确保标题/艺人名按真实字宽收缩
         await page.evaluate("fitBeatmapTitle();fitArtistName()")
         elem = await page.query_selector("#score")

@@ -9,7 +9,7 @@ from PIL import Image
 
 from ..info import get_bg
 from ..file import get_projectimg
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 
 ASSET_PATH = Path(__file__).parent / "template_assets"
@@ -70,9 +70,7 @@ async def render_map_template(
         torus_semibold_url=file_data_uri(ASSET_PATH / "torus-semibold.woff", "font/woff"),
     )
     async with persistent_page("map_render", None, {"width": 1500, "height": viewport_height}) as page:
-        await page.set_content(html, wait_until="networkidle")
-        await page.evaluate(
-            "Promise.all([document.fonts.ready,...Array.from(document.images,x=>x.decode().catch(()=>{}))])"
-        )
+        await page.set_content(html, wait_until="domcontentloaded")
+        await wait_for_page_assets(page)
         element = page.locator(f"#{element_id}")
         return BytesIO(await element.screenshot(type="jpeg", quality=92))

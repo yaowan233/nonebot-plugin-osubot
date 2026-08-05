@@ -5,16 +5,41 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from nonebot_plugin_htmlrender import render_template
+import jinja2
 
 from ..api import get_users
 from ..file import download_osu, map_path
 from ..pp import cal_pp
+from .browser import persistent_page, wait_for_page_assets
 from .map_render import file_data_uri
 
 template_dir = Path(__file__).parent / "templates"
 template_path = str(template_dir)
 template_asset_dir = Path(__file__).parent / "template_assets"
+
+
+async def _render_chart_template(
+    template_name: str,
+    variables: dict[str, Any],
+    *,
+    width: int,
+    height: int,
+) -> bytes:
+    """渲染 ECharts 模板，不依赖 htmlrender 固定的 networkidle 等待。"""
+    template = jinja2.Environment(  # noqa: S701
+        loader=jinja2.FileSystemLoader(template_path),
+        enable_async=True,
+        autoescape=jinja2.select_autoescape(),
+    ).get_template(template_name)
+    html = await template.render_async(**variables)
+    async with persistent_page(
+        f"echarts:{template_name}",
+        None,
+        {"width": width, "height": height},
+    ) as page:
+        await page.set_content(html, wait_until="domcontentloaded")
+        await wait_for_page_assets(page)
+        return await page.screenshot(full_page=True, type="png")
 
 
 @lru_cache(maxsize=1)
@@ -134,13 +159,12 @@ async def draw_history_plot(
         user_id=user_id,
         source_label=source_label,
     )
-    pic = await render_template(
-        template_path,
-        template_name=template_name,
-        variables={**_template_assets(), "payload": payload},
+    return await _render_chart_template(
+        template_name,
+        {**_template_assets(), "payload": payload},
         width=1280,
+        height=760,
     )
-    return bytes(pic)
 
 
 def _num(value: Any, default: float = 0.0) -> float:
@@ -350,10 +374,9 @@ async def draw_bpa_plot(
     if avatar_url is None and user_id:
         avatar_host = "https://a.ppy.sb" if source == "ppysb" else "https://a.ppy.sh"
         avatar_url = f"{avatar_host}/{user_id}"
-    pic = await render_template(
-        template_path,
-        template_name=template_name,
-        variables={
+    return await _render_chart_template(
+        template_name,
+        {
             **_template_assets(),
             "name": name,
             "username": display_name,
@@ -375,5 +398,5 @@ async def draw_bpa_plot(
             "length": len(pp_ls),
         },
         width=1620,
+        height=900,
     )
-    return bytes(pic)

@@ -15,7 +15,7 @@ from ..pp import cal_pp
 from ..schema.score import UnifiedScore
 from .score import cal_score_info
 from .utils import filter_scores_with_regex
-from .browser import persistent_page
+from .browser import persistent_page, wait_for_page_assets
 
 
 async def draw_bp(
@@ -161,11 +161,7 @@ async def draw_pfm(
             await template.render_async(payload_json=json.dumps(payload, ensure_ascii=False)),
             wait_until="domcontentloaded",
         )
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
+        await wait_for_page_assets(page)
         await page.evaluate(
             "const box=document.querySelector('.minor'),label=box?.querySelector('span');"
             "if(box&&label&&!box.querySelector('.minor-lines')){"

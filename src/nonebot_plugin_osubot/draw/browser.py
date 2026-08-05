@@ -12,6 +12,19 @@ _pages: dict[str, "_PersistentPage"] = {}
 _locks: dict[str, asyncio.Lock] = {}
 _closing = False
 
+_WAIT_FOR_ASSETS_SCRIPT = """
+async timeoutMs => {
+    const resources = [
+        document.fonts.ready,
+        ...Array.from(document.images, image => image.decode().catch(() => {})),
+    ];
+    await Promise.race([
+        Promise.all(resources),
+        new Promise(resolve => setTimeout(resolve, timeoutMs)),
+    ]);
+}
+"""
+
 
 @dataclass(slots=True)
 class _PersistentPage:
@@ -49,7 +62,10 @@ async def _create_page(
         raise
     try:
         if goto_uri:
-            await page.goto(goto_uri, wait_until="load")
+            # 持久页导航主要用于建立 file:// 基准地址。等待完整 load 会被
+            # 模板中的远程头像、封面等资源拖住；具体渲染函数会自行等待
+            # 必需资源，并设置更短的超时兜底。
+            await page.goto(goto_uri, wait_until="domcontentloaded")
     except BaseException:
         await lease.__aexit__(None, None, None)
         raise
@@ -87,6 +103,11 @@ async def persistent_page(
         except BaseException:
             await _drop_page(key)
             raise
+
+
+async def wait_for_page_assets(page: Any, timeout_ms: int = 8000) -> None:
+    """等待字体和图片，但不让不可达的远程资源阻塞截图。"""
+    await page.evaluate(_WAIT_FOR_ASSETS_SCRIPT, timeout_ms)
 
 
 async def close_persistent_pages() -> None:
