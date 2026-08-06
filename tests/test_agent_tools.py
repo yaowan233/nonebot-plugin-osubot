@@ -23,6 +23,21 @@ def test_self_reference_placeholders_fall_back_to_bound_context():
         assert _clean_user_id(value) is None
 
 
+@pytest.mark.asyncio
+async def test_explicit_osu_username_uses_players_preferred_mode(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    async def fake_user(name: str):
+        assert name == "miyuki"
+        return {"id": 42, "username": "miyuki", "playmode": "fruits"}
+
+    monkeypatch.setattr(agent_tools, "get_osu_user", fake_user)
+    user = await agent_tools._resolve_osu_user(SimpleNamespace(), "miyuki", "osu")
+
+    assert user.user_id == 42
+    assert user.default_mode == "2"
+
+
 def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     from nonebot_plugin_osubot.agent_tools import build_osu_agent_tools
 
@@ -44,7 +59,8 @@ def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     assert any(tool.name == "search_osu_beatmaps" for tool in bundle.tools)
     assert any(tool.name == "get_osu_scores_by_map_name" for tool in bundle.tools)
     assert "比较多个 BP" in instructions
-    assert "所有候选难度及成绩用简洁列表一次展示" in instructions
+    assert "工具会直接发送唯一成绩图或纯文本成绩列表" in instructions
+    assert "不要自行输出 Markdown 列表" in instructions
 
 
 @pytest.mark.asyncio
@@ -299,22 +315,28 @@ async def test_get_osu_scores_by_map_name_keeps_list_when_multiple_scores_exist(
             }
         }
 
-    async def fail_send(*args, **kwargs):
-        raise AssertionError("多个成绩时不应直接发送图片")
+    sent_text = []
+
+    async def fake_send_text(ctx, text):
+        sent_text.append(text)
+        return "已发送文字"
 
     monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
     monkeypatch.setattr(agent_tools, "search_beatmapsets", fake_search)
     monkeypatch.setattr(agent_tools, "osu_api", fake_osu_api)
-    monkeypatch.setattr(agent_tools, "_send_image", fail_send)
+    monkeypatch.setattr(agent_tools, "_send_text", fake_send_text)
     context = SimpleNamespace(user_id="12345678", send_target=None)
     bundle = agent_tools.build_osu_agent_tools(context)
     score_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_scores_by_map_name")
 
     result = json.loads(await score_tool.ainvoke({"query": "Test Song"}))
 
-    assert result["status"] == "ok"
+    assert result["status"] == "sent"
     assert result["played_count"] == 2
-    assert [item["difficulty"] for item in result["results"]] == ["Hard", "Insane"]
+    assert result["next_action"] == "finish"
+    assert "1）Test Song [Hard]" in sent_text[0]
+    assert "2）Test Song [Insane]" in sent_text[0]
+    assert "**" not in sent_text[0]
 
 
 @pytest.mark.asyncio

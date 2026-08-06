@@ -18,10 +18,18 @@ from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext, register_agent_tool
 from nonebot_plugin_ai_groupmate.reply_guard import is_request_active
 
-from .api import get_uid_by_name, get_recommend, get_user_scores, osu_api, safe_async_get, search_beatmapsets
+from .api import (
+    get_uid_by_name,
+    get_osu_user,
+    get_recommend,
+    get_user_scores,
+    osu_api,
+    safe_async_get,
+    search_beatmapsets,
+)
 from .draw import draw_info, draw_score, get_score_data, draw_map_info, draw_bmap_info
 from .info import get_bg
-from .utils import NGM, mods2list, normalize_map_mode
+from .utils import FGM, NGM, mods2list, normalize_map_mode
 from .mods import get_mods_list
 from .file import download_osu
 from .mania import generate_preview_pic
@@ -217,6 +225,14 @@ async def _resolve_osu_user(
 ) -> ResolvedOsuUser:
     name = _clean_optional_text(username)
     if name:
+        if source == "osu":
+            info = await get_osu_user(name)
+            playmode = str(info.get("playmode") or "osu")
+            return ResolvedOsuUser(
+                int(info["id"]),
+                str(info.get("username") or name),
+                default_mode=str(FGM.get(playmode, 0)),
+            )
         return ResolvedOsuUser(await get_uid_by_name(name, source), name)
 
     bind_user_ids = _tool_user_id_candidates(ctx, target_user_id)
@@ -262,6 +278,11 @@ def _resolve_is_lazer(is_lazer: bool | None) -> bool:
 async def _send_image(ctx: AgentToolContext, raw: bytes | BytesIO) -> str:
     await UniMessage.image(raw=raw).send(target=ctx.send_target)
     return "已发送图片"
+
+
+async def _send_text(ctx: AgentToolContext, text: str) -> str:
+    await UniMessage.text(text).send(target=ctx.send_target)
+    return "已发送文字"
 
 
 def _to_bytes(raw: bytes | BytesIO) -> bytes:
@@ -405,17 +426,44 @@ def _beatmap_search_candidates(
     beatmapsets: list[dict[str, Any]],
     mode: str | None,
     limit: int,
+    query: str | None = None,
 ) -> list[dict[str, Any]]:
+    normalized_query = re.sub(r"\W+", "", (query or "").casefold())
+
+    def text_rank(value: Any) -> int:
+        normalized = re.sub(r"\W+", "", str(value or "").casefold())
+        if not normalized_query:
+            return 3
+        if normalized == normalized_query:
+            return 0
+        if normalized_query in normalized:
+            return 1
+        return 3
+
+    def set_rank(beatmapset: dict[str, Any]) -> int:
+        values = [
+            beatmapset.get("title"),
+            beatmapset.get("title_unicode"),
+            beatmapset.get("artist"),
+            beatmapset.get("artist_unicode"),
+            beatmapset.get("creator"),
+            *(beatmap.get("version") for beatmap in beatmapset.get("beatmaps") or []),
+        ]
+        return min((text_rank(value) for value in values), default=3)
+
     target_mode = int(mode) if mode is not None else None
     candidates: list[dict[str, Any]] = []
-    for beatmapset in beatmapsets:
+    for beatmapset in sorted(beatmapsets, key=set_rank):
         beatmaps = beatmapset.get("beatmaps") or []
-        if target_mode is not None:
-            # std 谱面可以转为其他模式，不能在搜索阶段将其过滤掉。
-            beatmaps = sorted(
-                beatmaps,
-                key=lambda item: (int(item.get("mode_int", 0)) != target_mode, int(item.get("mode_int", 0)) != 0),
-            )
+        # 先匹配明确给出的难度名，再优先目标原生模式；std 谱面仍保留用于转谱查询。
+        beatmaps = sorted(
+            beatmaps,
+            key=lambda item: (
+                target_mode is not None and int(item.get("mode_int", 0)) != target_mode,
+                target_mode is not None and int(item.get("mode_int", 0)) != 0,
+                text_rank(item.get("version")),
+            ),
+        )
         for beatmap in beatmaps:
             native_mode = int(beatmap.get("mode_int", 0))
             if target_mode is not None and native_mode not in {0, target_mode}:
@@ -456,6 +504,23 @@ def _named_score_summary(score_data: dict[str, Any]) -> dict[str, Any]:
         "client": "stable" if score.get("legacy_score_id") else "lazer",
         "global_position": score_data.get("position"),
     }
+
+
+def _format_named_score_list(player: str, mode: str, query: str, results: list[dict[str, Any]]) -> str:
+    lines = [f"{player} · {mode} · {query}", f"查询到 {len(results)} 个有成绩的难度："]
+    for index, result in enumerate(results, 1):
+        score = result["score"]
+        pp = f"{score['pp']:g}pp" if score["pp"] is not None else "无pp"
+        mods = "".join(score["mods"])
+        total_score = f"{int(score['total_score'] or 0):,}分"
+        lines.extend(
+            (
+                f"{index}）{result['title']} [{result['difficulty']}]",
+                f"   {score['rank']}｜{total_score}｜{pp}｜{score['accuracy']:.4f}%｜"
+                f"{score['combo']}x｜{score['miss']}miss｜{mods}｜{score['client']}",
+            )
+        )
+    return "\n".join(lines)
 
 
 async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[bytes | BytesIO | Path, str | None]:
@@ -825,6 +890,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 await search_beatmapsets(query),
                 normalized_mode,
                 limit,
+                query,
             )
             if not candidates:
                 return json.dumps(
@@ -853,7 +919,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         is_lazer: bool | None = None,
-        limit: int = 8,
+        limit: int = 20,
     ) -> str:
         """
         按谱面名称搜索，并批量查询玩家在候选难度上的最佳成绩。
@@ -864,8 +930,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             query = query.strip()
             if not query:
                 raise ValueError("query 不能为空")
-            if not 1 <= limit <= 10:
-                raise ValueError("limit 必须在 1-10 之间")
+            if not 1 <= limit <= 20:
+                raise ValueError("limit 必须在 1-20 之间")
             user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
             resolved_mode = _resolve_mode(mode, user, "osu")
             is_lazer = _resolve_is_lazer(is_lazer)
@@ -873,6 +939,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 await search_beatmapsets(query),
                 resolved_mode,
                 limit,
+                query,
             )
             if not candidates:
                 return json.dumps(
@@ -929,15 +996,24 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     },
                     ensure_ascii=False,
                 )
+            if played:
+                message = _format_named_score_list(user.name, NGM[resolved_mode], query, played)
+            else:
+                message = (
+                    f"{user.name} · {NGM[resolved_mode]} · {query}\n已检查 {len(results)} 个相关难度，未查询到成绩。"
+                )
+            query_error_count = sum("query_error" in result for result in results)
+            if query_error_count:
+                message += f"\n另有 {query_error_count} 个难度查询失败，请稍后重试。"
+            await _send_text(ctx, message)
             return json.dumps(
                 {
-                    "status": "ok",
-                    "query": query,
+                    "status": "sent",
+                    "message": "已直接发送纯文本成绩列表。",
                     "player": user.name,
                     "mode": NGM[resolved_mode],
                     "played_count": len(played),
-                    "results": results,
-                    "next_action": "直接用简洁列表回复全部结果；score=null 显示未查询到成绩，不要再要求用户选择。",
+                    "next_action": "finish",
                 },
                 ensure_ascii=False,
             )
@@ -1310,8 +1386,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "先用它搜索。候选唯一或用户描述能唯一匹配时，再把 beatmap_id 交给成绩、谱面信息、预览或背景工具；"
             "多个候选无法确定时列出简短候选让用户选择，禁止擅自使用第一项或编造 ID。",
             "- get_osu_scores_by_map_name: 用户以‘xxx 图打了多少/在 xxx 的成绩’这类名称描述谱面且没给 ID 时，"
-            "直接调用它；status=sent 时工具已发送唯一成绩图，立即结束且不要重复回复；status=ok 时根据 results "
-            "把所有候选难度及成绩用简洁列表一次展示，未游玩项标记为未查询到成绩，不要再让用户逐个选择。",
+            "直接调用它。工具会直接发送唯一成绩图或纯文本成绩列表；status=sent 时立即结束，不要补充、复述，"
+            "也不要自行输出 Markdown 列表。未指定模式时必须省略 mode，让工具优先使用绑定默认模式或该玩家的"
+            "osu! 默认游玩模式；不要先调用不含玩家上下文的 search_osu_beatmaps。",
             "- send_osu_score: 用户给出 beatmap ID/链接，或明确要求某个已确定难度的成绩图时使用。"
             "仅要求按名称查看成绩列表时不要调用它逐张发图。",
             "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
