@@ -1809,8 +1809,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "需要更多时分成多次调用。",
             "- 用户要求评价/分析一段 BP 范围或整体 BP（如“评价一下我的 bp1-200”）时，按两段式执行："
             "① 先调用 send_osu_bp_list 发送 BP 列表图，range_text 填用户给的范围（未给则 1-200）；"
-            "② 再调用 get_osu_bp_range 分段读取结构化数据，从 1-20 开始，has_more=true 且需要更多时按 next_start 续读；"
-            "通常前 40-60 条就足以给出整体评价，不必读完 200；"
+            "② 再调用 get_osu_bp_range 分段读取结构化数据，从 1-20 开始，has_more=true 时按 next_start 续读；"
+            "评价整体/全量 BP 时可一直读到 has_more=false，覆盖越全评价越准确，不要只读前一两段就下结论；"
             "③ 最后基于读到的数据给出评价，不要依赖图片内容。",
             "- get_osu_bp_range: 按范围分页读取 BP 数据（每次最多 20 条、不发图），"
             "用于分析整体 BP 构成/实力/吃分分布。范围宽度必须 ≤20，不要传 1-200 这样的宽范围。"

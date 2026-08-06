@@ -898,6 +898,7 @@ async def test_instructions_contain_bp_analysis_recipe():
     assert "两段式" in instructions
     assert "send_osu_bp_list 发送 BP 列表图" in instructions
     assert "next_start 续读" in instructions
+    assert "读到 has_more=false" in instructions
     assert "范围宽度必须 ≤20" in instructions
     assert "最多传 10 个 BP 序号" in instructions
 
