@@ -381,6 +381,33 @@ def _compact_score_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]
     }
 
 
+def _history_to_summary(points: list[tuple[float, str, int]]) -> dict[str, Any]:
+    pp_ls = [point[0] for point in points]
+    date_ls = [point[1] for point in points]
+    rank_ls = [point[2] for point in points]
+    return {
+        "points": len(points),
+        "span": {"from": date_ls[0], "to": date_ls[-1]},
+        "pp": {
+            "first": round(pp_ls[0], 2),
+            "last": round(pp_ls[-1], 2),
+            "max": round(max(pp_ls), 2),
+            "min": round(min(pp_ls), 2),
+            "change": round(pp_ls[-1] - pp_ls[0], 2),
+        },
+        "rank": {
+            "first": rank_ls[0],
+            "last": rank_ls[-1],
+            "best": min(rank_ls),
+            "change": rank_ls[-1] - rank_ls[0],
+        },
+        "recent": [
+            {"date": date, "pp": round(pp, 2), "rank": rank}
+            for pp, date, rank in points[-20:]
+        ],
+    }
+
+
 def _info_to_summary(info: UnifiedUser) -> dict[str, Any]:
     statistics = info.statistics
     grade_counts = statistics.grade_counts if statistics else None
@@ -1318,11 +1345,17 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 source_label=source_label,
             )
             await _send_image(ctx, image)
-            return _image_tool_result(
-                f"已发送 {user.name} 的 {NGM[mode]} pp/rank 历史曲线图。",
-                image,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 {user.name} 的 {NGM[mode]} pp/rank 历史曲线图，并返回结构化数据。",
+                    "player": user.name,
+                    "mode": NGM[mode],
+                    "history": _history_to_summary(points),
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, image, include_image_for_analysis)
         except Exception as e:
             return f"发送历史曲线失败: {e}"
 
@@ -1658,7 +1691,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_score: 用户给出 beatmap ID/链接，或明确要求某个已确定难度的成绩图时使用。"
             "工具会返回该成绩的结构化数据，可据此分析发挥。"
             "仅要求按名称查看成绩列表时不要调用它逐张发图。",
-            "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
+            "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。"
+            "工具会返回结构化历史数据（起止/峰值 pp、rank 变化、最近数据点），可直接用于分析趋势。",
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
             "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
             "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"

@@ -900,3 +900,101 @@ async def test_instructions_contain_bp_analysis_recipe():
     assert "next_start 续读" in instructions
     assert "范围宽度必须 ≤20" in instructions
     assert "最多传 10 个 BP 序号" in instructions
+
+
+def _history_points(count: int = 25):
+    return [(3000.0 + i * 20.0, f"2026-01-{(i % 28) + 1:02d}", 1000 - i * 5) for i in range(count)]
+
+
+class _FakeScalars:
+    def all(self):
+        return []
+
+
+class _FakeSession:
+    async def scalars(self, *args, **kwargs):
+        return _FakeScalars()
+
+
+class _FakeSessionCM:
+    async def __aenter__(self):
+        return _FakeSession()
+
+    async def __aexit__(self, *args):
+        return False
+
+
+def _install_history_mocks(monkeypatch, points, include_image=False):
+    from nonebot_plugin_osubot import agent_tools
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_merge(*args, **kwargs):
+        return list(points), True
+
+    async def fake_draw(*args, **kwargs):
+        return BytesIO(b"history-image")
+
+    sent = []
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "get_session", lambda: _FakeSessionCM())
+    monkeypatch.setattr(agent_tools, "merge_osutrack_history", fake_merge)
+    monkeypatch.setattr(agent_tools, "draw_history_plot", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    return sent
+
+
+@pytest.mark.asyncio
+async def test_send_osu_history_returns_structured_data(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    points = _history_points(25)
+    sent = _install_history_mocks(monkeypatch, points)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    history_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_history")
+
+    raw = await history_tool.ainvoke({"day": 0})
+    result = json.loads(raw)
+
+    assert isinstance(raw, str)
+    assert result["status"] == "sent"
+    assert result["player"] == "player"
+    assert result["mode"] == "osu"
+    history = result["history"]
+    assert history["points"] == 25
+    assert history["span"] == {"from": points[0][1], "to": points[-1][1]}
+    assert history["pp"]["first"] == 3000.0
+    assert history["pp"]["last"] == 3480.0
+    assert history["pp"]["change"] == 480.0
+    assert history["rank"]["first"] == 1000
+    assert history["rank"]["last"] == 880
+    assert history["rank"]["best"] == 880
+    assert len(history["recent"]) == 20
+    assert sent == [b"history-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_history_include_image_attaches_block(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    points = _history_points(5)
+    sent = _install_history_mocks(monkeypatch, points)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    history_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_history")
+
+    raw = await history_tool.ainvoke({"day": 0, "include_image_for_analysis": True})
+
+    assert isinstance(raw, list)
+    assert raw[0]["type"] == "text"
+    assert json.loads(raw[0]["text"])["status"] == "sent"
+    assert raw[1]["type"] == "image_url"
+    assert raw[1]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert sent == [b"history-image"]
