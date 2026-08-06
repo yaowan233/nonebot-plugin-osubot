@@ -59,7 +59,7 @@ def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     assert any(tool.name == "search_osu_beatmaps" for tool in bundle.tools)
     assert any(tool.name == "get_osu_scores_by_map_name" for tool in bundle.tools)
     assert "比较多个 BP" in instructions
-    assert "工具会直接发送唯一成绩图或纯文本成绩列表" in instructions
+    assert "工具会直接发送唯一成绩图或多成绩图片列表" in instructions
     assert "不要自行输出 Markdown 列表" in instructions
 
 
@@ -278,7 +278,7 @@ async def test_get_osu_scores_by_map_name_sends_image_for_only_played_difficulty
 
 
 @pytest.mark.asyncio
-async def test_get_osu_scores_by_map_name_keeps_list_when_multiple_scores_exist(monkeypatch):
+async def test_get_osu_scores_by_map_name_sends_image_list_when_multiple_scores_exist(monkeypatch):
     from nonebot_plugin_osubot import agent_tools
 
     async def fake_resolve(*args, **kwargs):
@@ -315,16 +315,26 @@ async def test_get_osu_scores_by_map_name_keeps_list_when_multiple_scores_exist(
             }
         }
 
-    sent_text = []
+    async def fake_draw_pfm(project, uid, scores, selected, mode, source, **kwargs):
+        assert project == "map_scores"
+        assert uid == 42
+        assert scores == selected
+        assert [score.beatmap.id for score in selected] == [101, 102]
+        assert mode == "osu"
+        assert source == "osu"
+        return BytesIO(b"map-score-list")
 
-    async def fake_send_text(ctx, text):
-        sent_text.append(text)
-        return "已发送文字"
+    sent = []
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
 
     monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
     monkeypatch.setattr(agent_tools, "search_beatmapsets", fake_search)
     monkeypatch.setattr(agent_tools, "osu_api", fake_osu_api)
-    monkeypatch.setattr(agent_tools, "_send_text", fake_send_text)
+    monkeypatch.setattr(agent_tools, "draw_pfm", fake_draw_pfm)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
     context = SimpleNamespace(user_id="12345678", send_target=None)
     bundle = agent_tools.build_osu_agent_tools(context)
     score_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_scores_by_map_name")
@@ -334,9 +344,8 @@ async def test_get_osu_scores_by_map_name_keeps_list_when_multiple_scores_exist(
     assert result["status"] == "sent"
     assert result["played_count"] == 2
     assert result["next_action"] == "finish"
-    assert "1）Test Song [Hard]" in sent_text[0]
-    assert "2）Test Song [Insane]" in sent_text[0]
-    assert "**" not in sent_text[0]
+    assert result["message"] == "已发送谱面成绩图片列表。"
+    assert sent == [b"map-score-list"]
 
 
 @pytest.mark.asyncio

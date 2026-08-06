@@ -159,6 +159,9 @@ async def draw_pfm(
         section_title, range_label = "上传成绩", "近 24 小时"
     elif project == "relist":
         section_title, range_label = "上传成绩", "近 24 小时 · 含未通过"
+    elif project == "map_scores":
+        section_title = "谱面成绩"
+        range_label = f"搜索结果 · {len(score_ls_filtered)} 个难度"
     else:
         section_title, range_label = "新增最佳成绩", f"近 {day} 日"
     payload = {

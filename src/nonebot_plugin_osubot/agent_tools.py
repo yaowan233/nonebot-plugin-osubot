@@ -35,7 +35,7 @@ from .file import download_osu
 from .mania import generate_preview_pic
 from .database import InfoData, UserData, SbUserData
 from .exceptions import NetworkError
-from .schema.score import UnifiedScore
+from .schema.score import Mod, NewStatistics, UnifiedBeatmap, UnifiedScore
 from .draw.score import cal_score_info, draw_selected_score
 from .draw.bp import draw_pfm, select_bp_scores
 from .draw.rating import draw_rating
@@ -479,6 +479,13 @@ def _beatmap_search_candidates(
                     "native_mode_id": native_mode,
                     "native_mode": NGM.get(str(native_mode), str(native_mode)),
                     "stars": round(float(beatmap.get("difficulty_rating") or 0), 2),
+                    "total_length": int(beatmap.get("total_length") or 0),
+                    "bpm": float(beatmap.get("bpm") or beatmapset.get("bpm") or 0),
+                    "cs": float(beatmap.get("cs") or 0),
+                    "od": float(beatmap.get("accuracy") or 0),
+                    "ar": float(beatmap.get("ar") or 0),
+                    "hp": float(beatmap.get("drain") or 0),
+                    "mapper_id": beatmap.get("user_id") or beatmapset.get("user_id"),
                     "status": beatmapset.get("status"),
                     "url": f"https://osu.ppy.sh/b/{beatmap.get('id')}",
                 }
@@ -506,21 +513,47 @@ def _named_score_summary(score_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _format_named_score_list(player: str, mode: str, query: str, results: list[dict[str, Any]]) -> str:
-    lines = [f"{player} · {mode} · {query}", f"查询到 {len(results)} 个有成绩的难度："]
-    for index, result in enumerate(results, 1):
-        score = result["score"]
-        pp = f"{score['pp']:g}pp" if score["pp"] is not None else "无pp"
-        mods = "".join(score["mods"])
-        total_score = f"{int(score['total_score'] or 0):,}分"
-        lines.extend(
-            (
-                f"{index}）{result['title']} [{result['difficulty']}]",
-                f"   {score['rank']}｜{total_score}｜{pp}｜{score['accuracy']:.4f}%｜"
-                f"{score['combo']}x｜{score['miss']}miss｜{mods}｜{score['client']}",
-            )
-        )
-    return "\n".join(lines)
+def _named_score_to_unified(score_data: dict[str, Any], candidate: dict[str, Any], ruleset_id: int) -> UnifiedScore:
+    score = score_data["score"]
+    ended_at = datetime.datetime.fromisoformat(
+        str(score.get("ended_at") or datetime.datetime.now().isoformat()).replace("Z", "+00:00")
+    )
+    if ended_at.tzinfo is not None:
+        ended_at = ended_at.astimezone(datetime.timezone(datetime.timedelta(hours=8))).replace(tzinfo=None)
+    mods = [mod if isinstance(mod, dict) else {"acronym": str(mod)} for mod in score.get("mods") or []]
+    native_mode = int(candidate.get("native_mode_id") or 0)
+    return UnifiedScore(
+        mods=[Mod(**mod) for mod in mods],
+        ruleset_id=ruleset_id,
+        rank=str(score.get("rank") or "F"),
+        accuracy=float(score.get("accuracy") or 0) * 100,
+        total_score=int(score.get("total_score") or 0),
+        legacy_total_score=score.get("legacy_total_score"),
+        ended_at=ended_at,
+        max_combo=int(score.get("max_combo") or 0),
+        statistics=NewStatistics(**(score.get("statistics") or {})),
+        passed=bool(score.get("passed", True)),
+        pp=score.get("pp"),
+        score_version="stable" if score.get("legacy_score_id") is not None else "lazer",
+        beatmap=UnifiedBeatmap(
+            id=int(candidate["beatmap_id"]),
+            set_id=int(candidate["beatmapset_id"]),
+            artist=str(candidate.get("artist") or ""),
+            title=str(candidate.get("title") or ""),
+            version=str(candidate.get("difficulty") or ""),
+            creator=str(candidate.get("mapper") or ""),
+            total_length=int(candidate.get("total_length") or 0),
+            mode=native_mode,
+            bpm=float(candidate.get("bpm") or 0),
+            cs=float(candidate.get("cs") or 0),
+            od=float(candidate.get("od") or 0),
+            ar=float(candidate.get("ar") or 0),
+            hp=float(candidate.get("hp") or 0),
+            stars=float(candidate.get("stars") or 0),
+            user_id=candidate.get("mapper_id"),
+            convert=native_mode != ruleset_id,
+        ),
+    )
 
 
 async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[bytes | BytesIO | Path, str | None]:
@@ -923,7 +956,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     ) -> str:
         """
         按谱面名称搜索，并批量查询玩家在候选难度上的最佳成绩。
-        只有一个难度有成绩时直接发送成绩图；多个难度有成绩时返回列表数据。
+        只有一个难度有成绩时直接发送成绩图；多个难度有成绩时发送图片列表。
         适合“我在 xxx 图打了多少”且用户没有提供 beatmap ID 的问题。
         """
         try:
@@ -949,10 +982,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
             semaphore = asyncio.Semaphore(3)
 
-            async def query_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+            async def query_candidate(
+                candidate: dict[str, Any],
+            ) -> tuple[dict[str, Any], UnifiedScore | None]:
                 result = dict(candidate)
                 native_mode = int(candidate["native_mode_id"])
-                score_mode = NGM[normalize_map_mode(resolved_mode, native_mode)]
+                score_mode_id = normalize_map_mode(resolved_mode, native_mode)
+                score_mode = NGM[score_mode_id]
                 try:
                     async with semaphore:
                         score_data = await osu_api(
@@ -963,19 +999,22 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                             legacy_only=int(not is_lazer),
                         )
                     result["score"] = _named_score_summary(score_data)
+                    unified_score = _named_score_to_unified(score_data, candidate, int(score_mode_id))
                 except NetworkError as e:
+                    unified_score = None
                     if "未找到" in str(e):
                         result["score"] = None
                     else:
                         result["score"] = None
                         result["query_error"] = str(e)
-                return result
+                return result, unified_score
 
-            results = await asyncio.gather(*(query_candidate(candidate) for candidate in candidates))
-            played = [result for result in results if result["score"] is not None]
+            queried = await asyncio.gather(*(query_candidate(candidate) for candidate in candidates))
+            results = [result for result, _ in queried]
+            played = [(result, score) for result, score in queried if score is not None]
             has_query_error = any("query_error" in result for result in results)
             if len(played) == 1 and not has_query_error:
-                selected = played[0]
+                selected, _ = played[0]
                 image = await get_score_data(
                     user.user_id,
                     is_lazer,
@@ -996,20 +1035,31 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     },
                     ensure_ascii=False,
                 )
+            query_error_count = sum("query_error" in result for result in results)
             if played:
-                message = _format_named_score_list(user.name, NGM[resolved_mode], query, played)
+                played_scores = [score for _, score in played]
+                image = await draw_pfm(
+                    "map_scores",
+                    user.user_id,
+                    played_scores,
+                    played_scores,
+                    NGM[resolved_mode],
+                    "osu",
+                )
+                await _send_image(ctx, image)
+                message = "已发送谱面成绩图片列表。"
             else:
-                message = (
+                text_message = (
                     f"{user.name} · {NGM[resolved_mode]} · {query}\n已检查 {len(results)} 个相关难度，未查询到成绩。"
                 )
-            query_error_count = sum("query_error" in result for result in results)
-            if query_error_count:
-                message += f"\n另有 {query_error_count} 个难度查询失败，请稍后重试。"
-            await _send_text(ctx, message)
+                if query_error_count:
+                    text_message += f"\n另有 {query_error_count} 个难度查询失败，请稍后重试。"
+                await _send_text(ctx, text_message)
+                message = "未查到成绩，已发送查询结果。"
             return json.dumps(
                 {
                     "status": "sent",
-                    "message": "已直接发送纯文本成绩列表。",
+                    "message": message,
                     "player": user.name,
                     "mode": NGM[resolved_mode],
                     "played_count": len(played),
@@ -1386,7 +1436,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "先用它搜索。候选唯一或用户描述能唯一匹配时，再把 beatmap_id 交给成绩、谱面信息、预览或背景工具；"
             "多个候选无法确定时列出简短候选让用户选择，禁止擅自使用第一项或编造 ID。",
             "- get_osu_scores_by_map_name: 用户以‘xxx 图打了多少/在 xxx 的成绩’这类名称描述谱面且没给 ID 时，"
-            "直接调用它。工具会直接发送唯一成绩图或纯文本成绩列表；status=sent 时立即结束，不要补充、复述，"
+            "直接调用它。工具会直接发送唯一成绩图或多成绩图片列表；status=sent 时立即结束，不要补充、复述，"
             "也不要自行输出 Markdown 列表。未指定模式时必须省略 mode，让工具优先使用绑定默认模式或该玩家的"
             "osu! 默认游玩模式；不要先调用不含玩家上下文的 search_osu_beatmaps。",
             "- send_osu_score: 用户给出 beatmap ID/链接，或明确要求某个已确定难度的成绩图时使用。"
