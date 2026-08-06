@@ -461,6 +461,87 @@ def _history_to_summary(points: list[tuple[float, str, int]]) -> dict[str, Any]:
     }
 
 
+def _match_history_game_summary(game: dict[str, Any]) -> dict[str, Any]:
+    players = game.get("players") or []
+    mvp = None
+    if players:
+        best = players[0]
+        mvp = {
+            "name": best["name"],
+            "team": best["team"],
+            "score": best["score"],
+            "accuracy": round(best["accuracy"], 2),
+            "mods": best["mods"],
+        }
+    return {
+        "index": game["index"],
+        "map": f"{game['title']} [{game['version']}]",
+        "stars": round(game["stars"], 2),
+        "winner": game["winner"],
+        "red_score": game["red_score"],
+        "blue_score": game["blue_score"],
+        "mvp": mvp,
+    }
+
+
+def _match_history_to_summary(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "match_id": data["match_id"],
+        "title": data["title"],
+        "team_type": data["team_type"],
+        "red_name": data["red_name"],
+        "blue_name": data["blue_name"],
+        "red_wins": data["red_wins"],
+        "blue_wins": data["blue_wins"],
+        "game_count": data["game_count"],
+        "player_count": data["player_count"],
+        "team_size": data["team_size"],
+        "duration": data["duration"],
+        "complete": data["complete"],
+        "games": [_match_history_game_summary(game) for game in (data.get("games") or [])[:15]],
+    }
+
+
+def _match_player_summary(player: dict[str, Any]) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "rank": player["rank"],
+        "name": player["name"],
+        "team": player.get("team"),
+        "rating": round(player["rating"], 2),
+        "total_score": player["total_score"],
+        "average_score": player["average_score"],
+        "played": player.get("played"),
+    }
+    if player.get("wins") is not None:
+        summary["wins"] = player["wins"]
+        summary["losses"] = player["losses"]
+    if player.get("win_rate") is not None:
+        summary["win_rate"] = round(player["win_rate"] * 100, 2)
+    if "top1_rate" in player:
+        summary["top1_rate"] = round(player["top1_rate"] * 100, 2)
+    return summary
+
+
+def _match_rating_to_summary(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "match_id": data["match_id"],
+        "title": data["title"],
+        "team_type": data["team_type"],
+        "algorithm": data["algorithm"],
+        "time_range": data["time_range"],
+        "game_count": data["game_count"],
+        "player_count": data["player_count"],
+        "team_size": data["team_size"],
+        "average_rating": round(data["average_rating"], 2),
+        "red_name": data["red_name"],
+        "blue_name": data["blue_name"],
+        "red_wins": data["red_wins"],
+        "blue_wins": data["blue_wins"],
+        "mvp": _match_player_summary(data["mvp"]),
+        "players": [_match_player_summary(player) for player in data["players"]],
+    }
+
+
 def _info_to_summary(info: UnifiedUser) -> dict[str, Any]:
     statistics = info.statistics
     grade_counts = statistics.grade_counts if statistics else None
@@ -1534,13 +1615,18 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     ) -> str | list[ContentBlock]:
         """查询并发送 osu match 对局历史图。match_id 为多人房间 ID。"""
         try:
-            image = await draw_match_history(match_id.strip())
+            drawn = await draw_match_history(match_id.strip(), return_data=True)
+            image, match_data = drawn
             await _send_image(ctx, image)
-            return _image_tool_result(
-                f"已发送 match {match_id} 对局历史图。",
-                image,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 match {match_id} 对局历史图，并返回结构化对局数据。",
+                    "match": _match_history_to_summary(match_data),
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, image, include_image_for_analysis)
         except Exception as e:
             return f"发送 match 历史失败: {e}"
 
@@ -1551,13 +1637,18 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     ) -> str | list[ContentBlock]:
         """查询并发送 osu match rating 图。match_id 为多人房间 ID。"""
         try:
-            image = await draw_rating(match_id.strip())
+            drawn = await draw_rating(match_id.strip(), return_data=True)
+            image, rating_data = drawn
             await _send_image(ctx, image)
-            return _image_tool_result(
-                f"已发送 match {match_id} rating 图。",
-                image,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 match {match_id} rating 图，并返回结构化评分数据。",
+                    "rating": _match_rating_to_summary(rating_data),
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, image, include_image_for_analysis)
         except Exception as e:
             return f"发送 match rating 失败: {e}"
 
@@ -1766,8 +1857,10 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "想难一点/更难/冲分/高难传 target='peak'，想练习/风格推荐传 target='style'，"
             "想均衡传 target='balanced'。",
             "- send_osu_profile_url: 用户想要 osu 主页链接、个人主页、mu 时使用。",
-            "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。",
-            "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。",
+            "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。"
+            "工具会返回结构化对局数据（双方队伍、胜场、每局比分与 MVP），可直接用于分析对局。",
+            "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。"
+            "工具会返回结构化评分数据（各玩家 rating/胜率/总分/MVP），可直接用于评价表现。",
             "- send_osu_preview: 用户想看谱面预览、preview、完整预览时使用。",
             "- send_osu_background: 用户想提取谱面背景、bg/getbg、背景图时使用。",
             "- send_osu_medal: 用户想查 medal/成就获得方式时使用。",

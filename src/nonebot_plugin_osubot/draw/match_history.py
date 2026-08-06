@@ -155,6 +155,14 @@ async def draw_match_card(data: dict) -> bytes:
         return await element.screenshot(type="png")
 
 
-async def draw_match_history(match_id: str) -> bytes:
+async def draw_match_history(
+    match_id: str,
+    *,
+    return_data: bool = False,
+) -> bytes | tuple[bytes, dict]:
     raw = await api_info("matches", f"https://osu.ppy.sh/api/v2/matches/{match_id}")
-    return await draw_match_card(prepare_match_data(Match(**raw), match_id))
+    data = prepare_match_data(Match(**raw), match_id)
+    image = await draw_match_card(data)
+    if return_data:
+        return image, data
+    return image

@@ -1148,3 +1148,172 @@ async def test_send_osu_bp_analysis_returns_structured_data(monkeypatch):
     assert bpa["mod_pp_contribution"] == [{"name": "HD", "value": 500.0}, {"name": "DT", "value": 300.0}]
     assert bpa["top_mappers"] == [{"name": "mapper", "value": 800.0}]
     assert sent == [b"bpa-image"]
+
+
+def _match_history_data():
+    return {
+        "match_id": "12345",
+        "title": "Lobby vs Match",
+        "team_type": "team-vs",
+        "is_team": True,
+        "red_name": "红队",
+        "blue_name": "蓝队",
+        "red_wins": 2,
+        "blue_wins": 1,
+        "game_count": 3,
+        "player_count": 6,
+        "team_size": 3,
+        "duration": 2400,
+        "time_range": "2026/01/01 12:00—13:00",
+        "complete": True,
+        "games": [
+            {
+                "index": 1,
+                "map_id": 101,
+                "title": "song",
+                "version": "Insane",
+                "creator": "mapper",
+                "cover": "",
+                "stars": 5.5,
+                "winner": "red",
+                "red_score": 300,
+                "blue_score": 200,
+                "players": [
+                    {"user_id": 1, "name": "alice", "avatar": "", "team": "red", "score": 100,
+                     "accuracy": 98.5, "combo": 500, "mods": ["HD"]},
+                    {"user_id": 2, "name": "bob", "avatar": "", "team": "blue", "score": 90,
+                     "accuracy": 97.0, "combo": 400, "mods": []},
+                ],
+                "red_players": [],
+                "blue_players": [],
+            }
+        ],
+    }
+
+
+def _match_rating_data():
+    return {
+        "match_id": "12345",
+        "title": "Lobby vs Match",
+        "time_range": "2026/01/01 12:00—13:00",
+        "team_type": "team-vs",
+        "algorithm": "OSUPLUS",
+        "game_count": 3,
+        "player_count": 2,
+        "players": [
+            {"rank": 1, "name": "alice", "team": "red", "rating": 2.34, "total_score": 5000,
+             "average_score": 1666.67, "wins": 2, "losses": 1, "played": 3,
+             "win_rate": 0.6667, "record_text": "2W—1L · 66.7%"},
+            {"rank": 2, "name": "bob", "team": "blue", "rating": 1.2, "total_score": 3000,
+             "average_score": 1000.0, "wins": 1, "losses": 2, "played": 3,
+             "win_rate": 0.3333, "record_text": "1W—2L · 33.3%"},
+        ],
+        "mvp": {"rank": 1, "name": "alice", "team": "red", "rating": 2.34, "total_score": 5000,
+                "average_score": 1666.67, "wins": 2, "losses": 1, "played": 3,
+                "win_rate": 0.6667, "record_text": "2W—1L · 66.7%"},
+        "max_top1_count": 0,
+        "max_total_score": 5000,
+        "average_rating": 1.77,
+        "red_name": "红队",
+        "blue_name": "蓝队",
+        "red_wins": 2,
+        "blue_wins": 1,
+        "red_players": [],
+        "blue_players": [],
+        "team_size": 3,
+    }
+
+
+@pytest.mark.asyncio
+async def test_send_osu_match_history_returns_structured_data(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    sent = []
+
+    async def fake_draw(*args, **kwargs):
+        assert kwargs.get("return_data") is True
+        return BytesIO(b"match-image"), _match_history_data()
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "draw_match_history", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    match_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_match_history")
+
+    raw = await match_tool.ainvoke({"match_id": "12345"})
+    result = json.loads(raw)
+
+    assert isinstance(raw, str)
+    assert result["status"] == "sent"
+    match = result["match"]
+    assert match["title"] == "Lobby vs Match"
+    assert match["red_wins"] == 2
+    assert match["blue_wins"] == 1
+    assert match["game_count"] == 3
+    assert match["team_size"] == 3
+    game = match["games"][0]
+    assert game["map"] == "song [Insane]"
+    assert game["winner"] == "red"
+    assert game["red_score"] == 300
+    assert game["mvp"]["name"] == "alice"
+    assert game["mvp"]["accuracy"] == 98.5
+    assert game["mvp"]["mods"] == ["HD"]
+    assert sent == [b"match-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_match_rating_returns_structured_data(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    sent = []
+
+    async def fake_draw(*args, **kwargs):
+        assert kwargs.get("return_data") is True
+        return BytesIO(b"rating-image"), _match_rating_data()
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "draw_rating", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    rating_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_match_rating")
+
+    raw = await rating_tool.ainvoke({"match_id": "12345"})
+    result = json.loads(raw)
+
+    assert isinstance(raw, str)
+    assert result["status"] == "sent"
+    rating = result["rating"]
+    assert rating["algorithm"] == "OSUPLUS"
+    assert rating["average_rating"] == 1.77
+    assert rating["red_wins"] == 2
+    assert rating["mvp"]["name"] == "alice"
+    assert rating["mvp"]["rating"] == 2.34
+    assert rating["mvp"]["win_rate"] == 66.67
+    assert len(rating["players"]) == 2
+    assert rating["players"][0]["wins"] == 2
+    assert rating["players"][0]["losses"] == 1
+    assert "top1_rate" not in rating["players"][0]
+    assert sent == [b"rating-image"]
+
+
+def test_match_player_summary_includes_top1_rate_for_head_to_head():
+    from nonebot_plugin_osubot.agent_tools import _match_player_summary
+
+    player = {
+        "rank": 1, "name": "carol", "team": "none", "rating": 3.0,
+        "total_score": 1000, "average_score": 500, "played": 4,
+        "top1_count": 3, "top1_rate": 0.75,
+    }
+    summary = _match_player_summary(player)
+
+    assert summary["top1_rate"] == 75.0
+    assert "wins" not in summary
+    assert "win_rate" not in summary
