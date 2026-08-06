@@ -410,6 +410,30 @@ def _recommend_to_summary(data: RecommendData) -> dict[str, Any]:
     }
 
 
+def _bpa_to_summary(data: dict[str, Any]) -> dict[str, Any]:
+    rank_distribution: list[dict[str, Any]] = []
+    for series in data.get("star_scatter") or []:
+        points = series.get("data") or []
+        if not points:
+            continue
+        stars = [point[0] for point in points]
+        pps = [point[1] for point in points]
+        rank_distribution.append(
+            {
+                "rank": series.get("name"),
+                "count": len(points),
+                "avg_stars": round(sum(stars) / len(stars), 2),
+                "avg_pp": round(sum(pps) / len(pps), 1),
+            }
+        )
+    return {
+        "stats": data.get("stats") or {},
+        "rank_distribution": rank_distribution,
+        "mod_pp_contribution": data.get("mod_pp_ls") or [],
+        "top_mappers": data.get("mapper_pp_ls") or [],
+    }
+
+
 def _history_to_summary(points: list[tuple[float, str, int]]) -> dict[str, Any]:
     pp_ls = [point[0] for point in points]
     date_ls = [point[1] for point in points]
@@ -1429,11 +1453,17 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 **data,
             )
             await _send_image(ctx, image)
-            return _image_tool_result(
-                f"已发送 {user.name} 的 {NGM[mode]} bp 分析图。",
-                image,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 {user.name} 的 {NGM[mode]} bp 分析图，并返回结构化分析数据。",
+                    "player": user.name,
+                    "mode": NGM[mode],
+                    "bpa": _bpa_to_summary(data),
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, image, include_image_for_analysis)
         except NetworkError as e:
             return f"查询 bp 分析失败: {e}"
         except Exception as e:
@@ -1728,7 +1758,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "仅要求按名称查看成绩列表时不要调用它逐张发图。",
             "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。"
             "工具会返回结构化历史数据（起止/峰值 pp、rank 变化、最近数据点），可直接用于分析趋势。",
-            "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
+            "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。"
+            "工具会返回结构化分析数据（加权/总 pp、平均 acc/星数/bpm、rank 分布、mod/mapper 贡献）。",
             "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
             "工具会返回结构化推荐数据（标题/stars/预测 pp 与 acc/mods），可直接向用户描述推荐理由。"
             "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"

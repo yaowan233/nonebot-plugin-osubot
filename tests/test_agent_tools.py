@@ -1072,3 +1072,79 @@ async def test_send_osu_recommend_returns_structured_data(monkeypatch):
     assert recommend["sections"][0]["count"] == 4
     assert len(recommend["sections"][0]["top"]) == 3
     assert sent == [b"recommend-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_bp_analysis_returns_structured_data(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    bpa_data = {
+        "stats": {
+            "weighted_pp": 1000.0,
+            "total_pp": 1200.0,
+            "bp_count": 50,
+            "avg_acc": 98.5,
+            "avg_stars": 6.2,
+            "avg_bpm": 180.0,
+            "top_mod": "HD",
+            "top_mapper": "mapper",
+        },
+        "star_scatter": [
+            {"name": "XH", "color": "#c7eaf5", "data": [[6.0, 300.0], [6.5, 320.0]]},
+            {"name": "A", "color": "#84d61c", "data": [[7.0, 250.0]]},
+            {"name": "D", "color": "#f55757", "data": []},
+        ],
+        "mod_pp_ls": [{"name": "HD", "value": 500.0}, {"name": "DT", "value": 300.0}],
+        "mapper_pp_ls": [{"name": "mapper", "value": 800.0}],
+        "pp_ls": [],
+        "length_ls": [],
+        "acc_ls": [],
+        "bpm_ls": [],
+        "date_ls": [],
+    }
+    sent = []
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_scores(*args, **kwargs):
+        return [SimpleNamespace(mods=[SimpleNamespace(acronym="HD")], beatmap=None)]
+
+    async def fake_bpa(*args, **kwargs):
+        return bpa_data
+
+    async def fake_draw(*args, **kwargs):
+        return BytesIO(b"bpa-image")
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "get_user_scores", fake_scores)
+    monkeypatch.setattr(agent_tools, "cal_score_info", lambda is_lazer, score: score)
+    monkeypatch.setattr(agent_tools, "build_bpa_data", fake_bpa)
+    monkeypatch.setattr(agent_tools, "draw_bpa_plot", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    bpa_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_analysis")
+
+    raw = await bpa_tool.ainvoke({})
+    result = json.loads(raw)
+
+    assert isinstance(raw, str)
+    assert result["status"] == "sent"
+    assert result["player"] == "player"
+    assert result["mode"] == "osu"
+    bpa = result["bpa"]
+    assert bpa["stats"]["weighted_pp"] == 1000.0
+    assert bpa["stats"]["top_mod"] == "HD"
+    ranks = bpa["rank_distribution"]
+    assert [item["rank"] for item in ranks] == ["XH", "A"]
+    assert ranks[0]["count"] == 2
+    assert ranks[0]["avg_stars"] == 6.25
+    assert ranks[0]["avg_pp"] == 310.0
+    assert bpa["mod_pp_contribution"] == [{"name": "HD", "value": 500.0}, {"name": "DT", "value": 300.0}]
+    assert bpa["top_mappers"] == [{"name": "mapper", "value": 800.0}]
+    assert sent == [b"bpa-image"]
