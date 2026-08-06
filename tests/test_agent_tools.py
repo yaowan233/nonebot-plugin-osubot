@@ -734,6 +734,7 @@ def _install_range_mocks(monkeypatch, scores, cal_identity=True):
 def fake_get_user_scores(scores):
     async def _fake(*args, **kwargs):
         return list(scores)
+
     return _fake
 
 
@@ -808,9 +809,11 @@ async def test_get_osu_bp_range_caches_bp_list_across_pages(monkeypatch):
 
     scores = _make_bp_scores(50)
     calls = {"fetch": 0}
+
     async def counting_get(*args, **kwargs):
         calls["fetch"] += 1
         return list(scores)
+
     _install_range_mocks(monkeypatch, scores)
     monkeypatch.setattr(agent_tools, "get_user_scores", counting_get)
     context = _range_context()
@@ -1012,13 +1015,28 @@ async def test_send_osu_recommend_returns_structured_data(monkeypatch):
         target="mixed",
         recommendations=[
             RecommendItem(
-                map_id=101, mod=0, mod_str="NM", stars=5.2, pred_pp=320.5, pred_acc=98.3,
-                final_score=100, title="artist - song [Insane]", beatmapset_id=10,
+                map_id=101,
+                mod=0,
+                mod_str="NM",
+                stars=5.2,
+                pred_pp=320.5,
+                pred_acc=98.3,
+                final_score=100,
+                title="artist - song [Insane]",
+                beatmapset_id=10,
                 url="https://osu.ppy.sh/b/101",
             ),
             RecommendItem(
-                map_id=102, mod=8, mod_str="HD", stars=5.8, pred_pp=350.0, pred_acc=97.5,
-                final_score=100, title="artist2 - song2 [Another]", beatmapset_id=11, url=None,
+                map_id=102,
+                mod=8,
+                mod_str="HD",
+                stars=5.8,
+                pred_pp=350.0,
+                pred_acc=97.5,
+                final_score=100,
+                title="artist2 - song2 [Another]",
+                beatmapset_id=11,
+                url=None,
             ),
         ],
         sections=[
@@ -1026,8 +1044,18 @@ async def test_send_osu_recommend_returns_structured_data(monkeypatch):
                 key="overall",
                 title="综合推荐",
                 items=[
-                    RecommendItem(map_id=i, mod=0, mod_str="NM", stars=4.0, pred_pp=200.0, pred_acc=99.0,
-                                  final_score=100, title=f"artist - song{i} [Hard]", beatmapset_id=i, url=None)
+                    RecommendItem(
+                        map_id=i,
+                        mod=0,
+                        mod_str="NM",
+                        stars=4.0,
+                        pred_pp=200.0,
+                        pred_acc=99.0,
+                        final_score=100,
+                        title=f"artist - song{i} [Hard]",
+                        beatmapset_id=i,
+                        url=None,
+                    )
                     for i in range(103, 107)
                 ],
             ),
@@ -1180,10 +1208,26 @@ def _match_history_data():
                 "red_score": 300,
                 "blue_score": 200,
                 "players": [
-                    {"user_id": 1, "name": "alice", "avatar": "", "team": "red", "score": 100,
-                     "accuracy": 98.5, "combo": 500, "mods": ["HD"]},
-                    {"user_id": 2, "name": "bob", "avatar": "", "team": "blue", "score": 90,
-                     "accuracy": 97.0, "combo": 400, "mods": []},
+                    {
+                        "user_id": 1,
+                        "name": "alice",
+                        "avatar": "",
+                        "team": "red",
+                        "score": 100,
+                        "accuracy": 98.5,
+                        "combo": 500,
+                        "mods": ["HD"],
+                    },
+                    {
+                        "user_id": 2,
+                        "name": "bob",
+                        "avatar": "",
+                        "team": "blue",
+                        "score": 90,
+                        "accuracy": 97.0,
+                        "combo": 400,
+                        "mods": [],
+                    },
                 ],
                 "red_players": [],
                 "blue_players": [],
@@ -1202,16 +1246,46 @@ def _match_rating_data():
         "game_count": 3,
         "player_count": 2,
         "players": [
-            {"rank": 1, "name": "alice", "team": "red", "rating": 2.34, "total_score": 5000,
-             "average_score": 1666.67, "wins": 2, "losses": 1, "played": 3,
-             "win_rate": 0.6667, "record_text": "2W—1L · 66.7%"},
-            {"rank": 2, "name": "bob", "team": "blue", "rating": 1.2, "total_score": 3000,
-             "average_score": 1000.0, "wins": 1, "losses": 2, "played": 3,
-             "win_rate": 0.3333, "record_text": "1W—2L · 33.3%"},
+            {
+                "rank": 1,
+                "name": "alice",
+                "team": "red",
+                "rating": 2.34,
+                "total_score": 5000,
+                "average_score": 1666.67,
+                "wins": 2,
+                "losses": 1,
+                "played": 3,
+                "win_rate": 0.6667,
+                "record_text": "2W—1L · 66.7%",
+            },
+            {
+                "rank": 2,
+                "name": "bob",
+                "team": "blue",
+                "rating": 1.2,
+                "total_score": 3000,
+                "average_score": 1000.0,
+                "wins": 1,
+                "losses": 2,
+                "played": 3,
+                "win_rate": 0.3333,
+                "record_text": "1W—2L · 33.3%",
+            },
         ],
-        "mvp": {"rank": 1, "name": "alice", "team": "red", "rating": 2.34, "total_score": 5000,
-                "average_score": 1666.67, "wins": 2, "losses": 1, "played": 3,
-                "win_rate": 0.6667, "record_text": "2W—1L · 66.7%"},
+        "mvp": {
+            "rank": 1,
+            "name": "alice",
+            "team": "red",
+            "rating": 2.34,
+            "total_score": 5000,
+            "average_score": 1666.67,
+            "wins": 2,
+            "losses": 1,
+            "played": 3,
+            "win_rate": 0.6667,
+            "record_text": "2W—1L · 66.7%",
+        },
         "max_top1_count": 0,
         "max_total_score": 5000,
         "average_rating": 1.77,
@@ -1309,9 +1383,15 @@ def test_match_player_summary_includes_top1_rate_for_head_to_head():
     from nonebot_plugin_osubot.agent_tools import _match_player_summary
 
     player = {
-        "rank": 1, "name": "carol", "team": "none", "rating": 3.0,
-        "total_score": 1000, "average_score": 500, "played": 4,
-        "top1_count": 3, "top1_rate": 0.75,
+        "rank": 1,
+        "name": "carol",
+        "team": "none",
+        "rating": 3.0,
+        "total_score": 1000,
+        "average_score": 500,
+        "played": 4,
+        "top1_count": 3,
+        "top1_rate": 0.75,
     }
     summary = _match_player_summary(player)
 

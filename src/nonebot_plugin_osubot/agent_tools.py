@@ -454,10 +454,7 @@ def _history_to_summary(points: list[tuple[float, str, int]]) -> dict[str, Any]:
             "best": min(rank_ls),
             "change": rank_ls[-1] - rank_ls[0],
         },
-        "recent": [
-            {"date": date, "pp": round(pp, 2), "rank": rank}
-            for pp, date, rank in points[-20:]
-        ],
+        "recent": [{"date": date, "pp": round(pp, 2), "rank": rank} for pp, date, rank in points[-20:]],
     }
 
 
