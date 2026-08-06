@@ -493,6 +493,11 @@ def _make_info():
         is_supporter=True,
         follower_count=100,
         join_date="2020-01-01",
+        user_achievements=[{"name": "a"}, {"name": "b"}],
+        badges=[
+            SimpleNamespace(description="d1", awarded_at="2026", image_url="img1", url="https://example.com/1"),
+            SimpleNamespace(description="d2", awarded_at="2025", image_url="img2", url="https://example.com/2"),
+        ],
         statistics=statistics,
     )
     return info
@@ -533,6 +538,11 @@ async def test_send_osu_user_info_returns_structured_info(monkeypatch):
     assert result["info"]["statistics"]["global_rank"] == 123
     assert result["info"]["statistics"]["accuracy"] == 98.76
     assert result["info"]["statistics"]["grade_counts"]["ssh"] == 1
+    assert result["info"]["achievement_count"] == 2
+    assert result["info"]["badges"] == [
+        {"description": "d1", "awarded_at": "2026", "url": "https://example.com/1"},
+        {"description": "d2", "awarded_at": "2025", "url": "https://example.com/2"},
+    ]
     assert sent == [b"info-image"]
 
 

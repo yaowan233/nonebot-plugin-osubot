@@ -549,6 +549,15 @@ def _info_to_summary(info: UnifiedUser) -> dict[str, Any]:
         "is_supporter": bool(info.is_supporter),
         "follower_count": info.follower_count,
         "join_date": info.join_date,
+        "achievement_count": len(info.user_achievements or []),
+        "badges": [
+            {
+                "description": badge.description,
+                "awarded_at": badge.awarded_at,
+                "url": badge.url,
+            }
+            for badge in (info.badges or [])[:8]
+        ],
         "statistics": {
             "pp": round(statistics.pp, 2) if statistics else None,
             "global_rank": statistics.global_rank if statistics else None,
