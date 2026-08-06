@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from importlib.util import find_spec
 from io import BytesIO
 from types import SimpleNamespace
@@ -352,7 +353,7 @@ async def test_get_osu_scores_by_map_name_sends_image_list_when_multiple_scores_
 async def test_send_osu_bp_list_sends_single_score_when_filter_has_one_result(monkeypatch):
     from nonebot_plugin_osubot import agent_tools
 
-    score = SimpleNamespace()
+    score = _make_score()
 
     async def fake_resolve(*args, **kwargs):
         return agent_tools.ResolvedOsuUser(42, "player", "0")
@@ -377,9 +378,10 @@ async def test_send_osu_bp_list_sends_single_score_when_filter_has_one_result(mo
     bundle = agent_tools.build_osu_agent_tools(context)
     list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
 
-    result = await list_tool.ainvoke({"filters": "300pp+"})
+    result = json.loads(await list_tool.ainvoke({"filters": "300pp+"}))
 
-    assert "筛选后只有一条成绩" in result
+    assert "筛选后只有一条成绩" in result["message"]
+    assert result["status"] == "sent"
     assert sent == [b"single-score"]
 
 
@@ -408,7 +410,7 @@ async def test_send_osu_bp_list_keeps_list_for_multiple_results(monkeypatch):
     monkeypatch.setattr(agent_tools, "select_bp_scores", fake_select)
     monkeypatch.setattr(agent_tools, "draw_pfm", fake_list)
     monkeypatch.setattr(agent_tools, "_send_image", fake_send)
-    context = SimpleNamespace(user_id="12345678", send_target=None)
+    context = SimpleNamespace(user_id="12345678", request_id=None, session_id="group-1", send_target=None)
     bundle = agent_tools.build_osu_agent_tools(context)
     list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
 
@@ -416,3 +418,485 @@ async def test_send_osu_bp_list_keeps_list_for_multiple_results(monkeypatch):
 
     assert "bp1-2" in result
     assert sent == [b"score-list"]
+
+
+def _make_score():
+    return SimpleNamespace(
+        beatmap=SimpleNamespace(
+            id=1,
+            set_id=2,
+            artist="artist",
+            title="title",
+            version="difficulty",
+            creator="mapper",
+            stars=6.5,
+            bpm=180,
+            total_length=120,
+        ),
+        statistics=SimpleNamespace(model_dump=lambda **_: {"great": 1000, "miss": 1}),
+        rank="A",
+        pp=300.5,
+        accuracy=98.76,
+        max_combo=800,
+        mods=[SimpleNamespace(acronym="HD")],
+        total_score=900000,
+        ended_at=datetime(2026, 7, 31, 12, 0, 0),
+        score_version="lazer",
+    )
+
+
+def _make_bp_scores(count: int, hd_start: int = 0):
+    scores = []
+    for i in range(count):
+        score = _make_score()
+        score.pp = 300.0 + i
+        score.accuracy = 98.0 + (i % 10) * 0.1
+        score.max_combo = 800 + i
+        score.beatmap = SimpleNamespace(
+            id=1000 + i,
+            set_id=2000 + i,
+            artist="artist",
+            title=f"song-{i}",
+            version="Insane",
+            creator="mapper",
+            stars=5.0 + (i % 5) * 0.1,
+            bpm=180,
+            total_length=120,
+        )
+        score.mods = [SimpleNamespace(acronym="HD")] if i >= hd_start else []
+        score.statistics = SimpleNamespace(model_dump=lambda i=i, **kwargs: {"miss": i})
+        score.rank = "S" if i % 2 == 0 else "A"
+        score.ended_at = datetime(2026, 7, 31, 12, 0, 0)
+        scores.append(score)
+    return scores
+
+
+def _make_info():
+    grade_counts = SimpleNamespace(ssh=1, ss=2, sh=3, s=4, a=5)
+    statistics = SimpleNamespace(
+        pp=9876.5,
+        global_rank=123,
+        country_rank=4,
+        hit_accuracy=98.76,
+        play_count=1234,
+        total_hits=56789,
+        ranked_score=111111,
+        total_score=222222,
+        maximum_combo=3210,
+        play_time=3600,
+        grade_counts=grade_counts,
+    )
+    info = SimpleNamespace(
+        id=42,
+        username="player",
+        country_code="CN",
+        is_supporter=True,
+        follower_count=100,
+        join_date="2020-01-01",
+        statistics=statistics,
+    )
+    return info
+
+
+@pytest.mark.asyncio
+async def test_send_osu_user_info_returns_structured_info(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    info = _make_info()
+    sent = []
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_draw(*args, **kwargs):
+        assert kwargs.get("return_info") is True
+        return BytesIO(b"info-image"), info
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "draw_info", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    info_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_user_info")
+
+    result = json.loads(await info_tool.ainvoke({"username": "player"}))
+
+    assert result["status"] == "sent"
+    assert result["player"] == "player"
+    assert result["mode"] == "osu"
+    assert result["info"]["username"] == "player"
+    assert result["info"]["statistics"]["pp"] == 9876.5
+    assert result["info"]["statistics"]["global_rank"] == 123
+    assert result["info"]["statistics"]["accuracy"] == 98.76
+    assert result["info"]["statistics"]["grade_counts"]["ssh"] == 1
+    assert sent == [b"info-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_user_info_default_no_image_block(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    info = _make_info()
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_draw(*args, **kwargs):
+        return BytesIO(b"info-image"), info
+
+    async def fake_send(*args, **kwargs):
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "draw_info", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    info_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_user_info")
+
+    result = await info_tool.ainvoke({"username": "player"})
+
+    assert isinstance(result, str)
+    assert "image_url" not in result
+
+
+@pytest.mark.asyncio
+async def test_send_osu_user_info_include_image_attaches_block(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    info = _make_info()
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_draw(*args, **kwargs):
+        return BytesIO(b"info-image"), info
+
+    async def fake_send(*args, **kwargs):
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "draw_info", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    info_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_user_info")
+
+    result = await info_tool.ainvoke({"username": "player", "include_image_for_analysis": True})
+
+    assert isinstance(result, list)
+    assert result[0]["type"] == "text"
+    assert json.loads(result[0]["text"])["status"] == "sent"
+    assert result[1]["type"] == "image_url"
+    assert result[1]["image_url"]["url"].startswith("data:image/png;base64,")
+
+
+@pytest.mark.asyncio
+async def test_send_osu_recent_or_pr_returns_structured_score(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    score = _make_score()
+    sent = []
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_draw(*args, **kwargs):
+        assert kwargs.get("return_score") is True
+        return BytesIO(b"score-image"), score
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "draw_score", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    recent_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_recent_or_pr")
+
+    result = json.loads(await recent_tool.ainvoke({"kind": "recent", "index": 3}))
+
+    assert result["status"] == "sent"
+    assert result["player"] == "player"
+    assert result["scores"][0]["score"]["pp"] == 300.5
+    assert result["scores"][0]["score"]["miss"] == 1
+    assert result["scores"][0]["score"]["rank"] == "A"
+    assert "bp_index" not in result["scores"][0]
+    assert sent == [b"score-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_score_returns_structured_score(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    score = _make_score()
+    sent = []
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_score_data(*args, **kwargs):
+        assert kwargs.get("return_score") is True
+        return BytesIO(b"score-image"), score
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "get_score_data", fake_score_data)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    score_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_score")
+
+    result = json.loads(await score_tool.ainvoke({"beatmap_id": "114514"}))
+
+    assert result["status"] == "sent"
+    assert result["player"] == "player"
+    assert result["scores"][0]["score"]["pp"] == 300.5
+    assert result["scores"][0]["beatmap"]["id"] == 1
+    assert "bp_index" not in result["scores"][0]
+    assert sent == [b"score-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_bp_list_single_result_returns_structured_score(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    score = _make_score()
+    sent = []
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player", "0")
+
+    async def fake_select(*args, **kwargs):
+        return [score], [score]
+
+    async def fake_single(*args, **kwargs):
+        return BytesIO(b"single-score"), score
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "select_bp_scores", fake_select)
+    monkeypatch.setattr(agent_tools, "draw_selected_score", fake_single)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
+
+    result = json.loads(await list_tool.ainvoke({"filters": "300pp+"}))
+
+    assert result["status"] == "sent"
+    assert result["scores"][0]["score"]["pp"] == 300.5
+    assert "筛选后只有一条成绩" in result["message"]
+    assert sent == [b"single-score"]
+
+
+def _range_context():
+    return SimpleNamespace(
+        user_id="12345678",
+        request_id="request-1",
+        session_id="group-1",
+        send_target=None,
+    )
+
+
+def _install_range_mocks(monkeypatch, scores, cal_identity=True):
+    from nonebot_plugin_osubot import agent_tools
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_active(*args, **kwargs):
+        return True
+
+    async def fake_send(*args, **kwargs):
+        raise AssertionError("纯数据工具不应发送图片")
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "is_request_active", fake_active)
+    monkeypatch.setattr(agent_tools, "get_user_scores", fake_get_user_scores(scores))
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    if cal_identity:
+        monkeypatch.setattr(agent_tools, "cal_score_info", lambda lazer, score, source: score)
+
+
+def fake_get_user_scores(scores):
+    async def _fake(*args, **kwargs):
+        return list(scores)
+    return _fake
+
+
+@pytest.mark.asyncio
+async def test_get_osu_bp_range_returns_compact_page(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = _make_bp_scores(50)
+    _install_range_mocks(monkeypatch, scores)
+    context = _range_context()
+    bundle = agent_tools.build_osu_agent_tools(context)
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+
+    result = json.loads(await range_tool.ainvoke({"range_text": "1-20"}))
+
+    assert result["status"] == "ok"
+    assert result["player"] == "player"
+    assert result["mode"] == "osu"
+    assert result["total"] == 50
+    assert result["range"] == [1, 20]
+    assert result["has_more"] is True
+    assert result["next_start"] == 21
+    assert len(result["scores"]) == 20
+    first = result["scores"][0]
+    assert first["index"] == 1
+    assert first["title"] == "song-0"
+    assert first["pp"] == 300.0
+    assert first["accuracy"] == 98.0
+    assert first["combo"] == 800
+    assert first["mods"] == ["HD"]
+    assert len(json.dumps(result, ensure_ascii=False)) < 5000
+
+
+@pytest.mark.asyncio
+async def test_get_osu_bp_range_rejects_wide_range(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = _make_bp_scores(50)
+    _install_range_mocks(monkeypatch, scores)
+    context = _range_context()
+    bundle = agent_tools.build_osu_agent_tools(context)
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+
+    result = json.loads(await range_tool.ainvoke({"range_text": "1-30"}))
+
+    assert result["status"] == "failed"
+    assert "最多读取 20 条" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_get_osu_bp_range_last_page_has_no_more(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = _make_bp_scores(50)
+    _install_range_mocks(monkeypatch, scores)
+    context = _range_context()
+    bundle = agent_tools.build_osu_agent_tools(context)
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+
+    result = json.loads(await range_tool.ainvoke({"range_text": "41-60"}))
+
+    assert result["status"] == "ok"
+    assert result["range"] == [41, 50]
+    assert result["has_more"] is False
+    assert "next_start" not in result
+    assert len(result["scores"]) == 10
+
+
+@pytest.mark.asyncio
+async def test_get_osu_bp_range_caches_bp_list_across_pages(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = _make_bp_scores(50)
+    calls = {"fetch": 0}
+    async def counting_get(*args, **kwargs):
+        calls["fetch"] += 1
+        return list(scores)
+    _install_range_mocks(monkeypatch, scores)
+    monkeypatch.setattr(agent_tools, "get_user_scores", counting_get)
+    context = _range_context()
+    bundle = agent_tools.build_osu_agent_tools(context)
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+
+    first = json.loads(await range_tool.ainvoke({"range_text": "1-20"}))
+    second = json.loads(await range_tool.ainvoke({"range_text": "21-40"}))
+
+    assert first["status"] == "ok"
+    assert second["status"] == "ok"
+    assert calls == {"fetch": 1}
+
+
+@pytest.mark.asyncio
+async def test_get_osu_bp_range_mods_filter(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = _make_bp_scores(50, hd_start=3)
+    _install_range_mocks(monkeypatch, scores)
+    context = _range_context()
+    bundle = agent_tools.build_osu_agent_tools(context)
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+
+    result = json.loads(await range_tool.ainvoke({"range_text": "1-20", "mods": "HD"}))
+
+    assert result["status"] == "ok"
+    assert result["total"] == 47
+    assert len(result["scores"]) == 20
+    assert all(item["mods"] == ["HD"] for item in result["scores"])
+    assert result["scores"][0]["title"] == "song-3"
+
+
+@pytest.mark.asyncio
+async def test_send_osu_bp_list_dedups_repeat_list_image(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = [SimpleNamespace(), SimpleNamespace()]
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player", "0")
+
+    async def fake_select(*args, **kwargs):
+        return scores, scores
+
+    async def fake_list(*args, **kwargs):
+        return BytesIO(b"score-list")
+
+    sent = []
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    async def fake_active(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "select_bp_scores", fake_select)
+    monkeypatch.setattr(agent_tools, "draw_pfm", fake_list)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    monkeypatch.setattr(agent_tools, "is_request_active", fake_active)
+    context = SimpleNamespace(user_id="12345678", request_id="request-1", session_id="group-1", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
+
+    first = await list_tool.ainvoke({"range_text": "1-2"})
+    second = await list_tool.ainvoke({"range_text": "1-2"})
+
+    assert "已发送" in first
+    assert "不再重复发送" in second
+    assert sent == [b"score-list"]
+
+
+@pytest.mark.asyncio
+async def test_instructions_contain_bp_analysis_recipe():
+    from nonebot_plugin_osubot.agent_tools import build_osu_agent_tools
+
+    context = SimpleNamespace(user_id="12345678")
+    bundle = build_osu_agent_tools(context)
+    instructions = "\n".join(bundle.instructions)
+    tool_names = {tool.name for tool in bundle.tools}
+
+    assert "get_osu_bp_range" in tool_names
+    assert "两段式" in instructions
+    assert "send_osu_bp_list 发送 BP 列表图" in instructions
+    assert "next_start 续读" in instructions
+    assert "范围宽度必须 ≤20" in instructions
+    assert "最多传 10 个 BP 序号" in instructions

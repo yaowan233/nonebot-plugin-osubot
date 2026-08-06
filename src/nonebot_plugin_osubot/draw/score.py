@@ -123,7 +123,9 @@ async def get_score_data(
     mods: Optional[list[str]],
     mapid: int = 0,
     source: str = "osu",
-) -> BytesIO:
+    *,
+    return_score: bool = False,
+) -> BytesIO | tuple[BytesIO, UnifiedScore]:
     grank = ""
     map_json = await osu_api("map", map_id=mapid)
     native_mode = int(map_json["mode_int"])
@@ -187,7 +189,10 @@ async def get_score_data(
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
-    return await draw_score_pic(score, info, map_json, grank, source)
+    image = await draw_score_pic(score, info, map_json, grank, source)
+    if return_score:
+        return image, score
+    return image
 
 
 async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, source) -> BytesIO:

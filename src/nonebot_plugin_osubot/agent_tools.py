@@ -36,6 +36,7 @@ from .mania import generate_preview_pic
 from .database import InfoData, UserData, SbUserData
 from .exceptions import NetworkError
 from .schema.score import Mod, NewStatistics, UnifiedBeatmap, UnifiedScore
+from .schema.user import UnifiedUser
 from .draw.score import cal_score_info, draw_selected_score
 from .draw.bp import draw_pfm, select_bp_scores
 from .draw.rating import draw_rating
@@ -315,7 +316,7 @@ def _normalize_bp_indices(best_indices: list[int]) -> list[int]:
     return normalized
 
 
-def _score_to_bp_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]:
+def _score_to_bp_summary(score: UnifiedScore, bp_index: int | None = None) -> dict[str, Any]:
     beatmap = score.beatmap
     statistics: dict[str, Any] = {}
     if score.statistics:
@@ -323,8 +324,7 @@ def _score_to_bp_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]:
             statistics = score.statistics.model_dump(exclude_none=True)
         else:
             statistics = score.statistics.dict(exclude_none=True)
-    return {
-        "bp_index": bp_index,
+    summary: dict[str, Any] = {
         "beatmap": {
             "id": beatmap.id if beatmap else None,
             "set_id": beatmap.set_id if beatmap else None,
@@ -347,6 +347,72 @@ def _score_to_bp_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]:
             "played_at": score.ended_at.isoformat(),
             "client": score.score_version,
             "statistics": statistics,
+        },
+    }
+    if bp_index is not None:
+        summary["bp_index"] = bp_index
+    return summary
+
+
+def _compact_score_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]:
+    beatmap = score.beatmap
+    statistics: dict[str, Any] = {}
+    if score.statistics:
+        if hasattr(score.statistics, "model_dump"):
+            statistics = score.statistics.model_dump(exclude_none=True)
+        else:
+            statistics = score.statistics.dict(exclude_none=True)
+    mods = [mod.acronym for mod in score.mods] or ["NM"]
+    if "NC" in mods and "DT" in mods:
+        mods.remove("DT")
+    ended_at = score.ended_at
+    return {
+        "index": bp_index,
+        "title": beatmap.title if beatmap else None,
+        "version": beatmap.version if beatmap else None,
+        "stars": round(beatmap.stars, 2) if beatmap else None,
+        "rank": score.rank,
+        "pp": round(score.pp, 2) if score.pp is not None else None,
+        "accuracy": round(score.accuracy, 2),
+        "combo": score.max_combo,
+        "miss": statistics.get("miss", 0),
+        "mods": mods,
+        "date": ended_at.strftime("%Y.%m.%d") if ended_at is not None else None,
+    }
+
+
+def _info_to_summary(info: UnifiedUser) -> dict[str, Any]:
+    statistics = info.statistics
+    grade_counts = statistics.grade_counts if statistics else None
+    return {
+        "id": info.id,
+        "username": info.username,
+        "country_code": info.country_code,
+        "is_supporter": bool(info.is_supporter),
+        "follower_count": info.follower_count,
+        "join_date": info.join_date,
+        "statistics": {
+            "pp": round(statistics.pp, 2) if statistics else None,
+            "global_rank": statistics.global_rank if statistics else None,
+            "country_rank": statistics.country_rank if statistics else None,
+            "accuracy": round(statistics.hit_accuracy, 2) if statistics else None,
+            "play_count": statistics.play_count if statistics else None,
+            "total_hits": statistics.total_hits if statistics else None,
+            "ranked_score": statistics.ranked_score if statistics else None,
+            "total_score": statistics.total_score if statistics else None,
+            "maximum_combo": statistics.maximum_combo if statistics else None,
+            "play_time": statistics.play_time if statistics else None,
+            "grade_counts": (
+                {
+                    "ssh": grade_counts.ssh,
+                    "ss": grade_counts.ss,
+                    "sh": grade_counts.sh,
+                    "s": grade_counts.s,
+                    "a": grade_counts.a,
+                }
+                if grade_counts
+                else None
+            ),
         },
     }
 
@@ -594,6 +660,30 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     bp_delivery_lock = asyncio.Lock()
     delivered_bp_keys: set[tuple[Any, ...]] = set()
     bp_artifact_cache: dict[tuple[Any, ...], tuple[bytes | BytesIO, dict[str, Any]]] = {}
+    bp_list_cache: dict[tuple[Any, ...], list[UnifiedScore]] = {}
+
+    async def fetch_bp_list(
+        user: ResolvedOsuUser,
+        mode: str,
+        mod_list: list[str],
+        source: str,
+        is_lazer: bool,
+    ) -> list[UnifiedScore]:
+        cache_key = (user.user_id, source, mode, is_lazer, tuple(sorted(mod_list)))
+        cached = bp_list_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        scores = await get_user_scores(
+            user.user_id,
+            NGM[mode],
+            "best",
+            source=source,
+            legacy_only=not is_lazer,
+        )
+        if source == "osu":
+            scores = [cal_score_info(is_lazer, score, source) for score in scores]
+        bp_list_cache[cache_key] = scores
+        return scores
 
     async def deliver_bp_once(
         delivery_key: tuple[Any, ...], image: bytes | BytesIO
@@ -633,13 +723,20 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
-            data = await draw_info(user.user_id, NGM[mode], max(day, 0), source)
+            drawn = await draw_info(user.user_id, NGM[mode], max(day, 0), source, return_info=True)
+            data, info = drawn
             await _send_image(ctx, data)
-            return _image_tool_result(
-                f"已发送 {user.name} 的 osu 信息图。图片中包含玩家资料、排名、pp、acc 等信息。",
-                data,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 {user.name} 的 osu 信息图，并返回结构化资料。",
+                    "player": user.name,
+                    "mode": NGM[mode],
+                    "info": _info_to_summary(info),
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, data, include_image_for_analysis)
         except NetworkError as e:
             return f"查询 osu 玩家信息失败: {e}"
         except Exception as e:
@@ -733,7 +830,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         """
         读取一个或多个 BP 的结构化成绩，不发送图片。
         仅用于比较多个 BP 或进行复杂分析；普通查询应使用 send_osu_bp。
-        best_indices 最多包含 20 个 1-200 范围内的 BP 序号。
+        best_indices 为 1-200 范围内的 BP 序号，一次建议不超过 10 个（超过会因结果过长被截断丢失中间数据）。
         """
         try:
             if not await _is_context_request_active(ctx):
@@ -757,6 +854,65 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 mode=NGM[mode],
                 scores=summaries,
             )
+        except (NetworkError, ValueError) as e:
+            return _bp_tool_result("failed", f"查询 BP 数据失败: {e}")
+        except Exception as e:
+            return _bp_tool_result("failed", f"读取 BP 数据失败: {e}")
+
+    @tool("get_osu_bp_range")
+    async def get_osu_bp_range(
+        range_text: str,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
+        mode: str | None = None,
+        mods: str = "",
+        source: str = "osu",
+        is_lazer: bool | None = None,
+    ) -> str:
+        """
+        按范围分页读取玩家 BP 的结构化数据，每次最多 20 条，不发送图片。
+        用于分析整体 BP 构成/实力/吃分分布；先从 1-20 开始，返回 has_more=true 时按 next_start 继续读取。
+        range_text 类似 1-20，宽度不能超过 20。
+        """
+        try:
+            if not await _is_context_request_active(ctx):
+                return _bp_tool_result("expired", "请求已过期，已取消查询。")
+            source = _normalize_source(source)
+            user = await _resolve_osu_user(ctx, username, source, target_user_id)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer)
+            mod_list = mods2list(mods) if mods else []
+            low, high = _normalize_range(range_text, default="1-20")
+            if high - low + 1 > 20:
+                return _bp_tool_result("failed", "get_osu_bp_range 每次最多读取 20 条，请使用类似 1-20 的范围。")
+            scores = await fetch_bp_list(user, mode, mod_list, source, is_lazer)
+            filtered_indices = get_mods_list(scores, mod_list)
+            if not filtered_indices:
+                return _bp_tool_result("failed", "未查询到指定的 BP 成绩")
+            total = len(filtered_indices)
+            if low > total:
+                return _bp_tool_result("failed", f"BP {low} 超出该玩家的 BP 总数 {total}")
+            page_indices = filtered_indices[low - 1 : high]
+            if not page_indices:
+                return _bp_tool_result("failed", "未查询到游玩记录")
+            shown_high = min(high, total)
+            compact = [
+                _compact_score_summary(scores[score_index], position)
+                for position, score_index in enumerate(page_indices, start=low)
+            ]
+            result: dict[str, Any] = {
+                "status": "ok",
+                "message": f"已读取 {user.name} 的 BP {low}-{shown_high} 数据，未发送图片。",
+                "player": user.name,
+                "mode": NGM[mode],
+                "range": [low, shown_high],
+                "total": total,
+                "has_more": high < total,
+                "scores": compact,
+            }
+            if high < total:
+                result["next_start"] = high + 1
+            return json.dumps(result, ensure_ascii=False)
         except (NetworkError, ValueError) as e:
             return _bp_tool_result("failed", f"查询 BP 数据失败: {e}")
         except Exception as e:
@@ -806,7 +962,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 source,
             )
             if len(selected) == 1:
-                data, _ = await draw_selected_score(
+                data, score = await draw_selected_score(
                     selected[0],
                     user.user_id,
                     is_lazer,
@@ -814,13 +970,36 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     source,
                 )
                 await _send_image(ctx, data)
-                return _image_tool_result(
-                    f"筛选后只有一条成绩，已发送 {user.name} 的单张成绩图。",
-                    data,
-                    include_image_for_analysis,
+                text = json.dumps(
+                    {
+                        "status": "sent",
+                        "message": f"筛选后只有一条成绩，已发送 {user.name} 的单张成绩图，并返回结构化成绩。",
+                        "player": user.name,
+                        "mode": NGM[mode],
+                        "scores": [_score_to_bp_summary(score)],
+                    },
+                    ensure_ascii=False,
                 )
+                return _image_tool_result(text, data, include_image_for_analysis)
+            delivery_key = (
+                user.user_id,
+                source,
+                mode,
+                is_lazer,
+                tuple(mod_list),
+                "bp_list",
+                low,
+                high,
+                filters,
+            )
+            if delivery_key in delivered_bp_keys:
+                return f"{user.name} 的 bp{low}-{high} 已在本轮发送过，不再重复发送。"
             data = await draw_pfm("bp", user.user_id, scores, selected, NGM[mode], source, low, high, 0)
-            await _send_image(ctx, data)
+            delivery_status = await deliver_bp_once(delivery_key, data)
+            if delivery_status == "expired":
+                return "请求已过期，已取消发送。"
+            if delivery_status == "already_sent":
+                return f"{user.name} 的 bp{low}-{high} 已在本轮发送过，不再重复发送。"
             return _image_tool_result(
                 f"已发送 {user.name} 的 bp{low}-{high}"
                 f"{'（筛选：' + filters + '）' if filters else ''}。图片中包含 bp 列表，可用于分析成绩分布和整体表现。",
@@ -854,15 +1033,30 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
             is_lazer = _resolve_is_lazer(is_lazer)
-            data = await draw_score(score_type, user.user_id, is_lazer, NGM[mode], [], [], source, index)
+            data, score = await draw_score(
+                score_type,
+                user.user_id,
+                is_lazer,
+                NGM[mode],
+                [],
+                [],
+                source,
+                index,
+                return_score=True,
+            )
             await _send_image(ctx, data)
             label = "最近 best" if score_type == "pr" else "最近"
-            return _image_tool_result(
-                f"已发送 {user.name} 的第 {index} 个{label}成绩。"
-                "图片中包含成绩、pp、acc、combo、miss、mods、谱面等信息。",
-                data,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 {user.name} 的第 {index} 个{label}成绩，并返回结构化成绩。",
+                    "player": user.name,
+                    "mode": NGM[mode],
+                    "scores": [_score_to_bp_summary(score)],
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, data, include_image_for_analysis)
         except NetworkError as e:
             return f"查询最近成绩失败: {e}"
         except Exception as e:
@@ -887,20 +1081,27 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
             is_lazer = _resolve_is_lazer(is_lazer)
-            data = await get_score_data(
+            data, score = await get_score_data(
                 user.user_id,
                 is_lazer,
                 NGM[mode],
                 mods2list(mods) if mods else [],
                 int(beatmap_id),
                 source,
+                return_score=True,
             )
             await _send_image(ctx, data)
-            return _image_tool_result(
-                f"已发送 {user.name} 在谱面 {beatmap_id} 上的成绩。图片中包含成绩、pp、acc、combo、miss、mods 等信息。",
-                data,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 {user.name} 在谱面 {beatmap_id} 上的成绩，并返回结构化成绩。",
+                    "player": user.name,
+                    "mode": NGM[mode],
+                    "scores": [_score_to_bp_summary(score)],
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, data, include_image_for_analysis)
         except NetworkError as e:
             return f"查询谱面成绩失败: {e}"
         except Exception as e:
@@ -1381,6 +1582,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             send_osu_user_info,
             send_osu_bp,
             get_osu_bp_data,
+            get_osu_bp_range,
             send_osu_bp_list,
             send_osu_recent_or_pr,
             send_osu_score,
@@ -1414,15 +1616,28 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- 用户问单个 BP“打得怎么样/发挥如何/分析/评价/看看问题”时，调用 send_osu_bp 并传 purpose=analyze；"
             "根据工具返回的结构化成绩给出简短评价，不要重复发图。",
             "- 比较多个 BP、分析多个指定 BP 的差异时，调用 get_osu_bp_data；它只返回结构化数据且不会发图。"
-            "不要用它处理普通的单个 BP 看图请求。",
-            "- 对 send_osu_user_info、send_osu_bp_list、send_osu_recent_or_pr 等其他图片工具，"
-            "用户明确要求分析图片时才传 include_image_for_analysis=true。",
-            "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。",
+            "不要用它处理普通的单个 BP 看图请求。每次最多传 10 个 BP 序号，超过会因结果过长被截断丢失中间数据；"
+            "需要更多时分成多次调用。",
+            "- 用户要求评价/分析一段 BP 范围或整体 BP（如“评价一下我的 bp1-200”）时，按两段式执行："
+            "① 先调用 send_osu_bp_list 发送 BP 列表图，range_text 填用户给的范围（未给则 1-200）；"
+            "② 再调用 get_osu_bp_range 分段读取结构化数据，从 1-20 开始，has_more=true 且需要更多时按 next_start 续读；"
+            "通常前 40-60 条就足以给出整体评价，不必读完 200；"
+            "③ 最后基于读到的数据给出评价，不要依赖图片内容。",
+            "- get_osu_bp_range: 按范围分页读取 BP 数据（每次最多 20 条、不发图），"
+            "用于分析整体 BP 构成/实力/吃分分布。范围宽度必须 ≤20，不要传 1-200 这样的宽范围。"
+            "它与 send_osu_bp_list 不同：后者用于发图展示。",
+            "- 分析/评价类请求（锐评发挥、评价实力、分析成绩细节）直接用工具返回的 JSON 结构化数据"
+            "（info/scores 字段），不要依赖图片内容，也不要传 include_image_for_analysis。"
+            "图片只是发给用户的展示物，不是你的分析数据源。",
+            "- include_image_for_analysis 仅在用户明确要求看渲染图本身（如排版、背景、预览效果）时才传 true；"
+            "普通分析请求一律省略它，使用工具返回的结构化数据即可。",
+            "- send_osu_user_info: 用户想查 osu 玩家资料、info、个人信息图时使用。"
+            "工具会返回结构化资料（pp/rank/acc/游玩次数等），可直接用于评价玩家实力，无需看图。",
             "- send_osu_bp: 用户想查某个 bp 序号、最好成绩、bp1/bp10 时使用。",
             "- get_osu_bp_data: 仅用于读取多个指定 BP 的数据以进行比较或复杂分析，不发送图片。",
             "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm、一段 bp 范围或筛选 BP 时使用。"
             "无筛选默认 1-30；有 filters 且用户没指定范围时省略 range_text，让工具自动搜索 1-200。"
-            "筛选后只有一条时工具会自动发送单张成绩图，多条时才发送列表图。",
+            "筛选后只有一条时工具会自动发送单张成绩图并返回结构化成绩，多条时才发送列表图。",
             "- BP 筛选要写入 send_osu_bp_list.filters，不要把筛选文本放进 username，也不要传完整的 `/bl` 指令。"
             "多个条件以空格连接且为 AND：pp/acc/stars/miss/combo/bpm/length/mapper/title/version/rank/client/date/"
             "days/hours/speed/mods；简写 p/a/s/m/c/b/len/mp/t/v/r/cl/sp/mod。",
@@ -1431,7 +1646,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "‘非FC’=`nofc`，‘不要DT’=`-DT`，‘仅HDHR’=`=HDHR`。",
             "- Mods 参数语义：mods='HDHR' 表示成绩至少包含 HD 和 HR；精确 Mods 或排除 Mods 应写 filters："
             "mods=HDHR / =HDHR、mods!=DT / -DT。标题、谱师等文本搜索使用 t~关键词、mp~谱师；含空格时加引号。",
-            "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。",
+            "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。"
+            "工具会返回该成绩的结构化数据，可据此评价发挥，无需依赖图片。",
             "- search_osu_beatmaps: 用户只给出歌名、别名、艺术家、谱师或难度名而没有 beatmap ID/链接时，"
             "先用它搜索。候选唯一或用户描述能唯一匹配时，再把 beatmap_id 交给成绩、谱面信息、预览或背景工具；"
             "多个候选无法确定时列出简短候选让用户选择，禁止擅自使用第一项或编造 ID。",
@@ -1440,6 +1656,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "也不要自行输出 Markdown 列表。未指定模式时必须省略 mode，让工具优先使用绑定默认模式或该玩家的"
             "osu! 默认游玩模式；不要先调用不含玩家上下文的 search_osu_beatmaps。",
             "- send_osu_score: 用户给出 beatmap ID/链接，或明确要求某个已确定难度的成绩图时使用。"
+            "工具会返回该成绩的结构化数据，可据此分析发挥。"
             "仅要求按名称查看成绩列表时不要调用它逐张发图。",
             "- send_osu_history: 用户想查 pp/rank 历史、history、最近一段时间变化曲线时使用。",
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
