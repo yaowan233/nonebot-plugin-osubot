@@ -2,7 +2,7 @@ import asyncio
 import base64
 import jinja2
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 from datetime import date, datetime, timedelta
 
 from PIL import UnidentifiedImageError
@@ -19,6 +19,7 @@ from ..file import user_cache_path, download_osu, map_path
 from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
+from ..schema.user import UnifiedUser
 from ..api import get_user_info_data, get_user_scores
 
 
@@ -29,7 +30,7 @@ async def draw_info(
     source: str,
     *,
     return_info: bool = False,
-) -> bytes | tuple[bytes, Any]:
+) -> bytes | tuple[bytes, UnifiedUser]:
     info = await get_user_info_data(uid, mode, source)
     statistics = info.statistics
     if statistics.play_count == 0:

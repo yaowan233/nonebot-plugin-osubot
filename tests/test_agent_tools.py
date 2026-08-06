@@ -889,6 +889,60 @@ async def test_send_osu_bp_list_dedups_repeat_list_image(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_osu_bp_list_dedup_normalizes_mod_order(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = [SimpleNamespace(), SimpleNamespace()]
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player", "0")
+
+    async def fake_select(*args, **kwargs):
+        return scores, scores
+
+    async def fake_list(*args, **kwargs):
+        return BytesIO(b"score-list")
+
+    sent = []
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    async def fake_active(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "select_bp_scores", fake_select)
+    monkeypatch.setattr(agent_tools, "draw_pfm", fake_list)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    monkeypatch.setattr(agent_tools, "is_request_active", fake_active)
+    context = SimpleNamespace(user_id="12345678", request_id="request-1", session_id="group-1", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
+
+    first = await list_tool.ainvoke({"range_text": "1-2", "mods": "HDHR"})
+    second = await list_tool.ainvoke({"range_text": "1-2", "mods": "HRHD"})
+
+    assert "已发送" in first
+    assert "不再重复发送" in second
+    assert sent == [b"score-list"]
+
+
+def test_score_summaries_filter_cl_mod_as_nm():
+    from nonebot_plugin_osubot.agent_tools import _compact_score_summary, _score_to_bp_summary
+
+    score = _make_score()
+    score.mods = [SimpleNamespace(acronym="CL")]
+
+    full = _score_to_bp_summary(score, 1)
+    compact = _compact_score_summary(score, 1)
+
+    assert full["score"]["mods"] == ["NM"]
+    assert compact["mods"] == ["NM"]
+
+
+@pytest.mark.asyncio
 async def test_instructions_contain_bp_analysis_recipe():
     from nonebot_plugin_osubot.agent_tools import build_osu_agent_tools
 

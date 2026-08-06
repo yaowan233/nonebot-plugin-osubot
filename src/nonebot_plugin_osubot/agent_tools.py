@@ -343,7 +343,7 @@ def _score_to_bp_summary(score: UnifiedScore, bp_index: int | None = None) -> di
             "accuracy": round(score.accuracy, 4),
             "combo": score.max_combo,
             "miss": statistics.get("miss", 0),
-            "mods": [mod.acronym for mod in score.mods] or ["NM"],
+            "mods": [mod.acronym for mod in score.mods if mod.acronym != "CL"] or ["NM"],
             "total_score": score.total_score,
             "played_at": score.ended_at.isoformat(),
             "client": score.score_version,
@@ -363,7 +363,7 @@ def _compact_score_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]
             statistics = score.statistics.model_dump(exclude_none=True)
         else:
             statistics = score.statistics.dict(exclude_none=True)
-    mods = [mod.acronym for mod in score.mods] or ["NM"]
+    mods = [mod.acronym for mod in score.mods if mod.acronym != "CL"] or ["NM"]
     if "NC" in mods and "DT" in mods:
         mods.remove("DT")
     ended_at = score.ended_at
@@ -932,7 +932,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 source,
                 mode,
                 is_lazer,
-                tuple(mod_list),
+                tuple(sorted(mod_list)),
                 best,
             )
 
@@ -1144,7 +1144,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 source,
                 mode,
                 is_lazer,
-                tuple(mod_list),
+                tuple(sorted(mod_list)),
                 "bp_list",
                 low,
                 high,
