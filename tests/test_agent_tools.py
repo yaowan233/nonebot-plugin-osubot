@@ -998,3 +998,77 @@ async def test_send_osu_history_include_image_attaches_block(monkeypatch):
     assert raw[1]["type"] == "image_url"
     assert raw[1]["image_url"]["url"].startswith("data:image/png;base64,")
     assert sent == [b"history-image"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_recommend_returns_structured_data(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+    from nonebot_plugin_osubot.schema.alphaosu import RecommendData, RecommendItem, RecommendSection
+
+    recommend_data = RecommendData(
+        player_id=42,
+        mode="osu",
+        target="mixed",
+        recommendations=[
+            RecommendItem(
+                map_id=101, mod=0, mod_str="NM", stars=5.2, pred_pp=320.5, pred_acc=98.3,
+                final_score=100, title="artist - song [Insane]", beatmapset_id=10,
+                url="https://osu.ppy.sh/b/101",
+            ),
+            RecommendItem(
+                map_id=102, mod=8, mod_str="HD", stars=5.8, pred_pp=350.0, pred_acc=97.5,
+                final_score=100, title="artist2 - song2 [Another]", beatmapset_id=11, url=None,
+            ),
+        ],
+        sections=[
+            RecommendSection(
+                key="overall",
+                title="综合推荐",
+                items=[
+                    RecommendItem(map_id=i, mod=0, mod_str="NM", stars=4.0, pred_pp=200.0, pred_acc=99.0,
+                                  final_score=100, title=f"artist - song{i} [Hard]", beatmapset_id=i, url=None)
+                    for i in range(103, 107)
+                ],
+            ),
+        ],
+    )
+    sent = []
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player")
+
+    async def fake_recommend(*args, **kwargs):
+        return recommend_data
+
+    async def fake_draw(*args, **kwargs):
+        return BytesIO(b"recommend-image")
+
+    async def fake_send(ctx, image):
+        sent.append(image.getvalue())
+        return "已发送图片"
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "get_recommend", fake_recommend)
+    monkeypatch.setattr(agent_tools, "draw_recommend", fake_draw)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    recommend_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_recommend")
+
+    raw = await recommend_tool.ainvoke({"target": "mixed"})
+    result = json.loads(raw)
+
+    assert isinstance(raw, str)
+    assert result["status"] == "sent"
+    assert result["player"] == "player"
+    assert result["mode"] == "osu"
+    recommend = result["recommend"]
+    assert recommend["target"] == "mixed"
+    assert len(recommend["recommendations"]) == 2
+    assert recommend["recommendations"][0]["title"] == "artist - song [Insane]"
+    assert recommend["recommendations"][0]["pred_pp"] == 320.5
+    assert recommend["recommendations"][0]["mod"] == "NM"
+    assert recommend["sections"][0]["title"] == "综合推荐"
+    assert recommend["sections"][0]["count"] == 4
+    assert len(recommend["sections"][0]["top"]) == 3
+    assert sent == [b"recommend-image"]

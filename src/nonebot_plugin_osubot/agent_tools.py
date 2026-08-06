@@ -37,6 +37,7 @@ from .database import InfoData, UserData, SbUserData
 from .exceptions import NetworkError
 from .schema.score import Mod, NewStatistics, UnifiedBeatmap, UnifiedScore
 from .schema.user import UnifiedUser
+from .schema.alphaosu import RecommendData, RecommendItem
 from .draw.score import cal_score_info, draw_selected_score
 from .draw.bp import draw_pfm, select_bp_scores
 from .draw.rating import draw_rating
@@ -378,6 +379,34 @@ def _compact_score_summary(score: UnifiedScore, bp_index: int) -> dict[str, Any]
         "miss": statistics.get("miss", 0),
         "mods": mods,
         "date": ended_at.strftime("%Y.%m.%d") if ended_at is not None else None,
+    }
+
+
+def _recommend_item_summary(item: RecommendItem) -> dict[str, Any]:
+    return {
+        "title": item.title,
+        "stars": round(item.stars, 2),
+        "mod": item.mod_str,
+        "pred_pp": round(item.pred_pp, 2),
+        "pred_acc": round(item.pred_acc, 2),
+        "map_id": item.map_id,
+        "url": item.url,
+    }
+
+
+def _recommend_to_summary(data: RecommendData) -> dict[str, Any]:
+    return {
+        "mode": data.mode,
+        "target": data.target,
+        "recommendations": [_recommend_item_summary(item) for item in (data.recommendations or [])][:10],
+        "sections": [
+            {
+                "title": section.title,
+                "count": len(section.items),
+                "top": [_recommend_item_summary(item) for item in section.items[:3]],
+            }
+            for section in (data.sections or [])
+        ],
     }
 
 
@@ -1436,11 +1465,17 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 return "暂时没有找到可推荐的谱面，已加入更新队列，请明天再来查看推荐吧"
             image = await draw_recommend(recommend_data, user.name, f"https://a.ppy.sh/{user.user_id}")
             await _send_image(ctx, image)
-            return _image_tool_result(
-                f"已发送 {user.name} 的推荐谱面图。",
-                image,
-                include_image_for_analysis,
+            text = json.dumps(
+                {
+                    "status": "sent",
+                    "message": f"已发送 {user.name} 的推荐谱面图，并返回结构化推荐数据。",
+                    "player": user.name,
+                    "mode": NGM[mode],
+                    "recommend": _recommend_to_summary(recommend_data),
+                },
+                ensure_ascii=False,
             )
+            return _image_tool_result(text, image, include_image_for_analysis)
         except NetworkError as e:
             return f"查询推荐谱面失败: {e}"
         except Exception as e:
@@ -1695,6 +1730,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "工具会返回结构化历史数据（起止/峰值 pp、rank 变化、最近数据点），可直接用于分析趋势。",
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。",
             "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
+            "工具会返回结构化推荐数据（标题/stars/预测 pp 与 acc/mods），可直接向用户描述推荐理由。"
             "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"
             "想难一点/更难/冲分/高难传 target='peak'，想练习/风格推荐传 target='style'，"
             "想均衡传 target='balanced'。",
