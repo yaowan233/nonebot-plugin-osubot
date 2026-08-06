@@ -30,6 +30,34 @@ async def draw_bp(
     search_condition: list,
     source: str,
 ) -> BytesIO:
+    scores, selected = await select_bp_scores(
+        project,
+        uid,
+        is_lazer,
+        mode,
+        mods,
+        low_bound,
+        high_bound,
+        day,
+        search_condition,
+        source,
+    )
+    return await draw_pfm(project, uid, scores, selected, mode, source, low_bound, high_bound, day)
+
+
+async def select_bp_scores(
+    project: str,
+    uid: int,
+    is_lazer: bool,
+    mode: str,
+    mods: Optional[list],
+    low_bound: int,
+    high_bound: int,
+    day: int,
+    search_condition: list,
+    source: str,
+) -> tuple[list[UnifiedScore], list[UnifiedScore]]:
+    """Fetch and filter BP scores without rendering them."""
     scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
     candidates = scores
     if project == "tbp":
@@ -50,7 +78,7 @@ async def draw_bp(
         selected = filter_scores_with_regex(selected, search_condition)
     if not selected:
         raise NetworkError("未查询到游玩记录")
-    return await draw_pfm(project, uid, scores, selected, mode, source, low_bound, high_bound, day)
+    return scores, selected
 
 
 async def draw_pfm(

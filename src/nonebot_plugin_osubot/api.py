@@ -26,6 +26,8 @@ api = "https://osu.ppy.sh/api/v2"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 # 谱面元信息变化极少，缓存 1 小时避免每次出图都重新请求
 map_cache = ExpiringDict(max_len=500, max_age_seconds=3600)
+# 谱面搜索结果短暂缓存，减少 AI 连续澄清/查询时重复访问官方 API。
+beatmap_search_cache = ExpiringDict(max_len=100, max_age_seconds=300)
 plugin_config = get_plugin_config(Config)
 
 key = plugin_config.osu_key
@@ -450,6 +452,26 @@ async def get_beatmapsets_info(sid) -> BeatmapSets:
     url = f"https://osu.ppy.sh/api/v2/beatmapsets/{sid}"
     res = await make_request(url, await get_headers(), "未查询到该谱面集(Setid)信息")
     return BeatmapSets(**res)
+
+
+async def search_beatmapsets(query: str) -> list[dict]:
+    """Search beatmapsets by free text through osu! API v2."""
+    query = query.strip()
+    if not query:
+        return []
+    cache_key = query.casefold()
+    if cached := beatmap_search_cache.get(cache_key):
+        return cached
+
+    params = urlencode({"q": query, "s": "any"})
+    data = await make_request(
+        f"{api}/beatmapsets/search?{params}",
+        await get_headers(),
+        "搜索谱面失败",
+    )
+    results = data.get("beatmapsets") or []
+    beatmap_search_cache[cache_key] = results
+    return results
 
 
 async def get_map_bg(mapid, sid, bg_name) -> BytesIO | None:

@@ -82,14 +82,30 @@ async def draw_score(
         score = scores[mods_ls[best - 1]]
     else:
         raise Exception("Project Error")
-    # 从官网获取信息
+    image, score = await draw_selected_score(score, uid, is_lazer, mode, source, task1)
+    if return_context:
+        return image, score.beatmap.id, score.beatmap.set_id
+    if return_score:
+        return image, score
+    return image
+
+
+async def draw_selected_score(
+    score: UnifiedScore,
+    uid: int,
+    is_lazer: bool,
+    mode: str,
+    source: str = "osu",
+    info_task: asyncio.Task | None = None,
+) -> tuple[BytesIO, UnifiedScore]:
+    """Render one already-selected score without repeating list selection."""
     path = map_path / str(score.beatmap.set_id)
     path.mkdir(parents=True, exist_ok=True)
     osu = path / f"{score.beatmap.id}.osu"
     task2 = asyncio.create_task(osu_api("map", map_id=score.beatmap.id))
     if not osu.exists():
         await download_osu(score.beatmap.set_id, score.beatmap.id)
-    info = await task1
+    info = await info_task if info_task is not None else await get_user_info_data(uid, mode, source)
     user_path = user_cache_path / str(info.id)
     user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
@@ -97,11 +113,7 @@ async def draw_score(
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
     image = await draw_score_pic(score, info, map_json, "", source)
-    if return_context:
-        return image, score.beatmap.id, score.beatmap.set_id
-    if return_score:
-        return image, score
-    return image
+    return image, score
 
 
 async def get_score_data(
