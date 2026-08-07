@@ -210,7 +210,12 @@ async def draw_rating_card(data: dict) -> bytes:
         return await element.screenshot(type="png")
 
 
-async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
+async def draw_rating(
+    match_id: str,
+    algorithm: str = "osuplus",
+    *,
+    return_data: bool = False,
+) -> bytes | tuple[bytes, dict]:
     """Render multiplayer rating with a layout matched to the room type."""
     match_info = Match(**(await api_info("matches", f"https://osu.ppy.sh/api/v2/matches/{match_id}")))
     games = [
@@ -315,7 +320,10 @@ async def draw_rating(match_id: str, algorithm: str = "osuplus") -> bytes:
         "blue_players": [player for player in players if player["team"] == "blue"],
         "team_size": team_size,
     }
-    return await draw_rating_card(data)
+    image = await draw_rating_card(data)
+    if return_data:
+        return image, data
+    return image
 
 
 def rating_to_wn8_hex(rating: float, win_rate: float) -> tuple[float, str]:

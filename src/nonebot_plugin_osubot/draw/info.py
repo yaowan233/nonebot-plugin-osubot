@@ -19,10 +19,18 @@ from ..file import user_cache_path, download_osu, map_path
 from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
+from ..schema.user import UnifiedUser
 from ..api import get_user_info_data, get_user_scores
 
 
-async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> bytes:
+async def draw_info(
+    uid: Union[int, str],
+    mode: str,
+    day: int,
+    source: str,
+    *,
+    return_info: bool = False,
+) -> bytes | tuple[bytes, UnifiedUser]:
     info = await get_user_info_data(uid, mode, source)
     statistics = info.statistics
     if statistics.play_count == 0:
@@ -236,4 +244,7 @@ async def draw_info(uid: Union[int, str], mode: str, day: int, source: str) -> b
         await wait_for_page_assets(page)
         elem = await page.query_selector("#display")
         assert elem
-        return await elem.screenshot(type="jpeg", quality=92)
+        image = await elem.screenshot(type="jpeg", quality=92)
+    if return_info:
+        return image, info
+    return image

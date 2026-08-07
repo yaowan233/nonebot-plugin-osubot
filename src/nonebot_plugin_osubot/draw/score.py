@@ -17,7 +17,7 @@ from ..schema.user import UnifiedUser
 from ..schema import Beatmap, NewScore
 from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components
-from ..schema.score import Mod, UnifiedScore, NewStatistics, get_score_version
+from ..schema.score import Mod, UnifiedBeatmap, UnifiedScore, NewStatistics, get_score_version
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
 from ..file import map_path, download_osu, user_cache_path, team_cache_path, get_projectimg
 from .utils import (
@@ -116,6 +116,45 @@ async def draw_selected_score(
     return image, score
 
 
+def _map_score_to_unified(score: NewScore, map_json: dict) -> UnifiedScore:
+    beatmap = score.beatmap
+    beatmapset = score.beatmapset or (beatmap.beatmapset if beatmap else None)
+    beatmapset_json = map_json.get("beatmapset") or {}
+    return UnifiedScore(
+        mods=score.mods,
+        ruleset_id=score.ruleset_id,
+        rank=score.rank,
+        accuracy=score.accuracy * 100,
+        total_score=score.total_score,
+        ended_at=datetime.strptime(score.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+        max_combo=score.max_combo,
+        statistics=score.statistics,
+        legacy_total_score=score.legacy_total_score,
+        passed=score.passed,
+        pp=score.pp,
+        score_version=get_score_version(score.legacy_score_id),
+        beatmap=UnifiedBeatmap(
+            id=score.beatmap_id,
+            set_id=(beatmapset.id if beatmapset else map_json["beatmapset_id"]),
+            artist=beatmapset.artist if beatmapset else str(beatmapset_json.get("artist") or ""),
+            title=beatmapset.title if beatmapset else str(beatmapset_json.get("title") or ""),
+            version=beatmap.version if beatmap else str(map_json.get("version") or ""),
+            creator=beatmapset.creator if beatmapset else str(beatmapset_json.get("creator") or ""),
+            total_length=int(beatmap.total_length if beatmap else map_json.get("total_length") or 0),
+            mode=beatmap.mode_int if beatmap else int(map_json.get("mode_int") or 0),
+            bpm=float((beatmap.bpm if beatmap else None) or map_json.get("bpm") or 0),
+            cs=float(beatmap.cs if beatmap else map_json.get("cs") or 0),
+            od=float(beatmap.accuracy if beatmap else map_json.get("accuracy") or 0),
+            ar=float(beatmap.ar if beatmap else map_json.get("ar") or 0),
+            hp=float(beatmap.drain if beatmap else map_json.get("drain") or 0),
+            stars=float(beatmap.difficulty_rating if beatmap else map_json.get("difficulty_rating") or 0),
+            user_id=beatmap.user_id if beatmap else map_json.get("user_id"),
+            convert=beatmap.convert if beatmap else bool(map_json.get("convert", False)),
+        ),
+        beatmapset=beatmapset,
+    )
+
+
 async def get_score_data(
     uid: int,
     is_lazer: bool,
@@ -123,7 +162,9 @@ async def get_score_data(
     mods: Optional[list[str]],
     mapid: int = 0,
     source: str = "osu",
-) -> BytesIO:
+    *,
+    return_score: bool = False,
+) -> BytesIO | tuple[BytesIO, UnifiedScore]:
     grank = ""
     map_json = await osu_api("map", map_id=mapid)
     native_mode = int(map_json["mode_int"])
@@ -137,22 +178,7 @@ async def get_score_data(
             score_json = await osu_api("best_score", uid, mode, mapid, legacy_only=int(not is_lazer))
             grank = score_json.get("position", "")
             score_ls = [NewScore(**score_json["score"])]
-        score_ls = [
-            UnifiedScore(
-                mods=i.mods,
-                ruleset_id=i.ruleset_id,
-                rank=i.rank,
-                accuracy=i.accuracy * 100,
-                total_score=i.total_score,
-                ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-                max_combo=i.max_combo,
-                statistics=i.statistics,
-                legacy_total_score=i.legacy_total_score,
-                passed=i.passed,
-                score_version=get_score_version(i.legacy_score_id),
-            )
-            for i in score_ls
-        ]
+        score_ls = [_map_score_to_unified(score, map_json) for score in score_ls]
     else:
         score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
     if not score_ls:
@@ -187,7 +213,10 @@ async def get_score_data(
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
-    return await draw_score_pic(score, info, map_json, grank, source)
+    image = await draw_score_pic(score, info, map_json, grank, source)
+    if return_score:
+        return image, score
+    return image
 
 
 async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, grank, source) -> BytesIO:
