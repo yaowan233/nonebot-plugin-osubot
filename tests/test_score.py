@@ -80,6 +80,56 @@ async def test_draw_score_can_return_selected_bp_and_fetch_enough_for_mod_filter
     assert get_scores.call_args.kwargs["limit"] == 200
 
 
+def test_map_score_conversion_keeps_pp_and_beatmap_metadata():
+    from nonebot_plugin_osubot.draw.score import _map_score_to_unified
+    from nonebot_plugin_osubot.schema.score import NewStatistics
+
+    score = SimpleNamespace(
+        beatmap=None,
+        beatmapset=None,
+        beatmap_id=114514,
+        mods=[],
+        ruleset_id=0,
+        rank="A",
+        accuracy=0.9876,
+        total_score=1234567,
+        ended_at="2026-08-07T00:00:00Z",
+        max_combo=500,
+        statistics=NewStatistics(great=1000, miss=1),
+        legacy_total_score=1234567,
+        legacy_score_id=None,
+        passed=True,
+        pp=321.45,
+    )
+    map_json = {
+        "id": 114514,
+        "beatmapset_id": 1919810,
+        "version": "Insane",
+        "total_length": 180,
+        "mode_int": 0,
+        "bpm": 200,
+        "cs": 4,
+        "accuracy": 8,
+        "ar": 9,
+        "drain": 6,
+        "difficulty_rating": 5.67,
+        "user_id": 42,
+        "convert": False,
+        "beatmapset": {"artist": "artist", "title": "title", "creator": "mapper"},
+    }
+
+    converted = _map_score_to_unified(score, map_json)
+
+    assert converted.pp == 321.45
+    assert converted.beatmap.id == 114514
+    assert converted.beatmap.set_id == 1919810
+    assert converted.beatmap.version == "Insane"
+    assert converted.beatmap.stars == 5.67
+    assert converted.beatmap.artist == "artist"
+    assert converted.beatmap.title == "title"
+    assert converted.beatmap.creator == "mapper"
+
+
 def _img_msg(event):
     return Message(
         [

@@ -491,7 +491,8 @@ def _history_to_summary(points: list[tuple[float, str, int]]) -> dict[str, Any]:
             "first": rank_ls[0],
             "last": rank_ls[-1],
             "best": min(rank_ls),
-            "change": rank_ls[-1] - rank_ls[0],
+            "delta": rank_ls[-1] - rank_ls[0],
+            "gain": rank_ls[0] - rank_ls[-1],
         },
         "recent": [{"date": date, "pp": round(pp, 2), "rank": rank} for pp, date, rank in points[-20:]],
     }
@@ -782,6 +783,18 @@ def _named_score_summary(score_data: dict[str, Any]) -> dict[str, Any]:
         "played_at": score.get("ended_at"),
         "client": "stable" if score.get("legacy_score_id") else "lazer",
         "global_position": score_data.get("position"),
+    }
+
+
+def _named_score_analysis_summary(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "beatmap_id": result.get("beatmap_id"),
+        "artist": result.get("artist"),
+        "title": result.get("title"),
+        "difficulty": result.get("difficulty"),
+        "mapper": result.get("mapper"),
+        "stars": result.get("stars"),
+        "score": result.get("score"),
     }
 
 
@@ -1360,10 +1373,12 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         mode: str | None = None,
         is_lazer: bool | None = None,
         limit: int = 20,
+        purpose: BpPurposeArg = "view",
     ) -> str:
         """
         按谱面名称搜索，并批量查询玩家在候选难度上的最佳成绩。
         只有一个难度有成绩时直接发送成绩图；多个难度有成绩时发送图片列表。
+        purpose=view 只展示查询结果；purpose=analyze 会同时返回紧凑的结构化成绩供分析。
         适合“我在 xxx 图打了多少”且用户没有提供 beatmap ID 的问题。
         """
         try:
@@ -1437,8 +1452,10 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                         "message": f"已发送 {user.name} 在唯一有成绩的难度上的成绩图。",
                         "player": user.name,
                         "mode": NGM[resolved_mode],
+                        "purpose": purpose,
                         "selected": selected,
-                        "next_action": "finish",
+                        "scores": ([_named_score_analysis_summary(selected)] if purpose == "analyze" else None),
+                        "next_action": "reply_with_analysis" if purpose == "analyze" else "finish",
                     },
                     ensure_ascii=False,
                 )
@@ -1469,8 +1486,14 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     "message": message,
                     "player": user.name,
                     "mode": NGM[resolved_mode],
+                    "purpose": purpose,
                     "played_count": len(played),
-                    "next_action": "finish",
+                    "scores": (
+                        [_named_score_analysis_summary(result) for result, _ in played]
+                        if purpose == "analyze"
+                        else None
+                    ),
+                    "next_action": ("reply_with_analysis" if purpose == "analyze" and played else "finish"),
                 },
                 ensure_ascii=False,
             )
@@ -1886,8 +1909,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "先用它搜索。候选唯一或用户描述能唯一匹配时，再把 beatmap_id 交给成绩、谱面信息、预览或背景工具；"
             "多个候选无法确定时列出简短候选让用户选择，禁止擅自使用第一项或编造 ID。",
             "- get_osu_scores_by_map_name: 用户以‘xxx 图打了多少/在 xxx 的成绩’这类名称描述谱面且没给 ID 时，"
-            "直接调用它。工具会直接发送唯一成绩图或多成绩图片列表；status=sent 时立即结束，不要补充、复述，"
-            "也不要自行输出 Markdown 列表。未指定模式时必须省略 mode，让工具优先使用绑定默认模式或该玩家的"
+            "直接调用它。只查询时 purpose=view，工具发送图片后立即结束，不要自行输出 Markdown 列表，也不要补充或复述；"
+            "要求评价、分析发挥时 purpose=analyze，根据返回的 scores 给出分析，不要重复发图。"
+            "未指定模式时必须省略 mode，让工具优先使用绑定默认模式或该玩家的"
             "osu! 默认游玩模式；不要先调用不含玩家上下文的 search_osu_beatmaps。",
             "- send_osu_score: 用户给出 beatmap ID/链接，或明确要求某个已确定难度的成绩图时使用。"
             "工具会返回该成绩的结构化数据，可据此分析发挥。"

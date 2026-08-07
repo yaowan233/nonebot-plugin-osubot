@@ -61,8 +61,13 @@ def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     assert any(tool.name == "search_osu_beatmaps" for tool in bundle.tools)
     assert any(tool.name == "get_osu_scores_by_map_name" for tool in bundle.tools)
     assert "比较多个 BP" in instructions
-    assert "工具会直接发送唯一成绩图或多成绩图片列表" in instructions
+    assert "要求评价、分析发挥时 purpose=analyze" in instructions
     assert "不要自行输出 Markdown 列表" in instructions
+
+    named_score_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_scores_by_map_name")
+    named_schema = named_score_tool.args_schema.model_json_schema()
+    assert named_schema["properties"]["purpose"]["enum"] == ["view", "analyze"]
+    assert named_schema["properties"]["purpose"]["default"] == "view"
 
 
 def test_agent_mention_parser_skips_bot_and_selects_group_member():
@@ -389,13 +394,16 @@ async def test_get_osu_scores_by_map_name_sends_image_for_only_played_difficulty
     bundle = agent_tools.build_osu_agent_tools(context)
     score_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_scores_by_map_name")
 
-    result = json.loads(await score_tool.ainvoke({"query": "Freedom Dive"}))
+    result = json.loads(await score_tool.ainvoke({"query": "Freedom Dive", "purpose": "analyze"}))
 
     assert result["status"] == "sent"
     assert result["player"] == "player"
-    assert result["next_action"] == "finish"
+    assert result["purpose"] == "analyze"
+    assert result["next_action"] == "reply_with_analysis"
     assert result["selected"]["score"]["pp"] == 321.46
     assert result["selected"]["score"]["miss"] == 2
+    assert result["scores"][0]["beatmap_id"] == 101
+    assert result["scores"][0]["score"]["pp"] == 321.46
     assert sent == [b"score-image"]
 
 
@@ -462,12 +470,18 @@ async def test_get_osu_scores_by_map_name_sends_image_list_when_multiple_scores_
     score_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_scores_by_map_name")
 
     result = json.loads(await score_tool.ainvoke({"query": "Test Song"}))
+    analysis_result = json.loads(await score_tool.ainvoke({"query": "Test Song", "purpose": "analyze"}))
 
     assert result["status"] == "sent"
     assert result["played_count"] == 2
     assert result["next_action"] == "finish"
+    assert result["scores"] is None
     assert result["message"] == "已发送谱面成绩图片列表。"
-    assert sent == [b"map-score-list"]
+    assert analysis_result["purpose"] == "analyze"
+    assert analysis_result["next_action"] == "reply_with_analysis"
+    assert [score["beatmap_id"] for score in analysis_result["scores"]] == [101, 102]
+    assert [score["score"]["pp"] for score in analysis_result["scores"]] == [101.0, 102.0]
+    assert sent == [b"map-score-list", b"map-score-list"]
 
 
 @pytest.mark.asyncio
@@ -1165,6 +1179,8 @@ async def test_send_osu_history_returns_structured_data(monkeypatch):
     assert history["rank"]["first"] == 1000
     assert history["rank"]["last"] == 880
     assert history["rank"]["best"] == 880
+    assert history["rank"]["delta"] == -120
+    assert history["rank"]["gain"] == 120
     assert len(history["recent"]) == 20
     assert sent == [b"history-image"]
 
