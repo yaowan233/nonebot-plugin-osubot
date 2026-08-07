@@ -21,6 +21,19 @@ pattern = r"[:：]\s*(\w+)|[\+＋]\s*([\w,，]+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|
 BP_COMMANDS = {"bp", "pfm", "bplist", "bl", "tbp", "nb", "todaybp"}
 
 
+def _resolve_query_platform_user_id(event: Event, msg: UniMsg) -> str:
+    """选择命令查询目标；跳过 bot 自己与 @all，只取第一个真实群友。"""
+    sender_id = str(event.get_user_id())
+    bot_id = str(getattr(event, "self_id", ""))
+    if not msg.has(At):
+        return sender_id
+    for mention in msg.get(At):
+        target = str(mention.target).strip()
+        if target and target.lower() != "all" and target != bot_id:
+            return target
+    return sender_id
+
+
 def extract_bp_shorthands(arg: str, conditions: list[tuple[str, str, str]]) -> str:
     """Extract compact, whole-token BP filters and return the remaining arguments."""
 
@@ -80,9 +93,7 @@ def parse_bp_filter_text(arg: str) -> tuple[list[tuple[str, str, str]], str]:
 
 def split_msg():
     async def dependency(event: Event, state: T_State, msg: UniMsg, arg: Message = CommandArg()):
-        qq = event.get_user_id()
-        if msg.has(At):
-            qq = msg.get(At)[0].target
+        qq = _resolve_query_platform_user_id(event, msg)
         async with get_session() as session:
             user_data = await session.scalar(select(UserData).where(UserData.user_id == qq))
         state["user"] = user_data.osu_id if user_data else 0

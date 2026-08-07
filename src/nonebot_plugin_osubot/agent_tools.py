@@ -131,19 +131,20 @@ def _clean_user_id(value: str | int | None) -> str | None:
 
 
 def _extract_mentioned_user_id(ctx: AgentToolContext) -> str | None:
-    if not ctx.event:
+    event = getattr(ctx, "event", None)
+    if not event:
         return None
 
     bot_ids = {
         user_id
         for user_id in (
-            _clean_user_id(ctx.bot_id),
-            _clean_user_id(getattr(ctx.event, "self_id", None)),
+            _clean_user_id(getattr(ctx, "bot_id", None)),
+            _clean_user_id(getattr(event, "self_id", None)),
         )
         if user_id
     }
     try:
-        message = ctx.event.get_message()
+        message = event.get_message()
     except Exception:
         return None
 
@@ -166,6 +167,28 @@ def _event_user_id(ctx: AgentToolContext) -> str | None:
         return _clean_user_id(ctx.event.get_user_id())
     except Exception:
         return _clean_user_id(getattr(ctx.event, "user_id", None))
+
+
+def _explicit_target_user_id(
+    ctx: AgentToolContext,
+    target_user_id: str | int | None = None,
+) -> str | None:
+    """返回显式目标；非 bot 的 @ 优先于当前发言用户。"""
+    bot_ids = {
+        user_id
+        for user_id in (
+            _clean_user_id(getattr(ctx, "bot_id", None)),
+            _clean_user_id(getattr(getattr(ctx, "event", None), "self_id", None)),
+        )
+        if user_id
+    }
+    for candidate in (
+        _clean_user_id(target_user_id),
+        _extract_mentioned_user_id(ctx),
+    ):
+        if candidate and candidate not in bot_ids:
+            return candidate
+    return None
 
 
 def _tool_user_id_candidates(ctx: AgentToolContext, target_user_id: str | int | None = None) -> list[str]:
@@ -223,6 +246,22 @@ async def _resolve_osu_user(
     source: str,
     target_user_id: str | int | None = None,
 ) -> ResolvedOsuUser:
+    explicit_target = _explicit_target_user_id(ctx, target_user_id)
+    if explicit_target:
+        # @ 群友或显式平台 ID 是确定目标，优先级高于模型可能误填的群昵称
+        # username。目标未绑定时也不能悄悄回退成查询发言者本人。
+        model = SbUserData if source == "ppysb" else UserData
+        async with get_session() as session:
+            user = await session.scalar(select(model).where(model.user_id == explicit_target))
+        if not user:
+            bind_command = "/sbbind" if source == "ppysb" else "/bind"
+            raise ValueError(f"被查询的群友尚未绑定 osu 账号，请让对方先使用 {bind_command} 用户名")
+        return ResolvedOsuUser(
+            user.osu_id,
+            user.osu_name,
+            default_mode=str(getattr(user, "osu_mode", "0")),
+        )
+
     name = _clean_optional_text(username)
     if name:
         if source == "osu":

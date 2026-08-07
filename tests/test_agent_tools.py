@@ -2,6 +2,7 @@ import json
 from importlib.util import find_spec
 from io import BytesIO
 from types import SimpleNamespace
+from contextlib import asynccontextmanager
 
 import pytest
 
@@ -61,6 +62,126 @@ def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     assert "比较多个 BP" in instructions
     assert "工具会直接发送唯一成绩图或多成绩图片列表" in instructions
     assert "不要自行输出 Markdown 列表" in instructions
+
+
+def test_agent_mention_parser_skips_bot_and_selects_group_member():
+    from nonebot.adapters.onebot.v11 import Message, MessageSegment
+
+    from fake import fake_group_message_event_v11
+    from nonebot_plugin_osubot.agent_tools import (
+        _extract_mentioned_user_id,
+        _tool_user_id_candidates,
+    )
+
+    message = Message(
+        [
+            MessageSegment.at(1),
+            MessageSegment.text(" 查询 "),
+            MessageSegment.at(998877),
+        ]
+    )
+    event = fake_group_message_event_v11(
+        self_id=1,
+        user_id=12345678,
+        message=message,
+        original_message=message,
+    )
+    context = SimpleNamespace(
+        event=event,
+        bot_id="1",
+        user_id="12345678",
+    )
+
+    assert _extract_mentioned_user_id(context) == "998877"
+    assert _tool_user_id_candidates(context) == ["998877", "12345678"]
+
+
+@pytest.mark.asyncio
+async def test_agent_mention_binding_wins_over_model_supplied_group_nickname(monkeypatch):
+    from nonebot.adapters.onebot.v11 import Message, MessageSegment
+
+    from fake import fake_group_message_event_v11
+    from nonebot_plugin_osubot import agent_tools
+
+    target_binding = SimpleNamespace(
+        user_id="998877",
+        osu_id=42,
+        osu_name="target-player",
+        osu_mode=2,
+    )
+
+    class FakeSession:
+        async def scalar(self, _statement):
+            return target_binding
+
+    @asynccontextmanager
+    async def fake_get_session():
+        yield FakeSession()
+
+    async def forbidden_username_lookup(_name: str):
+        raise AssertionError("存在 @ 目标时不应按群昵称查询 osu 用户名")
+
+    message = Message(
+        [
+            MessageSegment.at(1),
+            MessageSegment.text(" 查一下 "),
+            MessageSegment.at(998877),
+        ]
+    )
+    event = fake_group_message_event_v11(
+        self_id=1,
+        user_id=12345678,
+        message=message,
+        original_message=message,
+    )
+    context = SimpleNamespace(event=event, bot_id="1", user_id="12345678")
+    monkeypatch.setattr(agent_tools, "get_session", fake_get_session)
+    monkeypatch.setattr(agent_tools, "get_osu_user", forbidden_username_lookup)
+
+    user = await agent_tools._resolve_osu_user(
+        context,
+        "群里的显示昵称",
+        "osu",
+    )
+
+    assert user == agent_tools.ResolvedOsuUser(42, "target-player", "2")
+
+
+@pytest.mark.asyncio
+async def test_unbound_mentioned_member_does_not_fall_back_to_requester(monkeypatch):
+    from nonebot.adapters.onebot.v11 import Message, MessageSegment
+
+    from fake import fake_group_message_event_v11
+    from nonebot_plugin_osubot import agent_tools
+
+    scalar_calls = 0
+
+    class FakeSession:
+        async def scalar(self, _statement):
+            nonlocal scalar_calls
+            scalar_calls += 1
+            if scalar_calls == 1:
+                return None
+            return SimpleNamespace(osu_id=7, osu_name="requester", osu_mode=0)
+
+    @asynccontextmanager
+    async def fake_get_session():
+        yield FakeSession()
+
+    message = Message([MessageSegment.at(998877)])
+    event = fake_group_message_event_v11(
+        self_id=1,
+        user_id=12345678,
+        message=message,
+        original_message=message,
+    )
+    context = SimpleNamespace(event=event, bot_id="1", user_id="12345678")
+    monkeypatch.setattr(agent_tools, "get_session", fake_get_session)
+
+    with pytest.raises(ValueError, match="被查询的群友尚未绑定"):
+        await agent_tools._resolve_osu_user(context, None, "osu")
+
+    assert scalar_calls == 1
 
 
 @pytest.mark.asyncio

@@ -300,3 +300,31 @@ def test_extract_ids_from_osu_urls():
     assert extract_beatmap_id(set_url) == "67890"
     assert extract_beatmap_id("https://osu.ppy.sh/beatmaps/67890") == "67890"
     assert extract_user_id("https://osu.ppy.sh/users/2") == "2"
+
+
+def test_command_mention_target_skips_bot_and_uses_group_member():
+    from types import SimpleNamespace
+
+    from nonebot_plugin_osubot.matcher.utils import _resolve_query_platform_user_id
+
+    class FakeEvent:
+        self_id = 1
+
+        @staticmethod
+        def get_user_id() -> str:
+            return "12345678"
+
+    class FakeUniMsg:
+        @staticmethod
+        def has(_segment_type) -> bool:
+            return True
+
+        @staticmethod
+        def get(_segment_type):
+            return [
+                SimpleNamespace(target="1"),
+                SimpleNamespace(target="all"),
+                SimpleNamespace(target="998877"),
+            ]
+
+    assert _resolve_query_platform_user_id(FakeEvent(), FakeUniMsg()) == "998877"
