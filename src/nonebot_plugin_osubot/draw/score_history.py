@@ -12,7 +12,7 @@ from ..exceptions import NetworkError
 from ..mods import get_mods_list, get_speed_change_labels
 from ..schema.score import UnifiedScore, NewStatistics, get_score_version
 from ..api import osu_api, get_user_info_data, get_ppysb_map_scores
-from ..file import download_osu, get_pfm_img, map_path
+from ..file import ensure_osu_file, get_pfm_img, map_path
 from .score import cal_score_info
 from .static import ColorArr
 from .browser import persistent_page, wait_for_page_assets
@@ -121,7 +121,7 @@ async def draw_score_history(
     await asyncio.gather(
         info_task,
         get_pfm_img(beatmap.beatmapset.covers.cover, cover_path),
-        download_osu(beatmap.beatmapset_id, map_id) if not osu_path.exists() else asyncio.sleep(0),
+        ensure_osu_file(beatmap.beatmapset_id, map_id, beatmap.checksum),
     )
     info = await info_task
 

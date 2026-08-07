@@ -15,7 +15,7 @@ from .browser import persistent_page, wait_for_page_assets
 from ..mods import get_speed_change_labels
 from ..pp import cal_pp
 from ..utils import FGM, GMN
-from ..file import user_cache_path, download_osu, map_path
+from ..file import user_cache_path, ensure_osu_file, map_path
 from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
@@ -152,9 +152,9 @@ async def draw_info(
         scores = []
 
     download_tasks = [
-        download_osu(score.beatmap.set_id, score.beatmap.id)
+        ensure_osu_file(score.beatmap.set_id, score.beatmap.id, score.beatmap.checksum)
         for score in scores
-        if score.beatmap and not (map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu").exists()
+        if score.beatmap
     ]
     if download_tasks:
         await asyncio.gather(*download_tasks, return_exceptions=True)

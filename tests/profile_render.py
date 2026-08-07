@@ -147,7 +147,7 @@ def _install_instrumentation(monkeypatch):
         "get_user_scores",
         "get_user_info_data",
         "osu_api",
-        "download_osu",
+        "ensure_osu_file",
         "get_bg",
         "open_user_icon",
         "get_projectimg",
@@ -184,7 +184,7 @@ def _install_instrumentation(monkeypatch):
 
 
 _GROUPS = [
-    ("网络 API", ["get_user_scores", "get_user_info_data", "osu_api", "download_osu"]),
+    ("网络 API", ["get_user_scores", "get_user_info_data", "osu_api", "ensure_osu_file"]),
     ("资源下载/读取", ["get_projectimg", "get_bg", "open_user_icon", "_owner_avatar_data", "_team_icon_data"]),
     ("PP 计算", ["cal_pp", "get_if_pp_ss_pp", "get_pp_components", "OsuCalculator.calculate"]),
     ("jinja 模板渲染", ["jinja 模板渲染"]),

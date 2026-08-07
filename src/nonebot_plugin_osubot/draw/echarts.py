@@ -8,7 +8,7 @@ from typing import Any
 import jinja2
 
 from ..api import get_users
-from ..file import download_osu, map_path
+from ..file import ensure_osu_file
 from ..pp import cal_pp
 from .browser import persistent_page, wait_for_page_assets
 from .map_render import file_data_uri
@@ -185,13 +185,9 @@ def _has_star_mod(score) -> bool:
     return any(getattr(m, "acronym", str(m)) in STAR_MODS for m in mods)
 
 
-async def _ensure_osu(set_id, map_id) -> Path | None:
-    p = map_path / str(set_id) / f"{map_id}.osu"
-    if p.exists():
-        return p
+async def _ensure_osu(set_id, map_id, checksum: str | None = None) -> Path | None:
     try:
-        await download_osu(set_id, map_id)
-        return p if p.exists() else None
+        return await ensure_osu_file(set_id, map_id, checksum)
     except Exception:
         return None
 
@@ -200,7 +196,11 @@ async def _calc_modded_stars(score, source: str) -> float | None:
     beatmap = getattr(score, "beatmap", None)
     if not beatmap:
         return None
-    p = await _ensure_osu(getattr(beatmap, "set_id", None), getattr(beatmap, "id", None))
+    p = await _ensure_osu(
+        getattr(beatmap, "set_id", None),
+        getattr(beatmap, "id", None),
+        getattr(beatmap, "checksum", None),
+    )
     if not p:
         return None
     try:

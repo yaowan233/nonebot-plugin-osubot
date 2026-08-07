@@ -19,7 +19,7 @@ from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components
 from ..schema.score import Mod, UnifiedBeatmap, UnifiedScore, NewStatistics, get_score_version
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
-from ..file import map_path, download_osu, user_cache_path, team_cache_path, get_projectimg
+from ..file import map_path, ensure_osu_file, user_cache_path, team_cache_path, get_projectimg
 from .utils import (
     is_close,
     calc_songlen,
@@ -99,16 +99,16 @@ async def draw_selected_score(
     info_task: asyncio.Task | None = None,
 ) -> tuple[BytesIO, UnifiedScore]:
     """Render one already-selected score without repeating list selection."""
-    path = map_path / str(score.beatmap.set_id)
-    path.mkdir(parents=True, exist_ok=True)
-    osu = path / f"{score.beatmap.id}.osu"
     task2 = asyncio.create_task(osu_api("map", map_id=score.beatmap.id))
-    if not osu.exists():
-        await download_osu(score.beatmap.set_id, score.beatmap.id)
     info = await info_task if info_task is not None else await get_user_info_data(uid, mode, source)
     user_path = user_cache_path / str(info.id)
     user_path.mkdir(parents=True, exist_ok=True)
     map_json = await task2
+    await ensure_osu_file(
+        score.beatmap.set_id,
+        score.beatmap.id,
+        map_json.get("checksum") or getattr(score.beatmap, "checksum", None),
+    )
     # 判断是否开启lazer模式
     if source == "osu":
         score = cal_score_info(is_lazer, score, source)
@@ -148,6 +148,7 @@ def _map_score_to_unified(score: NewScore, map_json: dict) -> UnifiedScore:
             ar=float(beatmap.ar if beatmap else map_json.get("ar") or 0),
             hp=float(beatmap.drain if beatmap else map_json.get("drain") or 0),
             stars=float(beatmap.difficulty_rating if beatmap else map_json.get("difficulty_rating") or 0),
+            checksum=beatmap.checksum if beatmap else map_json.get("checksum"),
             user_id=beatmap.user_id if beatmap else map_json.get("user_id"),
             convert=beatmap.convert if beatmap else bool(map_json.get("convert", False)),
         ),
@@ -202,11 +203,7 @@ async def get_score_data(
     else:
         score_ls.sort(key=lambda x: x.total_score, reverse=True)
         score = score_ls[0]
-    path = map_path / str(map_json["beatmapset_id"])
-    path.mkdir(parents=True, exist_ok=True)
-    osu = path / f"{mapid}.osu"
-    if not osu.exists():
-        await download_osu(map_json["beatmapset_id"], mapid)
+    await ensure_osu_file(map_json["beatmapset_id"], mapid, map_json.get("checksum"))
     info = await task
     user_path = user_cache_path / str(info.id)
     user_path.mkdir(parents=True, exist_ok=True)

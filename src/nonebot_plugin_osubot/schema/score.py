@@ -113,6 +113,7 @@ class UnifiedBeatmap(Base):
     ar: float
     hp: float
     stars: float
+    checksum: Optional[str] = None
     user_id: Optional[int] = None
     convert: Optional[bool] = False
 

@@ -1,4 +1,5 @@
 import re
+import hashlib
 import urllib
 import asyncio
 from pathlib import Path
@@ -8,6 +9,7 @@ from io import BytesIO, TextIOWrapper
 from nonebot.log import logger
 
 from .schema import Badge
+from .exceptions import NetworkError
 from .network import auto_retry
 from .api import safe_async_get
 from .network.first_response import get_first_response
@@ -81,8 +83,22 @@ async def download_map(setid: int) -> Optional[Path]:
     return filepath.absolute()
 
 
+def osu_file_matches_checksum(path: Path, checksum: str | None) -> bool:
+    """Return whether a cached .osu file matches the API checksum."""
+    if not path.exists():
+        return False
+    expected = (checksum or "").strip().casefold()
+    if not expected:
+        return True
+    digest = hashlib.md5()  # noqa: S324 - osu! uses MD5 as a cache identity, not for security
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest() == expected
+
+
 @auto_retry
-async def download_osu(set_id, map_id):
+async def download_osu(set_id, map_id, checksum: str | None = None):
     url = [
         f"https://osu.ppy.sh/osu/{map_id}",
         f"https://osu.direct/api/osu/{map_id}",
@@ -94,11 +110,41 @@ async def download_osu(set_id, map_id):
             filename = f"{map_id}.osu"
             filepath = map_path / str(set_id) / filename
             filepath.parent.mkdir(parents=True, exist_ok=True)
-            with open(filepath, "wb") as f:
-                f.write(req.content)
+            content = req.content
+            expected = (checksum or "").strip().casefold()
+            actual = hashlib.md5(content).hexdigest()  # noqa: S324
+            if expected and actual != expected:
+                official = await safe_async_get(url[0])
+                if not official or official.status_code >= 400:
+                    raise NetworkError("下载的谱面文件校验失败")
+                content = official.content
+                actual = hashlib.md5(content).hexdigest()  # noqa: S324
+                if actual != expected:
+                    raise NetworkError("下载的谱面文件与官网 checksum 不一致")
+            task_id = id(asyncio.current_task())
+            temporary = filepath.with_name(f".{filename}.{task_id}.tmp")
+            try:
+                with temporary.open("wb") as file:
+                    file.write(content)
+                temporary.replace(filepath)
+            finally:
+                temporary.unlink(missing_ok=True)
             return filepath
         else:
             raise Exception("下载出错，请稍后再试")
+
+
+async def ensure_osu_file(set_id, map_id, checksum: str | None = None) -> Path:
+    """Reuse a current cached .osu file, refreshing stale revisions by checksum."""
+    filepath = map_path / str(set_id) / f"{map_id}.osu"
+    if osu_file_matches_checksum(filepath, checksum):
+        return filepath
+    if filepath.exists() and checksum:
+        logger.info(f"谱面缓存 checksum 已变化，重新下载: <{map_id}>")
+    downloaded = await download_osu(set_id, map_id, checksum)
+    if downloaded is None:
+        raise NetworkError("谱面文件下载失败")
+    return downloaded
 
 
 async def get_projectimg(url: str) -> BytesIO:

@@ -125,6 +125,7 @@ async def fetch_score_batch(
                 hp=i.beatmap.drain,
                 od=i.beatmap.accuracy,
                 stars=i.beatmap.difficulty_rating,
+                checksum=i.beatmap.checksum,
                 convert=i.beatmap.convert,
             ),
             beatmapset=i.beatmapset,
@@ -219,6 +220,7 @@ async def get_user_scores(
                     hp=i.beatmap.hp,
                     od=i.beatmap.od,
                     stars=i.beatmap.diff,
+                    checksum=i.beatmap.md5,
                 ),
             )
             for i in filtered_scores

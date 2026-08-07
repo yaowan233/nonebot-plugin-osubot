@@ -6,7 +6,7 @@ from rosu_pp_py import Beatmap as RosuBeatmap, GameMode
 
 from ..api import osu_api
 from ..beatmap_stats_moder import with_mods
-from ..file import download_osu, map_path
+from ..file import ensure_osu_file
 from ..pp import get_ss_pp
 from ..schema import Beatmap
 from ..schema.score import Mod
@@ -87,9 +87,7 @@ async def draw_map_info(mapid: int, mods: list[str], target_mode: int | None = N
 
     mod_names = [name.upper() for name in mods]
     mode = int(normalize_map_mode(target_mode, api_map.mode_int)) if target_mode is not None else api_map.mode_int
-    osu_file = map_path / str(api_map.beatmapset_id) / f"{mapid}.osu"
-    if not osu_file.exists():
-        await download_osu(api_map.beatmapset_id, mapid)
+    osu_file = await ensure_osu_file(api_map.beatmapset_id, mapid, api_map.checksum)
 
     original = _apply_ruleset_metadata(api_map.model_copy(deep=True), _ruleset_map(osu_file, mode, []), mode, [])
     current = _apply_ruleset_metadata(

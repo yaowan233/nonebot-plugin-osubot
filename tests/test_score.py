@@ -32,7 +32,7 @@ async def test_draw_score_can_return_selected_beatmap_context(tmp_path):
         patch(f"{module}.get_user_scores", new=AsyncMock(return_value=[score])),
         patch(f"{module}.get_user_info_data", new=AsyncMock(return_value=user)),
         patch(f"{module}.osu_api", new=AsyncMock(return_value={})),
-        patch(f"{module}.download_osu", new=AsyncMock()),
+        patch(f"{module}.ensure_osu_file", new=AsyncMock()),
         patch(f"{module}.cal_score_info", side_effect=lambda _, value, __: value),
         patch(f"{module}.draw_score_pic", new=AsyncMock(return_value=BytesIO(FAKE_IMG))),
     ):
@@ -60,7 +60,7 @@ async def test_draw_score_can_return_selected_bp_and_fetch_enough_for_mod_filter
         patch(f"{module}.get_user_scores", new=get_scores),
         patch(f"{module}.get_user_info_data", new=AsyncMock(return_value=user)),
         patch(f"{module}.osu_api", new=AsyncMock(return_value={})),
-        patch(f"{module}.download_osu", new=AsyncMock()),
+        patch(f"{module}.ensure_osu_file", new=AsyncMock()),
         patch(f"{module}.cal_score_info", side_effect=lambda _, value, __: value),
         patch(f"{module}.draw_score_pic", new=AsyncMock(return_value=BytesIO(FAKE_IMG))),
     ):
@@ -113,6 +113,7 @@ def test_map_score_conversion_keeps_pp_and_beatmap_metadata():
         "ar": 9,
         "drain": 6,
         "difficulty_rating": 5.67,
+        "checksum": "0123456789abcdef0123456789abcdef",
         "user_id": 42,
         "convert": False,
         "beatmapset": {"artist": "artist", "title": "title", "creator": "mapper"},
@@ -125,6 +126,7 @@ def test_map_score_conversion_keeps_pp_and_beatmap_metadata():
     assert converted.beatmap.set_id == 1919810
     assert converted.beatmap.version == "Insane"
     assert converted.beatmap.stars == 5.67
+    assert converted.beatmap.checksum == "0123456789abcdef0123456789abcdef"
     assert converted.beatmap.artist == "artist"
     assert converted.beatmap.title == "title"
     assert converted.beatmap.creator == "mapper"

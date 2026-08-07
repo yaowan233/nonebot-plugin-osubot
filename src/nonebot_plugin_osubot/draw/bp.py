@@ -9,7 +9,7 @@ import jinja2
 
 from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
-from ..file import download_osu, get_pfm_img, map_path
+from ..file import ensure_osu_file, get_pfm_img, map_path
 from ..mods import get_mods_list, get_speed_change_labels
 from ..pp import cal_pp
 from ..schema.score import UnifiedScore
@@ -101,9 +101,7 @@ async def draw_pfm(
         for score, cover_path in zip(score_ls_filtered, cover_paths)
     ]
     osu_tasks = [
-        download_osu(score.beatmap.set_id, score.beatmap.id)
-        for score in score_ls_filtered
-        if not (map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu").exists()
+        ensure_osu_file(score.beatmap.set_id, score.beatmap.id, score.beatmap.checksum) for score in score_ls_filtered
     ]
     info, *_ = await asyncio.gather(
         get_user_info_data(uid, mode, source),
