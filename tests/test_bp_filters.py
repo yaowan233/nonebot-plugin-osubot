@@ -121,6 +121,15 @@ def test_agent_filter_text_uses_the_same_parser_as_commands():
     ]
 
 
+def test_agent_firsts_recent_day_filter_uses_24_hours():
+    from nonebot_plugin_osubot.matcher.utils import parse_bp_filter_text
+
+    conditions, remaining = parse_bp_filter_text("24h")
+
+    assert remaining == ""
+    assert conditions == [("hours", "<=", "24")]
+
+
 def test_agent_filter_text_reports_unparsed_content():
     from nonebot_plugin_osubot.matcher.utils import parse_bp_filter_text
 

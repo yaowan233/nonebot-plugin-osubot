@@ -242,6 +242,19 @@ def _normalize_range(range_text: str | None, default: str = "1-200") -> tuple[in
     return low, high
 
 
+def _normalize_firsts_range(range_text: str | None, default: str = "1-30") -> tuple[int, int]:
+    if not range_text or not range_text.strip():
+        range_text = default
+    parts = range_text.replace(" ", "").split("-", 1)
+    if len(parts) == 1:
+        low = high = int(parts[0])
+    else:
+        low, high = int(parts[0]), int(parts[1])
+    if not 0 < low <= high <= 200:
+        raise ValueError("range 只支持 1-200 内的序号或递增范围")
+    return low, high
+
+
 async def _resolve_osu_user(
     ctx: AgentToolContext,
     username: str | None,
@@ -1232,6 +1245,74 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         except Exception as e:
             return f"发送 bp 列表失败: {e}"
 
+    @tool("send_osu_firsts")
+    async def send_osu_firsts(
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
+        range_text: str | None = None,
+        mode: str | None = None,
+        mods: str = "",
+        filters: BpFiltersArg = "",
+        is_lazer: bool | None = None,
+        include_image_for_analysis: bool = False,
+    ) -> str | list[ContentBlock]:
+        """
+        查询并发送 osu 玩家在全球排行榜取得第一名的成绩列表（firsts/榜一）。
+        range_text 是榜一记录序号或范围，例如 5 或 1-20；不筛选时默认 1-30，筛选时默认搜索 1-200。
+        mods 是必须包含的 Mods；filters 与 BP 列表使用相同的筛选语法。仅支持 osu! 官网。
+        """
+        try:
+            source = "osu"
+            search_conditions, invalid_filter = parse_bp_filter_text(filters)
+            if invalid_filter:
+                return f"无法识别第一名成绩筛选条件: {invalid_filter}"
+            default_range = "1-200" if search_conditions else "1-30"
+            low, high = _normalize_firsts_range(range_text, default=default_range)
+            user = await _resolve_osu_user(ctx, username, source, target_user_id)
+            mode = _resolve_mode(mode, user, source)
+            is_lazer = _resolve_is_lazer(is_lazer)
+            mod_list = mods2list(mods) if mods else []
+            scores, selected = await select_bp_scores(
+                "firsts",
+                user.user_id,
+                is_lazer,
+                NGM[mode],
+                mod_list,
+                low,
+                high,
+                0,
+                search_conditions,
+                source,
+            )
+            delivery_key = (
+                user.user_id,
+                source,
+                mode,
+                is_lazer,
+                tuple(sorted(mod_list)),
+                "firsts_list",
+                low,
+                high,
+                filters,
+            )
+            if delivery_key in delivered_bp_keys:
+                return f"{user.name} 的榜一 {low}-{high} 已在本轮发送过，不再重复发送。"
+            data = await draw_pfm("firsts", user.user_id, scores, selected, NGM[mode], source, low, high, 0)
+            delivery_status = await deliver_bp_once(delivery_key, data)
+            if delivery_status == "expired":
+                return "请求已过期，已取消发送。"
+            if delivery_status == "already_sent":
+                return f"{user.name} 的榜一 {low}-{high} 已在本轮发送过，不再重复发送。"
+            return _image_tool_result(
+                f"已发送 {user.name} 的第一名成绩 {low}-{high}{'（筛选：' + filters + '）' if filters else ''}。",
+                data,
+                include_image_for_analysis,
+            )
+        except NetworkError as e:
+            return f"查询第一名成绩失败: {e}"
+        except Exception as e:
+            return f"发送第一名成绩失败: {e}"
+
     @tool("send_osu_recent_or_pr")
     async def send_osu_recent_or_pr(
         username: UsernameArg = None,
@@ -1843,6 +1924,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             get_osu_bp_data,
             get_osu_bp_range,
             send_osu_bp_list,
+            send_osu_firsts,
             send_osu_recent_or_pr,
             send_osu_score,
             search_osu_beatmaps,
@@ -1872,6 +1954,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- 未指定模式时，不要传 mode；工具会使用绑定账号的默认模式。官网成绩默认查询 lazer + stable。",
             "- send_osu_bp 会直接发送一张结果图。只要求查询/看图时 purpose=view，成功后调用 finish，"
             "不要再发送同义文字。",
+            "- send_osu_firsts 会直接发送玩家的第一名成绩列表图；成功后调用 finish，不要再发送同义文字。",
             "- 用户问单个 BP“打得怎么样/发挥如何/分析/评价/看看问题”时，调用 send_osu_bp 并传 purpose=analyze；"
             "根据工具返回的结构化成绩给出简短评价，不要重复发图。",
             "- 比较多个 BP、分析多个指定 BP 的差异时，调用 get_osu_bp_data；它只返回结构化数据且不会发图。"
@@ -1897,11 +1980,15 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm、一段 bp 范围或筛选 BP 时使用。"
             "无筛选默认 1-30；有 filters 且用户没指定范围时省略 range_text，让工具自动搜索 1-200。"
             "筛选后只有一条时工具会自动发送单张成绩图并返回结构化成绩，多条时才发送列表图。",
-            "- BP 筛选要写入 send_osu_bp_list.filters，不要把筛选文本放进 username，也不要传完整的 `/bl` 指令。"
+            "- send_osu_firsts: 用户想查 firsts、榜一、第一名成绩、全球排行榜第一记录时使用；"
+            "它只查询 osu! 官网。不要把 BP1/最好成绩误当成榜一，BP1 应使用 send_osu_bp。"
+            "无筛选默认 1-30；有 filters 且用户没指定范围时省略 range_text，让工具自动搜索 1-200。",
+            "- BP/榜一筛选要写入 send_osu_bp_list.filters 或 send_osu_firsts.filters，"
+            "不要把筛选文本放进 username，也不要传完整的 `/bl`、`/first` 指令。"
             "多个条件以空格连接且为 AND：pp/acc/stars/miss/combo/bpm/length/mapper/title/version/rank/client/date/"
             "days/hours/speed/mods；简写 p/a/s/m/c/b/len/mp/t/v/r/cl/sp/mod。",
-            "- 将自然语言 BP 条件转换为 filters：‘300pp以上’=`300pp+`，‘98acc以上’=`98a+`，"
-            "‘5到7星’=`5-7*`，‘最近7天’=`7d`，‘24小时内’=`24h`，‘FC/零失误’=`fc`，"
+            "- 将自然语言 BP/榜一条件转换为对应工具的 filters：‘300pp以上’=`300pp+`，‘98acc以上’=`98a+`，"
+            "‘5到7星’=`5-7*`，‘最近7天’=`7d`，‘最近一天/最近24小时’=`24h`，‘FC/零失误’=`fc`，"
             "‘非FC’=`nofc`，‘不要DT’=`-DT`，‘仅HDHR’=`=HDHR`。",
             "- Mods 参数语义：mods='HDHR' 表示成绩至少包含 HD 和 HR；精确 Mods 或排除 Mods 应写 filters："
             "mods=HDHR / =HDHR、mods!=DT / -DT。标题、谱师等文本搜索使用 t~关键词、mp~谱师；含空格时加引号。",

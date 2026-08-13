@@ -18,11 +18,14 @@ def test_self_reference_placeholders_fall_back_to_bound_context():
     from nonebot_plugin_osubot.agent_tools import (
         _clean_user_id,
         _clean_optional_text,
+        _normalize_firsts_range,
     )
 
     for value in ("我", "当前用户", "current_user", "current user", "requester"):
         assert _clean_optional_text(value) is None
         assert _clean_user_id(value) is None
+    assert _normalize_firsts_range("5") == (5, 5)
+    assert _normalize_firsts_range("5-10") == (5, 10)
 
 
 @pytest.mark.asyncio
@@ -58,6 +61,8 @@ def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     assert schema["properties"]["purpose"]["enum"] == ["view", "analyze"]
     assert "include_image_for_analysis" not in schema["properties"]
     assert any(tool.name == "get_osu_bp_data" for tool in bundle.tools)
+    firsts_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_firsts")
+    assert "source" not in firsts_tool.args_schema.model_json_schema()["properties"]
     assert any(tool.name == "search_osu_beatmaps" for tool in bundle.tools)
     assert any(tool.name == "get_osu_scores_by_map_name" for tool in bundle.tools)
     assert "比较多个 BP" in instructions
@@ -553,6 +558,53 @@ async def test_send_osu_bp_list_keeps_list_for_multiple_results(monkeypatch):
 
     assert "bp1-2" in result
     assert sent == [b"score-list"]
+
+
+@pytest.mark.asyncio
+async def test_send_osu_firsts_uses_official_firsts_and_deduplicates(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = [SimpleNamespace(), SimpleNamespace()]
+    calls = {"select": 0, "draw": 0, "send": 0}
+
+    async def fake_resolve(_ctx, _username, source, _target_user_id):
+        assert source == "osu"
+        return agent_tools.ResolvedOsuUser(42, "player", "0")
+
+    async def fake_select(*args):
+        calls["select"] += 1
+        assert args == ("firsts", 42, True, "osu", ["HD"], 1, 2, 0, [], "osu")
+        return scores, scores
+
+    async def fake_list(*args, **kwargs):
+        calls["draw"] += 1
+        assert args == ("firsts", 42, scores, scores, "osu", "osu", 1, 2, 0)
+        assert kwargs == {}
+        return BytesIO(b"firsts-list")
+
+    async def fake_send(_ctx, image):
+        calls["send"] += 1
+        assert image.getvalue() == b"firsts-list"
+        return "已发送图片"
+
+    async def fake_active(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "select_bp_scores", fake_select)
+    monkeypatch.setattr(agent_tools, "draw_pfm", fake_list)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    monkeypatch.setattr(agent_tools, "is_request_active", fake_active)
+    context = SimpleNamespace(user_id="12345678", request_id="request-1", session_id="group-1", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    firsts_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_firsts")
+
+    first = await firsts_tool.ainvoke({"range_text": "1-2", "mods": "HD"})
+    second = await firsts_tool.ainvoke({"range_text": "1-2", "mods": "HD"})
+
+    assert "已发送 player 的第一名成绩 1-2" in first
+    assert "不再重复发送" in second
+    assert calls == {"select": 2, "draw": 1, "send": 1}
 
 
 def _make_score():
@@ -1097,12 +1149,15 @@ async def test_instructions_contain_bp_analysis_recipe():
     tool_names = {tool.name for tool in bundle.tools}
 
     assert "get_osu_bp_range" in tool_names
+    assert "send_osu_firsts" in tool_names
     assert "两段式" in instructions
     assert "send_osu_bp_list 发送 BP 列表图" in instructions
     assert "next_start 续读" in instructions
     assert "读到 has_more=false" in instructions
     assert "范围宽度必须 ≤20" in instructions
     assert "最多传 10 个 BP 序号" in instructions
+    assert "不要把 BP1/最好成绩误当成榜一" in instructions
+    assert "‘最近一天/最近24小时’=`24h`" in instructions
 
 
 def _history_points(count: int = 25):

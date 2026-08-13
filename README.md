@@ -207,6 +207,7 @@ nb orm stamp 68a04ea31d05
 
 ```text
 @bot 查我的 bp1
+@bot 查我的榜一 1-20
 @bot 查我的 info
 @bot 查 peppy 的 bp1
 @bot 查 WhiteCat 的 bp 1-20
