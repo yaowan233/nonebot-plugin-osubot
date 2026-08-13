@@ -227,7 +227,7 @@ def _badge_description(value: object, x: float, y: float, width: float) -> str:
 def _badge_row(user: dict, y: float) -> str:
     badges = (user.get("badges") or [])[:8]
     if not badges:
-        return f"{text(645, y + 38, '近期荣誉', 18, fill='#111824', weight=700)}{text(1680, y + 38, '暂无荣誉徽章', 11, fill='#111824', anchor='end')}"
+        return ""
     parts = [
         text(645, y + 30, "近期荣誉", 22, fill="#111824", weight=700),
         f'<rect x="751" y="{y + 22}" width="25" height="4" fill="{PINK}"/><rect x="776" y="{y + 22}" width="13" height="4" fill="{CYAN}"/>',
@@ -283,9 +283,11 @@ def build_info_svg(user: dict) -> str:
     stats = user.get("statistics") or {}
     grades = stats.get("grade_counts") or {}
     bp = (user.get("best_plays") or [])[:10]
+    has_badges = bool(user.get("badges"))
     badge_y = 503
-    bp_header_y = 679
-    bp_top = 729
+    divider_y = 671 if has_badges else 520
+    bp_header_y = 679 if has_badges else 528
+    bp_top = 729 if has_badges else 578
     career = "".join(
         (
             _career_column(
@@ -334,7 +336,7 @@ def build_info_svg(user: dict) -> str:
 {text(1075, 224, "地区排名", 12, fill="#111824", weight=700)}{text(1140, 224, f"{user.get('country_code', '--')} {country_rank}" + _change(user.get("country_rank_change")), 17, fill="#111824", weight=700)}
 {text(1450, 117, "准确率", 12, fill="#111824")}{text(1450, 147, number(stats.get("hit_accuracy"), 4) + "%", 18, fill="#111824", weight=700)}{text(1450, 177, "最大连击", 12, fill="#111824")}{text(1450, 207, number(stats.get("maximum_combo")) + "x", 18, fill="#111824", weight=700)}
 <rect x="625" y="248" width="1050" height="78" fill="#e8ecec" stroke="#cbd2d5"/><rect x="625" y="248" width="4" height="78" fill="{CYAN}"/>{_trend(user, 625, 248, 1050)}
-{career}{_badge_row(user, badge_y)}<line x1="625" y1="671" x2="1680" y2="671" stroke="#c8cdd1"/><rect x="625" y="669" width="86" height="3" fill="{PINK}"/>
+{career}{_badge_row(user, badge_y)}<line data-role="info-bp-divider" x1="625" y1="{divider_y}" x2="1680" y2="{divider_y}" stroke="#c8cdd1"/><rect x="625" y="{divider_y - 2}" width="86" height="3" fill="{PINK}"/>
 {text(635, bp_header_y + 23, "最佳成绩", 20, fill="#111824", weight=700)}{text(bp_count_x, bp_header_y + 23, f"/ 前 {len(bp)}", 14, fill=PINK, weight=700)}{text(1680, bp_header_y + 23, f"平均 PP {number(sum(float(item.get('pp') or 0) for item in bp) / max(1, len(bp)), 2)}  ·  平均准确率 {number(sum(float(item.get('accuracy') or 0) for item in bp) / max(1, len(bp)), 2)}%  ·  最高星数 {number(max((float(item.get('stars') or 0) for item in bp), default=0), 2)}★", 11, fill="#111824", anchor="end")}{cards}</svg>"""
     return svg
 

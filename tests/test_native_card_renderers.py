@@ -81,6 +81,7 @@ def test_info_svg_restores_badge_cards_and_equal_grade_columns():
     svg = build_info_svg(payload)
 
     assert "最近 8 枚 / 共 9 枚" in svg
+    assert 'data-role="info-bp-divider" x1="625" y1="671"' in svg
     assert 'width="118.875" height="55"' in svg
     assert 'id="info-badge-' not in svg
     for boundary in (136, 218, 300, 382):
@@ -124,13 +125,16 @@ def test_info_svg_keeps_pp_unit_and_bp_shade_clear_of_content():
     assert 'fill="#07111dbb"' not in svg
     assert 'id="info-bp-shade-0"' in svg
     assert 'stop-opacity="0"' in svg
-    assert 'x1="635" y1="886" x2="831" y2="886" stroke="#c8ced1" stroke-dasharray="2 3"' in svg
+    assert "近期荣誉" not in svg
+    assert "暂无荣誉徽章" not in svg
+    assert 'data-role="info-bp-divider" x1="625" y1="520"' in svg
+    assert 'x1="635" y1="735" x2="831" y2="735" stroke="#c8ced1" stroke-dasharray="2 3"' in svg
     assert f'x="{1075 + text_width("26,925.2", 70) + 14}" y="193"' in svg
     assert 'data-gradient-start="#ffe600" data-gradient-end="#ed82ff"' in svg
     assert ">地区排名</text>" in svg
     assert ">CN #2</text>" in svg
     expected_bp_count_x = 635 + text_width("最佳成绩", 20) + 10
-    assert f'x="{expected_bp_count_x}" y="702"' in svg
+    assert f'x="{expected_bp_count_x}" y="551"' in svg
 
 
 def test_bmap_svg_restores_difficulty_visuals_and_keeps_all_tags():

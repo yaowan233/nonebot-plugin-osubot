@@ -152,6 +152,25 @@ async def test_info_real(app: App, mode_name, uid, mode):
 
 
 @pytest.mark.asyncio
+async def test_info_without_badges_preview(app: App, monkeypatch):
+    """使用真实玩家数据预览无近期荣誉时的 info 布局。"""
+    import nonebot_plugin_osubot.draw.info as info_module
+
+    original_get_user_info = info_module.get_user_info_data
+
+    async def get_user_info_without_badges(*args, **kwargs):
+        info = await original_get_user_info(*args, **kwargs)
+        return info.model_copy(update={"badges": []}, deep=True)
+
+    monkeypatch.setattr(info_module, "get_user_info_data", get_user_info_without_badges)
+    uid, mode = USERS["fruits"]
+    data = await info_module.draw_info(uid=uid, mode=mode, day=0, source="osu")
+    path = OUT / "info_fruits_without_badges.jpg"
+    path.write_bytes(data)
+    print(f"\n  [fruits without badges] -> {path.name}")
+
+
+@pytest.mark.asyncio
 async def test_info_extreme_changes(app: App):
     """info 极端变化值显示效果（超大正/负变化）"""
     from nonebot_plugin_osubot.draw import draw_info
