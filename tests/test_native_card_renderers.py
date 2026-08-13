@@ -55,6 +55,76 @@ def test_bp_svg_dynamic_height_and_team_alignment():
     assert height < 600
     assert 'x="182" y="116" width="31"' in svg
     assert "Lazer" in svg
+    assert "OSU! 最佳成绩档案" in svg
+
+    payload["section_title"] = "第一名成绩"
+    firsts_svg, _height = build_bp_svg(payload)
+    assert "OSU! 第一名成绩档案" in firsts_svg
+
+
+def test_mod_strip_hides_nm_and_preserves_custom_speed_mod_artwork():
+    from nonebot_plugin_osubot.draw.svg_components import mod_strip
+
+    assert mod_strip([], {}, x=0, y=0, icon_size=30, max_width=200) == ""
+    assert mod_strip(["NM"], {}, x=0, y=0, icon_size=30, max_width=200) == ""
+
+    svg = mod_strip(
+        ["DT", "HD"],
+        {"DT": "1.30×"},
+        x=0,
+        y=0,
+        icon_size=30,
+        max_width=200,
+        preserve_artwork_ratio=True,
+    )
+
+    assert svg.count("<image") == 2
+    assert 'width="42.1875" height="30"' in svg
+    assert 'preserveAspectRatio="xMidYMid meet"' in svg
+    assert "1.30×" in svg
+    assert svg.index("1.30×") < svg.rindex("<image")
+    backplate = svg.split("/>", 1)[0]
+    assert "Q" not in backplate
+    assert "H87.1875 L94.6875,15.0 L87.1875,30" in backplate
+    assert 'stroke-linejoin="round"' in backplate
+    assert 'data-role="mod-settings"' in svg
+    assert '<text x="68.4375"' in svg
+    assert 'x="94.6875" y="0" width="42.1875" height="30"' in svg
+
+
+def test_info_and_score_history_use_the_unified_mod_strip():
+    from nonebot_plugin_osubot.draw.info_svg import _bp_card
+    from nonebot_plugin_osubot.draw.score_history_svg import _row
+
+    shared = {
+        "rank": "S",
+        "mods": ["DT", "HD", "NM"],
+        "speed_changes": {"DT": "1.30×"},
+        "stars": 5,
+        "pp": 100,
+        "accuracy": 99,
+    }
+    info_svg = _bp_card(shared, 0, 0)
+    assert info_svg.count("<image") == 2
+    assert 'width="33.75" height="24"' in info_svg
+    assert 'x="718.75" y="72" width="33.75" height="24"' in info_svg
+    assert 'data-role="mod-settings"' in info_svg
+
+    history_svg = _row(
+        {
+            **shared,
+            "index": 1,
+            "score": 1_000_000,
+            "combo": 500,
+            "judgements": [],
+            "date": "2026.01.01",
+        },
+        0,
+    )
+    assert history_svg.count("<image") == 2
+    assert 'width="53.4375" height="38"' in history_svg
+    assert 'x="1061.9375" y="342" width="53.4375" height="38"' in history_svg
+    assert 'data-role="mod-settings"' in history_svg
 
 
 def test_info_svg_restores_badge_cards_and_equal_grade_columns():
@@ -270,7 +340,7 @@ def test_map_svg_only_shows_star_change_card_for_actual_change_and_wraps_tags():
     assert "final-tag" in unchanged_svg
 
     payload["map"]["stars"] = 5.5
-    payload["map"]["mods"] = ["HD", "HR"]
+    payload["map"]["mods"] = ["NM", "HD", "HR"]
     changed_svg, _height = build_map_svg(payload)
 
     assert 'data-role="star-change-card"' not in changed_svg
@@ -281,8 +351,8 @@ def test_map_svg_only_shows_star_change_card_for_actual_change_and_wraps_tags():
     assert ">MODS</text>" not in changed_svg
     assert "5.50★" in changed_svg
     assert 'fill="#ff6b81" opacity="1">5.50★</text>' in changed_svg
-    assert 'x="1299" y="140" width="28" height="28"' in changed_svg
-    assert 'x="1332" y="140" width="28" height="28"' in changed_svg
+    assert 'x="1281.25" y="140" width="39.375" height="28"' in changed_svg
+    assert 'x="1320.625" y="140" width="39.375" height="28"' in changed_svg
     assert 'data-role="map-stats-panel"><rect x="612" y="200"' in changed_svg
 
     payload["map"]["stars"] = 5.0

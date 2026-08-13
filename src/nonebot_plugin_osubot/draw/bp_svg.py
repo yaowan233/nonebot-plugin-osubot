@@ -42,7 +42,7 @@ def _profile(payload: dict) -> str:
 <defs><clipPath id="bp-avatar"><rect x="48" y="34" width="110" height="110" rx="8"/></clipPath></defs>
 <rect x="58" y="44" width="110" height="110" rx="8" fill="{PINK}"/>
 {image(user.get("avatar_data"), 48, 34, 110, 110, clip="bp-avatar")}
-{text(182, 57, "OSU! 最佳成绩档案", 11, fill="#df347c", weight=700)}
+{text(182, 57, f"OSU! {payload['section_title']}档案", 11, fill="#df347c", weight=700)}
 {fitted_text(182, 96, name, name_size, name_available, fill="#101824", weight=700)}
 {supporter_badge(182 + name_width + 8, 72, support)}
 {team_image}
@@ -102,7 +102,7 @@ def _card(play: dict, index: int, *, dense: bool) -> str:
 {text(x + padding + (17.5 if not dense else 15), y + padding + (17 if not dense else 15), f"#{play['index']}", badge_size, anchor="middle", weight=700)}
 <rect x="{x + width - padding - (58 if not dense else 52)}" y="{y + padding}" width="{58 if not dense else 52}" height="{25 if not dense else 21}" rx="13" fill="{star_color(star)}"/>
 {text(x + width - padding - (29 if not dense else 26), y + padding + (17 if not dense else 15), number(star, 2) + "★", badge_size, fill="#101925" if star < 6.5 else "#ffd966", anchor="middle", weight=700)}
-{mod_strip(play["mods"], play.get("speed_changes") or {}, x=x + padding, y=y + visual_height - padding - (24 if dense else 30), icon_size=24 if dense else 30, max_width=width - 92)}
+{mod_strip(play["mods"], play.get("speed_changes") or {}, x=x + padding, y=y + visual_height - padding - (24 if dense else 30), icon_size=24 if dense else 30, max_width=width - 92, preserve_artwork_ratio=True)}
 <rect x="{x + width - padding - (69 if dense else 82)}" y="{y + visual_height - padding - (23 if dense else 27)}" width="{69 if dense else 82}" height="{23 if dense else 27}" rx="14" fill="#f2c967"/>
 {text(x + width - padding - (34.5 if dense else 41), y + visual_height - padding - (8 if dense else 9), number(play["pp"], 2) + " pp", 9 if dense else 11, fill="#17202b", anchor="middle", weight=700)}
 <rect x="{x}" y="{y + visual_height + 10}" width="4" height="{10 if dense else 13}" rx="2" fill="{CYAN if (index + 1) % 3 == 0 else PINK}"/>

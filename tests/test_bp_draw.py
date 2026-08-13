@@ -28,6 +28,25 @@ async def test_plain_bp_range_only_requests_needed_api_rows():
 
 
 @pytest.mark.asyncio
+async def test_first_place_scores_use_official_firsts_scope():
+    import nonebot_plugin_osubot.draw.bp as bp
+
+    scores = [_score() for _ in range(20)]
+    get_scores = AsyncMock(return_value=scores)
+    with (
+        patch.object(bp, "get_user_scores", new=get_scores),
+        patch.object(bp, "cal_score_info", side_effect=lambda _is_lazer, score, _source: score),
+    ):
+        _all_scores, selected = await bp.select_bp_scores(
+            "firsts", 1, True, "osu", [], 1, 20, 0, [], "osu"
+        )
+
+    assert selected == scores
+    assert get_scores.await_args.args[2] == "firsts"
+    assert get_scores.await_args.kwargs["limit"] == 20
+
+
+@pytest.mark.asyncio
 async def test_filtered_bp_still_requests_full_search_window():
     import nonebot_plugin_osubot.draw.bp as bp
 
@@ -121,3 +140,57 @@ async def test_bp_list_keeps_official_api_pp_while_calculating_modded_stars(tmp_
     assert result.getvalue() == b"image"
     assert play["pp"] == 321.45
     assert play["stars"] == 8.76
+
+
+@pytest.mark.asyncio
+async def test_first_place_list_uses_distinct_heading(tmp_path):
+    import nonebot_plugin_osubot.draw.bp as bp
+
+    beatmap = SimpleNamespace(
+        id=456,
+        set_id=123,
+        checksum=None,
+        stars=5.0,
+        title="Map",
+        artist="Artist",
+        version="Insane",
+    )
+    score = SimpleNamespace(
+        beatmap=beatmap,
+        pp=None,
+        accuracy=99.0,
+        mods=[],
+        ended_at=SimpleNamespace(strftime=lambda _format: "2026.01.01"),
+        score_version="lazer",
+    )
+    statistics = SimpleNamespace(model_dump=lambda: {"global_rank": 1})
+    info = SimpleNamespace(
+        id=1,
+        username="player",
+        country_code="CN",
+        support_level=0,
+        team=None,
+        statistics=statistics,
+    )
+    osu_file = tmp_path / "123" / "456.osu"
+    osu_file.parent.mkdir()
+    osu_file.write_text("osu file", encoding="utf-8")
+
+    with (
+        patch.object(bp, "map_path", tmp_path),
+        patch.object(bp, "get_pfm_img", new=AsyncMock()),
+        patch.object(bp, "ensure_osu_file", new=AsyncMock()),
+        patch.object(bp, "_player_avatar_data_uri", new=AsyncMock(return_value=None)),
+        patch.object(bp, "_team_icon_data", new=AsyncMock(return_value=None)),
+        patch.object(bp, "cal_stars", return_value=5.0),
+        patch.object(bp, "cal_pp", return_value=SimpleNamespace(pp=456.78)) as cal_pp,
+        patch.object(bp, "render_bp_svg", new=AsyncMock(return_value=BytesIO(b"image"))) as render,
+    ):
+        result = await bp.draw_pfm("firsts", 1, [score], [score], "osu", "osu", 1, 1, info=info)
+
+    payload = render.await_args.args[0]
+    assert result.getvalue() == b"image"
+    assert payload["section_title"] == "第一名成绩"
+    assert payload["range_label"] == "榜一 1–1"
+    assert payload["plays"][0]["pp"] == 456.78
+    cal_pp.assert_called_once()

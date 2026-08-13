@@ -28,6 +28,7 @@ HELP_TOPICS = {
         "成绩查询\n"
         "/bp [序号]：单条最佳成绩，例如 /bp 5\n"
         "/bl [起始-结束]：BP 列表，默认 1-30，例如 /bl 31-60\n"
+        "/first [序号或范围]：玩家的第一名成绩，默认 1-30，例如 /first 1-20\n"
         "/re [序号]、/rl [范围]：单条/列表最近游玩，包含未通过\n"
         "/pr [序号]、/pl [范围]：单条/列表最近通过成绩\n"
         "/sc [mapid]：指定谱面成绩；查询过谱面后可省略 mapid\n"
@@ -102,6 +103,11 @@ TOPIC_ALIASES = {
     "tbp": "score",
     "bpa": "score",
     "bp分析": "score",
+    "first": "score",
+    "firsts": "score",
+    "fs": "score",
+    "榜一": "score",
+    "第一名": "score",
     "hs": "score",
     "history": "score",
     "谱面": "map",

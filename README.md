@@ -167,6 +167,7 @@ nb orm stamp 68a04ea31d05
 | 账号 | `/bind`、`/unbind`、`/mode` | 绑定账号与设置默认模式 |
 | 资料 | `/info`、`/mu`、`/rank`、`/update` | 玩家资料、主页、群内 PP 排名和资料刷新 |
 | 最佳成绩 | `/bp`、`/bl`、`/nb`、`/bpa` | 单条 BP、BP 列表、新增 BP 与 BP 分析 |
+| 第一名成绩 | `/first [序号或范围]` | 查询玩家在谱面排行榜上的第一名成绩（仅 osu! 官网） |
 | 最近成绩 | `/re`、`/rl`、`/pr`、`/pl` | 最近游玩、最近通过成绩及其列表 |
 | 谱面成绩 | `/sc [mapid]`、`/sl [mapid]` | 查询单条成绩，或列出该谱面各 Mod 组合的最佳成绩 |
 | 历史 | `/hs [#天数]` | 查询 PP 与排名历史 |
@@ -181,6 +182,7 @@ nb orm stamp 68a04ea31d05
 /bind peppy
 /bp 5:o +HDHR
 /bl 31-60:m
+/first peppy 1-20:o
 /sc 3783810
 /sl 3783810
 /bpa

@@ -7,7 +7,7 @@ from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from ..mods import get_mods_list, get_speed_change_labels
-from ..pp import cal_stars
+from ..pp import cal_pp, cal_stars
 from ..schema.score import UnifiedScore
 from .bp_svg import render_bp_svg
 from .score import _player_avatar_data_uri, _team_icon_data, cal_score_info
@@ -74,11 +74,12 @@ async def select_bp_scores(
     source: str,
 ) -> tuple[list[UnifiedScore], list[UnifiedScore]]:
     """Fetch and filter BP scores without rendering them."""
-    api_limit = high_bound if project == "bp" and not mods and not search_condition else 200
+    api_limit = high_bound if project in {"bp", "firsts"} and not mods and not search_condition else 200
+    scope = "firsts" if project == "firsts" else "best"
     scores = await get_user_scores(
         uid,
         mode,
-        "best",
+        scope,
         source=source,
         legacy_only=not is_lazer,
         limit=api_limit,
@@ -143,11 +144,17 @@ async def draw_pfm(
     def build_play(score: UnifiedScore, cover_path, fallback_index: int) -> dict:
         osu_file = map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu"
         stars = score.beatmap.stars
+        pp = score.pp
         if osu_file.exists():
             try:
                 stars = cal_stars(score, str(osu_file.absolute()), source)
             except Exception:
                 pass
+            if pp is None:
+                try:
+                    pp = cal_pp(score, str(osu_file.absolute()), source).pp
+                except Exception:
+                    pass
         speed_changes = get_speed_change_labels(score.mods)
         mods = [mod.acronym for mod in score.mods]
         if "NC" in mods and "DT" in mods:
@@ -164,7 +171,7 @@ async def draw_pfm(
             "cover_data": (
                 thumbnail_data_uri(cover_path, max_width=320, max_height=180) if cover_path.exists() else None
             ),
-            "pp": score.pp or 0,
+            "pp": pp or 0,
             "accuracy": score.accuracy,
             "stars": stars,
             "mods": mods,
@@ -184,6 +191,10 @@ async def draw_pfm(
         shown_high = min(high_bound, low_bound + len(score_ls_filtered) - 1)
         section_title = "最佳成绩"
         range_label = f"BP {low_bound}–{shown_high}"
+    elif project == "firsts":
+        shown_high = min(high_bound, low_bound + len(score_ls_filtered) - 1)
+        section_title = "第一名成绩"
+        range_label = f"榜一 {low_bound}–{shown_high}"
     elif project == "prlist":
         section_title, range_label = "上传成绩", "近 24 小时"
     elif project == "relist":

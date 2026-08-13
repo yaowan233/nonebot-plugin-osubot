@@ -274,7 +274,7 @@ def _bp_card(play: dict, index: int, top: float) -> str:
 <rect x="{x + 8}" y="{y + 8}" width="30" height="22" rx="11" fill="{PINK}"/>{text(x + 23, y + 24, "#" + str(index + 1), 9, anchor="middle", weight=700)}
 {rank_seal(str(play.get("rank") or "A"), x + 42, y + 8, width=42, height=22)}
 <rect x="{x + width - 61}" y="{y + 8}" width="53" height="22" rx="11" fill="{star_color(star)}"/>{text(x + width - 34.5, y + 24, number(star, 2) + "★", 9, fill="#101925" if star < 6.5 else "#ffd966", anchor="middle", weight=700)}
-{mod_strip(play.get("mods") or [], play.get("speed_changes") or {}, x=x + 8, y=y + 70, icon_size=26, max_width=104)}<rect x="{x + width - 75}" y="{y + 72}" width="67" height="24" rx="12" fill="#f2c967"/>{text(x + width - 41.5, y + 89, number(play.get("pp"), 1) + " pp", 10, fill="#17202b", anchor="middle", weight=700)}
+{mod_strip(play.get("mods") or [], play.get("speed_changes") or {}, x=x + 8, y=y + 72, icon_size=24, max_width=113, preserve_artwork_ratio=True)}<rect x="{x + width - 75}" y="{y + 72}" width="67" height="24" rx="12" fill="#f2c967"/>{text(x + width - 41.5, y + 89, number(play.get("pp"), 1) + " pp", 10, fill="#17202b", anchor="middle", weight=700)}
 {fitted_text(x, y + 127, play.get("title") or "", 13, width, fill="#111824", weight=700)}{fitted_text(x, y + 149, play.get("artist") or "", 10, width - 65, fill="#111824")}{text(x + width, y + 149, number(play.get("accuracy"), 2) + "%", 10, fill=PINK, anchor="end", weight=700)}<line x1="{x}" y1="{y + 157}" x2="{x + width}" y2="{y + 157}" stroke="#c8ced1" stroke-dasharray="2 3"/>{fitted_text(x, y + 169, play.get("version") or "", 9, width - 75, fill="#111824")}{text(x + width, y + 169, str(play.get("ended_at") or "")[:10].replace("-", "."), 9, fill=CYAN, anchor="end")}
 """
 

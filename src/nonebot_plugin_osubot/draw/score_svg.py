@@ -12,6 +12,7 @@ from functools import lru_cache
 
 from PIL import Image, ImageColor, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
+from .svg_components import mod_strip
 from .svg_render import FONT_FAMILY, escape_text, fit_text, font_for_text, render_svg_png
 
 
@@ -411,27 +412,27 @@ def build_score_svg(data: dict) -> str:
     star_colour = _star_colour(data.get("stars"))
     star_text = "#101925" if float(data.get("stars") or 0) < 6.5 else "#ffd966"
 
-    mods = []
-    mod_x = 408
-    for item in list(data.get("mods") or [])[:8]:
-        icon_width = 48
-        mods.append(_queue_pillow_image(item.get("icon"), mod_x, 226, icon_width, 36, contain=True))
-        speed = item.get("speed_change")
-        if speed:
-            speed_width = 53
-            points = (
-                f"{mod_x + 30},228 {mod_x + 38},226 {mod_x + 30 + speed_width},226 "
-                f"{mod_x + 38 + speed_width},244 {mod_x + 30 + speed_width},262 {mod_x + 38},262"
-            )
-            mods.extend(
-                [
-                    f'<polygon points="{points}" fill="#432020"/>',
-                    _text(mod_x + 61, 250, speed, 12, fill="#ff7184", weight=700, anchor="middle"),
-                ]
-            )
-            mod_x += 84
-        else:
-            mod_x += 44
+    mod_items = [
+        item
+        for item in list(data.get("mods") or [])
+        if str(item.get("name") or "").upper() != "NM"
+    ][:8]
+    mod_names = [str(item.get("name") or "") for item in mod_items]
+    speed_changes = {
+        name: str(item["speed_change"])
+        for name, item in zip(mod_names, mod_items)
+        if item.get("speed_change")
+    }
+    mods_svg = mod_strip(
+        mod_names,
+        speed_changes,
+        x=408,
+        y=226,
+        icon_size=36,
+        max_width=560,
+        preserve_artwork_ratio=True,
+        text_renderer=_text,
+    )
 
     score_version = data.get("score_version")
     version_badge = ""
@@ -453,7 +454,6 @@ def build_score_svg(data: dict) -> str:
     artist_width = min(300, _text_width(artist, artist_size))
     version_x = round(408 + artist_width + 12)
     version_width = round(max(90, min(260, _text_width(version, 13) + 24)))
-    mods_svg = "".join(mods)
     identity_svg = _render_identity(data)
     judgements_svg = _render_judgements(data)
     dimensions_svg = _render_dimensions(data)

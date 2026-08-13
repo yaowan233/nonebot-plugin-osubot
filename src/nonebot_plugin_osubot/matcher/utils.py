@@ -18,7 +18,20 @@ FILTER_PATTERN = (
 )
 pattern = r"[:：]\s*(\w+)|[\+＋]\s*([\w,，]+)|[#＃]\s*(\d+)|(\d+\s*-\s*\d+)|[＆&]\s*(\w+)|" + FILTER_PATTERN
 
-BP_COMMANDS = {"bp", "pfm", "bplist", "bl", "tbp", "nb", "todaybp"}
+BP_COMMANDS = {
+    "bp",
+    "pfm",
+    "bplist",
+    "bl",
+    "tbp",
+    "nb",
+    "todaybp",
+    "first",
+    "firsts",
+    "fs",
+    "榜一",
+    "第一名",
+}
 
 
 def _resolve_query_platform_user_id(event: Event, msg: UniMsg) -> str:

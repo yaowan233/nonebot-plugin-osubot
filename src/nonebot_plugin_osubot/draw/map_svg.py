@@ -112,7 +112,7 @@ def _metric(x: float, y: float, label: str, value: str, *, color: str = CYAN, wi
 
 def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[str, int]:
     beatmapset, beatmap = payload["set"], payload["map"]
-    mods = beatmap.get("mods") or []
+    mods = [str(mod) for mod in beatmap.get("mods") or [] if str(mod).upper() != "NM"]
     stats = beatmap.get("stats") or []
     star_delta = float(beatmap.get("stars") or 0) - float(beatmap.get("original_stars") or 0)
     has_star_change = abs(star_delta) >= 0.005
@@ -158,11 +158,12 @@ def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[
         cursor += width
     title_mods_svg = ""
     if mods:
-        mod_icon_size, mod_gap, mod_max_width = 28, 5, 400
-        visible_mods = mods[: int((mod_max_width + mod_gap) // (mod_icon_size + mod_gap))]
-        mods_width = len(visible_mods) * mod_icon_size + max(0, len(visible_mods) - 1) * mod_gap
+        mod_icon_size, mod_max_width = 28, 400
+        mod_icon_width = mod_icon_size * 45 / 32
+        visible_mods = mods[: int(mod_max_width // mod_icon_width)]
+        mods_width = len(visible_mods) * mod_icon_width
         mods_x = 1360 - mods_width
-        title_mods_svg = f'<g data-role="map-title-mods">{mod_strip(visible_mods, {}, x=mods_x, y=140, icon_size=mod_icon_size, max_width=mods_width, item_gap=mod_gap)}</g>'
+        title_mods_svg = f'<g data-role="map-title-mods">{mod_strip(visible_mods, {}, x=mods_x, y=140, icon_size=mod_icon_size, max_width=mods_width, preserve_artwork_ratio=True)}</g>'
     stats_header = f"""
 {text(646, stats_panel_y + 29, "谱面参数 · 模组前后对比" if has_star_change else "谱面参数", 16, weight=700)}
 {text(720, stats_panel_y + 53, "0", 9, fill="#ffffff99", anchor="middle")}{text(1000, stats_panel_y + 53, number(dimension_max / 2, 1), 9, fill="#ffffff99", anchor="middle")}{text(1280, stats_panel_y + 53, number(dimension_max), 9, fill="#ffffff99", anchor="middle")}{text(1355, stats_panel_y + 53, "当前", 9, fill="#ffffff99", anchor="end")}

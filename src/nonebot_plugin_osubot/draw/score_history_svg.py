@@ -90,7 +90,7 @@ def _row(play: dict, index: int) -> str:
 {text(421, y + 55, number(play["accuracy"], 2) + "%", 17, fill="#168f9b", weight=700)}
 {text(525, y + 55, number(play["combo"]) + "x", 17, fill="#101824", weight=700)}
 {"".join(judge_parts)}
-{mod_strip(play["mods"], play.get("speed_changes") or {}, x=942, y=y + 27, icon_size=38, max_width=174)}
+{mod_strip(play["mods"], play.get("speed_changes") or {}, x=942, y=y + 27, icon_size=38, max_width=174, preserve_artwork_ratio=True)}
 <rect x="1135" y="{y + 30}" width="84" height="31" rx="16" fill="#060a0d"/>
 {text(1177, y + 51, "★ " + number(play["stars"], 2), 13, fill="#ffd966", anchor="middle", weight=700)}
 {text(1350, y + 38, play["date"], 12, fill="#101824", anchor="end", weight=700)}

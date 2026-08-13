@@ -1,6 +1,6 @@
 from .mu import mu
 from .info import info
-from .bp import bp, pfm, tbp
+from .bp import bp, pfm, tbp, first
 from .getbg import getbg
 from .match import match
 from .medal import medal
@@ -46,6 +46,7 @@ __all__ = [
     "bp",
     "pfm",
     "tbp",
+    "first",
     "info",
     "osu_map",
     "bmap",

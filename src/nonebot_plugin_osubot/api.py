@@ -140,7 +140,7 @@ async def fetch_score_batch(
 async def get_user_scores(
     uid: Union[int, str],
     mode: str,
-    scope: str = Literal["recent", "best"],
+    scope: Literal["recent", "best", "firsts"] = "best",
     source: str = "osu",
     legacy_only: bool = 0,
     include_failed: bool = True,

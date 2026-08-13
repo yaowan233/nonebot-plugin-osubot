@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from .svg_render import FONT_FAMILY, escape_text, file_data_uri, truncate_text
@@ -193,44 +194,71 @@ def mod_strip(
     icon_size: float,
     max_width: float,
     item_gap: float | None = None,
+    preserve_artwork_ratio: bool = True,
+    text_renderer: Callable[..., str] = text,
 ) -> str:
+    mods = [acronym for acronym in mods if acronym.upper() != "NM"]
     if not mods:
-        return (
-            f'<rect x="{x}" y="{y + 4}" width="44" height="{icon_size - 8}" rx="{(icon_size - 8) / 2}" '
-            f'fill="none" stroke="#ffffff55"/>{text(x + 22, y + icon_size * 0.67, "NM", 8, anchor="middle", opacity=0.7)}'
-        )
+        return ""
     parts: list[str] = []
     cursor = x
+    # Bundled mod artwork uses a 45:32 canvas. Preserve that ratio so the
+    # hexagonal marks are not squeezed into or cropped by a square viewport.
+    icon_width = icon_size * 45 / 32 if preserve_artwork_ratio else icon_size
     for acronym in mods:
         rate = speed_changes.get(acronym)
-        extension = max(29, icon_size * 0.9) if rate else 0
-        item_width = icon_size + extension
+        extension = icon_size * 1.75 if rate else 0
+        item_width = icon_width + extension
         if cursor + item_width > x + max_width:
             break
         if rate:
+            backplate_left = cursor + icon_width * 0.44
+            backplate_top = y
+            backplate_bottom = y + icon_size
+            backplate_middle = y + icon_size / 2
+            # The source mod hexagon advances 8 px horizontally over half of
+            # its 32 px height. Reuse that 1:2 slope for the speed badge so
+            # its right edges stay parallel with the adjacent mod artwork.
+            backplate_shoulder = cursor + item_width - icon_size * 0.25
+            backplate_right = cursor + item_width
             parts.append(
-                f'<path d="M{cursor + icon_size * 0.44},{y + 3} H{cursor + icon_size + 3} '
-                f"L{cursor + item_width},{y + icon_size / 2} L{cursor + icon_size + 3},{y + icon_size - 3} "
-                f'H{cursor + icon_size * 0.44} Z" fill="#431b1b"/>'
+                f'<path d="M{backplate_left},{backplate_top} H{backplate_shoulder} '
+                f"L{backplate_right},{backplate_middle} L{backplate_shoulder},{backplate_bottom} "
+                f'H{backplate_left} Z" fill="#431b1b" stroke="#431b1b" stroke-width="1" stroke-linejoin="round"/>'
             )
         path = MOD_PATH / f"{acronym}.png"
         if path.exists():
-            parts.append(image(file_data_uri(path), cursor, y, icon_size, icon_size, contain=True))
+            parts.append(image(file_data_uri(path), cursor, y, icon_width, icon_size, contain=True))
         else:
-            parts.append(text(cursor + icon_size / 2, y + icon_size * 0.67, acronym, 9, anchor="middle"))
+            parts.append(text_renderer(cursor + icon_width / 2, y + icon_size * 0.67, acronym, 9, anchor="middle"))
         if rate:
+            badge_size = icon_size * 0.38
+            badge_x = cursor + icon_width * 0.82
+            badge_y = y + icon_size * 0.07
+            tooth_width = badge_size * 0.16
+            tooth_height = badge_size * 0.28
+            teeth = "".join(
+                f'<rect x="{-tooth_width / 2}" y="{-badge_size * 0.43}" width="{tooth_width}" '
+                f'height="{tooth_height}" rx="{tooth_width * 0.25}" transform="rotate({angle})"/>'
+                for angle in range(0, 360, 45)
+            )
             parts.append(
-                text(
-                    cursor + icon_size + extension / 2 - 2,
+                f'<g data-role="mod-settings" transform="translate({badge_x} {badge_y})">'
+                f'<circle r="{badge_size / 2}" fill="#6b2528"/><g fill="#ff6670">{teeth}'
+                f'<circle r="{badge_size * 0.25}"/><circle r="{badge_size * 0.1}" fill="#6b2528"/></g></g>'
+            )
+            parts.append(
+                text_renderer(
+                    cursor + icon_width + extension / 2,
                     y + icon_size * 0.64,
                     rate,
-                    max(8, round(icon_size * 0.28)),
+                    max(8, round(icon_size * 0.32)),
                     fill="#ff7184",
                     anchor="middle",
                     weight=700,
                 )
             )
-        cursor += item_width + item_gap if item_gap is not None else item_width - icon_size * 0.15
+        cursor += item_width + item_gap if item_gap is not None else item_width
     return "".join(parts)
 
 

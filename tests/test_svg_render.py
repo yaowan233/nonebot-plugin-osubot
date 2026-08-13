@@ -67,7 +67,7 @@ def test_thumbnail_data_uri_merges_concurrent_generation(tmp_path):
 
 @pytest.mark.asyncio
 async def test_native_score_renderer_preserves_text_and_bundled_images():
-    from nonebot_plugin_osubot.draw.score_svg import render_score_svg
+    from nonebot_plugin_osubot.draw.score_svg import build_score_svg, render_score_svg
     from nonebot_plugin_osubot.draw.score import _png_file_data_uri
     from nonebot_plugin_osubot.draw.static import osufile
 
@@ -87,7 +87,11 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
         "cover": data_uri("jpeg", cover_io.getvalue()),
         "avatar": data_uri("png", avatar_io.getvalue()),
         "rank_image": _png_file_data_uri(osufile / "ranking" / "legacy-ranking-S@2x.png"),
-        "mods": [],
+        "mods": [
+            {"name": "DT", "speed_change": "1.30×"},
+            {"name": "HD", "speed_change": None},
+            {"name": "NM", "speed_change": None},
+        ],
         "owners": [],
         "judgements": [],
         "dimensions": [],
@@ -96,6 +100,12 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
         "stars": "5.00",
         "score": "1,234,567",
     }
+
+    svg = build_score_svg(data)
+    assert 'data-role="mod-settings"' in svg
+    assert 'width="50.625" height="36"' in svg
+    assert 'x="521.625" y="226" width="50.625" height="36"' in svg
+    assert ">NM</text>" not in svg
 
     result = await render_score_svg(data)
 
@@ -106,3 +116,10 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
         # URI or font regression leaves these sample areas nearly black.
         assert image.crop((1040, 100, 1360, 460)).convert("L").getextrema()[1] > 150
         assert image.crop((400, 95, 750, 160)).convert("L").getextrema()[1] > 150
+        rate_region = image.crop((465, 236, 515, 256)).convert("RGB")
+        assert any(
+            red > 170 and red > green * 1.35
+            for y in range(rate_region.height)
+            for x in range(rate_region.width)
+            for red, green, _blue in (rate_region.getpixel((x, y)),)
+        )

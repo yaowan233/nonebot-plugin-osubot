@@ -84,6 +84,31 @@ async def test_pfm_real(app: App, mode_name, uid, mode):
 
 
 @pytest.mark.asyncio
+async def test_firsts_real(app: App):
+    """玩家第一名成绩列表的真实 API 图片输出。"""
+    from nonebot_plugin_osubot.draw import draw_bp
+
+    uid, mode = USERS["osu"]
+    t0 = time.perf_counter()
+    data = await draw_bp(
+        project="firsts",
+        uid=uid,
+        is_lazer=True,
+        mode=mode,
+        mods=[],
+        low_bound=1,
+        high_bound=10,
+        day=0,
+        search_condition=[],
+        source="osu",
+    )
+    elapsed = time.perf_counter() - t0
+    path = OUT / "firsts_osu.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [firsts] {elapsed:.2f}s -> {path.name}")
+
+
+@pytest.mark.asyncio
 async def test_pfm_speed_change_preview(app: App):
     """基于真实 BP 数据预览非默认 DT 倍率标签。"""
     from nonebot_plugin_osubot.api import get_user_scores

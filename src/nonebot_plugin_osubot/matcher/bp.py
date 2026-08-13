@@ -12,6 +12,7 @@ from .map_context import remember_map
 bp = on_command("bp", priority=11, block=True)
 pfm = on_command("pfm", priority=11, block=True, aliases={"bplist", "bl"})
 tbp = on_command("tbp", priority=11, block=True, aliases={"nb", "todaybp"})
+first = on_command("first", priority=11, block=True, aliases={"firsts", "fs", "榜一", "第一名"})
 
 
 @bp.handle(parameterless=[split_msg()])
@@ -112,5 +113,41 @@ async def _tbp(state: T_State):
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} {state['day']}日内最佳成绩时 {str(e)}"
+        ).finish(reply_to=True)
+    await UniMessage.image(raw=data).finish(reply_to=True)
+
+
+@first.handle(parameterless=[split_msg()])
+async def _first(state: T_State):
+    if "error" in state:
+        await UniMessage.text(state["error"]).finish(reply_to=True)
+    if state["source"] != "osu":
+        await UniMessage.text("第一名成绩仅支持 osu! 官网查询").finish(reply_to=True)
+    if not state["range"]:
+        if state["target"]:
+            state["range"] = f"{state['target']}-{state['target']}"
+        else:
+            state["range"] = "1-200" if state["query"] else "1-30"
+    ls = state["range"].split("-")
+    low, high = int(ls[0]), int(ls[1])
+    if not 0 < low <= high <= 200:
+        await UniMessage.text("仅支持查询第 1-200 条第一名成绩").finish(reply_to=True)
+    try:
+        data = await draw_bp(
+            "firsts",
+            state["user"],
+            state["is_lazer"],
+            NGM[state["mode"]],
+            state["mods"],
+            low,
+            high,
+            0,
+            state["query"],
+            state["source"],
+        )
+    except NetworkError as e:
+        mods = f" mod:{state['mods']}" if state["mods"] else ""
+        await UniMessage.text(
+            f"在查找用户：{state['username']} {NGM[state['mode']]}模式 第一名成绩{state['range']}{mods} 时 {str(e)}"
         ).finish(reply_to=True)
     await UniMessage.image(raw=data).finish(reply_to=True)

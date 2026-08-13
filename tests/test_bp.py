@@ -475,3 +475,76 @@ async def test_tbp_applies_date_mods_and_range_in_order(app: App):
         await draw_bp_module.draw_bp("tbp", 1, False, "osu", ["HD"], 1, 1, 1, [], "osu")
 
     assert mock_draw_pfm.call_args.args[3] == [recent_hd]
+
+
+# ---------------------------------------------------------------------------
+# /first (first-place scores)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_first_defaults_to_first_30_scores(app: App):
+    from nonebot_plugin_osubot.matcher.bp import first
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/first"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(first) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[0] == "firsts"
+    assert draw.call_args.args[5:7] == (1, 30)
+
+
+@pytest.mark.asyncio
+async def test_first_accepts_one_score_index(app: App):
+    from nonebot_plugin_osubot.matcher.bp import first
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/first 5"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{BP_MODULE}.draw_bp", new=AsyncMock(return_value=BytesIO(FAKE_IMG))) as draw:
+            async with app.test_matcher(first) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    assert draw.call_args.args[5:7] == (5, 5)
+
+
+@pytest.mark.asyncio
+async def test_first_rejects_ppysb_source(app: App):
+    from nonebot_plugin_osubot.matcher.bp import first
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/first &sb"))
+
+    with patch_session(UTILS_MODULE, session):
+        async with app.test_matcher(first) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(
+                event,
+                _text_msg(event, "第一名成绩仅支持 osu! 官网查询"),
+                result={"message_id": 1},
+            )
+            ctx.should_finished()
