@@ -307,6 +307,7 @@ def test_info_global_rank_tier_colors(rank, percent, expected):
 
 
 @pytest.mark.asyncio
+@pytest.mark.no_cover
 async def test_native_bp_raster_stays_inside_local_budget():
     from nonebot_plugin_osubot.draw.bp_svg import render_bp_svg
     from nonebot_plugin_osubot.draw.svg_render import warm_up_native_renderer
