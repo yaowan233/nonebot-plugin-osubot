@@ -37,9 +37,7 @@ async def test_first_place_scores_use_official_firsts_scope():
         patch.object(bp, "get_user_scores", new=get_scores),
         patch.object(bp, "cal_score_info", side_effect=lambda _is_lazer, score, _source: score),
     ):
-        _all_scores, selected = await bp.select_bp_scores(
-            "firsts", 1, True, "osu", [], 1, 20, 0, [], "osu"
-        )
+        _all_scores, selected = await bp.select_bp_scores("firsts", 1, True, "osu", [], 1, 20, 0, [], "osu")
 
     assert selected == scores
     assert get_scores.await_args.args[2] == "firsts"

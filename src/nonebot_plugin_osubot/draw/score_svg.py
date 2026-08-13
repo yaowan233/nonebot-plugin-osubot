@@ -412,16 +412,10 @@ def build_score_svg(data: dict) -> str:
     star_colour = _star_colour(data.get("stars"))
     star_text = "#101925" if float(data.get("stars") or 0) < 6.5 else "#ffd966"
 
-    mod_items = [
-        item
-        for item in list(data.get("mods") or [])
-        if str(item.get("name") or "").upper() != "NM"
-    ][:8]
+    mod_items = [item for item in list(data.get("mods") or []) if str(item.get("name") or "").upper() != "NM"][:8]
     mod_names = [str(item.get("name") or "") for item in mod_items]
     speed_changes = {
-        name: str(item["speed_change"])
-        for name, item in zip(mod_names, mod_items)
-        if item.get("speed_change")
+        name: str(item["speed_change"]) for name, item in zip(mod_names, mod_items) if item.get("speed_change")
     }
     mods_svg = mod_strip(
         mod_names,
