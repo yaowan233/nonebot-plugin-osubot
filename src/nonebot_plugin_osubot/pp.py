@@ -1,4 +1,9 @@
-from rosu_pp_py import Beatmap, GameMode, Strains, Performance
+import json
+import threading
+from functools import lru_cache
+from pathlib import Path
+
+from rosu_pp_py import Beatmap, Difficulty, GameMode, Performance, Strains
 from osu_tools import OsuCalculator, CalculationResult
 from nonebot.log import logger
 
@@ -8,6 +13,36 @@ from .schema.score import Mod, UnifiedScore
 
 PPYSB_RELAX_RULESETS = {4, 5, 6}
 RELAX_MODS = {"RX", "RX2"}
+
+# osu-tools supports retaining decoded beatmaps and difficulty attributes, but
+# constructing a fresh calculator for every derived value disabled that cache.
+# A score card calculates the same map/mod combination several times (current,
+# FC, SS and target accuracies), so keep one process-local calculator.
+
+
+class _CachedOsuCalculator(OsuCalculator):
+    """Serialize access to shared pythonnet objects while retaining their cache."""
+
+    def __init__(self) -> None:
+        self._calculation_lock = threading.RLock()
+        super().__init__(prepared_cache_size=128)
+
+    def calculate(self, *args, **kwargs) -> CalculationResult:
+        with self._calculation_lock:
+            return super().calculate(*args, **kwargs)
+
+
+_calculator: _CachedOsuCalculator | None = None
+_calculator_init_lock = threading.Lock()
+
+
+def get_osu_calculator() -> OsuCalculator:
+    global _calculator
+    if _calculator is None:
+        with _calculator_init_lock:
+            if _calculator is None:
+                _calculator = _CachedOsuCalculator()
+    return _calculator
 
 
 def is_ppysb_relax_score(score: UnifiedScore, source: str) -> bool:
@@ -33,7 +68,7 @@ def cal_pp(score: UnifiedScore, path: str, source: str = "osu") -> CalculationRe
     if beatmap.is_suspicious():
         raise NetworkError("这似乎不是一个正常谱面 OAO")
     score = normalize_score_for_pp(score, source)
-    c = OsuCalculator()
+    c = get_osu_calculator()
     res = c.calculate(
         path,
         score.ruleset_id % 4,
@@ -44,6 +79,51 @@ def cal_pp(score: UnifiedScore, path: str, source: str = "osu") -> CalculationRe
         statistics=score.statistics,
     )
     return res
+
+
+@lru_cache(maxsize=1024)
+def _cal_stars_cached(
+    path: str,
+    modified_ns: int,
+    file_size: int,
+    mode: int,
+    mods_json: str,
+) -> float:
+    del modified_ns, file_size  # They are part of the cache key for revision invalidation.
+    mods = json.loads(mods_json)
+    beatmap = Beatmap(path=path)
+    target_mode = (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania)[mode]
+    if beatmap.mode != target_mode:
+        beatmap.convert(target_mode, mods)
+    return float(Difficulty(mods=mods).calculate(beatmap).stars)
+
+
+def cal_stars(score: UnifiedScore, path: str, source: str = "osu") -> float:
+    """Calculate only the modded star rating with the native rosu-pp binding.
+
+    Score-list renderers already receive the official PP value from the API.
+    Using osu-tools there would calculate performance again and serialize all
+    list entries behind its shared pythonnet lock, while only difficulty is
+    needed for display.
+    """
+    score = normalize_score_for_pp(score, source)
+    mods = [
+        {
+            "acronym": mod.acronym,
+            **({"settings": mod.settings} if mod.settings else {}),
+        }
+        for mod in score.mods
+    ]
+    resolved = Path(path).resolve()
+    stat = resolved.stat()
+    mods_json = json.dumps(mods, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return _cal_stars_cached(
+        str(resolved),
+        stat.st_mtime_ns,
+        stat.st_size,
+        score.ruleset_id % 4,
+        mods_json,
+    )
 
 
 def get_pp_components(score: UnifiedScore, path: str, source: str = "osu") -> dict[str, float]:
@@ -102,7 +182,7 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, source: str = "osu") -> tupl
     beatmap = Beatmap(path=path)
     if beatmap.is_suspicious():
         return "nan", "nan"
-    c = OsuCalculator()
+    c = get_osu_calculator()
     total = beatmap.n_objects
     score = normalize_score_for_pp(score, source)
     if not is_ppysb_relax_score(score, source):
@@ -154,7 +234,7 @@ def get_ss_pp(path: str, ruleset_id: int, mods: list[str], source: str = "osu") 
     beatmap = Beatmap(path=path)
     if beatmap.is_suspicious():
         raise NetworkError("这似乎不是一个正常谱面 OAO")
-    c = OsuCalculator()
+    c = get_osu_calculator()
     mods = normalize_mods_for_pp(mods, source, ruleset_id)
     res = c.calculate(path, ruleset_id % 4, acc=100, mods=mods)
     return res
@@ -181,7 +261,7 @@ async def warm_up_pp_calculator():
 
         def _warm():
             Beatmap(path=path)
-            OsuCalculator().calculate(path, 0, [], 100)
+            get_osu_calculator().calculate(path, 0, [], 100)
 
         await asyncio.to_thread(_warm)
     except Exception as e:

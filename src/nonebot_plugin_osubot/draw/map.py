@@ -14,10 +14,10 @@ from ..utils import GM, normalize_map_mode
 from .map_render import (
     duration_text,
     file_data_uri,
-    remote_image_data_uri,
-    render_map_template,
+    cached_avatar_data_uri,
     beatmap_background_data_uri,
 )
+from .map_svg import render_map_svg
 
 
 TEMPLATE_PATH = Path(__file__).parent / "map_templates"
@@ -106,7 +106,7 @@ async def draw_map_info(mapid: int, mods: list[str], target_mode: int | None = N
             original.beatmapset_id,
             f"https://assets.ppy.sh/beatmaps/{original.beatmapset_id}/covers/cover@2x.jpg",
         ),
-        remote_image_data_uri(f"https://a.ppy.sh/{original.user_id}"),
+        cached_avatar_data_uri(original.user_id),
     )
     mod_images = {
         name: file_data_uri(MOD_PATH / f"{name}.png", "image/png")
@@ -154,4 +154,4 @@ async def draw_map_info(mapid: int, mods: list[str], target_mode: int | None = N
             "object_labels": OBJECT_LABELS[mode],
         },
     }
-    return await render_map_template(TEMPLATE_PATH, payload, "map-refined", 960)
+    return await render_map_svg(payload)

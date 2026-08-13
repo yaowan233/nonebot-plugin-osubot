@@ -1,11 +1,8 @@
 import asyncio
 from io import BytesIO
-from pathlib import Path
 from datetime import datetime, timedelta
 
-import jinja2
-
-from ..pp import cal_pp
+from ..pp import cal_stars
 from ..utils import FGM, NGM, normalize_map_mode
 from ..schema import Beatmap, NewScore
 from ..exceptions import NetworkError
@@ -13,9 +10,10 @@ from ..mods import get_mods_list, get_speed_change_labels
 from ..schema.score import UnifiedScore, NewStatistics, get_score_version
 from ..api import osu_api, get_user_info_data, get_ppysb_map_scores
 from ..file import ensure_osu_file, get_pfm_img, map_path
-from .score import cal_score_info
+from .score import _player_avatar_data_uri, cal_score_info
+from .score_history_svg import render_score_history_svg
 from .static import ColorArr
-from .browser import persistent_page, wait_for_page_assets
+from .svg_render import file_data_uri
 
 
 def _to_datetime(value: str) -> datetime:
@@ -125,16 +123,12 @@ async def draw_score_history(
     )
     info = await info_task
 
-    plays = []
-    for offset, score in enumerate(scores, start=start):
+    def build_play(offset: int, score: UnifiedScore) -> dict:
         score = cal_score_info(is_lazer, score, source)
         pp_value = float(score.pp or 0)
         stars = float(beatmap.difficulty_rating)
         try:
-            calculation = cal_pp(score, str(osu_path.absolute()), source)
-            stars = float(calculation.stars)
-            if not pp_value:
-                pp_value = float(calculation.pp)
+            stars = cal_stars(score, str(osu_path.absolute()), source)
         except Exception:
             pass
         speed_changes = get_speed_change_labels(score.mods)
@@ -142,29 +136,32 @@ async def draw_score_history(
         if "NC" in mod_names and "DT" in mod_names:
             mod_names.remove("DT")
         star_color, star_text = _star_style(stars)
-        plays.append(
-            {
-                "index": offset,
-                "rank": score.rank,
-                "passed": score.passed,
-                "score": score.legacy_total_score or score.total_score,
-                "pp": pp_value,
-                "accuracy": score.accuracy,
-                "combo": score.max_combo,
-                "stars": stars,
-                "star_color": star_color,
-                "star_text": star_text,
-                "mods": mod_names,
-                "speed_changes": speed_changes,
-                "judgements": _judgements(score),
-                "date": score.ended_at.strftime("%Y.%m.%d %H:%M"),
-                "score_version": score.score_version if source == "osu" else None,
-            }
-        )
+        return {
+            "index": offset,
+            "rank": score.rank,
+            "passed": score.passed,
+            "score": score.legacy_total_score or score.total_score,
+            "pp": pp_value,
+            "accuracy": score.accuracy,
+            "combo": score.max_combo,
+            "stars": stars,
+            "star_color": star_color,
+            "star_text": star_text,
+            "mods": mod_names,
+            "speed_changes": speed_changes,
+            "judgements": _judgements(score),
+            "date": score.ended_at.strftime("%Y.%m.%d %H:%M"),
+            "score_version": score.score_version if source == "osu" else None,
+        }
+
+    plays = await asyncio.gather(
+        *(asyncio.to_thread(build_play, offset, score) for offset, score in enumerate(scores, start=start))
+    )
 
     best_key = max(range(len(plays)), key=lambda index: (plays[index]["score"], plays[index]["pp"]))
     plays[best_key]["best"] = True
     statistics = info.statistics.model_dump() if info.statistics else {}
+    avatar_data = await _player_avatar_data_uri(info, source)
     map_star_color, map_star_text = _star_style(beatmap.difficulty_rating)
     data = {
         "source": "ppysb" if source == "ppysb" else "osu!",
@@ -179,7 +176,7 @@ async def draw_score_history(
         "user": {
             "id": info.id,
             "name": info.username,
-            "avatar": info.avatar_url,
+            "avatar_data": avatar_data,
             "country": info.country_code,
             "pp": statistics.get("pp", 0),
             "global_rank": statistics.get("global_rank"),
@@ -195,20 +192,9 @@ async def draw_score_history(
             "star_color": map_star_color,
             "star_text": map_star_text,
             "bpm": beatmap.bpm,
-            "cover": cover_path.resolve().as_uri() if cover_path.exists() else beatmap.beatmapset.covers.cover,
+            "cover_data": file_data_uri(cover_path) if cover_path.exists() else None,
         },
         "plays": plays,
     }
 
-    template_path = Path(__file__).parent / "score_history_templates"
-    template = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
-    ).get_template("index.html")
-    async with persistent_page(
-        "score_history", (template_path / "index.html").as_uri(), {"width": 1240, "height": 900}, device_scale_factor=1
-    ) as page:
-        await page.set_content(await template.render_async(d=data), wait_until="domcontentloaded")
-        await wait_for_page_assets(page)
-        element = await page.query_selector("#history")
-        assert element
-        return BytesIO(await element.screenshot(type="jpeg", quality=92))
+    return await render_score_history_svg(data)

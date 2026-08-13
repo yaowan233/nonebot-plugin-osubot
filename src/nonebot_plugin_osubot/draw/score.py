@@ -4,10 +4,9 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 from datetime import datetime, timedelta
+from functools import lru_cache
 
-import jinja2
 from PIL import Image
-from osu_tools import OsuCalculator
 
 from ..info import get_bg
 from ..utils import FGM, NGM, normalize_map_mode
@@ -16,7 +15,7 @@ from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
 from ..schema import Beatmap, NewScore
 from ..beatmap_stats_moder import with_mods
-from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components
+from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components, get_osu_calculator
 from ..schema.score import Mod, UnifiedBeatmap, UnifiedScore, NewStatistics, get_score_version
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
 from ..file import map_path, ensure_osu_file, user_cache_path, team_cache_path, get_projectimg
@@ -27,7 +26,7 @@ from .utils import (
     filter_scores_with_regex,
 )
 from .static import osufile
-from .browser import persistent_page, wait_for_page_assets
+from .score_svg import render_score_svg
 
 
 async def draw_score(
@@ -280,32 +279,48 @@ def _format_stat(value) -> str:
     return f"{int(value or 0):,}"
 
 
-def _image_data_uri(image: Image.Image, image_format: str = "PNG") -> str:
+def _image_data_uri(
+    image: Image.Image,
+    image_format: str = "PNG",
+    max_size: tuple[int, int] | None = None,
+) -> str:
     output = BytesIO()
     frame = image.convert("RGBA" if image_format == "PNG" else "RGB")
+    if max_size:
+        frame.thumbnail(max_size, Image.Resampling.LANCZOS)
     # 不开 optimize：多轮压缩每次出图要多花几百毫秒，体积差距对内嵌 data uri 不值得
-    frame.save(output, image_format)
-    return f"data:image/{image_format.lower()};base64,{base64.b64encode(output.getvalue()).decode()}"
+    save_options = {"quality": 85} if image_format == "JPEG" else {}
+    try:
+        frame.save(output, image_format, **save_options)
+        return f"data:image/{image_format.lower()};base64,{base64.b64encode(output.getvalue()).decode()}"
+    finally:
+        frame.close()
+
+
+@lru_cache(maxsize=128)
+def _png_file_data_uri(path: Path) -> str:
+    """Embed tiny bundled assets so native SVG rendering needs no file I/O."""
+    return f"data:image/png;base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
 async def _cover_data_uri(map_id: int, set_id: int) -> str:
     try:
         cover_image = await get_bg(map_id, set_id)
-        cover = _image_data_uri(cover_image, "JPEG")
+        cover = _image_data_uri(cover_image, "JPEG", (720, 450))
         cover_image.close()
         return cover
     except Exception:
-        return _image_data_uri(Image.new("RGB", (640, 360), (9, 18, 29)), "JPEG")
+        return _image_data_uri(Image.new("RGB", (640, 360), (9, 18, 29)), "JPEG", (720, 450))
 
 
 async def _player_avatar_data_uri(info: UnifiedUser, source: str) -> str:
     try:
         player_image = await open_user_icon(info, source)
-        avatar = _image_data_uri(player_image)
+        avatar = _image_data_uri(player_image, max_size=(128, 128))
         player_image.close()
         return avatar
     except Exception:
-        return _image_data_uri(Image.new("RGBA", (128, 128), (30, 45, 58, 255)))
+        return _image_data_uri(Image.new("RGBA", (128, 128), (30, 45, 58, 255)), max_size=(128, 128))
 
 
 async def _owner_avatar_data(owner_id: int) -> str:
@@ -318,10 +333,10 @@ async def _owner_avatar_data(owner_id: int) -> str:
             with Image.open(avatar_bytes) as avatar:
                 avatar.convert("RGBA").save(avatar_path, "PNG")
         with Image.open(avatar_path) as avatar:
-            return _image_data_uri(avatar)
+            return _image_data_uri(avatar, max_size=(64, 64))
     except Exception:
         placeholder = Image.new("RGBA", (32, 32), (40, 55, 68, 255))
-        return _image_data_uri(placeholder)
+        return _image_data_uri(placeholder, max_size=(64, 64))
 
 
 async def _team_icon_data(info: UnifiedUser) -> str | None:
@@ -334,7 +349,7 @@ async def _team_icon_data(info: UnifiedUser) -> str | None:
             with Image.open(icon_bytes) as icon:
                 icon.convert("RGBA").save(icon_path, "PNG")
         with Image.open(icon_path) as icon:
-            return _image_data_uri(icon)
+            return _image_data_uri(icon, max_size=(128, 64))
     except Exception:
         return None
 
@@ -428,7 +443,7 @@ async def render_score_template(
     accuracy_pp = {}
     target_accuracies = (96, 98) if mode in {0, 1, 3} else ()
     try:
-        calculator = OsuCalculator()
+        calculator = get_osu_calculator()
         for target_accuracy in target_accuracies:
             accuracy_pp[target_accuracy] = calculator.calculate(
                 osu_path,
@@ -506,7 +521,7 @@ async def render_score_template(
             mod_data.append(
                 {
                     "name": mod.acronym,
-                    "icon": icon.as_uri(),
+                    "icon": _png_file_data_uri(icon),
                     "speed_change": get_speed_change_label(mod),
                 }
             )
@@ -576,7 +591,7 @@ async def render_score_template(
         "combo": combo,
         "combo_is_full": combo_is_full,
         "stars": f"{display_stars:.2f}",
-        "rank_image": rank_image.as_uri(),
+        "rank_image": _png_file_data_uri(rank_image),
         "score_rank": grank,
         "profile_third_label": profile_third_label,
         "profile_third_value": profile_third_value,
@@ -598,21 +613,7 @@ async def render_score_template(
         "pp_items": [{"label": label, "value": _format_pp(value)} for label, value in pp_items],
     }
 
-    template_path = Path(__file__).parent / "score_templates"
-    template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path), enable_async=True)  # noqa: S701
-    template = template_env.get_template("index.html")
-    html = await template.render_async(d=data)
-    async with persistent_page(
-        "score", (template_path / "index.html").as_uri(), {"width": 1440, "height": 900}
-    ) as page:
-        await page.set_content(html, wait_until="domcontentloaded")
-        await page.evaluate("colourStarBadge()")
-        await wait_for_page_assets(page)
-        # 字体就绪后再跑一次自适应，确保标题/艺人名按真实字宽收缩
-        await page.evaluate("fitBeatmapTitle();fitArtistName()")
-        elem = await page.query_selector("#score")
-        assert elem
-        return BytesIO(await elem.screenshot(type="jpeg", quality=92))
+    return await render_score_svg(data)
 
 
 def cal_legacy_acc(statistics: NewStatistics) -> float:

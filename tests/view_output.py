@@ -631,6 +631,32 @@ async def test_sl_real(app: App):
 
 
 @pytest.mark.asyncio
+async def test_map_real(app: App):
+    """map 单谱面信息真实图片输出"""
+    from nonebot_plugin_osubot.draw.map import draw_map_info
+
+    t0 = time.perf_counter()
+    data = await draw_map_info(1462799, [])
+    elapsed = time.perf_counter() - t0
+    path = OUT / "map_osu.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [map osu] {elapsed:.2f}s -> {path.name}")
+
+
+@pytest.mark.asyncio
+async def test_map_mod_real(app: App):
+    """map 单谱面信息带 Mod 真实图片输出"""
+    from nonebot_plugin_osubot.draw.map import draw_map_info
+
+    t0 = time.perf_counter()
+    data = await draw_map_info(1462799, ["HD", "DT"])
+    elapsed = time.perf_counter() - t0
+    path = OUT / "map_osu_hd_dt.png"
+    path.write_bytes(data.getvalue())
+    print(f"\n  [map osu +HD+DT] {elapsed:.2f}s -> {path.name}")
+
+
+@pytest.mark.asyncio
 async def test_bmap_real(app: App):
     """bmap 谱面组信息 真实图片输出"""
     from nonebot_plugin_osubot.draw.bmap import draw_bmap_info

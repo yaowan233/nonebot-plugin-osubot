@@ -3,6 +3,7 @@
 import base64
 import pytest
 from io import BytesIO
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -130,6 +131,33 @@ def test_map_score_conversion_keeps_pp_and_beatmap_metadata():
     assert converted.beatmap.artist == "artist"
     assert converted.beatmap.title == "title"
     assert converted.beatmap.creator == "mapper"
+
+
+def test_cal_stars_uses_mod_settings_without_recalculating_pp(after_nonebot_init, tmp_path):
+    from nonebot_plugin_osubot.pp import cal_stars
+    from nonebot_plugin_osubot.schema.score import Mod, NewStatistics, UnifiedScore
+
+    source = next((Path("data/osu/map")).glob("*/*.osu"), None)
+    if source is None:
+        pytest.skip("本地没有可用于 rosu-pp 的谱面缓存")
+    beatmap = tmp_path / "map.osu"
+    beatmap.write_bytes(source.read_bytes())
+    base = {
+        "ruleset_id": 0,
+        "rank": "S",
+        "accuracy": 99.0,
+        "total_score": 1_000_000,
+        "ended_at": "2026-01-01T00:00:00",
+        "max_combo": 1000,
+        "statistics": NewStatistics(great=1000),
+        "passed": True,
+        "pp": 123.45,
+    }
+    nomod = UnifiedScore(mods=[], **base)
+    faster = UnifiedScore(mods=[Mod(acronym="DT", settings={"speed_change": 1.2})], **base)
+
+    assert cal_stars(faster, str(beatmap)) > cal_stars(nomod, str(beatmap))
+    assert faster.pp == 123.45
 
 
 def _img_msg(event):

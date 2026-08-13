@@ -432,6 +432,7 @@ async def test_tbp_one_day_filter_uses_exact_24_hours(app: App):
             new=AsyncMock(return_value=[recent, expired]),
         ),
         patch.object(draw_bp_module, "cal_score_info", side_effect=lambda _, score, __: score),
+        patch.object(draw_bp_module, "get_user_info_data", new=AsyncMock(return_value=SimpleNamespace())),
         patch.object(
             draw_bp_module,
             "draw_pfm",
@@ -464,6 +465,7 @@ async def test_tbp_applies_date_mods_and_range_in_order(app: App):
             new=AsyncMock(return_value=[recent_hd, recent_nm, expired_hd]),
         ),
         patch.object(draw_bp_module, "cal_score_info", side_effect=lambda _, score, __: score),
+        patch.object(draw_bp_module, "get_user_info_data", new=AsyncMock(return_value=SimpleNamespace())),
         patch.object(
             draw_bp_module,
             "draw_pfm",

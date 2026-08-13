@@ -1,10 +1,13 @@
 import hashlib
 import importlib
+import os
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from PIL import Image
 
 
 def _checksum(content: bytes) -> str:
@@ -24,6 +27,19 @@ def test_osu_file_matches_checksum(file_module, tmp_path: Path):
     assert not file_module.osu_file_matches_checksum(osu_file, _checksum(b"old revision"))
     assert file_module.osu_file_matches_checksum(osu_file, None)
     assert not file_module.osu_file_matches_checksum(tmp_path / "missing.osu", None)
+
+
+def test_badge_cache_path_is_stable(file_module, tmp_path: Path):
+    badge = SimpleNamespace(image_url="https://example.com/badge.png", description="Tournament Winner")
+
+    with patch.object(file_module, "badge_cache_path", tmp_path):
+        first = file_module.badge_cache_file(badge)
+        second = file_module.badge_cache_file(badge)
+
+    assert first == second
+    assert first.parent == tmp_path
+    assert first.suffix == ".png"
+    assert "Tournament" not in first.name
 
 
 @pytest.mark.asyncio
@@ -96,3 +112,41 @@ async def test_download_osu_rejects_wrong_official_revision(file_module, tmp_pat
         await file_module.download_osu.__wrapped__(123, 456, _checksum(b"current revision"))
 
     assert not (tmp_path / "123" / "456.osu").exists()
+
+
+def _jpeg_bytes(colour: str) -> BytesIO:
+    output = BytesIO()
+    Image.new("RGB", (8, 8), colour).save(output, "JPEG")
+    output.seek(0)
+    return output
+
+
+@pytest.mark.asyncio
+async def test_background_cache_refreshes_only_after_beatmap_revision(after_nonebot_init, tmp_path: Path):
+    bg_module = importlib.import_module("nonebot_plugin_osubot.info.bg")
+    set_path = tmp_path / "123"
+    set_path.mkdir()
+    osu_file = set_path / "456.osu"
+    cover_file = set_path / "cover.jpg"
+    osu_file.write_text("osu file", encoding="utf-8")
+    cover_file.write_bytes(_jpeg_bytes("red").getvalue())
+    os.utime(osu_file, ns=(1_000_000_000, 1_000_000_000))
+    os.utime(cover_file, ns=(2_000_000_000, 2_000_000_000))
+    download = AsyncMock(return_value=_jpeg_bytes("blue"))
+
+    with (
+        patch.object(bg_module, "map_path", tmp_path),
+        patch.object(bg_module, "re_map", return_value="cover.jpg"),
+        patch.object(bg_module, "get_map_bg", download),
+    ):
+        cached = await bg_module.get_bg(456, 123)
+        download.assert_not_awaited()
+        assert cached.getpixel((0, 0))[0] > cached.getpixel((0, 0))[2]
+        cached.close()
+
+        os.utime(osu_file, ns=(3_000_000_000, 3_000_000_000))
+        refreshed = await bg_module.get_bg(456, 123)
+
+    download.assert_awaited_once()
+    assert refreshed.getpixel((0, 0))[2] > refreshed.getpixel((0, 0))[0]
+    refreshed.close()

@@ -1,21 +1,18 @@
 import asyncio
-import json
 from datetime import datetime, timedelta
 from io import BytesIO
-from pathlib import Path
 from typing import Optional, Union
-
-import jinja2
 
 from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from ..mods import get_mods_list, get_speed_change_labels
-from ..pp import cal_pp
+from ..pp import cal_stars
 from ..schema.score import UnifiedScore
-from .score import cal_score_info
+from .bp_svg import render_bp_svg
+from .score import _player_avatar_data_uri, _team_icon_data, cal_score_info
+from .svg_render import thumbnail_data_uri
 from .utils import filter_scores_with_regex
-from .browser import persistent_page, wait_for_page_assets
 
 
 async def draw_bp(
@@ -30,19 +27,38 @@ async def draw_bp(
     search_condition: list,
     source: str,
 ) -> BytesIO:
-    scores, selected = await select_bp_scores(
+    info_task = asyncio.create_task(get_user_info_data(uid, mode, source))
+    try:
+        scores, selected = await select_bp_scores(
+            project,
+            uid,
+            is_lazer,
+            mode,
+            mods,
+            low_bound,
+            high_bound,
+            day,
+            search_condition,
+            source,
+        )
+        info = await info_task
+    except BaseException:
+        if not info_task.done():
+            info_task.cancel()
+        await asyncio.gather(info_task, return_exceptions=True)
+        raise
+    return await draw_pfm(
         project,
         uid,
-        is_lazer,
+        scores,
+        selected,
         mode,
-        mods,
+        source,
         low_bound,
         high_bound,
         day,
-        search_condition,
-        source,
+        info=info,
     )
-    return await draw_pfm(project, uid, scores, selected, mode, source, low_bound, high_bound, day)
 
 
 async def select_bp_scores(
@@ -58,7 +74,15 @@ async def select_bp_scores(
     source: str,
 ) -> tuple[list[UnifiedScore], list[UnifiedScore]]:
     """Fetch and filter BP scores without rendering them."""
-    scores = await get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer)
+    api_limit = high_bound if project == "bp" and not mods and not search_condition else 200
+    scores = await get_user_scores(
+        uid,
+        mode,
+        "best",
+        source=source,
+        legacy_only=not is_lazer,
+        limit=api_limit,
+    )
     candidates = scores
     if project == "tbp":
         cutoff = datetime.now() - timedelta(days=day)
@@ -91,6 +115,8 @@ async def draw_pfm(
     low_bound: int = 0,
     high_bound: int = 0,
     day: int = 0,
+    *,
+    info=None,
 ) -> Union[str, BytesIO]:
     cover_paths = [map_path / str(score.beatmap.set_id) / "cover.jpg" for score in score_ls_filtered]
     cover_tasks = [
@@ -103,23 +129,23 @@ async def draw_pfm(
     osu_tasks = [
         ensure_osu_file(score.beatmap.set_id, score.beatmap.id, score.beatmap.checksum) for score in score_ls_filtered
     ]
-    info, *_ = await asyncio.gather(
-        get_user_info_data(uid, mode, source),
-        asyncio.gather(*cover_tasks),
-        asyncio.gather(*osu_tasks),
+    resources = [asyncio.gather(*cover_tasks), asyncio.gather(*osu_tasks)]
+    if info is None:
+        info, *_ = await asyncio.gather(get_user_info_data(uid, mode, source), *resources)
+    else:
+        await asyncio.gather(*resources)
+
+    avatar_data, team_data = await asyncio.gather(
+        _player_avatar_data_uri(info, source),
+        _team_icon_data(info),
     )
 
-    plays = []
-    for score, cover_path in zip(score_ls_filtered, cover_paths):
+    def build_play(score: UnifiedScore, cover_path, fallback_index: int) -> dict:
         osu_file = map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu"
         stars = score.beatmap.stars
-        pp_value = score.pp or 0
         if osu_file.exists():
             try:
-                pp_info = cal_pp(score, str(osu_file.absolute()), source)
-                stars = pp_info.stars
-                if source != "ppysb":
-                    pp_value = pp_info.pp
+                stars = cal_stars(score, str(osu_file.absolute()), source)
             except Exception:
                 pass
         speed_changes = get_speed_change_labels(score.mods)
@@ -129,25 +155,30 @@ async def draw_pfm(
         try:
             bp_index = score_ls.index(score) + 1
         except ValueError:
-            bp_index = low_bound + len(plays)
-        plays.append(
-            {
-                "index": bp_index,
-                "title": score.beatmap.title,
-                "artist": score.beatmap.artist,
-                "version": score.beatmap.version,
-                "cover": cover_path.resolve().as_uri()
-                if cover_path.exists()
-                else f"https://assets.ppy.sh/beatmaps/{score.beatmap.set_id}/covers/cover.jpg",
-                "pp": pp_value,
-                "accuracy": score.accuracy,
-                "stars": stars,
-                "mods": mods,
-                "speed_changes": speed_changes,
-                "date": score.ended_at.strftime("%Y.%m.%d"),
-                "score_version": getattr(score, "score_version", None) if source == "osu" else None,
-            }
+            bp_index = fallback_index
+        return {
+            "index": bp_index,
+            "title": score.beatmap.title,
+            "artist": score.beatmap.artist,
+            "version": score.beatmap.version,
+            "cover_data": (
+                thumbnail_data_uri(cover_path, max_width=320, max_height=180) if cover_path.exists() else None
+            ),
+            "pp": score.pp or 0,
+            "accuracy": score.accuracy,
+            "stars": stars,
+            "mods": mods,
+            "speed_changes": speed_changes,
+            "date": score.ended_at.strftime("%Y.%m.%d"),
+            "score_version": getattr(score, "score_version", None) if source == "osu" else None,
+        }
+
+    plays = await asyncio.gather(
+        *(
+            asyncio.to_thread(build_play, score, cover_path, low_bound + index)
+            for index, (score, cover_path) in enumerate(zip(score_ls_filtered, cover_paths))
         )
+    )
 
     if project == "bp":
         shown_high = min(high_bound, low_bound + len(score_ls_filtered) - 1)
@@ -170,38 +201,12 @@ async def draw_pfm(
         "user": {
             "id": info.id,
             "name": info.username,
-            "avatar": info.avatar_url,
+            "avatar_data": avatar_data,
             "country": info.country_code,
             "support_level": info.support_level,
-            "team": info.team.model_dump() if info.team else None,
+            "team": ({**info.team.model_dump(), "flag_data": team_data} if info.team else None),
             "statistics": info.statistics.model_dump() if info.statistics else {},
         },
         "plays": plays,
     }
-
-    template_path = Path(__file__).parent / "bp_templates"
-    template = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
-    ).get_template("index.html")
-    async with persistent_page(
-        "bp", (template_path / "index.html").as_uri(), {"width": 1440, "height": 900}, device_scale_factor=1
-    ) as page:
-        await page.set_content(
-            await template.render_async(payload_json=json.dumps(payload, ensure_ascii=False)),
-            wait_until="domcontentloaded",
-        )
-        await wait_for_page_assets(page)
-        await page.evaluate(
-            "const box=document.querySelector('.minor'),label=box?.querySelector('span');"
-            "if(box&&label&&!box.querySelector('.minor-lines')){"
-            "const parts=label.textContent.split(' · '),logo=box.querySelector('img')?.outerHTML||'';"
-            "const cut=Math.max(1,parts.length-2);"
-            "box.innerHTML=logo+'<span class=\"minor-lines\"><span>'+"
-            "parts.slice(0,cut).join(' · ')+'</span><span>'+"
-            "parts.slice(cut).join(' · ')+'</span></span>'}"
-        )
-        await page.evaluate("fitProfileName()")
-        element = await page.query_selector("#display")
-        assert element
-        result = await element.screenshot(type="jpeg", quality=90)
-    return BytesIO(result)
+    return await render_bp_svg(payload)

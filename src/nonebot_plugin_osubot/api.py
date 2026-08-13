@@ -28,6 +28,9 @@ cache = ExpiringDict(max_len=1, max_age_seconds=86400)
 map_cache = ExpiringDict(max_len=500, max_age_seconds=3600)
 # 谱面搜索结果短暂缓存，减少 AI 连续澄清/查询时重复访问官方 API。
 beatmap_search_cache = ExpiringDict(max_len=100, max_age_seconds=300)
+# 谱面集详情用于 bmap 绘图，短时缓存可避免同一谱面集连续查询重复等待 API。
+beatmapset_cache = ExpiringDict(max_len=256, max_age_seconds=300)
+_beatmapset_tasks: dict[int, asyncio.Task[BeatmapSets]] = {}
 plugin_config = get_plugin_config(Config)
 
 key = plugin_config.osu_key
@@ -450,10 +453,27 @@ async def get_users(users: list[int]):
     return [User(**i) for i in req.json()["users"]] if req else []
 
 
-async def get_beatmapsets_info(sid) -> BeatmapSets:
+async def _fetch_beatmapset(sid: int) -> BeatmapSets:
     url = f"https://osu.ppy.sh/api/v2/beatmapsets/{sid}"
     res = await make_request(url, await get_headers(), "未查询到该谱面集(Setid)信息")
-    return BeatmapSets(**res)
+    result = BeatmapSets(**res)
+    beatmapset_cache[sid] = result
+    return result
+
+
+async def get_beatmapsets_info(sid) -> BeatmapSets:
+    sid = int(sid)
+    if (cached := beatmapset_cache.get(sid)) is not None:
+        return cached
+    task = _beatmapset_tasks.get(sid)
+    if task is None:
+        task = asyncio.create_task(_fetch_beatmapset(sid))
+        _beatmapset_tasks[sid] = task
+    try:
+        return await asyncio.shield(task)
+    finally:
+        if task.done() and _beatmapset_tasks.get(sid) is task:
+            _beatmapset_tasks.pop(sid, None)
 
 
 async def search_beatmapsets(query: str) -> list[dict]:

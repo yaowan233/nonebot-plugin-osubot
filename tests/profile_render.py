@@ -5,7 +5,7 @@
     uv run --dev python -m pytest tests/profile_render.py -q -s
 
 对同一用户同一模式连跑 3 次：
-  hot#1  热缓存第 1 次（含浏览器首次拿页等冷启动开销）
+  hot#1  热缓存第 1 次（含原生渲染器首次加载开销）
   hot#2  热缓存第 2 次（稳定态）
   cold   冷缓存（map/user/team 缓存目录重定向到临时目录，全部重新下载）
 
@@ -61,84 +61,6 @@ def _wrap_sync(fn, name):
     return wrapper
 
 
-_TIMED_PAGE_METHODS = {"set_content", "evaluate", "query_selector"}
-
-
-class _TimedElement:
-    def __init__(self, elem):
-        self._elem = elem
-
-    def __getattr__(self, name):
-        attr = getattr(self._elem, name)
-        if name == "screenshot":
-
-            @functools.wraps(attr)
-            async def timed(*a, **kw):
-                t = time.perf_counter()
-                try:
-                    return await attr(*a, **kw)
-                finally:
-                    _rec("playwright: elem.screenshot", time.perf_counter() - t)
-
-            return timed
-        return attr
-
-
-class _TimedPage:
-    def __init__(self, page):
-        self._page = page
-
-    def __getattr__(self, name):
-        attr = getattr(self._page, name)
-        if name not in _TIMED_PAGE_METHODS:
-            return attr
-
-        @functools.wraps(attr)
-        async def timed(*a, **kw):
-            t = time.perf_counter()
-            res = await attr(*a, **kw)
-            _rec(f"playwright: page.{name}", time.perf_counter() - t)
-            if name == "query_selector" and res is not None:
-                return _TimedElement(res)
-            return res
-
-        return timed
-
-
-class _TimedCM:
-    def __init__(self, cm):
-        self._cm = cm
-
-    async def __aenter__(self):
-        t = time.perf_counter()
-        page = await self._cm.__aenter__()
-        _rec("playwright: persistent_page(新建/复用)", time.perf_counter() - t)
-        return _TimedPage(page)
-
-    async def __aexit__(self, *args):
-        return await self._cm.__aexit__(*args)
-
-
-class _TimedTemplate:
-    def __init__(self, template):
-        self._template = template
-
-    def __getattr__(self, name):
-        attr = getattr(self._template, name)
-        if name == "render_async":
-
-            @functools.wraps(attr)
-            async def timed(*a, **kw):
-                t = time.perf_counter()
-                try:
-                    return await attr(*a, **kw)
-                finally:
-                    _rec("jinja 模板渲染", time.perf_counter() - t)
-
-            return timed
-        return attr
-
-
 def _install_instrumentation(monkeypatch):
     import nonebot_plugin_osubot.draw.score as score_mod
     from osu_tools import OsuCalculator
@@ -155,6 +77,7 @@ def _install_instrumentation(monkeypatch):
         "_team_icon_data",
         "_cover_data_uri",
         "_player_avatar_data_uri",
+        "render_score_svg",
         "draw_score_pic",
         "render_score_template",
     ):
@@ -165,21 +88,6 @@ def _install_instrumentation(monkeypatch):
 
     monkeypatch.setattr(OsuCalculator, "calculate", _wrap_sync(OsuCalculator.calculate, "OsuCalculator.calculate"))
 
-    orig_persistent_page = score_mod.persistent_page
-
-    def timed_persistent_page(*a, **kw):
-        return _TimedCM(orig_persistent_page(*a, **kw))
-
-    monkeypatch.setattr(score_mod, "persistent_page", timed_persistent_page)
-
-    orig_env = score_mod.jinja2.Environment
-
-    class TimedEnv(orig_env):
-        def get_template(self, name, *a, **kw):
-            return _TimedTemplate(super().get_template(name, *a, **kw))
-
-    monkeypatch.setattr(score_mod.jinja2, "Environment", TimedEnv)
-
     return score_mod
 
 
@@ -187,17 +95,7 @@ _GROUPS = [
     ("网络 API", ["get_user_scores", "get_user_info_data", "osu_api", "ensure_osu_file"]),
     ("资源下载/读取", ["get_projectimg", "get_bg", "open_user_icon", "_owner_avatar_data", "_team_icon_data"]),
     ("PP 计算", ["cal_pp", "get_if_pp_ss_pp", "get_pp_components", "OsuCalculator.calculate"]),
-    ("jinja 模板渲染", ["jinja 模板渲染"]),
-    (
-        "playwright 浏览器",
-        [
-            "playwright: persistent_page(新建/复用)",
-            "playwright: page.set_content",
-            "playwright: page.evaluate",
-            "playwright: page.query_selector",
-            "playwright: elem.screenshot",
-        ],
-    ),
+    ("原生 SVG 出图", ["render_score_svg"]),
     ("骨架", ["draw_score_pic", "render_score_template", "cal_score_info"]),
 ]
 
@@ -259,3 +157,124 @@ async def test_profile_draw_score(app: App, monkeypatch, tmp_path):
         monkeypatch.setattr(mod, "team_cache_path", tmp_path / "team", raising=False)
     wall = await run_once()
     _report("cold 冷缓存(全部重新下载)", wall)
+
+
+@pytest.mark.asyncio
+async def test_profile_bmap(app: App, monkeypatch):
+    import nonebot_plugin_osubot.api as api_mod
+    import nonebot_plugin_osubot.draw.bmap as bmap_mod
+    import nonebot_plugin_osubot.draw.map_render as map_render_mod
+
+    local_timings = defaultdict(float)
+    local_counts = defaultdict(int)
+
+    def wrap_async(module, name):
+        original = getattr(module, name)
+
+        @functools.wraps(original)
+        async def wrapper(*args, **kwargs):
+            started = time.perf_counter()
+            try:
+                return await original(*args, **kwargs)
+            finally:
+                local_timings[name] += time.perf_counter() - started
+                local_counts[name] += 1
+
+        monkeypatch.setattr(module, name, wrapper)
+
+    for module, name in (
+        (api_mod, "_fetch_beatmapset"),
+        (bmap_mod, "get_beatmapsets_info"),
+        (bmap_mod, "_avatar_data_uri"),
+        (bmap_mod, "beatmap_background_data_uri"),
+        (bmap_mod, "render_map_template"),
+        (map_render_mod, "get_bg"),
+    ):
+        wrap_async(module, name)
+
+    async def run_once(label):
+        local_timings.clear()
+        local_counts.clear()
+        started = time.perf_counter()
+        await bmap_mod.draw_bmap_info(691220)
+        wall = time.perf_counter() - started
+        print(f"\n[bmap {label}] {wall:.3f}s")
+        for name, elapsed in sorted(local_timings.items(), key=lambda item: item[1], reverse=True):
+            print(f"  {name:<32} {elapsed:.3f}s x{local_counts[name]}")
+
+    await run_once("cold-process")
+    await run_once("hot")
+
+
+@pytest.mark.asyncio
+async def test_profile_map(app: App, monkeypatch):
+    import nonebot_plugin_osubot.draw.map as map_mod
+    import nonebot_plugin_osubot.draw.svg_render as svg_render_mod
+
+    local_timings = defaultdict(float)
+    local_counts = defaultdict(int)
+
+    def wrap_async(name):
+        original = getattr(map_mod, name)
+
+        @functools.wraps(original)
+        async def wrapper(*args, **kwargs):
+            started = time.perf_counter()
+            try:
+                return await original(*args, **kwargs)
+            finally:
+                local_timings[name] += time.perf_counter() - started
+                local_counts[name] += 1
+
+        monkeypatch.setattr(map_mod, name, wrapper)
+
+    def wrap_sync(name):
+        original = getattr(map_mod, name)
+
+        @functools.wraps(original)
+        def wrapper(*args, **kwargs):
+            started = time.perf_counter()
+            try:
+                return original(*args, **kwargs)
+            finally:
+                local_timings[name] += time.perf_counter() - started
+                local_counts[name] += 1
+
+        monkeypatch.setattr(map_mod, name, wrapper)
+
+    for name in (
+        "osu_api",
+        "ensure_osu_file",
+        "beatmap_background_data_uri",
+        "cached_avatar_data_uri",
+        "render_map_svg",
+    ):
+        wrap_async(name)
+    for name in ("_ruleset_map", "get_ss_pp", "with_mods"):
+        wrap_sync(name)
+
+    original_svg_to_bytes = svg_render_mod.svg_to_bytes
+
+    @functools.wraps(original_svg_to_bytes)
+    def profiled_svg_to_bytes(*args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return original_svg_to_bytes(*args, **kwargs)
+        finally:
+            local_timings["svg_to_bytes"] += time.perf_counter() - started
+            local_counts["svg_to_bytes"] += 1
+
+    monkeypatch.setattr(svg_render_mod, "svg_to_bytes", profiled_svg_to_bytes)
+
+    async def run_once(label):
+        local_timings.clear()
+        local_counts.clear()
+        started = time.perf_counter()
+        await map_mod.draw_map_info(1462799, ["HD", "DT"])
+        wall = time.perf_counter() - started
+        print(f"\n[map {label}] {wall:.3f}s")
+        for name, elapsed in sorted(local_timings.items(), key=lambda item: item[1], reverse=True):
+            print(f"  {name:<32} {elapsed:.3f}s x{local_counts[name]}")
+
+    await run_once("cold-process")
+    await run_once("hot")

@@ -188,7 +188,22 @@ def re_map(file: Union[bytes, Path]) -> str:
 
 
 async def make_badge_cache_file(badge: Badge):
-    path = badge_cache_path / f"{hash(badge.description)}.png"
-    badge_icon = await get_projectimg(badge.image_url)
-    with open(path, "wb") as f:
-        f.write(badge_icon.getvalue())
+    path = badge_cache_file(badge)
+    if path.exists():
+        return path
+    badge_icon = await asyncio.wait_for(get_projectimg(badge.image_url), timeout=3)
+    task_id = id(asyncio.current_task())
+    temporary = path.with_name(f".{path.name}.{task_id}.tmp")
+    try:
+        temporary.write_bytes(badge_icon.getvalue())
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
+
+
+def badge_cache_file(badge: Badge) -> Path:
+    """Return a stable badge cache path that survives Python process restarts."""
+    identity = f"{badge.image_url}\0{badge.description}".encode()
+    digest = hashlib.sha256(identity).hexdigest()[:24]
+    return badge_cache_path / f"{digest}.png"
