@@ -353,7 +353,10 @@ async def test_native_bp_raster_stays_inside_local_budget():
     with Image.open(result) as image:
         assert image.width == 1400
         assert image.height > 1000
-    assert elapsed < 1.0
+    # A typical local run stays around 0.6s. GitHub's shared Linux runners can
+    # take roughly twice as long inside native resvg, so keep enough headroom
+    # for host variance while still catching meaningful regressions.
+    assert elapsed < 1.5
 
 
 def test_info_only_recalculates_stars_for_difficulty_mods():

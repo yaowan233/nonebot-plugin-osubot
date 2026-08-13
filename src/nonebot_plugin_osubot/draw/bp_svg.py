@@ -136,4 +136,10 @@ def build_bp_svg(payload: dict) -> tuple[str, int]:
 
 async def render_bp_svg(payload: dict) -> object:
     svg, height = build_bp_svg(payload)
-    return await render_svg_jpeg_async(svg, width=WIDTH, height=height, quality=90)
+    return await render_svg_jpeg_async(
+        svg,
+        width=WIDTH,
+        height=height,
+        quality=90,
+        image_rendering="optimize_speed",
+    )
