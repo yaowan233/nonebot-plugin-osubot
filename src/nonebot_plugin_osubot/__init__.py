@@ -102,10 +102,12 @@ async def update_info():
 
 @driver.on_startup
 async def _warm_up_pp_calculator():
-    # 后台预热，不阻塞启动；首次 pp 计算有近 2s 的初始化开销
+    # 后台预热，不阻塞启动；首次 pp 计算和原生出图都有初始化开销
+    from .draw.svg_render import warm_up_native_renderer
     from .pp import warm_up_pp_calculator
 
     asyncio.create_task(warm_up_pp_calculator())
+    asyncio.create_task(warm_up_native_renderer())
 
 
 driver.on_shutdown(close_persistent_pages)

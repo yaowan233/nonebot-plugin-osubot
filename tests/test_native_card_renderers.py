@@ -309,6 +309,7 @@ def test_info_global_rank_tier_colors(rank, percent, expected):
 @pytest.mark.asyncio
 async def test_native_bp_raster_stays_inside_local_budget():
     from nonebot_plugin_osubot.draw.bp_svg import render_bp_svg
+    from nonebot_plugin_osubot.draw.svg_render import warm_up_native_renderer
 
     play = {
         "index": 1,
@@ -340,6 +341,10 @@ async def test_native_bp_raster_stays_inside_local_budget():
         "plays": [{**play, "index": index + 1} for index in range(20)],
     }
 
+    # Production performs this same warm-up in a background startup task. Keep
+    # the budget focused on steady-state local rendering instead of import,
+    # FreeType font loading, and the first resvg call.
+    await warm_up_native_renderer()
     started = time.perf_counter()
     result = await render_bp_svg(payload)
     elapsed = time.perf_counter() - started

@@ -20,6 +20,7 @@ EXTRA_FONT_PATH = Path(__file__).parent / "template_assets" / "extra.woff"
 FONT_FAMILY = "Source Han Sans SC"
 _thumbnail_locks: dict[Path, threading.Lock] = {}
 _thumbnail_locks_guard = threading.Lock()
+_NATIVE_RENDER_FONT_SIZES = (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 25, 28, 31, 34, 35, 43)
 
 
 def escape_text(value: object) -> str:
@@ -270,3 +271,23 @@ def render_svg_png(svg: str, *, width: int, height: int) -> bytes:
         skip_system_fonts=True,
         image_rendering="optimize_quality",
     )
+
+
+def _warm_up_native_renderer_sync() -> None:
+    """Load common card fonts and initialize resvg before the first command."""
+    for size in _NATIVE_RENDER_FONT_SIZES:
+        font_for_text("OSU 0123456789", size)
+        font_for_text("谱面成绩", size)
+    font_for_text("\ue800", 25, "extra")
+    render_svg_png(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">'
+        '<rect width="16" height="16" fill="#101824"/>'
+        "</svg>",
+        width=16,
+        height=16,
+    )
+
+
+async def warm_up_native_renderer() -> None:
+    """Warm the native card renderer without blocking plugin startup."""
+    await asyncio.to_thread(_warm_up_native_renderer_sync)
