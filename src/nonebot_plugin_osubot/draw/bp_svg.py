@@ -53,9 +53,9 @@ def _profile(payload: dict) -> str:
 
 def _summary(payload: dict) -> str:
     plays = payload["plays"]
-    average_pp = sum(float(play["pp"]) for play in plays) / len(plays)
-    average_accuracy = sum(float(play["accuracy"]) for play in plays) / len(plays)
-    peak = max(float(play["stars"]) for play in plays)
+    average_pp = sum(float(play["pp"]) for play in plays) / len(plays) if plays else 0
+    average_accuracy = sum(float(play["accuracy"]) for play in plays) / len(plays) if plays else 0
+    peak = max((float(play["stars"]) for play in plays), default=0)
     return f"""
 <rect x="420" y="0" width="980" height="185" fill="#f5f1e9"/>
 <rect x="420" y="0" width="980" height="4" fill="{CYAN}"/>

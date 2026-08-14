@@ -62,6 +62,31 @@ def test_bp_svg_dynamic_height_and_team_alignment():
     assert "OSU! 第一名成绩档案" in firsts_svg
 
 
+def test_bp_svg_empty_payload_has_safe_zero_summary():
+    from nonebot_plugin_osubot.draw.bp_svg import build_bp_svg
+
+    payload = {
+        "mode": "osu",
+        "section_title": "上传成绩",
+        "range_label": "近 24 小时",
+        "generated_at": "2026/08/14 15:42:27",
+        "user": {
+            "name": "player",
+            "country": "CN",
+            "support_level": 0,
+            "avatar_data": _image_uri(),
+            "team": None,
+            "statistics": {},
+        },
+        "plays": [],
+    }
+
+    svg, _height = build_bp_svg(payload)
+
+    assert "共 0 项" in svg
+    assert "平均 PP" in svg
+
+
 def test_mod_strip_hides_nm_and_preserves_custom_speed_mod_artwork():
     from nonebot_plugin_osubot.draw.svg_components import mod_strip
 

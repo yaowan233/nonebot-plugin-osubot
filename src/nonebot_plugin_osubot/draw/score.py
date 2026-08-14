@@ -616,27 +616,17 @@ async def render_score_template(
     return await render_score_svg(data)
 
 
-def cal_legacy_acc(statistics: NewStatistics) -> float:
-    statistics.great = statistics.great or 0
-    statistics.good = statistics.good or 0
-    statistics.ok = statistics.ok or 0
-    statistics.meh = statistics.meh or 0
-    statistics.perfect = statistics.perfect or 0
-    statistics.miss = statistics.miss or 0
-    num = statistics.great + statistics.good + statistics.ok + statistics.meh + statistics.perfect + statistics.miss
+def cal_legacy_acc(statistics: NewStatistics) -> float | None:
+    great = statistics.great or 0
+    good = statistics.good or 0
+    ok = statistics.ok or 0
+    meh = statistics.meh or 0
+    perfect = statistics.perfect or 0
+    miss = statistics.miss or 0
+    num = great + good + ok + meh + perfect + miss
     if num == 0:
-        return 1
-    return (
-        (
-            statistics.perfect * 300
-            + statistics.great * 300
-            + statistics.good * 200
-            + statistics.ok * 100
-            + statistics.meh * 50
-        )
-        / (num * 300)
-        * 100
-    )
+        return None
+    return (perfect * 300 + great * 300 + good * 200 + ok * 100 + meh * 50) / (num * 300) * 100
 
 
 def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
@@ -660,7 +650,7 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
     max_combo_60 = max_combo * 0.6
     max_combo_1_percent = max_combo * 0.01
 
-    if score_info.accuracy == 1:
+    if score_info.accuracy >= 100:
         return "XH" if is_hidden else "X"
 
     if score_info.ruleset_id == 3:
@@ -716,9 +706,13 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
 
 
 def cal_score_info(is_lazer: bool, score_info: UnifiedScore, source: str = "osu") -> UnifiedScore:
-    if score_info.ruleset_id == 3 and not is_lazer and source != "ppysb":
-        score_info.accuracy = cal_legacy_acc(score_info.statistics)
-    if not is_lazer and source != "ppysb":
+    score_version = getattr(score_info, "score_version", None)
+    is_stable_score = score_version == "stable" or (score_version is None and not is_lazer)
+    if score_info.ruleset_id == 3 and is_stable_score and source != "ppysb":
+        legacy_accuracy = cal_legacy_acc(score_info.statistics)
+        if legacy_accuracy is not None:
+            score_info.accuracy = legacy_accuracy
+    if is_stable_score and source != "ppysb":
         is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
         score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return score_info

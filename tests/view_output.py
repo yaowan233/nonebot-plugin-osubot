@@ -85,7 +85,7 @@ async def test_pfm_real(app: App, mode_name, uid, mode):
 
 @pytest.mark.asyncio
 async def test_firsts_real(app: App):
-    """玩家第一名成绩列表的真实 API 图片输出。"""
+    """默认 30 条玩家第一名成绩列表的真实 API 图片输出。"""
     from nonebot_plugin_osubot.draw import draw_bp
 
     uid, mode = USERS["osu"]
@@ -97,7 +97,7 @@ async def test_firsts_real(app: App):
         mode=mode,
         mods=[],
         low_bound=1,
-        high_bound=10,
+        high_bound=30,
         day=0,
         search_condition=[],
         source="osu",
@@ -105,7 +105,7 @@ async def test_firsts_real(app: App):
     elapsed = time.perf_counter() - t0
     path = OUT / "firsts_osu.png"
     path.write_bytes(data.getvalue())
-    print(f"\n  [firsts] {elapsed:.2f}s -> {path.name}")
+    print(f"\n  [firsts 30] {elapsed:.2f}s -> {path.name}")
 
 
 @pytest.mark.asyncio

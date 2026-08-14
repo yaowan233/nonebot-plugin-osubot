@@ -141,6 +141,50 @@ async def test_bp_list_keeps_official_api_pp_while_calculating_modded_stars(tmp_
 
 
 @pytest.mark.asyncio
+async def test_draw_pfm_rejects_an_empty_score_list():
+    import nonebot_plugin_osubot.draw.bp as bp
+    from nonebot_plugin_osubot.exceptions import NetworkError
+
+    with pytest.raises(NetworkError, match="未查询到游玩记录"):
+        await bp.draw_pfm("prlist", 1, [], [], "osu", "osu")
+
+
+def test_bp_list_only_requires_osu_files_for_local_calculation():
+    from nonebot_plugin_osubot.draw.bp import _requires_osu_file
+
+    def score(pp, acronym):
+        return SimpleNamespace(pp=pp, mods=[SimpleNamespace(acronym=acronym)])
+
+    assert not _requires_osu_file(score(321.45, "HD"))
+    assert not _requires_osu_file(score(321.45, "CL"))
+    assert _requires_osu_file(score(321.45, "DT"))
+    assert _requires_osu_file(score(321.45, "DA"))
+    assert _requires_osu_file(score(None, "HD"))
+
+
+def test_bp_list_caches_locally_calculated_pp(tmp_path):
+    import nonebot_plugin_osubot.draw.bp as bp
+
+    osu_file = tmp_path / "map.osu"
+    osu_file.write_text("osu file", encoding="utf-8")
+    score = SimpleNamespace(
+        ruleset_id=0,
+        mods=[],
+        accuracy=99.0,
+        max_combo=100,
+        legacy_total_score=1_000_000,
+        statistics=SimpleNamespace(model_dump=lambda **_: {"great": 100}),
+    )
+    bp._calculated_pp_cache.clear()
+    with patch.object(bp, "cal_pp", return_value=SimpleNamespace(pp=456.78)) as cal_pp:
+        assert bp._calculated_pp(score, osu_file, "osu") == 456.78
+        assert bp._calculated_pp(score, osu_file, "osu") == 456.78
+
+    cal_pp.assert_called_once()
+    bp._calculated_pp_cache.clear()
+
+
+@pytest.mark.asyncio
 async def test_first_place_list_uses_distinct_heading(tmp_path):
     import nonebot_plugin_osubot.draw.bp as bp
 

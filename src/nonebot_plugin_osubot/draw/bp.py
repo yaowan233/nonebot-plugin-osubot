@@ -1,4 +1,6 @@
 import asyncio
+import json
+import threading
 from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, Union
@@ -13,6 +15,55 @@ from .bp_svg import render_bp_svg
 from .score import _player_avatar_data_uri, _team_icon_data, cal_score_info
 from .svg_render import thumbnail_data_uri
 from .utils import filter_scores_with_regex
+
+
+_STAR_RATING_MODS = frozenset({"DT", "NC", "HT", "HR", "EZ", "DC", "DA"})
+_CALCULATED_PP_CACHE_MAX_ENTRIES = 1024
+_calculated_pp_cache: dict[tuple, float] = {}
+_calculated_pp_cache_lock = threading.Lock()
+
+
+def _has_star_rating_mod(score: UnifiedScore) -> bool:
+    return any(mod.acronym.upper() in _STAR_RATING_MODS for mod in score.mods)
+
+
+def _requires_osu_file(score: UnifiedScore) -> bool:
+    return score.pp is None or _has_star_rating_mod(score)
+
+
+def _calculated_pp(score: UnifiedScore, osu_file, source: str) -> float:
+    stat = osu_file.stat()
+    statistics = getattr(score, "statistics", None)
+    if hasattr(statistics, "model_dump"):
+        statistics = statistics.model_dump(mode="json")
+    mods = [
+        {
+            "acronym": mod.acronym,
+            **({"settings": mod.settings} if mod.settings else {}),
+        }
+        for mod in score.mods
+    ]
+    key = (
+        str(osu_file.resolve()),
+        stat.st_mtime_ns,
+        stat.st_size,
+        source,
+        getattr(score, "ruleset_id", None),
+        json.dumps(mods, ensure_ascii=True, sort_keys=True, separators=(",", ":")),
+        getattr(score, "accuracy", None),
+        getattr(score, "max_combo", None),
+        getattr(score, "legacy_total_score", None),
+        json.dumps(statistics, ensure_ascii=True, sort_keys=True, separators=(",", ":"), default=str),
+    )
+    with _calculated_pp_cache_lock:
+        if key in _calculated_pp_cache:
+            return _calculated_pp_cache[key]
+    value = float(cal_pp(score, str(osu_file.absolute()), source).pp)
+    with _calculated_pp_cache_lock:
+        if len(_calculated_pp_cache) >= _CALCULATED_PP_CACHE_MAX_ENTRIES:
+            _calculated_pp_cache.pop(next(iter(_calculated_pp_cache)))
+        _calculated_pp_cache[key] = value
+    return value
 
 
 async def draw_bp(
@@ -119,6 +170,8 @@ async def draw_pfm(
     *,
     info=None,
 ) -> Union[str, BytesIO]:
+    if not score_ls_filtered:
+        raise NetworkError("未查询到游玩记录")
     cover_paths = [map_path / str(score.beatmap.set_id) / "cover.jpg" for score in score_ls_filtered]
     cover_tasks = [
         get_pfm_img(
@@ -126,50 +179,55 @@ async def draw_pfm(
             cover_path,
         )
         for score, cover_path in zip(score_ls_filtered, cover_paths)
+        if not cover_path.exists()
     ]
     osu_tasks = [
-        ensure_osu_file(score.beatmap.set_id, score.beatmap.id, score.beatmap.checksum) for score in score_ls_filtered
+        ensure_osu_file(score.beatmap.set_id, score.beatmap.id, score.beatmap.checksum)
+        for score in score_ls_filtered
+        if _requires_osu_file(score)
     ]
     resources = [asyncio.gather(*cover_tasks), asyncio.gather(*osu_tasks)]
     if info is None:
         info, *_ = await asyncio.gather(get_user_info_data(uid, mode, source), *resources)
+        avatar_data, team_data = await asyncio.gather(
+            _player_avatar_data_uri(info, source),
+            _team_icon_data(info),
+        )
     else:
-        await asyncio.gather(*resources)
+        _, _, avatar_data, team_data = await asyncio.gather(
+            *resources,
+            _player_avatar_data_uri(info, source),
+            _team_icon_data(info),
+        )
 
-    avatar_data, team_data = await asyncio.gather(
-        _player_avatar_data_uri(info, source),
-        _team_icon_data(info),
-    )
+    score_indices = {id(score): index for index, score in enumerate(score_ls, start=1)}
 
     def build_play(score: UnifiedScore, cover_path, fallback_index: int) -> dict:
         osu_file = map_path / str(score.beatmap.set_id) / f"{score.beatmap.id}.osu"
         stars = score.beatmap.stars
         pp = score.pp
-        if osu_file.exists():
+        if osu_file.exists() and _has_star_rating_mod(score):
             try:
                 stars = cal_stars(score, str(osu_file.absolute()), source)
             except Exception:
                 pass
-            if pp is None:
-                try:
-                    pp = cal_pp(score, str(osu_file.absolute()), source).pp
-                except Exception:
-                    pass
+        if pp is None and osu_file.exists():
+            try:
+                pp = _calculated_pp(score, osu_file, source)
+            except Exception:
+                pass
         speed_changes = get_speed_change_labels(score.mods)
         mods = [mod.acronym for mod in score.mods]
         if "NC" in mods and "DT" in mods:
             mods.remove("DT")
-        try:
-            bp_index = score_ls.index(score) + 1
-        except ValueError:
-            bp_index = fallback_index
+        bp_index = score_indices.get(id(score), fallback_index)
         return {
             "index": bp_index,
             "title": score.beatmap.title,
             "artist": score.beatmap.artist,
             "version": score.beatmap.version,
             "cover_data": (
-                thumbnail_data_uri(cover_path, max_width=320, max_height=180) if cover_path.exists() else None
+                thumbnail_data_uri(cover_path, max_width=256, max_height=145) if cover_path.exists() else None
             ),
             "pp": pp or 0,
             "accuracy": score.accuracy,

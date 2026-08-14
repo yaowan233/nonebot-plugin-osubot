@@ -57,3 +57,36 @@ async def test_score_list_defaults_to_top_30(
 
     assert get_scores.call_args.args[5:] == (include_fails, 0, 30)
     assert draw_list.call_args.args[0] == project
+
+
+@pytest.mark.asyncio
+async def test_pass_list_reports_no_recent_passes_instead_of_rendering_empty_list(app: App):
+    import nonebot
+
+    pr_module = importlib.import_module(PR_MODULE)
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    event = fake_group_message_event_v11(message=Message("/pl"))
+
+    with patch_session(UTILS_MODULE, session):
+        with (
+            patch(f"{PR_MODULE}.get_user_scores", new=AsyncMock(return_value=[])),
+            patch(f"{PR_MODULE}.draw_pfm", new=AsyncMock()) as draw_list,
+        ):
+            async with app.test_matcher(pr_module.pass_list) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(
+                    event,
+                    Message(
+                        [
+                            MessageSegment.reply(event.message_id),
+                            MessageSegment.text("在查找用户：test_player osu模式 最近1-30成绩时 未查询到游玩记录"),
+                        ]
+                    ),
+                    result={"message_id": 1},
+                )
+                ctx.should_finished()
+
+    draw_list.assert_not_awaited()

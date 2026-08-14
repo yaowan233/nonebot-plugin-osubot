@@ -54,6 +54,69 @@ def test_non_official_scores_have_no_client_version():
     assert score.score_version is None
 
 
+def _mania_score(*, score_version: str, accuracy: float, statistics, rank: str = "A", passed: bool = True):
+    from nonebot_plugin_osubot.schema.score import UnifiedScore
+
+    return UnifiedScore(
+        mods=[],
+        ruleset_id=3,
+        rank=rank,
+        accuracy=accuracy,
+        total_score=900000,
+        legacy_total_score=900000 if score_version == "stable" else 0,
+        ended_at=datetime(2026, 8, 14, 12, 0),
+        max_combo=1000,
+        statistics=statistics,
+        passed=passed,
+        score_version=score_version,
+    )
+
+
+def test_stable_mania_uses_legacy_accuracy_in_mixed_score_queries():
+    from nonebot_plugin_osubot.draw.score import cal_score_info
+    from nonebot_plugin_osubot.schema.score import NewStatistics
+
+    statistics = NewStatistics(perfect=1, great=1, good=1, ok=1, meh=1, miss=1)
+    score = _mania_score(score_version="stable", accuracy=0, statistics=statistics)
+
+    cal_score_info(True, score)
+
+    assert score.accuracy == pytest.approx(52.7777777778)
+
+
+def test_stable_mania_repairs_incorrect_zero_accuracy_and_f_rank_from_api():
+    from nonebot_plugin_osubot.draw.score import cal_score_info
+    from nonebot_plugin_osubot.schema.score import NewStatistics
+
+    score = _mania_score(
+        score_version="stable",
+        accuracy=0,
+        statistics=NewStatistics(perfect=800, great=150, good=30, ok=10, meh=5, miss=5),
+        rank="F",
+        passed=True,
+    )
+
+    cal_score_info(True, score)
+
+    assert score.accuracy == pytest.approx(97.4166666667)
+    assert score.rank == "S"
+
+
+def test_lazer_mania_accuracy_is_not_replaced_by_legacy_formula():
+    from nonebot_plugin_osubot.draw.score import cal_score_info
+    from nonebot_plugin_osubot.schema.score import NewStatistics
+
+    score = _mania_score(
+        score_version="lazer",
+        accuracy=96.875,
+        statistics=NewStatistics(perfect=1, great=1),
+    )
+
+    cal_score_info(False, score)
+
+    assert score.accuracy == 96.875
+
+
 def test_score_version_templates_render_source_badges():
     template_root = Path(__file__).parents[1] / "src" / "nonebot_plugin_osubot" / "draw"
 

@@ -34,6 +34,8 @@ async def _draw_recent_list(state: T_State, include_fails: bool, project: str):
             low - 1,
             high if state["source"] == "ppysb" else high - low + 1,
         )
+        if not scores:
+            raise NetworkError("未查询到游玩记录")
     except NetworkError as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
