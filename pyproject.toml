@@ -24,7 +24,7 @@ dependencies = [
     "osu-tools-py>=0.1.4",
     "rhythmgame-tools>=2.0.0",
     "nonebot-plugin-uninfo>=0.11.1",
-    "resvg-py>=0.3.3,<0.4",
+    "resvg-py>=0.3.3,<0.5",
 ]
 requires-python = ">=3.10,<3.14"
 readme = "README.md"
