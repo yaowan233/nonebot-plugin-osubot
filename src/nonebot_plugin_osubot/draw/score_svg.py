@@ -262,6 +262,28 @@ def _render_judgements(data: dict) -> str:
         f'<rect x="{left}" y="553" width="341" height="310" fill="#111925ed"/>',
         _text(left + 24, 592, "判定明细", 20, weight=700),
     ]
+    ratio = str(data.get("ratio") or "")
+    if ratio:
+        ratio_left = left + 167
+        ratio_width = 150
+        ratio_size = fit_text(ratio, 82, 15, 11)
+        parts.extend(
+            [
+                f'<g data-role="mania-ratio"><rect x="{ratio_left}" y="566" width="{ratio_width}" height="32" '
+                'rx="2" fill="#ffd9660d" stroke="#ffd96666"/>',
+                f'<rect x="{ratio_left}" y="566" width="3" height="32" fill="#ffd966"/>',
+                _text(ratio_left + 11, 587, "黄彩比", 11, fill="#ffd966", weight=700),
+                _text(
+                    ratio_left + ratio_width - 10,
+                    588,
+                    ratio,
+                    ratio_size,
+                    weight=700,
+                    anchor="end",
+                ),
+                "</g>",
+            ]
+        )
     judgements = list(data.get("judgements") or [])
     columns = max(2, min(3, int(data.get("judge_cols") or 2)))
     for index, item in enumerate(judgements):

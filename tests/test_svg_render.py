@@ -123,3 +123,23 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
             for x in range(rate_region.width)
             for red, green, _blue in (rate_region.getpixel((x, y)),)
         )
+
+
+def test_mania_score_judgements_show_yellow_rainbow_ratio():
+    from nonebot_plugin_osubot.draw.score_svg import _render_judgements
+
+    mania_svg = _render_judgements(
+        {
+            "ratio": "12.5 : 1",
+            "judge_cols": 3,
+            "judgements": [
+                {"label": "MAX / 彩 300", "value": 1250, "display": "1,250"},
+                {"label": "300", "value": 100, "display": "100"},
+            ],
+        }
+    )
+
+    assert 'data-role="mania-ratio"' in mania_svg
+    assert ">黄彩比</text>" in mania_svg
+    assert ">12.5 : 1</text>" in mania_svg
+    assert 'data-role="mania-ratio"' not in _render_judgements({"ratio": None})
