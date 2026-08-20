@@ -26,5 +26,11 @@ class NetworkManager:
                     )
         return self._client
 
+    async def close(self) -> None:
+        async with self._lock:
+            client, self._client = self._client, None
+        if client is not None:
+            await client.aclose()
+
 
 network_manager = NetworkManager()

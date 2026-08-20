@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from pathlib import Path
 
-from nonebot import get_driver, get_loaded_plugins, require
+from nonebot import get_driver, get_loaded_plugins, get_plugin_config, require
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
@@ -55,8 +55,12 @@ from sqlalchemy import select
 from .config import Config
 from .matcher import *  # noqa
 from .info import update_users_info
+from .api import close_osu_api_network
 from .draw.browser import close_persistent_pages
 from .database.models import UserData
+from .network.scheduler import RequestPriority, osu_api_priority
+
+plugin_config = get_plugin_config(Config)
 
 try:
     require("nonebot_plugin_ai_groupmate")
@@ -87,17 +91,36 @@ __plugin_meta__ = PluginMetadata(
 )
 
 
-@scheduler.scheduled_job("cron", hour="0", misfire_grace_time=60)
+@scheduler.scheduled_job("cron", hour="0", coalesce=True, max_instances=1, misfire_grace_time=60)
 async def update_info():
     async with get_session() as session:
-        result = (await session.scalars(select(UserData))).all()
-    if not result:
+        users = list(await session.scalars(select(UserData.osu_id).distinct()))
+    if not users:
         return
-    users = [i.osu_id for i in result]
     groups = [users[i : i + 50] for i in range(0, len(users), 50)]
-    for group in groups:
-        await update_users_info(group)
-    logger.info(f"已更新{len(result)}位玩家数据")
+    with osu_api_priority(RequestPriority.BACKGROUND):
+        for group in groups:
+            await update_users_info(group)
+    logger.info(f"已更新{len(users)}位玩家数据")
+
+
+@scheduler.scheduled_job(
+    "cron",
+    hour=plugin_config.osu_score_history_sync_hour,
+    coalesce=True,
+    max_instances=1,
+    misfire_grace_time=3600,
+)
+async def update_score_history():
+    if not plugin_config.osu_score_history_enabled:
+        return
+
+    from .score_collector import collect_active_score_history
+
+    await collect_active_score_history(
+        concurrency=plugin_config.osu_score_history_concurrency,
+        recent_limit=plugin_config.osu_score_history_recent_limit,
+    )
 
 
 @driver.on_startup
@@ -111,3 +134,4 @@ async def _warm_up_pp_calculator():
 
 
 driver.on_shutdown(close_persistent_pages)
+driver.on_shutdown(close_osu_api_network)

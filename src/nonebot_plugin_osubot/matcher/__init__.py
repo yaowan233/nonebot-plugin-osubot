@@ -1,6 +1,7 @@
 from .mu import mu
 from .info import info
 from .bp import bp, pfm, tbp, first
+from .bp_fix import bp_fix
 from .getbg import getbg
 from .match import match
 from .medal import medal
@@ -44,6 +45,7 @@ __all__ = [
     "bind",
     "unbind",
     "bp",
+    "bp_fix",
     "pfm",
     "tbp",
     "first",

@@ -16,7 +16,7 @@ PINK = "#ff3f8e"
 CYAN = "#20a9b8"
 
 
-def _profile(payload: dict) -> str:
+def bp_profile(payload: dict) -> str:
     user = payload["user"]
     stats = user.get("statistics") or {}
     team = user.get("team") or {}
@@ -42,7 +42,7 @@ def _profile(payload: dict) -> str:
 <defs><clipPath id="bp-avatar"><rect x="48" y="34" width="110" height="110" rx="8"/></clipPath></defs>
 <rect x="58" y="44" width="110" height="110" rx="8" fill="{PINK}"/>
 {image(user.get("avatar_data"), 48, 34, 110, 110, clip="bp-avatar")}
-{text(182, 57, f"OSU! {payload['section_title']}档案", 11, fill="#df347c", weight=700)}
+{text(182, 57, f"OSU! {payload.get('section_title', 'BP')}档案", 11, fill="#df347c", weight=700)}
 {fitted_text(182, 96, name, name_size, name_available, fill="#101824", weight=700)}
 {supporter_badge(182 + name_width + 8, 72, support)}
 {team_image}
@@ -130,7 +130,7 @@ def build_bp_svg(payload: dict) -> tuple[str, int]:
 <rect width="{WIDTH}" height="{height}" fill="#f5f1e9"/>
 <rect y="185" width="{WIDTH}" height="{height - 185}" fill="url(#bp-dots)"/>
 <rect width="420" height="4" fill="{PINK}"/><rect x="420" width="980" height="4" fill="{CYAN}"/>
-{_profile(payload)}{_summary(payload)}{cards}</svg>"""
+{bp_profile(payload)}{_summary(payload)}{cards}</svg>"""
     return svg, height
 
 

@@ -107,6 +107,19 @@ OSU_KEY=你的客户端密钥
 | `OSU_PROXY` | 否 | 无 | 请求 osu! API 时使用的代理地址或代理配置 |
 | `OSUTRACK_ENABLED` | 否 | `true` | 是否启用玩家信息定时追踪 |
 | `OSUTRACK_DEFAULT_DAYS` | 否 | `365` | 历史查询的默认追踪天数 |
+| `OSU_SCORE_HISTORY_ENABLED` | 否 | `true` | 是否采集官网排行榜无法查询的成绩历史 |
+| `OSU_SCORE_HISTORY_SYNC_HOUR` | 否 | `2` | 每日采集小时（服务器本地时间，0–23） |
+| `OSU_SCORE_HISTORY_CONCURRENCY` | 否 | `2` | 成绩采集并发数（1–20） |
+| `OSU_SCORE_HISTORY_RECENT_LIMIT` | 否 | `200` | 每个活跃用户/模式检查的最近成绩数（1–1000） |
+| `OSU_API_MAX_CONCURRENCY` | 否 | `8` | osu! API 总并发；至少为前台和后台各保留一个 worker |
+| `OSU_API_FOREGROUND_RATE` | 否 | `8.0` | 交互查询每秒启动的最大请求数 |
+| `OSU_API_BACKGROUND_RATE` | 否 | `1.0` | 历史采集每秒启动的最大请求数 |
+| `OSU_API_QUEUE_SIZE` | 否 | `512` | 前台、后台各自的最大等待队列长度 |
+| `OSU_API_MAX_RETRIES` | 否 | `3` | 网络错误、429 和 5xx 的最大重试次数 |
+| `OSU_RENDER_MAX_CONCURRENCY` | 否 | `2` | Playwright 同时执行的最大绘图数（1–16） |
+| `OSU_RENDER_QUEUE_SIZE` | 否 | `64` | Playwright 绘图等待队列的最大长度 |
+| `OSU_RENDER_QUEUE_TIMEOUT` | 否 | `30.0` | 绘图请求允许排队的最长秒数 |
+| `OSU_RENDER_TIMEOUT` | 否 | `180.0` | 单次 Playwright 绘图的最长执行秒数 |
 
 ### 完整预览配置
 

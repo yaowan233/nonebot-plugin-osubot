@@ -116,6 +116,12 @@ class UnifiedBeatmap(Base):
     checksum: Optional[str] = None
     user_id: Optional[int] = None
     convert: Optional[bool] = False
+    status: Optional[str] = None
+    is_scoreable: Optional[bool] = None
+    max_combo: Optional[int] = None
+    count_circles: Optional[int] = None
+    count_sliders: Optional[int] = None
+    count_spinners: Optional[int] = None
 
 
 class UnifiedScore(Base):
@@ -133,6 +139,8 @@ class UnifiedScore(Base):
     pp: Optional[float] = None
     beatmapset: Optional[Beatmapset] = None
     score_version: Optional[Literal["stable", "lazer"]] = None
+    score_id: Optional[int] = None
+    user_id: Optional[int] = None
 
 
 def get_score_version(legacy_score_id: Optional[int]) -> Literal["stable", "lazer"]:

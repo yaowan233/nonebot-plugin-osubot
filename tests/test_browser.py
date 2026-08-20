@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -67,6 +68,12 @@ def browser_pool(monkeypatch):
     browser._pages.clear()
     browser._locks.clear()
     browser._closing = False
+    browser._render_scheduler = browser._RenderScheduler(
+        max_concurrency=2,
+        queue_size=64,
+        queue_timeout=1,
+        render_timeout=1,
+    )
     yield browser, playwright
     browser._pages.clear()
     browser._locks.clear()
@@ -132,3 +139,130 @@ async def test_wait_for_page_assets_uses_bounded_wait(browser_pool):
     assert "Promise.race" in script
     assert "document.fonts.ready" in script
     assert timeout == 2500
+
+
+@pytest.mark.asyncio
+async def test_render_scheduler_limits_global_concurrency(browser_pool):
+    browser, _ = browser_pool
+    browser._render_scheduler = browser._RenderScheduler(
+        max_concurrency=1,
+        queue_size=4,
+        queue_timeout=1,
+        render_timeout=1,
+    )
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+    second_started = asyncio.Event()
+
+    async def first_render():
+        async with browser.persistent_page("first", None, {"width": 100, "height": 100}):
+            first_started.set()
+            await release_first.wait()
+
+    async def second_render():
+        async with browser.persistent_page("second", None, {"width": 100, "height": 100}):
+            second_started.set()
+
+    first_task = asyncio.create_task(first_render())
+    await first_started.wait()
+    second_task = asyncio.create_task(second_render())
+    await asyncio.sleep(0)
+
+    assert not second_started.is_set()
+    assert browser.render_scheduler_snapshot().queued == 1
+
+    release_first.set()
+    await asyncio.gather(first_task, second_task)
+
+    snapshot = browser.render_scheduler_snapshot()
+    assert snapshot.completed == 2
+    assert snapshot.in_flight == 0
+    assert snapshot.queued == 0
+
+
+@pytest.mark.asyncio
+async def test_render_scheduler_rejects_when_queue_is_full(browser_pool):
+    browser, _ = browser_pool
+    browser._render_scheduler = browser._RenderScheduler(
+        max_concurrency=1,
+        queue_size=1,
+        queue_timeout=1,
+        render_timeout=1,
+    )
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+
+    async def first_render():
+        async with browser.persistent_page("first", None, {"width": 100, "height": 100}):
+            first_started.set()
+            await release_first.wait()
+
+    async def queued_render():
+        async with browser.persistent_page("second", None, {"width": 100, "height": 100}):
+            pass
+
+    first_task = asyncio.create_task(first_render())
+    await first_started.wait()
+    queued_task = asyncio.create_task(queued_render())
+    await asyncio.sleep(0)
+
+    with pytest.raises(browser.RenderQueueFull, match="请求过多"):
+        async with browser.persistent_page("third", None, {"width": 100, "height": 100}):
+            pass
+
+    release_first.set()
+    await asyncio.gather(first_task, queued_task)
+    assert browser.render_scheduler_snapshot().rejected == 1
+
+
+@pytest.mark.asyncio
+async def test_render_scheduler_times_out_queued_request(browser_pool):
+    browser, _ = browser_pool
+    browser._render_scheduler = browser._RenderScheduler(
+        max_concurrency=1,
+        queue_size=2,
+        queue_timeout=0.01,
+        render_timeout=1,
+    )
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+
+    async def first_render():
+        async with browser.persistent_page("first", None, {"width": 100, "height": 100}):
+            first_started.set()
+            await release_first.wait()
+
+    first_task = asyncio.create_task(first_render())
+    await first_started.wait()
+
+    with pytest.raises(browser.RenderQueueTimeout, match="排队超时"):
+        async with browser.persistent_page("second", None, {"width": 100, "height": 100}):
+            pass
+
+    release_first.set()
+    await first_task
+    assert browser.render_scheduler_snapshot().rejected == 1
+
+
+@pytest.mark.asyncio
+async def test_render_timeout_drops_page_and_updates_metrics(browser_pool):
+    browser, playwright = browser_pool
+    browser._render_scheduler = browser._RenderScheduler(
+        max_concurrency=1,
+        queue_size=2,
+        queue_timeout=1,
+        render_timeout=0.01,
+    )
+
+    with pytest.raises(browser.RenderTimeout, match="已终止"):
+        async with browser.persistent_page("slow", None, {"width": 100, "height": 100}):
+            await asyncio.Event().wait()
+
+    assert playwright.leases[0].exit_count == 1
+    snapshot = browser.render_scheduler_snapshot()
+    assert snapshot.failed == 1
+    assert snapshot.timed_out == 1
+    assert snapshot.in_flight == 0
+
+    async with browser.persistent_page("slow", None, {"width": 100, "height": 100}) as page:
+        assert page is playwright.leases[1].page

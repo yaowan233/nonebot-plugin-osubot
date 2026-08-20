@@ -7,6 +7,7 @@ from .utils import split_msg
 from .map_context import get_last_map_id, get_last_set_id, remember_map, remember_set
 from ..exceptions import NetworkError
 from ..draw import draw_map_info, draw_bmap_info
+from ..performance import PerformanceScenarioError, parse_performance_scenario
 
 osu_map = on_command("map", aliases={"m"}, priority=11, block=True)
 bmap = on_command("bmap", aliases={"bm"}, priority=11, block=True)
@@ -20,11 +21,16 @@ async def _map(event: Event, state: T_State):
     if not map_id:
         await UniMessage.text("请输入地图ID，或先查询一张谱面").finish(reply_to=True)
     try:
-        if state["mode_explicit"]:
+        scenario = parse_performance_scenario(state["query"])
+        if state["mode_explicit"] and scenario is not None:
+            m = await draw_map_info(map_id, mods, int(state["mode"]), scenario=scenario)
+        elif state["mode_explicit"]:
             m = await draw_map_info(map_id, mods, int(state["mode"]))
+        elif scenario is not None:
+            m = await draw_map_info(map_id, mods, scenario=scenario)
         else:
             m = await draw_map_info(map_id, mods)
-    except NetworkError as e:
+    except (NetworkError, PerformanceScenarioError) as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图mapid:{map_id}{mods}时 {str(e)}").finish(reply_to=True)
     remember_map(event, map_id)

@@ -1,12 +1,10 @@
-from datetime import date
-
 from nonebot.log import logger
 from nonebot_plugin_orm import get_session
-from sqlalchemy import select
 
 from ..utils import FGM
 from ..api import get_osu_user, get_users
-from ..database.models import InfoData, UserData
+from ..database.models import UserData
+from .snapshot import info_snapshot_store
 
 
 async def bind_user_info(project: str, uid, qid) -> str:
@@ -26,67 +24,9 @@ async def bind_user_info(project: str, uid, qid) -> str:
     return msg
 
 
-def _make_info_data(osu_id: int, stats, osu_mode: int, badge_count: int = 0) -> InfoData:
-    gc = stats.grade_counts
-    return InfoData(
-        osu_id=osu_id,
-        c_rank=stats.country_rank,
-        g_rank=stats.global_rank,
-        pp=stats.pp,
-        acc=stats.hit_accuracy,
-        pc=stats.play_count,
-        count=stats.total_hits,
-        osu_mode=osu_mode,
-        date=date.today(),
-        ranked_score=stats.ranked_score,
-        total_score=stats.total_score,
-        max_combo=stats.maximum_combo,
-        count_xh=gc.ssh,
-        count_x=gc.ss,
-        count_sh=gc.sh,
-        count_s=gc.s,
-        count_a=gc.a,
-        replays=stats.replays_watched_by_others,
-        play_time=stats.play_time,
-        badge_count=badge_count,
-    )
-
-
-async def update_users_info(uids: list[int]):
+async def update_users_info(uids: list[int]) -> int:
     users = await get_users(uids)
-    for user in users:
-        async with get_session() as session:
-            if await session.scalar(select(InfoData).where(InfoData.osu_id == user.id, InfoData.date == date.today())):
-                continue
-            if not user.statistics_rulesets:
-                continue
-            rulesets = user.statistics_rulesets
-            badge_count = len(user.badges) if user.badges else 0
-            mode_stats = [
-                (rulesets.osu, 0),
-                (rulesets.taiko, 1),
-                (rulesets.fruits, 2),
-                (rulesets.mania, 3),
-            ]
-            for stats, mode in mode_stats:
-                if stats:
-                    session.add(_make_info_data(user.id, stats, mode, badge_count))
-                else:
-                    session.add(
-                        InfoData(
-                            osu_id=user.id,
-                            c_rank=0,
-                            g_rank=0,
-                            pp=0,
-                            acc=0,
-                            pc=0,
-                            count=0,
-                            osu_mode=mode,
-                            date=date.today(),
-                        )
-                    )
-            user_info = await session.scalar(select(UserData).where(UserData.osu_id == user.id))
-            if user_info and user_info.osu_name != user.username:
-                user_info.osu_name = user.username
-            await session.commit()
-        logger.info(f"玩家:[{user.username}] 个人信息更新完毕")
+    updated = await info_snapshot_store.save(users)
+    if users:
+        logger.info(f"批量更新玩家信息完成: 请求 {len(uids)}，返回 {len(users)}，写入 {updated}")
+    return updated

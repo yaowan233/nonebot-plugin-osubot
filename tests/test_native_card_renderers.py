@@ -384,6 +384,21 @@ def test_map_svg_only_shows_star_change_card_for_actual_change_and_wraps_tags():
     decreased_svg, _height = build_map_svg(payload)
     assert 'fill="#63d98b" opacity="1">5.00★</text>' in decreased_svg
 
+    payload["scenario"] = {
+        "label": "98% · 1 miss · 400x · 1.2x rate · lazer",
+        "pp": 234.5,
+        "stars": 5.8,
+        "points": [
+            {"accuracy": 98, "pp": 234.5, "selected": True},
+            {"accuracy": 100, "pp": 280.0, "selected": False},
+        ],
+    }
+    scenario_svg, scenario_height = build_map_svg(payload)
+    assert scenario_height == 1038
+    assert 'data-role="performance-scenario"' in scenario_svg
+    assert 'data-role="scenario-point" data-selected="true"' in scenario_svg
+    assert "目标 234.5 PP · 5.80★" in scenario_svg
+
 
 @pytest.mark.parametrize(
     ("rank", "percent", "expected"),

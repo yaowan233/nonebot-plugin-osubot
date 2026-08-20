@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, Date, Float, Integer, Text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, Index, Integer, SmallInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nonebot_plugin_orm import Model
@@ -18,6 +18,15 @@ class UserData(Model):
 
 
 class InfoData(Model):
+    __table_args__ = (
+        Index(
+            "ix_nonebot_plugin_osubot_infodata_lookup",
+            "osu_id",
+            "osu_mode",
+            "date",
+        ),
+    )
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     osu_id: Mapped[int] = mapped_column(Integer)
     c_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -46,3 +55,25 @@ class SbUserData(Model):
     user_id: Mapped[str] = mapped_column(Text, index=True)
     osu_id: Mapped[int] = mapped_column(Integer)
     osu_name: Mapped[str] = mapped_column(Text)
+
+
+class ScoreHistoryData(Model):
+    """A compact, selective archive of scores unavailable from beatmap leaderboards."""
+
+    __table_args__ = (
+        Index(
+            "ix_nonebot_plugin_osubot_scorehistory_lookup",
+            "user_id",
+            "beatmap_id",
+            "ruleset_id",
+            "ended_at",
+        ),
+    )
+
+    score_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    beatmap_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    ruleset_id: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    ended_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)

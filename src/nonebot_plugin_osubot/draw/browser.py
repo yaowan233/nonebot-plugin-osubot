@@ -5,12 +5,16 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
 
+from nonebot import get_plugin_config
 from nonebot.log import logger
 from nonebot_plugin_htmlrender import get_default_application
+
+from ..config import Config
 
 _pages: dict[str, "_PersistentPage"] = {}
 _locks: dict[str, asyncio.Lock] = {}
 _closing = False
+plugin_config = get_plugin_config(Config)
 
 _WAIT_FOR_ASSETS_SCRIPT = """
 async timeoutMs => {
@@ -33,6 +37,154 @@ class _PersistentPage:
     goto_uri: str | None
     viewport: dict
     device_scale_factor: float
+
+
+class RenderQueueFull(RuntimeError):
+    pass
+
+
+class RenderQueueTimeout(TimeoutError):
+    pass
+
+
+class RenderTimeout(TimeoutError):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class RenderSchedulerSnapshot:
+    queued: int
+    in_flight: int
+    completed: int
+    failed: int
+    timed_out: int
+    rejected: int
+    average_queue_wait: float
+    average_render_time: float
+
+
+class _RenderScheduler:
+    """Bound admission, per-template serialisation, and render lifetime."""
+
+    def __init__(
+        self,
+        *,
+        max_concurrency: int,
+        queue_size: int,
+        queue_timeout: float,
+        render_timeout: float,
+    ):
+        self._semaphore = asyncio.Semaphore(max(1, max_concurrency))
+        self._queue_size = max(1, queue_size)
+        self._queue_timeout = max(0.01, queue_timeout)
+        self._render_timeout = max(0.01, render_timeout)
+        self._queued = 0
+        self._in_flight = 0
+        self._completed = 0
+        self._failed = 0
+        self._timed_out = 0
+        self._rejected = 0
+        self._started = 0
+        self._total_queue_wait = 0.0
+        self._total_render_time = 0.0
+
+    @asynccontextmanager
+    async def slot(self, key: str):
+        if self._queued >= self._queue_size:
+            self._rejected += 1
+            raise RenderQueueFull("绘图请求过多，请稍后再试")
+
+        loop = asyncio.get_running_loop()
+        queued_at = loop.time()
+        deadline = queued_at + self._queue_timeout
+        lock = _locks.setdefault(key, asyncio.Lock())
+        queued = True
+        key_acquired = False
+        semaphore_acquired = False
+        render_started_at = 0.0
+
+        self._queued += 1
+        try:
+            try:
+                await asyncio.wait_for(lock.acquire(), timeout=self._remaining(loop, deadline))
+                key_acquired = True
+                await asyncio.wait_for(self._semaphore.acquire(), timeout=self._remaining(loop, deadline))
+                semaphore_acquired = True
+            except (TimeoutError, asyncio.TimeoutError) as error:
+                self._rejected += 1
+                raise RenderQueueTimeout("绘图排队超时，请稍后再试") from error
+
+            self._queued -= 1
+            queued = False
+            self._in_flight += 1
+            self._started += 1
+            render_started_at = loop.time()
+            self._total_queue_wait += render_started_at - queued_at
+
+            task = asyncio.current_task()
+            if task is None:
+                raise RuntimeError("无法获取当前绘图任务")
+            expired = False
+
+            def expire() -> None:
+                nonlocal expired
+                expired = True
+                task.cancel()
+
+            timeout_handle = loop.call_later(self._render_timeout, expire)
+            try:
+                yield
+            except asyncio.CancelledError:
+                if expired:
+                    self._timed_out += 1
+                    self._failed += 1
+                    raise RenderTimeout(f"绘图超过 {self._render_timeout:g} 秒，已终止") from None
+                raise
+            except BaseException:
+                self._failed += 1
+                raise
+            else:
+                self._completed += 1
+            finally:
+                timeout_handle.cancel()
+                self._total_render_time += loop.time() - render_started_at
+        finally:
+            if queued:
+                self._queued -= 1
+            if semaphore_acquired:
+                self._semaphore.release()
+            if key_acquired:
+                lock.release()
+            if render_started_at:
+                self._in_flight -= 1
+
+    def snapshot(self) -> RenderSchedulerSnapshot:
+        return RenderSchedulerSnapshot(
+            queued=self._queued,
+            in_flight=self._in_flight,
+            completed=self._completed,
+            failed=self._failed,
+            timed_out=self._timed_out,
+            rejected=self._rejected,
+            average_queue_wait=self._total_queue_wait / self._started if self._started else 0.0,
+            average_render_time=self._total_render_time / self._started if self._started else 0.0,
+        )
+
+    @staticmethod
+    def _remaining(loop: asyncio.AbstractEventLoop, deadline: float) -> float:
+        return max(0.001, deadline - loop.time())
+
+
+_render_scheduler = _RenderScheduler(
+    max_concurrency=plugin_config.osu_render_max_concurrency,
+    queue_size=plugin_config.osu_render_queue_size,
+    queue_timeout=plugin_config.osu_render_queue_timeout,
+    render_timeout=plugin_config.osu_render_timeout,
+)
+
+
+def render_scheduler_snapshot() -> RenderSchedulerSnapshot:
+    return _render_scheduler.snapshot()
 
 
 async def _drop_page(key: str) -> None:
@@ -80,11 +232,10 @@ async def persistent_page(
     viewport: dict,
     device_scale_factor: float = 2,
 ):
-    """复用模板页面；同一模板串行渲染，异常或参数变化时自动重建。"""
+    """复用模板页面；全局限流，同一模板串行，异常时自动重建。"""
     if _closing:
         raise RuntimeError("Playwright 持久页面池正在关闭")
-    lock = _locks.setdefault(key, asyncio.Lock())
-    async with lock:
+    async with _render_scheduler.slot(key):
         entry = _pages.get(key)
         if entry is not None and (
             entry.page.is_closed() or entry.goto_uri != goto_uri or entry.device_scale_factor != device_scale_factor

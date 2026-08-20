@@ -10,6 +10,7 @@ from nonebot import get_plugin_config
 from httpx import HTTPError, Response
 
 from .network.manager import network_manager
+from .network.scheduler import ApiQueueFull, OsuApiScheduler
 from .schema.beatmapsets import BeatmapSets
 from .utils import FGM, extract_user_id
 from .config import Config
@@ -31,24 +32,62 @@ beatmap_search_cache = ExpiringDict(max_len=100, max_age_seconds=300)
 # 谱面集详情用于 bmap 绘图，短时缓存可避免同一谱面集连续查询重复等待 API。
 beatmapset_cache = ExpiringDict(max_len=256, max_age_seconds=300)
 _beatmapset_tasks: dict[int, asyncio.Task[BeatmapSets]] = {}
+_token_lock = asyncio.Lock()
 plugin_config = get_plugin_config(Config)
 
 key = plugin_config.osu_key
 client_id = plugin_config.osu_client
+osu_api_scheduler = OsuApiScheduler(
+    max_concurrency=plugin_config.osu_api_max_concurrency,
+    foreground_rate=plugin_config.osu_api_foreground_rate,
+    background_rate=plugin_config.osu_api_background_rate,
+    queue_size=plugin_config.osu_api_queue_size,
+    max_retries=plugin_config.osu_api_max_retries,
+)
 
 
 @auto_retry
-async def safe_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
+async def _direct_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
     client = await network_manager.get_client()
-    req = await client.get(url, headers=headers, params=params)
-    return req
+    return await client.get(url, headers=headers, params=params)
 
 
 @auto_retry
-async def safe_async_post(url, headers=None, data=None, json=None) -> Response:
+async def _direct_async_post(url, headers=None, data=None, json=None) -> Response:
     client = await network_manager.get_client()
-    req = await client.post(url, headers=headers, data=data, json=json)
-    return req
+    return await client.post(url, headers=headers, data=data, json=json)
+
+
+def _is_osu_api_url(url: str) -> bool:
+    return url.startswith(f"{api}/") or url == api
+
+
+async def safe_async_get(
+    url,
+    headers: Optional[dict] = None,
+    params: Optional[dict] = None,
+) -> Response | None:
+    if not _is_osu_api_url(url):
+        return await _direct_async_get(url, headers=headers, params=params)
+
+    async def operation() -> Response:
+        client = await network_manager.get_client()
+        return await client.get(url, headers=headers, params=params)
+
+    try:
+        return await osu_api_scheduler.request(operation)
+    except (ApiQueueFull, HTTPError) as error:
+        logger.error(f"osu! API 请求多次失败: {error}")
+        return None
+
+
+async def safe_async_post(url, headers=None, data=None, json=None) -> Response | None:
+    return await _direct_async_post(url, headers=headers, data=data, json=json)
+
+
+async def close_osu_api_network() -> None:
+    await osu_api_scheduler.close()
+    await network_manager.close()
 
 
 async def renew_token():
@@ -64,18 +103,21 @@ async def renew_token():
             "scope": "public",
         },
     )
-    if req and req.status_code == 200:
-        osu_token = req.json()
-        cache.update({"token": osu_token["access_token"]})
-    else:
-        logger.error(f"更新OSU token出错 错误{req.status_code}")
+    if not req or req.status_code != 200:
+        status = req.status_code if req else "无响应"
+        raise NetworkError(f"更新 osu! token 失败：{status}")
+    osu_token = req.json()
+    cache.update({"token": osu_token["access_token"]})
 
 
 async def get_headers() -> dict[str, str]:
     token = cache.get("token")
     if not token:
-        await renew_token()
-        token = cache.get("token")
+        async with _token_lock:
+            token = cache.get("token")
+            if not token:
+                await renew_token()
+                token = cache.get("token")
     return {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
 
 
@@ -100,6 +142,8 @@ async def fetch_score_batch(
     scores = [NewScore(**i) for i in data]
     return [
         UnifiedScore(
+            score_id=i.id,
+            user_id=i.user_id,
             mods=i.mods,
             ruleset_id=i.ruleset_id,
             rank=i.rank,
@@ -107,7 +151,7 @@ async def fetch_score_batch(
             total_score=i.total_score,
             ended_at=datetime.strptime(i.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
             max_combo=i.max_combo,
-            statistics=i.statistics,
+            statistics=i.statistics or NewStatistics(),
             legacy_total_score=i.legacy_total_score,
             passed=i.passed,
             pp=i.pp,
@@ -130,6 +174,12 @@ async def fetch_score_batch(
                 stars=i.beatmap.difficulty_rating,
                 checksum=i.beatmap.checksum,
                 convert=i.beatmap.convert,
+                status=i.beatmap.status,
+                is_scoreable=i.beatmap.is_scoreable,
+                max_combo=i.beatmap.max_combo,
+                count_circles=i.beatmap.count_circles,
+                count_sliders=i.beatmap.count_sliders,
+                count_spinners=i.beatmap.count_spinners,
             ),
             beatmapset=i.beatmapset,
         )

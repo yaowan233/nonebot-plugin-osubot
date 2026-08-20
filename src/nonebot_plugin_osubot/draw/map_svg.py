@@ -110,6 +110,22 @@ def _metric(x: float, y: float, label: str, value: str, *, color: str = CYAN, wi
     return f'<rect x="{x}" y="{y}" width="4" height="42" fill="{color}"/>{text(x + 12, y + 13, label, 10, fill="#ffffffcc", weight=700)}{fitted_text(x + 12, y + 39, value, 20, width - 12, weight=700)}'
 
 
+def _scenario_panel(scenario: dict, y: float = 860) -> str:
+    points = scenario.get("points") or []
+    gap = 10
+    card_width = (711 - gap * max(0, len(points) - 1)) / max(1, len(points))
+    cards = []
+    for index, point in enumerate(points):
+        x = 642 + index * (card_width + gap)
+        selected = bool(point.get("selected"))
+        color = PINK if selected else CYAN
+        cards.append(
+            f'<g data-role="scenario-point" data-selected="{str(selected).lower()}"><rect x="{x}" y="{y + 59}" width="{card_width}" height="81" rx="12" fill="{color}18" stroke="{color if selected else "#ffffff24"}" stroke-width="{2 if selected else 1}"/>{text(x + card_width / 2, y + 84, number(point["accuracy"], 2) + "%", 11, fill="#ffffffbb", anchor="middle", weight=700)}{text(x + card_width / 2, y + 119, number(point["pp"], 1), 22, fill=color, anchor="middle", weight=700)}{text(x + card_width / 2, y + 134, "PP", 8, fill="#ffffff88", anchor="middle")}</g>'
+        )
+    summary = f"目标 {number(scenario['pp'], 1)} PP · {number(scenario['stars'], 2)}★"
+    return f'<g data-role="performance-scenario">{_panel(612, y, 771, 158)}{text(642, y + 27, "PP 情景计算", 16, weight=700)}{text(642, y + 48, scenario["label"], 10, fill="#ffffffbb")}{text(1355, y + 30, summary, 15, fill=PINK, anchor="end", weight=700)}{"".join(cards)}</g>'
+
+
 def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[str, int]:
     beatmapset, beatmap = payload["set"], payload["map"]
     mods = [str(mod) for mod in beatmap.get("mods") or [] if str(mod).upper() != "NM"]
@@ -126,7 +142,8 @@ def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[
     if isinstance(tag_value, list):
         tag_value = " ".join(str(item) for item in tag_value)
     tag_lines = _wrap_text(tag_value, 520, 11)
-    height = max(860, 790 + len(tag_lines) * 17)
+    scenario = payload.get("scenario")
+    height = max(1038 if scenario else 860, 790 + len(tag_lines) * 17)
     objects = (beatmap.get("circles") or 0, beatmap.get("sliders") or 0, beatmap.get("spinners") or 0)
     total_objects = max(1, sum(objects))
     dimension_max = 11 if any(max(float(stat["before"] or 0), float(stat["after"] or 0)) > 10 for stat in stats) else 10
@@ -174,6 +191,7 @@ def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[
         text(41, overview_y + 178 + line_index * 17, line, 11, fill="#ffffffcc")
         for line_index, line in enumerate(tag_lines)
     )
+    scenario_svg = _scenario_panel(scenario) if scenario else ""
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{height}" viewBox="0 0 {WIDTH} {height}">{_background(beatmapset.get("cover"), height, "map", external_canvas=external_background)}
 {text(25, 29, "OSU! / 谱面资料", 11, fill=CYAN, weight=700)}{text(1375, 29, f"谱面 {beatmap['id']} · 谱面组 {beatmapset['id']}", 13, anchor="end", weight=700)}
 {_left_identity(payload, map_card=True, card_height=height - 78)}
@@ -185,7 +203,7 @@ def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[
 {text(643, 87, "BEATMAP / DIFFICULTY DETAIL", 9, fill=CYAN)}{fitted_text(643, 133, beatmap["version"], 34, 440, weight=700)}{text(643, 163, MODE_NAMES[int(beatmap["mode_int"])], 14, fill="#ffffffcc")}{title_mods_svg}
 {text(1170, 91, "星数", 9, fill="#ffffffcc", anchor="end")}{text(1170, 119, number(beatmap["stars"], 2) + "★", 19, fill=star_value_color, anchor="end", weight=700)}{text(1270, 91, "SS PP", 9, fill="#ffffffcc", anchor="end")}{text(1270, 119, number(beatmap["ss_pp"], 1), 19, fill=CYAN, anchor="end", weight=700)}{text(1360, 91, "最大连击", 9, fill="#ffffffcc", anchor="end")}{text(1360, 119, number(beatmap["max_combo"]) + "x", 19, anchor="end", weight=700)}
 <g data-role="map-stats-panel">{_panel(612, stats_panel_y, 771, stats_panel_height)}{stats_header}{"".join(stats_svg)}<line x1="632" y1="592" x2="1363" y2="592" stroke="#ffffff1a"/><g data-role="object-composition">{text(646, 625, "物件构成", 11, fill="#ffffffcc", weight=700)}{"".join(object_bar)}{text(1360, 625, f"{payload['map']['object_labels'][0]} {number(objects[0])}  ·  {payload['map']['object_labels'][1]} {number(objects[1])}  ·  {payload['map']['object_labels'][2]} {number(objects[2])}", 10, anchor="end")}</g></g>
-{_panel(612, 679, 771, 164)}{_metric(642, 711, "BPM", number(beatmap["bpm"], 1), width=180)}{_metric(880, 711, "时长", beatmap["duration"], color=PINK, width=180)}{_metric(1118, 711, "物件数", number(beatmap["objects"]), width=180)}{_metric(642, 777, "最大连击", number(beatmap["max_combo"]) + "x", color=PINK, width=180)}{_metric(880, 777, "谱面 ID", str(beatmap["id"]), width=180)}{_metric(1118, 777, "谱面组 ID", str(beatmapset["id"]), color=PINK, width=180)}</svg>"""
+{_panel(612, 679, 771, 164)}{_metric(642, 711, "BPM", number(beatmap["bpm"], 1), width=180)}{_metric(880, 711, "时长", beatmap["duration"], color=PINK, width=180)}{_metric(1118, 711, "物件数", number(beatmap["objects"]), width=180)}{_metric(642, 777, "最大连击", number(beatmap["max_combo"]) + "x", color=PINK, width=180)}{_metric(880, 777, "谱面 ID", str(beatmap["id"]), width=180)}{_metric(1118, 777, "谱面组 ID", str(beatmapset["id"]), color=PINK, width=180)}{scenario_svg}</svg>"""
     return svg, height
 
 

@@ -7,6 +7,12 @@ from rosu_pp_py import Beatmap as RosuBeatmap, GameMode
 from ..api import osu_api
 from ..beatmap_stats_moder import with_mods
 from ..file import ensure_osu_file
+from ..performance import (
+    PerformanceReport,
+    PerformanceScenario,
+    calculate_performance_report,
+    format_scenario,
+)
 from ..pp import get_ss_pp
 from ..schema import Beatmap
 from ..schema.score import Mod
@@ -78,7 +84,30 @@ def _apply_ruleset_metadata(mapinfo: Beatmap, ruleset_map: RosuBeatmap, mode: in
     return mapinfo
 
 
-async def draw_map_info(mapid: int, mods: list[str], target_mode: int | None = None) -> BytesIO:
+def _scenario_payload(report: PerformanceReport) -> dict:
+    return {
+        "label": format_scenario(report.scenario, report.requested.max_combo),
+        "pp": report.requested.pp,
+        "stars": report.requested.stars,
+        "accuracy": report.scenario.accuracy,
+        "points": [
+            {
+                "accuracy": point.accuracy,
+                "pp": point.pp,
+                "selected": abs(point.accuracy - report.scenario.accuracy) < 0.0001,
+            }
+            for point in report.points
+        ],
+    }
+
+
+async def draw_map_info(
+    mapid: int,
+    mods: list[str],
+    target_mode: int | None = None,
+    *,
+    scenario: PerformanceScenario | None = None,
+) -> BytesIO:
     raw_map = await osu_api("map", map_id=mapid)
     api_map = Beatmap(**raw_map)
     beatmapset = api_map.beatmapset
@@ -100,14 +129,27 @@ async def draw_map_info(mapid: int, mods: list[str], target_mode: int | None = N
 
     ss_result = get_ss_pp(str(osu_file.absolute()), mode, mod_names)
     original_ss_result = get_ss_pp(str(osu_file.absolute()), mode, [])
-    cover, avatar = await asyncio.gather(
+    resource_tasks = [
         beatmap_background_data_uri(
             original.id,
             original.beatmapset_id,
             f"https://assets.ppy.sh/beatmaps/{original.beatmapset_id}/covers/cover@2x.jpg",
         ),
         cached_avatar_data_uri(original.user_id),
-    )
+    ]
+    if scenario is not None:
+        resource_tasks.append(
+            asyncio.to_thread(
+                calculate_performance_report,
+                osu_file,
+                mode,
+                mod_names,
+                scenario,
+            )
+        )
+    resources = await asyncio.gather(*resource_tasks)
+    cover, avatar = resources[:2]
+    scenario_report = resources[2] if scenario is not None else None
     mod_images = {
         name: file_data_uri(MOD_PATH / f"{name}.png", "image/png")
         for name in mod_names
@@ -153,5 +195,6 @@ async def draw_map_info(mapid: int, mods: list[str], target_mode: int | None = N
             "stats": _mode_stats(original, current),
             "object_labels": OBJECT_LABELS[mode],
         },
+        "scenario": _scenario_payload(scenario_report) if scenario_report is not None else None,
     }
     return await render_map_svg(payload)

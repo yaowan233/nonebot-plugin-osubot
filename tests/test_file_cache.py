@@ -19,6 +19,17 @@ def file_module(after_nonebot_init):
     return importlib.import_module("nonebot_plugin_osubot.file")
 
 
+class RecordingSemaphore:
+    def __init__(self):
+        self.entries = 0
+
+    async def __aenter__(self):
+        self.entries += 1
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
 def test_osu_file_matches_checksum(file_module, tmp_path: Path):
     osu_file = tmp_path / "map.osu"
     osu_file.write_bytes(b"current revision")
@@ -40,6 +51,21 @@ def test_badge_cache_path_is_stable(file_module, tmp_path: Path):
     assert first.parent == tmp_path
     assert first.suffix == ".png"
     assert "Tournament" not in first.name
+
+
+@pytest.mark.asyncio
+async def test_image_downloads_use_shared_semaphore(file_module, tmp_path: Path):
+    semaphore = RecordingSemaphore()
+    response = SimpleNamespace(content=b"image", status_code=200)
+
+    with (
+        patch.object(file_module, "image_download_semaphore", semaphore),
+        patch.object(file_module, "safe_async_get", new=AsyncMock(return_value=response)),
+    ):
+        image = await file_module.get_pfm_img("https://example.com/image.png", tmp_path / "image.png")
+
+    assert semaphore.entries == 1
+    assert image.getvalue() == b"image"
 
 
 @pytest.mark.asyncio

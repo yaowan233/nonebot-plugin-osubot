@@ -7,8 +7,9 @@ from ..utils import FGM, NGM, normalize_map_mode
 from ..schema import Beatmap, NewScore
 from ..exceptions import NetworkError
 from ..mods import get_mods_list, get_speed_change_labels
-from ..schema.score import UnifiedScore, NewStatistics, get_score_version
+from ..schema.score import NewStatistics, UnifiedScore, get_score_version
 from ..api import osu_api, get_user_info_data, get_ppysb_map_scores
+from ..score_query import score_query
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from .score import _player_avatar_data_uri, cal_score_info
 from .score_history_svg import render_score_history_svg
@@ -21,7 +22,10 @@ def _to_datetime(value: str) -> datetime:
 
 
 def _to_unified_score(score: NewScore) -> UnifiedScore:
+    """Compatibility conversion helper retained for external callers and tests."""
     return UnifiedScore(
+        score_id=getattr(score, "id", None),
+        user_id=getattr(score, "user_id", None),
         mods=score.mods,
         ruleset_id=score.ruleset_id,
         rank=score.rank,
@@ -90,8 +94,8 @@ async def draw_score_history(
     info_task = asyncio.create_task(get_user_info_data(uid, mode, source))
 
     if source == "osu":
-        response = await osu_api("score", uid, mode, map_id, legacy_only=int(not is_lazer))
-        scores = [_to_unified_score(NewScore(**item)) for item in response.get("scores", [])]
+        lookup = await score_query.list_beatmap_scores(uid, mode, map_json, legacy_only=not is_lazer)
+        scores = lookup.scores
     else:
         scores = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
 
@@ -101,6 +105,8 @@ async def draw_score_history(
         else:
             scores = [scores[index] for index in get_mods_list(scores, mods)]
     if not scores:
+        if source == "osu" and lookup.source == "history":
+            raise NetworkError("该谱面没有官网排行榜，且本地历史库尚未收录游玩记录")
         raise NetworkError("未查询到该谱面的游玩记录")
 
     scores.sort(key=lambda score: score.ended_at, reverse=True)
@@ -169,7 +175,9 @@ async def draw_score_history(
         "mode": mode,
         "generated_at": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
         "disclaimer": (
-            "每种 Mod 组合显示 osu! API 当前保留的最佳成绩，不代表全部历史尝试"
+            "显示本地采集到的无榜谱面历史，未收录不代表没有游玩过"
+            if source == "osu" and lookup.source == "history"
+            else "每种 Mod 组合显示 osu! API 当前保留的最佳成绩，不代表全部历史尝试"
             if source == "osu"
             else "显示 ppysb API 当前可返回的谱面成绩"
         ),

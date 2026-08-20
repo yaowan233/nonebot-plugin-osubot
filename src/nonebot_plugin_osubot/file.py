@@ -24,7 +24,8 @@ api_ls = [
     "https://txy1.sayobot.cn/beatmaps/download/novideo/",
     "https://catboy.best/d/",
 ]
-semaphore = asyncio.Semaphore(5)
+osu_download_semaphore = asyncio.Semaphore(5)
+image_download_semaphore = asyncio.Semaphore(5)
 
 map_path.mkdir(parents=True, exist_ok=True)
 user_cache_path.mkdir(parents=True, exist_ok=True)
@@ -105,7 +106,7 @@ async def download_osu(set_id, map_id, checksum: str | None = None):
         f"https://catboy.best/osu/{map_id}",
     ]
     logger.info(f"开始下载谱面: <{map_id}>")
-    async with semaphore:
+    async with osu_download_semaphore:
         if req := await get_first_response(url):
             filename = f"{map_id}.osu"
             filepath = map_path / str(set_id) / filename
@@ -150,7 +151,8 @@ async def ensure_osu_file(set_id, map_id, checksum: str | None = None) -> Path:
 async def get_projectimg(url: str) -> BytesIO:
     if "avatar-guest.png" in url:
         url = "https://osu.ppy.sh/images/layout/avatar-guest.png"
-    req = await safe_async_get(url)
+    async with image_download_semaphore:
+        req = await safe_async_get(url)
     if not req or req.status_code >= 400:
         raise Exception("图片下载失败")
     data = req.read()
@@ -164,7 +166,7 @@ async def get_pfm_img(url: str, cache_path: Path) -> BytesIO:
     if cache_path.exists():
         with cache_path.open("rb") as f:
             return BytesIO(f.read())
-    async with asyncio.Semaphore(5):
+    async with image_download_semaphore:
         req = await safe_async_get(url)
     if not req or req.status_code >= 400:
         return BytesIO()

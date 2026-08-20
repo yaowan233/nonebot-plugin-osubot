@@ -1,3 +1,3 @@
-from .models import InfoData, UserData, SbUserData
+from .models import InfoData, UserData, SbUserData, ScoreHistoryData
 
-__all__ = ["UserData", "InfoData", "SbUserData"]
+__all__ = ["UserData", "InfoData", "SbUserData", "ScoreHistoryData"]

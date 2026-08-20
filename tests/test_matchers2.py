@@ -207,6 +207,34 @@ async def test_osu_map_passes_explicit_convert_mode_and_mods(app: App):
 
 
 @pytest.mark.asyncio
+async def test_osu_map_passes_performance_scenario(app: App):
+    from nonebot_plugin_osubot.matcher.map import osu_map
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=0)
+    event = fake_group_message_event_v11(
+        message=Message("/map 12345 +HD acc=98.5 miss=1 combo=800 rate=1.2 legacy=true")
+    )
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{MAP_MODULE}.draw_map_info", new=AsyncMock(return_value=FAKE_MAP_IMG)) as draw:
+            async with app.test_matcher(osu_map) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, img_msg(event, FAKE_MAP_IMG), result={"message_id": 1})
+                ctx.should_finished()
+
+    scenario = draw.await_args.kwargs["scenario"]
+    assert draw.await_args.args == ("12345", ["HD"])
+    assert scenario.accuracy == 98.5
+    assert scenario.misses == 1
+    assert scenario.combo == 800
+    assert scenario.clock_rate == 1.2
+    assert scenario.lazer is False
+
+
+@pytest.mark.asyncio
 async def test_osu_map_accepts_beatmap_url(app: App):
     from nonebot_plugin_osubot.matcher.map import osu_map
 

@@ -3,7 +3,6 @@ import base64
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
-from datetime import datetime, timedelta
 from functools import lru_cache
 
 from PIL import Image
@@ -13,10 +12,11 @@ from ..utils import FGM, NGM, normalize_map_mode
 from ..mods import get_mods_list, get_speed_change_label
 from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
-from ..schema import Beatmap, NewScore
+from ..schema import Beatmap
 from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components, get_osu_calculator
-from ..schema.score import Mod, UnifiedBeatmap, UnifiedScore, NewStatistics, get_score_version
+from ..schema.score import Mod, UnifiedScore, NewStatistics
+from ..score_query import map_score_to_unified, score_query
 from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
 from ..file import map_path, ensure_osu_file, user_cache_path, team_cache_path, get_projectimg
 from .utils import (
@@ -27,6 +27,11 @@ from .utils import (
 )
 from .static import osufile
 from .score_svg import render_score_svg
+
+
+def _map_score_to_unified(score, map_json: dict) -> UnifiedScore:
+    """Compatibility wrapper for callers that used the old drawing helper."""
+    return map_score_to_unified(score, map_json)
 
 
 async def draw_score(
@@ -115,46 +120,6 @@ async def draw_selected_score(
     return image, score
 
 
-def _map_score_to_unified(score: NewScore, map_json: dict) -> UnifiedScore:
-    beatmap = score.beatmap
-    beatmapset = score.beatmapset or (beatmap.beatmapset if beatmap else None)
-    beatmapset_json = map_json.get("beatmapset") or {}
-    return UnifiedScore(
-        mods=score.mods,
-        ruleset_id=score.ruleset_id,
-        rank=score.rank,
-        accuracy=score.accuracy * 100,
-        total_score=score.total_score,
-        ended_at=datetime.strptime(score.ended_at.replace("Z", ""), "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-        max_combo=score.max_combo,
-        statistics=score.statistics,
-        legacy_total_score=score.legacy_total_score,
-        passed=score.passed,
-        pp=score.pp,
-        score_version=get_score_version(score.legacy_score_id),
-        beatmap=UnifiedBeatmap(
-            id=score.beatmap_id,
-            set_id=(beatmapset.id if beatmapset else map_json["beatmapset_id"]),
-            artist=beatmapset.artist if beatmapset else str(beatmapset_json.get("artist") or ""),
-            title=beatmapset.title if beatmapset else str(beatmapset_json.get("title") or ""),
-            version=beatmap.version if beatmap else str(map_json.get("version") or ""),
-            creator=beatmapset.creator if beatmapset else str(beatmapset_json.get("creator") or ""),
-            total_length=int(beatmap.total_length if beatmap else map_json.get("total_length") or 0),
-            mode=beatmap.mode_int if beatmap else int(map_json.get("mode_int") or 0),
-            bpm=float((beatmap.bpm if beatmap else None) or map_json.get("bpm") or 0),
-            cs=float(beatmap.cs if beatmap else map_json.get("cs") or 0),
-            od=float(beatmap.accuracy if beatmap else map_json.get("accuracy") or 0),
-            ar=float(beatmap.ar if beatmap else map_json.get("ar") or 0),
-            hp=float(beatmap.drain if beatmap else map_json.get("drain") or 0),
-            stars=float(beatmap.difficulty_rating if beatmap else map_json.get("difficulty_rating") or 0),
-            checksum=beatmap.checksum if beatmap else map_json.get("checksum"),
-            user_id=beatmap.user_id if beatmap else map_json.get("user_id"),
-            convert=beatmap.convert if beatmap else bool(map_json.get("convert", False)),
-        ),
-        beatmapset=beatmapset,
-    )
-
-
 async def get_score_data(
     uid: int,
     is_lazer: bool,
@@ -172,16 +137,16 @@ async def get_score_data(
     task = asyncio.create_task(get_user_info_data(uid, mode, source))
     if source == "osu":
         if mods:
-            score_json = await osu_api("score", uid, mode, mapid, legacy_only=int(not is_lazer))
-            score_ls = [NewScore(**i) for i in score_json["scores"]]
+            lookup = await score_query.list_beatmap_scores(uid, mode, map_json, legacy_only=not is_lazer)
         else:
-            score_json = await osu_api("best_score", uid, mode, mapid, legacy_only=int(not is_lazer))
-            grank = score_json.get("position", "")
-            score_ls = [NewScore(**score_json["score"])]
-        score_ls = [_map_score_to_unified(score, map_json) for score in score_ls]
+            lookup = await score_query.best_beatmap_score(uid, mode, map_json, legacy_only=not is_lazer)
+            grank = lookup.position or ""
+        score_ls = lookup.scores
     else:
         score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
     if not score_ls:
+        if source == "osu" and lookup.source == "history":
+            raise NetworkError("该谱面没有官网排行榜，且本地历史库尚未收录该成绩")
         raise NetworkError("未查询到游玩记录")
     if mods:
         for i in score_ls:

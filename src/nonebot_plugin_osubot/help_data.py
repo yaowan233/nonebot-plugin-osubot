@@ -34,6 +34,7 @@ HELP_TOPICS = {
         "/sc [mapid]：指定谱面成绩；查询过谱面后可省略 mapid\n"
         "/sl [mapid] [范围]：该谱面各 Mod 组合的最佳成绩列表\n"
         "/nb [#天数]：最近新增 BP；/bpa：BP 分析；/hs [#天数]：PP/排名历史\n"
+        "/fix [玩家]:[模式]：计算 BP 中小掉连成绩理论 FC 后的排名与总 PP\n"
         "可附加玩家、模式和 Mods，例如 /bp peppy 5:o +HDHR。\n"
         "BP 列表支持组合筛选：pp、acc、星数、长度、bpm、谱师、标题、难度名、miss、rank、客户端等。\n"
         '示例：/bl pp>=300 acc>=98 星数=5..7；/bl 标题~"Freedom Dive" mods!=HD。\n'
@@ -45,6 +46,7 @@ HELP_TOPICS = {
     "map": (
         "谱面工具\n"
         "/m [mapid] [+Mods]：单张难度信息\n"
+        "/m [mapid] acc=98 miss=1 combo=800 rate=1.2：计算指定情景 PP（参数可省略）\n"
         "/bm [setid]：谱面集信息\n"
         "/sc [mapid]：查询玩家在谱面上的成绩\n"
         "/bg [mapid]：获取背景\n"
@@ -103,6 +105,9 @@ TOPIC_ALIASES = {
     "tbp": "score",
     "bpa": "score",
     "bp分析": "score",
+    "fix": "score",
+    "bpfix": "score",
+    "理论fc": "score",
     "first": "score",
     "firsts": "score",
     "fs": "score",
