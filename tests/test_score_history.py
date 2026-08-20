@@ -51,9 +51,7 @@ async def test_history_store_only_saves_no_leaderboard_scores_and_is_idempotent(
     history_id = 9_100_000_000_000_001
     ranked_id = 9_100_000_000_000_002
     async with get_session() as session:
-        await session.execute(
-            delete(ScoreHistoryData).where(ScoreHistoryData.score_id.in_([history_id, ranked_id]))
-        )
+        await session.execute(delete(ScoreHistoryData).where(ScoreHistoryData.score_id.in_([history_id, ranked_id])))
         await session.commit()
 
     store = SqlScoreHistoryStore()
@@ -68,14 +66,10 @@ async def test_history_store_only_saves_no_leaderboard_scores_and_is_idempotent(
     async with get_session() as session:
         stored_ids = set(
             await session.scalars(
-                select(ScoreHistoryData.score_id).where(
-                    ScoreHistoryData.score_id.in_([history_id, ranked_id])
-                )
+                select(ScoreHistoryData.score_id).where(ScoreHistoryData.score_id.in_([history_id, ranked_id]))
             )
         )
-        await session.execute(
-            delete(ScoreHistoryData).where(ScoreHistoryData.score_id.in_([history_id, ranked_id]))
-        )
+        await session.execute(delete(ScoreHistoryData).where(ScoreHistoryData.score_id.in_([history_id, ranked_id])))
         await session.commit()
     assert stored_ids == {history_id}
 

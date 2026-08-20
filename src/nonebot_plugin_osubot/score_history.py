@@ -66,9 +66,7 @@ class SqlScoreHistoryStore:
         async with get_session() as session:
             existing = set(
                 await session.scalars(
-                    select(ScoreHistoryData.score_id).where(
-                        ScoreHistoryData.score_id.in_(list(eligible))
-                    )
+                    select(ScoreHistoryData.score_id).where(ScoreHistoryData.score_id.in_(list(eligible)))
                 )
             )
             missing = [(score_id, score) for score_id, score in eligible.items() if score_id not in existing]

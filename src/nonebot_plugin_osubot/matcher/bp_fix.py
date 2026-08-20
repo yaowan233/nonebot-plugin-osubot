@@ -25,7 +25,7 @@ async def _bp_fix(state: T_State):
             state["source"],
         )
     except NetworkError as error:
-        await UniMessage.text(
-            f"在分析用户：{state['username']} {NGM[state['mode']]} 模式 BP Fix 时 {error}"
-        ).finish(reply_to=True)
+        await UniMessage.text(f"在分析用户：{state['username']} {NGM[state['mode']]} 模式 BP Fix 时 {error}").finish(
+            reply_to=True
+        )
     await UniMessage.image(raw=data).finish(reply_to=True)

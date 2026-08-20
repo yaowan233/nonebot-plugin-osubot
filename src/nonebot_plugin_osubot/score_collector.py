@@ -47,11 +47,7 @@ def active_score_targets(rows: Iterable[tuple[int, int, int, date]]) -> set[Coll
 async def find_active_bound_users() -> set[CollectionTarget]:
     """Return only bound users who played in a ruleset since the previous snapshot."""
     async with get_session() as session:
-        dates = list(
-            await session.scalars(
-                select(InfoData.date).distinct().order_by(InfoData.date.desc()).limit(2)
-            )
-        )
+        dates = list(await session.scalars(select(InfoData.date).distinct().order_by(InfoData.date.desc()).limit(2)))
         if len(dates) < 2:
             return set()
 
@@ -134,7 +130,5 @@ async def collect_active_score_history(*, concurrency: int = 2, recent_limit: in
         recent_limit=recent_limit,
     )
     report = await collector.collect(targets)
-    logger.info(
-        f"成绩历史采集完成：活跃模式 {report.targets} 个，新增 {report.saved} 条，失败 {report.failed} 个"
-    )
+    logger.info(f"成绩历史采集完成：活跃模式 {report.targets} 个，新增 {report.saved} 条，失败 {report.failed} 个")
     return report

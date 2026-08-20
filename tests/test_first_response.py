@@ -130,9 +130,7 @@ async def test_cancelling_mirror_race_cleans_up_every_request(after_nonebot_init
         return client
 
     task = asyncio.create_task(
-        MirrorRacer(get_client, hedge_delay=0).request(
-            ["https://one.example/map", "https://two.example/map"]
-        )
+        MirrorRacer(get_client, hedge_delay=0).request(["https://one.example/map", "https://two.example/map"])
     )
     await asyncio.wait_for(client.all_started.wait(), timeout=1)
     task.cancel()

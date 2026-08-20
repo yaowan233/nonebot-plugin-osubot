@@ -106,9 +106,7 @@ class SqlInfoSnapshotStore:
             if rows:
                 session.add_all(rows)
 
-            bound_users = (
-                await session.scalars(select(UserData).where(UserData.osu_id.in_(list(usernames))))
-            ).all()
+            bound_users = (await session.scalars(select(UserData).where(UserData.osu_id.in_(list(usernames))))).all()
             for bound_user in bound_users:
                 username = usernames.get(bound_user.osu_id)
                 if username is not None and bound_user.osu_name != username:

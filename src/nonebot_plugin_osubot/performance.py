@@ -81,9 +81,7 @@ def parse_performance_scenario(conditions: Sequence[tuple[str, str, str]]) -> Pe
     for raw_field, operator, raw_value in conditions:
         field = _FIELD_ALIASES.get(raw_field.strip().lower())
         if field is None:
-            raise PerformanceScenarioError(
-                f"不支持情景参数 {raw_field}，可用 acc、miss、combo、rate、lazer"
-            )
+            raise PerformanceScenarioError(f"不支持情景参数 {raw_field}，可用 acc、miss、combo、rate、lazer")
         if operator != "=":
             raise PerformanceScenarioError(f"情景参数 {raw_field} 仅支持 =")
         try:

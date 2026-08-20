@@ -32,10 +32,7 @@ class FixedCandidate:
 def _object_count(score: UnifiedScore) -> int:
     beatmap = score.beatmap
     if beatmap is not None:
-        count = sum(
-            int(value or 0)
-            for value in (beatmap.count_circles, beatmap.count_sliders, beatmap.count_spinners)
-        )
+        count = sum(int(value or 0) for value in (beatmap.count_circles, beatmap.count_sliders, beatmap.count_spinners))
         if count:
             return count
     statistics = score.statistics
@@ -112,9 +109,7 @@ def build_bp_fix_payload(
     original_pp = [float(score.pp or 0) for score in scores]
     hypothetical = [
         (
-            max(original_pp[index], fixed_by_index[index].fixed_pp)
-            if index in fixed_by_index
-            else original_pp[index],
+            max(original_pp[index], fixed_by_index[index].fixed_pp) if index in fixed_by_index else original_pp[index],
             index,
         )
         for index in range(len(scores))

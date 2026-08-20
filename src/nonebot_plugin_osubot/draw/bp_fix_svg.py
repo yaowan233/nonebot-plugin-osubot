@@ -28,7 +28,7 @@ def _summary(payload: dict) -> str:
 {text(485, 58, f"{MODE_NAMES[int(payload['mode'])]} / BP FIX", 11, fill="#101824", weight=700)}{text(1352, 58, f"共展示 {len(payload['entries'])} 项 · 候选 {payload['candidate_count']} 项", 11, fill="#101824", anchor="end")}
 <line x1="485" y1="74" x2="1352" y2="74" stroke="#c9ced1"/>
 {fitted_text(485, 126, "理论 FULL COMBO", 34, 420, fill="#101824", weight=700)}
-{_fact(940, "当前总 PP", number(payload['current_pp'], 2))}{_fact(1080, "理论总 PP", number(payload['fixed_pp'], 2), color=PINK)}{_fact(1230, "加权提升", "+" + number(payload['gain'], 2), color="#218f61")}
+{_fact(940, "当前总 PP", number(payload["current_pp"], 2))}{_fact(1080, "理论总 PP", number(payload["fixed_pp"], 2), color=PINK)}{_fact(1230, "加权提升", "+" + number(payload["gain"], 2), color="#218f61")}
 {text(1352, 166, "保持原准确率 · 清零 miss · 补满 combo · 按 0.95 权重重排", 9, fill="#59626c", anchor="end")}
 """
 
@@ -48,12 +48,12 @@ def _card(entry: dict, index: int) -> str:
     pp_change = f"{number(entry['old_pp'], 1)} → {number(entry['fixed_pp'], 1)} pp"
     return f"""
 <g data-role="bp-fix-entry"><defs><clipPath id="{clip_id}"><rect x="{x}" y="{y}" width="{width}" height="{visual_height}" rx="8"/></clipPath></defs>
-<rect x="{x}" y="{y}" width="{width}" height="{visual_height}" rx="8" fill="#101925" stroke="#ffffff"/>{image(entry.get('cover_data'), x, y, width, visual_height, clip=clip_id)}<rect x="{x}" y="{y + 48}" width="{width}" height="{visual_height - 48}" fill="url(#bp-fix-shade)" clip-path="url(#{clip_id})"/>
+<rect x="{x}" y="{y}" width="{width}" height="{visual_height}" rx="8" fill="#101925" stroke="#ffffff"/>{image(entry.get("cover_data"), x, y, width, visual_height, clip=clip_id)}<rect x="{x}" y="{y + 48}" width="{width}" height="{visual_height - 48}" fill="url(#bp-fix-shade)" clip-path="url(#{clip_id})"/>
 <rect x="{x + 12}" y="{y + 12}" width="68" height="25" rx="13" fill="{PINK}"/>{text(x + 46, y + 29, rank, 10, anchor="middle", weight=700)}
 <rect x="{x + width - 70}" y="{y + 12}" width="58" height="25" rx="13" fill="{star_color(star)}"/>{text(x + width - 41, y + 29, number(star, 2) + "★", 10, fill="#101925" if star < 6.5 else "#ffd966", anchor="middle", weight=700)}
-{mod_strip(entry['mods'], {}, x=x + 12, y=y + 103, icon_size=30, max_width=width - 24, preserve_artwork_ratio=True)}
-<rect x="{x}" y="{y + visual_height + 10}" width="4" height="13" rx="2" fill="{CYAN if (index + 1) % 3 == 0 else PINK}"/>{fitted_text(x + 10, y + visual_height + 23, entry['title'], 15, width - 10, fill="#101824", weight=700)}
-{fitted_text(x, y + visual_height + 47, entry['artist'], 10, width - 92, fill="#101824")}{text(x + width, y + visual_height + 47, number(entry['accuracy'], 2) + f"% · {entry['misses']}m", 9, fill="#e33c83", anchor="end", weight=700)}
+{mod_strip(entry["mods"], {}, x=x + 12, y=y + 103, icon_size=30, max_width=width - 24, preserve_artwork_ratio=True)}
+<rect x="{x}" y="{y + visual_height + 10}" width="4" height="13" rx="2" fill="{CYAN if (index + 1) % 3 == 0 else PINK}"/>{fitted_text(x + 10, y + visual_height + 23, entry["title"], 15, width - 10, fill="#101824", weight=700)}
+{fitted_text(x, y + visual_height + 47, entry["artist"], 10, width - 92, fill="#101824")}{text(x + width, y + visual_height + 47, number(entry["accuracy"], 2) + f"% · {entry['misses']}m", 9, fill="#e33c83", anchor="end", weight=700)}
 <line x1="{x}" y1="{y + visual_height + 56}" x2="{x + width}" y2="{y + visual_height + 56}" stroke="#c8ced1" stroke-dasharray="2 3"/>
 {fitted_text(x, y + visual_height + 74, combo, 9, width - 126, fill="#101824", weight=700)}{text(x + width, y + visual_height + 74, pp_change, 9, fill="#168f9b", anchor="end", weight=700)}</g>"""
 

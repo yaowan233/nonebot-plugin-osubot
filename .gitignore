@@ -5,6 +5,7 @@ __pycache__/
 *.pyo
 data/
 design/
+docs/research/
 tests/output/
 .env.*
 coverage.xml
