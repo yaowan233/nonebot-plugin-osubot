@@ -141,6 +141,54 @@ async def test_bp_list_keeps_official_api_pp_while_calculating_modded_stars(tmp_
 
 
 @pytest.mark.asyncio
+async def test_bp_list_falls_back_to_api_values_when_osu_download_fails(tmp_path):
+    """One unavailable optional .osu file must not abort the whole BP image."""
+    import nonebot_plugin_osubot.draw.bp as bp
+
+    beatmap = SimpleNamespace(
+        id=456,
+        set_id=123,
+        checksum="checksum",
+        stars=5.0,
+        title="Map",
+        artist="Artist",
+        version="Insane",
+    )
+    score = SimpleNamespace(
+        beatmap=beatmap,
+        beatmapset=None,
+        pp=321.45,
+        accuracy=99.0,
+        mods=[SimpleNamespace(acronym="DT", settings=None)],
+        ended_at=SimpleNamespace(strftime=lambda _format: "2026.01.01"),
+        score_version="lazer",
+    )
+    info = SimpleNamespace(
+        id=1,
+        username="player",
+        country_code="CN",
+        support_level=0,
+        team=None,
+        statistics=SimpleNamespace(model_dump=lambda: {"global_rank": 1, "pp": 1000}),
+    )
+
+    with (
+        patch.object(bp, "map_path", tmp_path),
+        patch.object(bp, "get_pfm_img", new=AsyncMock()),
+        patch.object(bp, "ensure_osu_file", new=AsyncMock(side_effect=Exception("download failed"))),
+        patch.object(bp, "_player_avatar_data_uri", new=AsyncMock(return_value=None)),
+        patch.object(bp, "_team_icon_data", new=AsyncMock(return_value=None)),
+        patch.object(bp, "render_bp_svg", new=AsyncMock(return_value=BytesIO(b"image"))) as render,
+    ):
+        result = await bp.draw_pfm("bp", 1, [score], [score], "osu", "osu", 1, 1, 0, info=info)
+
+    assert result.getvalue() == b"image"
+    play = render.await_args.args[0]["plays"][0]
+    assert play["pp"] == 321.45
+    assert play["stars"] == 5.0
+
+
+@pytest.mark.asyncio
 async def test_draw_pfm_rejects_an_empty_score_list():
     import nonebot_plugin_osubot.draw.bp as bp
     from nonebot_plugin_osubot.exceptions import NetworkError

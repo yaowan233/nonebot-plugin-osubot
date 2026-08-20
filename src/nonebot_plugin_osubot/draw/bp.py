@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional, Union
 
+from nonebot.log import logger
+
 from ..api import get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
 from ..file import ensure_osu_file, get_pfm_img, map_path
@@ -64,6 +66,15 @@ def _calculated_pp(score: UnifiedScore, osu_file, source: str) -> float:
             _calculated_pp_cache.pop(next(iter(_calculated_pp_cache)))
         _calculated_pp_cache[key] = value
     return value
+
+
+async def _gather_optional_osu_files(tasks: list) -> None:
+    """Download list-only calculation resources without making them fatal."""
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    failures = [result for result in results if isinstance(result, BaseException)]
+    if failures:
+        logger.warning(f"BP 列表有 {len(failures)} 个谱面文件下载失败，已使用 API 数据继续渲染")
+        logger.debug(f"BP 列表谱面下载失败详情: {failures!r}")
 
 
 async def draw_bp(
@@ -186,7 +197,7 @@ async def draw_pfm(
         for score in score_ls_filtered
         if _requires_osu_file(score)
     ]
-    resources = [asyncio.gather(*cover_tasks), asyncio.gather(*osu_tasks)]
+    resources = [asyncio.gather(*cover_tasks), _gather_optional_osu_files(osu_tasks)]
     if info is None:
         info, *_ = await asyncio.gather(get_user_info_data(uid, mode, source), *resources)
         avatar_data, team_data = await asyncio.gather(
