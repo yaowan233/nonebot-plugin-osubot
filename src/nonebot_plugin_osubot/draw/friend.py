@@ -47,9 +47,7 @@ async def _load_avatar_data_uri(uid: int, url: str) -> str:
         async with _avatar_sem:
             req = await safe_async_get(url)
         if not req or req.status_code >= 400:
-            raise RuntimeError(
-                f"头像下载失败: HTTP {req.status_code if req else 'None'}"
-            )
+            raise RuntimeError(f"头像下载失败: HTTP {req.status_code if req else 'None'}")
         img = Image.open(BytesIO(req.content)).convert("RGBA")
         img.thumbnail((_AVATAR_SIZE, _AVATAR_SIZE))
         buf = BytesIO()
@@ -70,9 +68,7 @@ async def _prepare_avatars(friends: list[dict]) -> list[dict]:
     """并发加载全部好友头像（本地缓存优先），返回替换为 data URI 的副本。"""
     if not friends:
         return friends
-    avatars = await asyncio.gather(
-        *[_load_avatar_data_uri(f["uid"], f["avatar"]) for f in friends]
-    )
+    avatars = await asyncio.gather(*[_load_avatar_data_uri(f["uid"], f["avatar"]) for f in friends])
     return [{**f, "avatar": av} for f, av in zip(friends, avatars)]
 
 

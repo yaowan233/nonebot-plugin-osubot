@@ -78,6 +78,7 @@ class ScoreHistoryData(Model):
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
 
+
 class UserOAuthData(Model):
     """每个绑定用户的 osu! OAuth 用户级令牌（/friend 好友功能使用）。"""
 

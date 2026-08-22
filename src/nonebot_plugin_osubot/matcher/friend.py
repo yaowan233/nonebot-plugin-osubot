@@ -355,7 +355,7 @@ async def _handle_pair(oauth: UserOAuthData, friends: list, name_text: str) -> N
     elif partner_followed_me:
         text_msg = f"你还没有将 {partner_name} 添加为你的好友，但对方似乎已经悄悄添加了你。"
     else:
-        text_msg = f"你们暂未互相成为好友。或许可以考虑一下？"
+        text_msg = "你们暂未互相成为好友。或许可以考虑一下？"
 
     extra = f"\n你的好友数：{len(friends)}"
     if partner_friend_count is not None:
@@ -367,31 +367,77 @@ async def _handle_pair(oauth: UserOAuthData, friends: list, name_text: str) -> N
 # 排序 / 筛选
 # ===========================================================================
 _SORT_SPECS = {
-    "p": ("pp", "desc"), "pp": ("pp", "desc"), "performance": ("pp", "desc"),
-    "p+": ("pp", "asc"), "pp+": ("pp", "asc"), "p2": ("pp", "asc"), "pp2": ("pp", "asc"),
-    "a": ("acc", "desc"), "acc": ("acc", "desc"), "accuracy": ("acc", "desc"),
-    "a+": ("acc", "asc"), "acc+": ("acc", "asc"), "a2": ("acc", "asc"), "acc2": ("acc", "asc"),
-    "pc": ("pc", "desc"), "playcount": ("pc", "desc"),
-    "pc+": ("pc", "asc"), "pc2": ("pc", "asc"), "playcount+": ("pc", "asc"),
-    "pt": ("pt", "desc"), "playtime": ("pt", "desc"),
-    "pt+": ("pt", "asc"), "pt2": ("pt", "asc"),
-    "th": ("th", "desc"), "h": ("th", "desc"), "tth": ("th", "desc"), "totalhits": ("th", "desc"),
-    "th+": ("th", "asc"), "h+": ("th", "asc"), "th2": ("th", "asc"),
-    "t": ("time", "asc"), "time": ("time", "asc"), "seen": ("time", "asc"),
-    "t-": ("time", "desc"), "time-": ("time", "desc"), "t2": ("time", "desc"),
-    "u": ("uid", "asc"), "uid": ("uid", "asc"), "u-": ("uid", "desc"), "uid-": ("uid", "desc"),
-    "c": ("country", "asc"), "country": ("country", "asc"), "c-": ("country", "desc"),
-    "n": ("name", "asc"), "name": ("name", "asc"), "n-": ("name", "desc"),
-    "o": ("online", "true"), "on": ("online", "true"), "online": ("online", "true"),
-    "o-": ("online", "false"), "off": ("online", "false"), "offline": ("online", "false"),
-    "m": ("mutual", "true"), "mu": ("mutual", "true"), "mutual": ("mutual", "true"),
-    "m-": ("mutual", "false"), "single": ("mutual", "false"),
+    "p": ("pp", "desc"),
+    "pp": ("pp", "desc"),
+    "performance": ("pp", "desc"),
+    "p+": ("pp", "asc"),
+    "pp+": ("pp", "asc"),
+    "p2": ("pp", "asc"),
+    "pp2": ("pp", "asc"),
+    "a": ("acc", "desc"),
+    "acc": ("acc", "desc"),
+    "accuracy": ("acc", "desc"),
+    "a+": ("acc", "asc"),
+    "acc+": ("acc", "asc"),
+    "a2": ("acc", "asc"),
+    "acc2": ("acc", "asc"),
+    "pc": ("pc", "desc"),
+    "playcount": ("pc", "desc"),
+    "pc+": ("pc", "asc"),
+    "pc2": ("pc", "asc"),
+    "playcount+": ("pc", "asc"),
+    "pt": ("pt", "desc"),
+    "playtime": ("pt", "desc"),
+    "pt+": ("pt", "asc"),
+    "pt2": ("pt", "asc"),
+    "th": ("th", "desc"),
+    "h": ("th", "desc"),
+    "tth": ("th", "desc"),
+    "totalhits": ("th", "desc"),
+    "th+": ("th", "asc"),
+    "h+": ("th", "asc"),
+    "th2": ("th", "asc"),
+    "t": ("time", "asc"),
+    "time": ("time", "asc"),
+    "seen": ("time", "asc"),
+    "t-": ("time", "desc"),
+    "time-": ("time", "desc"),
+    "t2": ("time", "desc"),
+    "u": ("uid", "asc"),
+    "uid": ("uid", "asc"),
+    "u-": ("uid", "desc"),
+    "uid-": ("uid", "desc"),
+    "c": ("country", "asc"),
+    "country": ("country", "asc"),
+    "c-": ("country", "desc"),
+    "n": ("name", "asc"),
+    "name": ("name", "asc"),
+    "n-": ("name", "desc"),
+    "o": ("online", "true"),
+    "on": ("online", "true"),
+    "online": ("online", "true"),
+    "o-": ("online", "false"),
+    "off": ("online", "false"),
+    "offline": ("online", "false"),
+    "m": ("mutual", "true"),
+    "mu": ("mutual", "true"),
+    "mutual": ("mutual", "true"),
+    "m-": ("mutual", "false"),
+    "single": ("mutual", "false"),
 }
 
 _SORT_LABELS = {
-    "pp": "PP", "acc": "ACC", "pc": "游玩次数", "pt": "游玩时长",
-    "th": "总击打", "time": "最后上线", "uid": "UID", "country": "国家/地区",
-    "name": "名字", "online": "在线", "mutual": "互关",
+    "pp": "PP",
+    "acc": "ACC",
+    "pc": "游玩次数",
+    "pt": "游玩时长",
+    "th": "总击打",
+    "time": "最后上线",
+    "uid": "UID",
+    "country": "国家/地区",
+    "name": "名字",
+    "online": "在线",
+    "mutual": "互关",
 }
 
 
@@ -414,10 +460,16 @@ def _sort_friends(friends: list, sort_type: str | None, direction: str | None) -
         return sorted(friends, key=lambda f: (f.target.username or "").lower())
 
     def pp(f):
-        return f.target.statistics.pp if f.target and f.target.statistics and f.target.statistics.pp is not None else 0.0
+        return (
+            f.target.statistics.pp if f.target and f.target.statistics and f.target.statistics.pp is not None else 0.0
+        )
 
     def acc(f):
-        return f.target.statistics.hit_accuracy if f.target and f.target.statistics and f.target.statistics.hit_accuracy is not None else 0.0
+        return (
+            f.target.statistics.hit_accuracy
+            if f.target and f.target.statistics and f.target.statistics.hit_accuracy is not None
+            else 0.0
+        )
 
     def num(key):
         def getter(f):
@@ -455,7 +507,7 @@ def _sort_friends(friends: list, sort_type: str | None, direction: str | None) -
     if sort_type == "country":
         return sorted(
             friends,
-            key=lambda f: ((f.target.country_code or "") if f.target else ""),
+            key=lambda f: (f.target.country_code or "") if f.target else "",
             reverse=reverse,
         )
     if sort_type == "name":
@@ -480,29 +532,62 @@ def _sort_label(sort_type: str | None, direction: str | None) -> str:
     return f"{label}{' ↑' if direction == 'asc' else ' ↓' if direction == 'desc' else ''}"
 
 
-_CONDITION_PATTERN = re.compile(
-    r'(\w+)\s*(!=|>=|<=|~=|~|=|>|<)\s*("[^"]*"|\'[^\']*\'|\S+)'
-)
+_CONDITION_PATTERN = re.compile(r'(\w+)\s*(!=|>=|<=|~=|~|=|>|<)\s*("[^"]*"|\'[^\']*\'|\S+)')
 
 _FIELD_MAP = {
-    "name": "username", "username": "username", "user": "username", "n": "username",
-    "id": "id", "uid": "id", "i": "id",
-    "country": "country", "code": "country", "c": "country",
-    "mutual": "mutual", "mu": "mutual", "m": "mutual",
-    "online": "online", "on": "online", "o": "online",
-    "active": "active", "e": "active",
-    "bot": "bot", "b": "bot",
-    "deleted": "deleted", "del": "deleted", "d": "deleted",
-    "supporter": "supporter", "vip": "supporter", "v": "supporter",
-    "pp": "pp", "p": "pp", "performance": "pp",
-    "acc": "acc", "accuracy": "acc", "a": "acc",
-    "pc": "pc", "playcount": "pc",
-    "pt": "pt", "playtime": "pt",
-    "th": "th", "h": "th", "tth": "th", "totalhits": "th",
-    "level": "level", "lv": "level", "l": "level",
-    "combo": "max_combo", "cb": "max_combo",
-    "rank": "global_rank", "ranking": "global_rank", "k": "global_rank",
-    "ssh": "ssh", "ss": "ss", "sh": "sh", "s": "s", "ra": "a",
+    "name": "username",
+    "username": "username",
+    "user": "username",
+    "n": "username",
+    "id": "id",
+    "uid": "id",
+    "i": "id",
+    "country": "country",
+    "code": "country",
+    "c": "country",
+    "mutual": "mutual",
+    "mu": "mutual",
+    "m": "mutual",
+    "online": "online",
+    "on": "online",
+    "o": "online",
+    "active": "active",
+    "e": "active",
+    "bot": "bot",
+    "b": "bot",
+    "deleted": "deleted",
+    "del": "deleted",
+    "d": "deleted",
+    "supporter": "supporter",
+    "vip": "supporter",
+    "v": "supporter",
+    "pp": "pp",
+    "p": "pp",
+    "performance": "pp",
+    "acc": "acc",
+    "accuracy": "acc",
+    "a": "acc",
+    "pc": "pc",
+    "playcount": "pc",
+    "pt": "pt",
+    "playtime": "pt",
+    "th": "th",
+    "h": "th",
+    "tth": "th",
+    "totalhits": "th",
+    "level": "level",
+    "lv": "level",
+    "l": "level",
+    "combo": "max_combo",
+    "cb": "max_combo",
+    "rank": "global_rank",
+    "ranking": "global_rank",
+    "k": "global_rank",
+    "ssh": "ssh",
+    "ss": "ss",
+    "sh": "sh",
+    "s": "s",
+    "ra": "a",
 }
 
 
@@ -618,9 +703,7 @@ def _filter_friends(friends: list, conditions: list[tuple[str, str, str]]) -> li
 def _register_callback_route() -> None:
     driver = get_driver()
     if driver.type not in ("fastapi", "quart"):
-        logger.warning(
-            f"当前驱动 {driver.type} 无法自动挂载 OAuth 回调路由；用户可通过 /frbind <code> 手动完成授权"
-        )
+        logger.warning(f"当前驱动 {driver.type} 无法自动挂载 OAuth 回调路由；用户可通过 /frbind <code> 手动完成授权")
         return
     app = driver.server_app
     try:
