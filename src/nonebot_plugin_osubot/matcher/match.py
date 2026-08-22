@@ -11,12 +11,14 @@ try:
     from nonebot.adapters.onebot.v11.exception import NetworkError
     from nonebot.adapters.onebot.v11 import Message as OB11Message  # noqa: F401
     from nonebot.adapters.onebot.v11 import MessageSegment  # noqa: F401
+
     _OB11_OK = True
 except ImportError:
     _OB11_OK = False
 
     class NetworkError(Exception):
         pass
+
 
 from ..draw.match_history import draw_match_history
 
@@ -32,6 +34,7 @@ def is_primary_bot(self_id: object) -> bool:
     except Exception:
         return True
     return _primary.is_primary_bot(self_id)
+
 
 SEND_RETRY = 2
 SEND_RETRY_INTERVAL = 2
@@ -89,13 +92,9 @@ async def _send_forward(bot, event, images: list[bytes]) -> bool:
 
     try:
         if group_id is not None:
-            await _send_with_retry(
-                lambda: bot.call_api("send_group_forward_msg", group_id=group_id, messages=nodes)
-            )
+            await _send_with_retry(lambda: bot.call_api("send_group_forward_msg", group_id=group_id, messages=nodes))
         elif user_id is not None:
-            await _send_with_retry(
-                lambda: bot.call_api("send_private_forward_msg", user_id=user_id, messages=nodes)
-            )
+            await _send_with_retry(lambda: bot.call_api("send_private_forward_msg", user_id=user_id, messages=nodes))
         else:
             return False
         return True
@@ -106,9 +105,7 @@ async def _send_forward(bot, event, images: list[bytes]) -> bool:
 async def _send_one_by_one(images: list[bytes]):
     """退化方案：逐张发送。"""
     for index, img in enumerate(images):
-        await _send_with_retry(
-            lambda raw=img, first=(index == 0): UniMessage.image(raw=raw).send(reply_to=first)
-        )
+        await _send_with_retry(lambda raw=img, first=(index == 0): UniMessage.image(raw=raw).send(reply_to=first))
         if index < len(images) - 1:
             await asyncio.sleep(0.5)
 

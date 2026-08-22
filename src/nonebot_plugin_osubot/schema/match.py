@@ -12,26 +12,26 @@ class Game(Base):
     beatmap_id: int
     # 【修改点 1】mods 兼容 str 和 dict/Mod 对象
     mods: List[Union[str, dict]] = []
-    
+
     beatmap: BeatmapCompact
     scores: list[Score]
     team_type: str
 
     # 【新增验证器】统一处理 game 级别的 mods
-    @field_validator('mods', mode='before')
+    @field_validator("mods", mode="before")
     @classmethod
     def parse_mods(cls, v):
         if not v:
             return []
-        
+
         result = []
         for m in v:
             if isinstance(m, dict):
-                result.append(m.get('acronym', ''))
+                result.append(m.get("acronym", ""))
             elif isinstance(m, str):
                 result.append(m)
             else:
-                result.append(getattr(m, 'acronym', str(m)))
+                result.append(getattr(m, "acronym", str(m)))
         return result
 
 

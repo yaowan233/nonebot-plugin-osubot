@@ -346,10 +346,7 @@ async def _convert_rooms_to_match_format(raw: dict, match_id: str) -> dict:
             logger.debug(f"[rooms] playlist_item {playlist_item_id}: 被强制关闭(abort)，跳过")
             continue
 
-        scores_url = (
-            f"https://osu.ppy.sh/api/v2/rooms/{match_id}"
-            f"/playlist/{playlist_item_id}/scores"
-        )
+        scores_url = f"https://osu.ppy.sh/api/v2/rooms/{match_id}/playlist/{playlist_item_id}/scores"
 
         try:
             scores_data = await api_info("matches", scores_url)
@@ -386,17 +383,19 @@ async def _convert_rooms_to_match_format(raw: dict, match_id: str) -> dict:
             if team_colour not in ("red", "blue"):
                 team_colour = "none"
 
-            game_scores.append({
-                "user_id": s.get("user_id"),
-                "score": s.get("total_score", 0),
-                "accuracy": s.get("accuracy", 0),
-                "max_combo": s.get("max_combo", 0),
-                "mods": _parse_mods(s.get("mods", [])),
-                "match": {
-                    "team": team_colour,
-                    "passed": bool(s.get("passed", True)),  # ← 透传是否通过
-                },
-            })
+            game_scores.append(
+                {
+                    "user_id": s.get("user_id"),
+                    "score": s.get("total_score", 0),
+                    "accuracy": s.get("accuracy", 0),
+                    "max_combo": s.get("max_combo", 0),
+                    "mods": _parse_mods(s.get("mods", [])),
+                    "match": {
+                        "team": team_colour,
+                        "passed": bool(s.get("passed", True)),  # ← 透传是否通过
+                    },
+                }
+            )
 
         if not game_scores:
             continue
@@ -448,12 +447,14 @@ async def _convert_rooms_to_match_format(raw: dict, match_id: str) -> dict:
             "scores": game_scores,
         }
 
-        events.append({
-            "id": playlist_item_id,
-            "detail": {"type": "other"},
-            "timestamp": item.get("played_at", ""),
-            "game": game,
-        })
+        events.append(
+            {
+                "id": playlist_item_id,
+                "detail": {"type": "other"},
+                "timestamp": item.get("played_at", ""),
+                "game": game,
+            }
+        )
 
     return {
         "match": match_meta,
@@ -477,9 +478,7 @@ def prepare_match_data(match_info: Match, match_id: str, team_type_filter: str |
     all_games = [
         event.game
         for event in match_info.events
-        if event.detail.type == "other"
-        and event.game is not None
-        and event.game.scores
+        if event.detail.type == "other" and event.game is not None and event.game.scores
     ]
     if not all_games:
         raise ValueError("该多人房没有可展示的对局")
@@ -494,11 +493,7 @@ def prepare_match_data(match_info: Match, match_id: str, team_type_filter: str |
     team_type = team_type_filter or mode([game.team_type for game in games])
     is_team = team_type in ("team-vs", "tag-team-vs")
     if is_team:
-        _has_team = any(
-            (score.match or {}).get("team") in ("red", "blue")
-            for game in games
-            for score in game.scores
-        )
+        _has_team = any((score.match or {}).get("team") in ("red", "blue") for game in games for score in game.scores)
         if not _has_team:
             team_type = "head-to-head"
             is_team = False
@@ -523,36 +518,30 @@ def prepare_match_data(match_info: Match, match_id: str, team_type_filter: str |
             # ── 队伍标签拼接逻辑 ──
             if user:
                 team = getattr(user, "team", None)
-                tag = (
-                    getattr(team, "short_name", None) or getattr(team, "name", None)
-                ) if team else None
+                tag = (getattr(team, "short_name", None) or getattr(team, "name", None)) if team else None
                 display_name = f"[{tag}] {user.username}" if tag else user.username
             else:
                 display_name = str(score.user_id)
             # ── 队伍标签拼接逻辑结束 ──
-            player_rows.append({
-                "user_id": score.user_id,
-                "name": display_name,
-                "avatar": user.avatar_url if user else f"https://a.ppy.sh/{score.user_id}",
-                "team": (score.match or {}).get("team", "none"),
-                "passed": (score.match or {}).get("passed", True),
-                "score": score.score or 0,
-                "accuracy": (score.accuracy or 0) * 100,
-                "combo": score.max_combo or 0,
-                "mods": _score_mods(game.mods, score.mods),
-            })
+            player_rows.append(
+                {
+                    "user_id": score.user_id,
+                    "name": display_name,
+                    "avatar": user.avatar_url if user else f"https://a.ppy.sh/{score.user_id}",
+                    "team": (score.match or {}).get("team", "none"),
+                    "passed": (score.match or {}).get("passed", True),
+                    "score": score.score or 0,
+                    "accuracy": (score.accuracy or 0) * 100,
+                    "combo": score.max_combo or 0,
+                    "mods": _score_mods(game.mods, score.mods),
+                }
+            )
 
         # ── 队伍总分：与 osu! 官方判定一致，只统计通过(passed)玩家的分数 ──
         # 参考 osu-web resources/js/legacy-match/content.tsx：
         #   if (!score.passed) continue; scores[team] += score.total_score;
-        red_score = sum(
-            p["score"] for p in player_rows
-            if p["team"] == "red" and p["passed"]
-        )
-        blue_score = sum(
-            p["score"] for p in player_rows
-            if p["team"] == "blue" and p["passed"]
-        )
+        red_score = sum(p["score"] for p in player_rows if p["team"] == "red" and p["passed"])
+        blue_score = sum(p["score"] for p in player_rows if p["team"] == "blue" and p["passed"])
         winner = "none"
         if red_score > blue_score:
             winner = "red"
@@ -561,29 +550,27 @@ def prepare_match_data(match_info: Match, match_id: str, team_type_filter: str |
             winner = "blue"
             blue_wins += 1
 
-        rendered_games.append({
-            "index": index,
-            "map_id": game.beatmap_id,
-            "title": beatmapset.title if beatmapset else f"Beatmap {game.beatmap_id}",
-            "version": beatmap.version if beatmap else "Unknown Difficulty",
-            "creator": beatmapset.creator if beatmapset else "unknown",
-            "cover": (
-                beatmapset.covers.cover
-                if beatmapset
-                else (
-                    f"https://assets.ppy.sh/beatmaps/{beatmap.beatmapset_id}/covers/cover.jpg"
-                    if beatmap
-                    else ""
-                )
-            ),
-            "stars": beatmap.difficulty_rating if beatmap else 0,
-            "winner": winner,
-            "red_score": red_score,
-            "blue_score": blue_score,
-            "players": player_rows,
-            "red_players": [p for p in player_rows if p["team"] == "red"],
-            "blue_players": [p for p in player_rows if p["team"] == "blue"],
-        })
+        rendered_games.append(
+            {
+                "index": index,
+                "map_id": game.beatmap_id,
+                "title": beatmapset.title if beatmapset else f"Beatmap {game.beatmap_id}",
+                "version": beatmap.version if beatmap else "Unknown Difficulty",
+                "creator": beatmapset.creator if beatmapset else "unknown",
+                "cover": (
+                    beatmapset.covers.cover
+                    if beatmapset
+                    else (f"https://assets.ppy.sh/beatmaps/{beatmap.beatmapset_id}/covers/cover.jpg" if beatmap else "")
+                ),
+                "stars": beatmap.difficulty_rating if beatmap else 0,
+                "winner": winner,
+                "red_score": red_score,
+                "blue_score": blue_score,
+                "players": player_rows,
+                "red_players": [p for p in player_rows if p["team"] == "red"],
+                "blue_players": [p for p in player_rows if p["team"] == "blue"],
+            }
+        )
 
     if not rendered_games:
         raise ValueError("该多人房没有有效成绩")
@@ -598,11 +585,7 @@ def prepare_match_data(match_info: Match, match_id: str, team_type_filter: str |
         "red_wins": red_wins,
         "blue_wins": blue_wins,
         "game_count": len(rendered_games),
-        "player_count": len({
-            player["user_id"]
-            for game in rendered_games
-            for player in game["players"]
-        }),
+        "player_count": len({player["user_id"] for game in rendered_games for player in game["players"]}),
         "team_size": max(
             (max(len(g["red_players"]), len(g["blue_players"])) for g in rendered_games),
             default=0,
@@ -624,9 +607,7 @@ async def draw_match_card(data: dict) -> bytes:
         (TEMPLATE_PATH / "index.html").as_uri(),
         {"width": 1280, "height": 900},
     ) as page:
-        await page.set_content(
-            await template.render_async(**data), wait_until="domcontentloaded"
-        )
+        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
         await page.evaluate(
             "Promise.race([Promise.all([document.fonts.ready,"
             "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
@@ -661,27 +642,22 @@ async def draw_match_history(match_id: str, query_type: str = "auto") -> list[by
     # ── Step 1: 尝试获取原始数据 ──
     if query_type in ("match", "auto"):
         try:
-            raw = await api_info(
-                "matches", f"https://osu.ppy.sh/api/v2/matches/{match_id}"
-            )
+            raw = await api_info("matches", f"https://osu.ppy.sh/api/v2/matches/{match_id}")
             source = "matches"
         except Exception:
             raw = None
 
     if raw is None and query_type in ("room", "auto"):
         try:
-            raw = await api_info(
-                "matches", f"https://osu.ppy.sh/api/v2/rooms/{match_id}"
-            )
+            raw = await api_info("matches", f"https://osu.ppy.sh/api/v2/rooms/{match_id}")
             source = "rooms"
         except Exception:
             raw = None
 
     if raw is None:
         from ..exceptions import NetworkError as OsubotNetworkError
-        raise OsubotNetworkError(
-            f"未找到 ID 为 {match_id} 的比赛/多人房，请检查 ID 是否正确。"
-        )
+
+        raise OsubotNetworkError(f"未找到 ID 为 {match_id} 的比赛/多人房，请检查 ID 是否正确。")
 
     # ── Step 2: 如果是 rooms 格式，转换为 matches 格式 ──
     if source == "rooms" or _is_rooms_response(raw):
@@ -694,9 +670,7 @@ async def draw_match_history(match_id: str, query_type: str = "auto") -> list[by
     all_games = [
         event.game
         for event in match_info.events
-        if event.detail.type == "other"
-        and event.game is not None
-        and event.game.scores
+        if event.detail.type == "other" and event.game is not None and event.game.scores
     ]
     if not all_games:
         raise ValueError("该多人房没有可展示的对局")
