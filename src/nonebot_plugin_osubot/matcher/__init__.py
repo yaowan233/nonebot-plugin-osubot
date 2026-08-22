@@ -4,7 +4,7 @@ from .bp import bp, pfm, tbp, first
 from .bp_fix import bp_fix
 from .getbg import getbg
 from .match import match
-from .medal import medal
+from .medal import medal, myach, achrec
 from .score import score, score_history
 from .osudl import osudl
 from .pr import pr, pass_list, recent, recent_list
@@ -31,6 +31,8 @@ __all__ = [
     "hint",
     "pic_hint",
     "medal",
+    "myach",
+    "achrec",
     "bp_analyze",
     "pr",
     "pass_list",
