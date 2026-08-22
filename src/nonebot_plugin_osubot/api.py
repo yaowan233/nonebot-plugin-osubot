@@ -770,9 +770,7 @@ async def exchange_oauth_code(code: str) -> dict:
         },
     )
     if not req or req.status_code != 200:
-        raise NetworkError(
-            f"OAuth 授权码兑换失败：HTTP {req.status_code if req else 'None'}{_oauth_error_detail(req)}"
-        )
+        raise NetworkError(f"OAuth 授权码兑换失败：HTTP {req.status_code if req else 'None'}{_oauth_error_detail(req)}")
     return req.json()
 
 
@@ -788,9 +786,7 @@ async def refresh_oauth_token(refresh_token: str) -> dict:
         },
     )
     if not req or req.status_code != 200:
-        raise NetworkError(
-            f"OAuth 令牌刷新失败：HTTP {req.status_code if req else 'None'}{_oauth_error_detail(req)}"
-        )
+        raise NetworkError(f"OAuth 令牌刷新失败：HTTP {req.status_code if req else 'None'}{_oauth_error_detail(req)}")
     return req.json()
 
 
@@ -865,6 +861,8 @@ async def get_user_friends(access_token: str) -> list:
         if friend.target is not None:
             friends.append(friend)
     return friends
+
+
 async def get_users(users: list[int]):
     headers = await get_headers()
     req = await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users})

@@ -38,9 +38,7 @@ def upgrade(name: str = "") -> None:
         info={"bind_key": "nonebot_plugin_osubot"},
     )
     with op.batch_alter_table("nonebot_plugin_osubot_useroauthdata", schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f("ix_nonebot_plugin_osubot_useroauthdata_user_id"), ["user_id"], unique=False
-        )
+        batch_op.create_index(batch_op.f("ix_nonebot_plugin_osubot_useroauthdata_user_id"), ["user_id"], unique=False)
     # ### end Alembic commands ###
 
 
