@@ -62,15 +62,11 @@ async def _audio(event: Event, state: T_State):
         return
 
     if not voice:
-        await UniMessage.text(
-            "无法获取该谱面的音频，请检查ID是否正确，或先查询一张谱面后再试听"
-        ).finish(reply_to=True)
+        await UniMessage.text("无法获取该谱面的音频，请检查ID是否正确，或先查询一张谱面后再试听").finish(reply_to=True)
         return
 
     if not voice:
-        await UniMessage.text(
-            "无法获取该谱面的音频，请检查ID是否正确，或先查询一张谱面后再试听"
-        ).finish(reply_to=True)
+        await UniMessage.text("无法获取该谱面的音频，请检查ID是否正确，或先查询一张谱面后再试听").finish(reply_to=True)
         return
 
     # ① 先发一条带引用的提示（保留 reply_to，让用户知道在回复谁）

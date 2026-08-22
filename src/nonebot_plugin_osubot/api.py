@@ -517,6 +517,7 @@ async def get_preview_audio(sid: int) -> bytes | None:
         return res.content
     return None
 
+
 async def get_users(users: list[int]):
     headers = await get_headers()
     req = await safe_async_get(f"{api}/users", headers=headers, params={"ids[]": users})
