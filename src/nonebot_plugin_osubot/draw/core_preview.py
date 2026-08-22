@@ -12,7 +12,8 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
+from collections.abc import Sequence
 
 logger = logging.getLogger("nonebot_plugin_osubot.core_preview")
 

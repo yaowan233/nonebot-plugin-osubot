@@ -108,17 +108,13 @@ async def _(event: Event, state: T_State):
     # 静态预览：std -> gif（保持旧 UX）；taiko/ctb/mania -> png
     # ------------------------------------------------------------------
     if state["mode"] == "0":
-        pic = await render_preview(
-            int(osu_id), data["beatmapset_id"], 0, fmt="gif", mods=state["mods"]
-        )
+        pic = await render_preview(int(osu_id), data["beatmapset_id"], 0, fmt="gif", mods=state["mods"])
         msg = UniMessage.image(raw=pic) + UniMessage.text(
             f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
         )
         await msg.finish(reply_to=True)
     elif state["mode"] in ("1", "2", "3"):
-        pic = await render_preview(
-            int(osu_id), data["beatmapset_id"], mode_int, fmt="png", mods=state["mods"]
-        )
+        pic = await render_preview(int(osu_id), data["beatmapset_id"], mode_int, fmt="png", mods=state["mods"])
         await UniMessage.image(raw=pic).finish(reply_to=True)
     else:
         await UniMessage.text(f"{NGM[state['mode']]}模式暂不支持预览").finish()

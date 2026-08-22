@@ -455,9 +455,7 @@ async def draw_osu_preview(
 ) -> bytes | Path:
     """full=False -> gif bytes；full=True -> 完整 mp4 Path。优先 core，失败按配置回退。"""
     if full:
-        return await draw_full_osu_preview(
-            beatmap_id, beatmapset_id, target_mode=target_mode, mods=mods
-        )
+        return await draw_full_osu_preview(beatmap_id, beatmapset_id, target_mode=target_mode, mods=mods)
 
     if plugin_config.osu_preview_use_core:
         try:
@@ -466,9 +464,7 @@ async def draw_osu_preview(
             if not plugin_config.osu_preview_fallback:
                 raise
             logger.warning("core gif 渲染失败，回退旧链路: %s", e)
-    return await _legacy_draw_osu_preview(
-        beatmap_id, beatmapset_id, full=False, target_mode=target_mode
-    )
+    return await _legacy_draw_osu_preview(beatmap_id, beatmapset_id, full=False, target_mode=target_mode)
 
 
 async def draw_full_osu_preview(
@@ -513,9 +509,7 @@ async def render_preview(
     mode = int(mode)
 
     if fmt == "mp4":
-        return await draw_full_osu_preview(
-            bid, sid, progress_callback=progress_callback, target_mode=mode, mods=mods
-        )
+        return await draw_full_osu_preview(bid, sid, progress_callback=progress_callback, target_mode=mode, mods=mods)
 
     if plugin_config.osu_preview_use_core:
         try:
