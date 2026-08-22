@@ -24,7 +24,16 @@ myach = on_command("myachievement", aliases={"myach", "我的成就"}, priority=
 achrec = on_command("achrec", aliases={"成就推荐", "推荐成就"}, priority=11, block=True)
 
 # 模式名 → osu! API mode 参数
-_MODE_MAP = {"o": "osu", "t": "taiko", "c": "fruits", "m": "mania", "osu": "osu", "taiko": "taiko", "catch": "fruits", "mania": "mania"}
+_MODE_MAP = {
+    "o": "osu",
+    "t": "taiko",
+    "c": "fruits",
+    "m": "mania",
+    "osu": "osu",
+    "taiko": "taiko",
+    "catch": "fruits",
+    "mania": "mania",
+}
 
 
 def _strip_medal_html(text: str) -> str:
@@ -146,10 +155,7 @@ async def _(msg: Message = CommandArg()):
             diff = beatmap.get("DifficultyName") or beatmap.get("version") or ""
             bmid = beatmap.get("BeatmapID") or beatmap.get("id") or ""
             stars = beatmap.get("Difficulty") or ""
-            beatmap_msg += (
-                f"{title} [{diff}]\n{stars}⭐\n"
-                + f"https://osu.ppy.sh/b/{bmid}\n"
-            )
+            beatmap_msg += f"{title} [{diff}]\n{stars}⭐\n" + f"https://osu.ppy.sh/b/{bmid}\n"
         await beatmap_msg.send()
 
 
@@ -244,7 +250,9 @@ async def _(event: Event, arg: Message = CommandArg()):
     # 未获得列表：优先推荐本模式成就，其次全模式
     mode_ids = [a["id"] for a in catalog if a.get("mode") == mode]
     all_ids = [a["id"] for a in catalog]
-    ordered_ids = [i for i in mode_ids if i not in owned_ids] + [i for i in all_ids if i not in owned_ids and i not in mode_ids]
+    ordered_ids = [i for i in mode_ids if i not in owned_ids] + [
+        i for i in all_ids if i not in owned_ids and i not in mode_ids
+    ]
 
     # 取前 15 个推荐
     recommended = [next(a for a in catalog if a["id"] == i) for i in ordered_ids[:15]]
@@ -256,7 +264,9 @@ async def _(event: Event, arg: Message = CommandArg()):
     text_lines = []
     for i, ach in enumerate(recommended, start=1):
         name = ach.get("name", "")
-        icon = ach.get("icon_url") or (f"https://assets.ppy.sh/medals/web/{ach.get('slug')}.png" if ach.get("slug") else "")
+        icon = ach.get("icon_url") or (
+            f"https://assets.ppy.sh/medals/web/{ach.get('slug')}.png" if ach.get("slug") else ""
+        )
         grouping = ach.get("grouping") or "成就"
         # 中文攻略
         solution = ""
@@ -295,7 +305,5 @@ async def _(event: Event, arg: Message = CommandArg()):
 
     # 图片 + 文本攻略
     msg_out = UniMessage.image(raw=img)
-    msg_out += UniMessage.text(
-        "以下成就你还没有获得，加油：\n" + "\n".join(text_lines)
-    )
+    msg_out += UniMessage.text("以下成就你还没有获得，加油：\n" + "\n".join(text_lines))
     await msg_out.finish(reply_to=True)

@@ -614,15 +614,15 @@ async def fetch_achievements_catalog(force: bool = False) -> list[dict]:
 
         profile_url = "https://osu.ppy.sh/users/78024"  # Cookiezi
         try:
-            req = await safe_async_get(
-                profile_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64)"}
-            )
+            req = await safe_async_get(profile_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64)"})
             if req and req.status_code == 200:
                 html = req.text if hasattr(req, "text") else req.content.decode("utf-8", "ignore")
                 m = _re.search(r'data-initial-data="([^"]*)"', html)
                 if m:
                     payload = json.loads(_unescape(m.group(1)))
-                    achievements = [_normalize_achievement(a) for a in (payload.get("achievements") or []) if isinstance(a, dict)]
+                    achievements = [
+                        _normalize_achievement(a) for a in (payload.get("achievements") or []) if isinstance(a, dict)
+                    ]
         except Exception:
             pass
 
@@ -656,6 +656,7 @@ async def get_user_achievements(uid: int, mode: str = "osu") -> list[dict]:
             entry.update(detail)
         result.append(entry)
     return result
+
 
 async def get_users(users: list[int]):
     headers = await get_headers()
