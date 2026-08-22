@@ -134,6 +134,21 @@ OSU_KEY=你的客户端密钥
 | `OSU_PREVIEW_STD_CATCH_FULL_SCALE` | `0.5` | osu!/Catch 完整视频缩放倍率 |
 | `OSU_PREVIEW_STD_CATCH_FULL_FRAME_INTERVAL` | `30` | osu!/Catch 完整视频帧间隔（毫秒） |
 
+
+### 二进制预览配置（osu-beatmap-preview，可选）
+
+使用 [osu-beatmap-preview](https://github.com/2710165659/osu-beatmap-preview)（Rust 单可执行文件，支持四种模式、GIF/PNG/MP4、转谱与变速）可替代默认的浏览器 + FFmpeg 渲染链路，速度更快且无需 FFmpeg。未配置二进制或渲染失败时自动回退旧链路（可用 `OSU_PREVIEW_FALLBACK` 关闭回退）。
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `OSU_PREVIEW_BIN_PATH` | 无 | osu-beatmap-preview 可执行文件绝对路径；不配置则使用旧浏览器链路 |
+| `OSU_PREVIEW_USE_CORE` | `true` | 是否启用二进制渲染 |
+| `OSU_PREVIEW_FALLBACK` | `true` | 二进制缺失/失败时是否回退旧浏览器链路 |
+| `OSU_PREVIEW_TIMEOUT` | `120` | GIF/PNG 单次渲染超时（秒） |
+| `OSU_PREVIEW_VIDEO_TIMEOUT` | `300` | 完整 MP4 渲染超时（秒） |
+
+二进制请从项目的 [Releases](https://github.com/2710165659/osu-beatmap-preview/releases) 下载对应平台版本。
+
 ## ⚠️ 从 v6 升级到 v7
 
 v7 将底层 ORM 从 tortoise-orm 迁移至 nonebot-plugin-orm，**数据库表名和结构发生了变化**，升级前需手动执行迁移脚本，否则数据将丢失。
