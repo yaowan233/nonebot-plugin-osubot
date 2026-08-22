@@ -13,6 +13,7 @@ from .history import history
 from .bind import bind, unbind
 from .map import bmap, osu_map
 from .osu_help import osu_help
+from .audio import audio_preview
 from .rank import group_pp_rank
 from .recommend import recommend
 from .url_match import url_match
@@ -37,6 +38,7 @@ __all__ = [
     "recent",
     "recent_list",
     "osu_help",
+    "audio_preview",
     "url_match",
     "recommend",
     "update_info",
