@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{font-family:Torus;src:url('../template_assets/torus-regular.woff')}
+@font-face{font-family:Torus;src:url('../template_assets/torus-semibold.woff');font-weight:800}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;background:transparent;font-family:Torus,"Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+
+.card{position:relative;width:1280px;min-height:900px;padding-bottom:60px;overflow:hidden;background:#101722;color:#fff}
+
+/* Header */
+.head{position:relative;height:150px;padding:30px 48px;border-bottom:1px solid #ffffff12;background:linear-gradient(105deg,#1a2c3e 0%,#101722 70%)}
+.me{display:flex;align-items:center;gap:18px}
+.me .avatar{width:78px;height:78px;border-radius:50%;border:3px solid #ec3f83;object-fit:cover;background:#26323d}
+.me h1{font-size:30px;font-weight:800;letter-spacing:-.5px}
+.me .sub{color:#82929d;font-size:12px;font-weight:600;margin-top:6px}
+.head-meta{position:absolute;right:48px;top:30px;text-align:right;color:#82929d;font-size:12px;line-height:1.9;font-weight:600}
+.head-meta b{color:#62cddd;font-size:16px}
+
+/* Friend grid — 5 per row */
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:22px 40px 0}
+.f-card{display:flex;flex-direction:column;align-items:center;text-align:center;padding:16px 8px 12px;background:#0b1925e8;border:1px solid #ffffff12;border-radius:10px;transition:background .2s}
+.f-card:hover{background:#ffffff08}
+.f-card.mutual-card{background:linear-gradient(180deg,#ec3f8318,transparent);box-shadow:inset 0 0 0 1px #ec3f8340}
+
+.f-card .avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;background:#26323d;border:2px solid #26323d}
+.f-card.mutual-card .avatar{border-color:#ec3f83}
+
+.fname{width:100%;margin-top:8px;font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsub{display:flex;align-items:center;gap:5px;margin-top:4px;color:#718794;font-size:11px;font-weight:600;white-space:nowrap}
+.fsub .flag{font-size:14px}
+
+.badges{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;justify-content:center;min-height:15px}
+.badge{display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px;letter-spacing:.3px}
+.badge.mutual{color:#ff8ab0;background:#ec3f8326;border:1px solid #ec3f8340}
+.badge.supporter{color:#f3b61f;background:#f3b61f1f;border:1px solid #f3b61f40}
+.badge.online{color:#4ade80;background:#4ade8020;border:1px solid #4ade8040}
+
+/* Footer */
+.foot{position:absolute;left:40px;right:40px;bottom:20px;display:flex;justify-content:space-between;color:#586b78;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+{% macro flag(code) -%}
+    {%- if code and code|length == 2 -%}
+        {{- code.upper().replace('A','🇦').replace('B','🇧').replace('C','🇨').replace('D','🇩').replace('E','🇪').replace('F','🇫').replace('G','🇬').replace('H','🇭').replace('I','🇮').replace('J','🇯').replace('K','🇰').replace('L','🇱').replace('M','🇲').replace('N','🇳').replace('O','🇴').replace('P','🇵').replace('Q','🇶').replace('R','🇷').replace('S','🇸').replace('T','🇹').replace('U','🇺').replace('V','🇻').replace('W','🇼').replace('X','🇽').replace('Y','🇾').replace('Z','🇿') -}}
+    {%- else -%}🌐{%- endif -%}
+{%- endmacro %}
+
+<main class="card">
+    <header class="head">
+        <div class="me">
+            <img class="avatar" src="{{ me_avatar }}" alt="">
+            <div>
+                <h1>{{ me_name }} 的好友</h1>
+                <div class="sub">共 {{ total }} 位好友</div>
+            </div>
+        </div>
+        <div class="head-meta">
+            <b>{{ start }}-{{ end }}</b> / {{ total }}<br>
+            排序：{{ sort_label }} · OSU! FRIENDS
+        </div>
+    </header>
+
+    <section class="grid">
+        {% for player in friends %}
+        <div class="f-card {% if player.mutual %}mutual-card{% endif %}">
+            <img class="avatar" src="{{ player.avatar }}" alt="">
+            <div class="fname" title="{{ player.name }}">{{ player.name }}</div>
+            <div class="fsub"><span class="flag">{{ flag(player.country) }}</span><span>uid {{ player.uid }}</span></div>
+            <div class="badges">
+                {% if player.mutual %}<span class="badge mutual">互关</span>{% endif %}
+                {% if player.supporter %}<span class="badge supporter">Supporter</span>{% endif %}
+                {% if player.online %}<span class="badge online">在线</span>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <footer class="foot">
+        <span>OSUBOT FRIENDS · /friend</span>
+        <span>{{ me_name }} · 好友列表</span>
+    </footer>
+</main>
+
+</body>
+</html>
