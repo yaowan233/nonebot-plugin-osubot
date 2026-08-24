@@ -497,25 +497,27 @@ async def get_user_info(url: str) -> dict:
     return await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID是否正确")
 
 
-async def get_preview_audio(sid: int) -> bytes | None:
-    """
-    获取谱面集(sid)的官方 30s 试听音频，返回 mp3 字节流。
-    接口文档(SayoBot 静态资源 - 试听音频):
-        https://cdn.sayobot.cn:25225/preview/{sid}.mp3
-        https://a.sayobot.cn/preview/{sid}.mp3
-    获取失败或内容不合法时返回 None。
-    """
-    res = await get_first_response(
-        [
-            f"https://cdn.sayobot.cn:25225/preview/{sid}.mp3",
-            f"https://a.sayobot.cn/preview/{sid}.mp3",
-        ],
-        timeout=15.0,
-    )
+async def _get_preview_audio(urls: list[str]) -> bytes | None:
+    res = await get_first_response(urls, timeout=15.0)
     # 校验：必须 200 且内容足够大（排除错误页/空文件）
     if res and res.status_code == 200 and len(res.content) > 1024:
         return res.content
     return None
+
+
+async def get_preview_audio(bid: int) -> bytes | None:
+    """获取指定谱面(bid)的试听音频。"""
+    return await _get_preview_audio([f"https://osu.direct/api/media/preview/{bid}"])
+
+
+async def get_beatmapset_preview_audio(sid: int) -> bytes | None:
+    """在只有谱面集 ID 时，获取该谱面集的默认试听音频。"""
+    return await _get_preview_audio(
+        [
+            f"https://cdn.sayobot.cn:25225/preview/{sid}.mp3",
+            f"https://a.sayobot.cn/preview/{sid}.mp3",
+        ]
+    )
 
 
 async def get_users(users: list[int]):
