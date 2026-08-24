@@ -445,7 +445,7 @@ async def test_match_success(app: App):
 
     event = fake_group_message_event_v11(message=Message("/match 114514"))
 
-    with patch(f"{MATCH_MODULE}.draw_match_history", new=AsyncMock(return_value=FAKE_IMG)):
+    with patch(f"{MATCH_MODULE}.draw_match_history", new=AsyncMock(return_value=[FAKE_IMG])):
         async with app.test_matcher(match) as ctx:
             adapter = nonebot.get_adapter(OnebotV11Adapter)
             bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -461,6 +461,34 @@ async def test_match_success(app: App):
                 result={"message_id": 1},
             )
             ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_match_multiple_images_always_tries_forward(app: App):
+    """多图发送不在 osubot 内部判断主号或分身。"""
+    try:
+        from nonebot_plugin_osubot.matcher.match import match
+    except ImportError:
+        pytest.skip()
+    import nonebot
+
+    pages = [b"PAGE_1", b"PAGE_2"]
+    event = fake_group_message_event_v11(message=Message("/match 114514"))
+    forward = AsyncMock(return_value=True)
+    one_by_one = AsyncMock()
+
+    with (
+        patch(f"{MATCH_MODULE}.draw_match_history", new=AsyncMock(return_value=pages)),
+        patch(f"{MATCH_MODULE}._send_forward", new=forward),
+        patch(f"{MATCH_MODULE}._send_one_by_one", new=one_by_one),
+    ):
+        async with app.test_matcher(match) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter, self_id="1919810")
+            ctx.receive_event(bot, event)
+
+    forward.assert_awaited_once_with(bot, event, pages)
+    one_by_one.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

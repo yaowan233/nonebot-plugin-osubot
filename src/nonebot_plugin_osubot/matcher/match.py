@@ -24,18 +24,6 @@ from ..draw.match_history import draw_match_history
 
 match = on_command("match", aliases={"mp"}, priority=11, block=True)
 
-
-def is_primary_bot(self_id: object) -> bool:
-    """判断当前 bot 是否为主号；主号去重插件未加载时一律视为主号（保持旧行为）。"""
-    try:
-        from nonebot import require
-
-        _primary = require("nonebot_plugin_primary_bot")
-    except Exception:
-        return True
-    return _primary.is_primary_bot(self_id)
-
-
 SEND_RETRY = 2
 SEND_RETRY_INTERVAL = 2
 USE_FORWARD = True  # 多图时用合并转发
@@ -124,11 +112,6 @@ async def _help(bot: Bot, arg: Message = CommandArg(), event: Event = None):
     # 单图：直接回复发送
     if len(pages) == 1:
         await _send_with_retry(lambda: UniMessage.image(raw=pages[0]).finish(reply_to=True))
-        return
-
-    # 多图：主号走合并转发；分身降级为逐张发送（多 bot 并存时避免发错账号）
-    if not is_primary_bot(bot.self_id):
-        await _send_one_by_one(pages)
         return
 
     # 多图：优先合并转发，失败则逐张发送
