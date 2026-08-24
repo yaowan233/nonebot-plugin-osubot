@@ -1,9 +1,12 @@
 """HTMLRender 0.8 Playwright lease 上的持久页面池。"""
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 from nonebot import get_plugin_config
 from nonebot.log import logger
@@ -194,6 +197,43 @@ async def _drop_page(key: str) -> None:
     await entry.lease.__aexit__(None, None, None)
 
 
+def _file_uri_to_path(uri: str) -> Path:
+    """Convert an absolute file URI generated on this host back to a path."""
+    parsed = urlsplit(uri)
+    path = unquote(parsed.path)
+    if parsed.netloc and parsed.netloc != "localhost":
+        path = f"//{parsed.netloc}{path}"
+    elif os.name == "nt" and len(path) >= 3 and path[0] == "/" and path[2] == ":":
+        path = path[1:]
+    return Path(path)
+
+
+async def _install_remote_filehost_route(page: Any, app: Any) -> None:
+    """Proxy local file requests through htmlrender's configured filehost."""
+    strategy = app.resources.strategy
+    policy = getattr(strategy.remote_local_policy, "value", strategy.remote_local_policy)
+    if not strategy.is_remote or policy != "filehost":
+        return
+
+    async def handle_local_file(route: Any) -> None:
+        resolution = await app.resources.to_resource_url(
+            _file_uri_to_path(route.request.url),
+            strict=True,
+        )
+        headers = dict(resolution.request_headers_by_url.get(resolution.value, {}))
+        response = await page.context.request.get(
+            resolution.value,
+            headers=headers,
+            max_redirects=0,
+        )
+        try:
+            await route.fulfill(response=response)
+        finally:
+            await response.dispose()
+
+    await page.route("file://**", handle_local_file)
+
+
 async def _create_page(
     key: str,
     goto_uri: str | None,
@@ -213,6 +253,7 @@ async def _create_page(
         # 原始 ProviderLifecycleError 为 "generator didn't stop after athrow()"。
         raise
     try:
+        await _install_remote_filehost_route(page, app)
         if goto_uri:
             # 持久页导航主要用于建立 file:// 基准地址。等待完整 load 会被
             # 模板中的远程头像、封面等资源拖住；具体渲染函数会自行等待
