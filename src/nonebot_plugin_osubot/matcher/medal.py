@@ -1,9 +1,11 @@
 import re
 import json
+from html import unescape
 from pathlib import Path
 from datetime import datetime
 
 from nonebot import on_command
+from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 from nonebot.internal.adapter import Event, Message
 from nonebot.log import logger
@@ -11,17 +13,17 @@ from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
-from ..api import fetch_achievements_catalog, load_achievements_catalog_disk, get_user_achievements
+from ..api import Achievement, fetch_achievements_catalog, get_user_achievements
 from ..database import UserData
-from ..draw.medal import draw_achievements
+from ..draw.medal import AchievementRenderRow, draw_achievements
 
 medal_data_path = Path(__file__).parent.parent / "osufile" / "medals" / "medals.json"
 with open(medal_data_path, encoding="utf-8") as file:
     medal_json = json.load(file)
 
 medal = on_command("medal", aliases={"md", "成就"}, priority=11, block=True)
-myach = on_command("myachievement", aliases={"myach", "我的成就"}, priority=11, block=True)
-achrec = on_command("achrec", aliases={"成就推荐", "推荐成就"}, priority=11, block=True)
+myach = on_command("myach", aliases={"ma", "myachievement", "我的成就"}, priority=11, block=True)
+achrec = on_command("achrec", aliases={"ar", "成就推荐", "推荐成就"}, priority=11, block=True)
 
 # 模式名 → osu! API mode 参数
 _MODE_MAP = {
@@ -45,26 +47,28 @@ def _strip_medal_html(text: str) -> str:
     if not text:
         return ""
     # 移除 <img ...>（含自闭合与成对标签）
-    text = re.sub(r"<img[^>]*/?>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<img[^>]*/?>", "", text, flags=re.DOTALL | re.IGNORECASE)
     # 表格转纯文本
     table_regex = r"<table[^>]*>(.*?)<\/table>"
-    table_match = re.search(table_regex, text, re.DOTALL)
-    if table_match:
+
+    def replace_table(table_match: re.Match) -> str:
         table_text = table_match.group(1)
         row_regex = r"<tr[^>]*>(.*?)<\/tr>"
-        rows = re.findall(row_regex, table_text, re.DOTALL)
-        result = ""
+        rows = re.findall(row_regex, table_text, re.DOTALL | re.IGNORECASE)
+        result = []
         for row in rows:
             cell_regex = r"<t[hd][^>]*>(.*?)<\/t[hd]>"
-            cells = re.findall(cell_regex, row, re.DOTALL)
+            cells = re.findall(cell_regex, row, re.DOTALL | re.IGNORECASE)
             for cell in cells:
                 cell_text = re.sub(r"<[^>]*>", "", cell)
-                result += cell_text + " "
-            result += "\n"
-        text = re.sub(table_regex, result, text)
+                result.append(cell_text)
+            result.append("\n")
+        return " ".join(result)
+
+    text = re.sub(table_regex, replace_table, text, flags=re.DOTALL | re.IGNORECASE)
     # 移除 <style>/<script>
-    text = re.sub(r"<style[^>]*>(.*?)</style>", "", text, flags=re.DOTALL)
-    text = re.sub(r"<script[^>]*>(.*?)</script>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<style[^>]*>(.*?)</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<script[^>]*>(.*?)</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
     # <br>/<p>/<div>/<li> 等块级标签转换行
     text = re.sub(r"<(br|/p|/div|/li|/tr|/h\d)[^>]*>", "\n", text, flags=re.IGNORECASE)
     # 其余标签直接删除
@@ -72,7 +76,39 @@ def _strip_medal_html(text: str) -> str:
     # 压缩多余空行
     text = re.sub(r"\n\s*\n+", "\n", text)
     text = re.sub(r"[ \t]+", " ", text)
-    return text.strip()
+    return unescape(text).strip()
+
+
+def _get_chinese_solution(name: str) -> str:
+    detail = medal_json.get(name) or {}
+    return detail.get("MedalSolution", "").strip()
+
+
+def _filter_achievements_by_mode(achievements: list[dict], mode: str) -> list[dict]:
+    """保留通用成就与指定模式的成就。"""
+    return [achievement for achievement in achievements if achievement.get("mode") in {None, mode}]
+
+
+def _get_recommendation_solution(achievement: Achievement) -> str:
+    name = achievement.get("name", "")
+    if solution := _get_chinese_solution(name):
+        return solution
+    original = _strip_medal_html(achievement.get("solution") or achievement.get("instructions") or "")
+    return f"暂无中文攻略，英文原文：{original}" if original else "暂无可用攻略"
+
+
+def _pack_urls(achievement: Achievement, local_detail: dict) -> list[str]:
+    pack_id = local_detail.get("PackID") or achievement.get("pack_id")
+    pack_ids = [value for value in re.split(r",+", str(pack_id)) if value]
+    return [f"https://osu.ppy.sh/beatmaps/packs/{value}" for value in pack_ids]
+
+
+def _related_beatmaps(achievement: Achievement, local_detail: dict) -> list[dict]:
+    beatmaps = achievement.get("beatmaps") or []
+    if beatmaps:
+        return beatmaps[:5]
+    beatmap_ids = [value for value in re.split(r",+", local_detail.get("BeatmapID", "")) if value]
+    return [{"id": beatmap_id} for beatmap_id in beatmap_ids[:5]]
 
 
 def _format_achieved_at(value) -> str:
@@ -93,6 +129,50 @@ async def _get_bound_uid(qq: str) -> int:
     return user_data.osu_id if user_data else 0
 
 
+async def _get_bound_achievement_request(
+    event: Event,
+    arg: Message,
+    matcher: type[Matcher],
+) -> tuple[int, str, list[dict]]:
+    uid = await _get_bound_uid(event.get_user_id())
+    if not uid:
+        await matcher.finish("该账号尚未绑定，请输入 /bind 用户名 绑定账号")
+
+    mode = _MODE_MAP.get(arg.extract_plain_text().strip().lower(), "osu")
+    try:
+        achievements = await get_user_achievements(uid, mode)
+    except Exception as e:
+        logger.opt(exception=e).error(f"获取成就失败 uid={uid}")
+        await matcher.finish(f"获取成就失败：{e}")
+    return uid, mode, achievements
+
+
+async def _render_achievement_rows(
+    matcher: type[Matcher],
+    *,
+    uid: int,
+    title: str,
+    subtitle: str,
+    rows: list[AchievementRenderRow],
+) -> bytes:
+    try:
+        return await draw_achievements(
+            {
+                "me_name": f"UID {uid}",
+                "me_avatar": f"https://a.ppy.sh/{uid}",
+                "title": title,
+                "subtitle": subtitle,
+                "total": len(rows),
+                "start": 1,
+                "end": len(rows),
+                "achievements": rows,
+            }
+        )
+    except Exception as e:
+        logger.opt(exception=e).error(f"渲染{title}失败")
+        await matcher.finish(f"渲染{title}失败：{e}")
+
+
 # ===========================================================================
 # /md <成就名>：查询单个成就达成方式
 # ===========================================================================
@@ -103,9 +183,7 @@ async def _(msg: Message = CommandArg()):
         await medal.finish("用法：/md <成就名>，例如 /md 500 Combo、/md Rising Star")
 
     # 优先用本地目录定位（含图标与攻略），无需再请求 osekai 单查接口
-    catalog = load_achievements_catalog_disk()
-    if not catalog:
-        catalog = await fetch_achievements_catalog()
+    catalog = await fetch_achievements_catalog()
     hit = None
     if catalog:
         name_lower = name.lower()
@@ -123,9 +201,8 @@ async def _(msg: Message = CommandArg()):
 
     # 取达成方式：本地中文攻略优先，否则用目录里的 solution/instructions
     words = "获得方式：\n"
-    solution = ""
-    if display_name in medal_json:
-        solution = medal_json[display_name].get("MedalSolution", "")
+    local_detail = medal_json.get(display_name) or {}
+    solution = _get_chinese_solution(display_name)
     if not solution:
         solution = hit.get("solution") or hit.get("instructions") or ""
         solution = _strip_medal_html(solution)
@@ -139,6 +216,8 @@ async def _(msg: Message = CommandArg()):
     if hit.get("mode"):
         mode_names = {"osu": "osu!", "taiko": "osu!taiko", "fruits": "osu!catch", "mania": "osu!mania"}
         words = f"适用模式：{mode_names.get(hit['mode'], hit['mode'])}\n" + words
+    if pack_urls := _pack_urls(hit, local_detail):
+        words += "\n" + "\n".join(pack_urls)
 
     msg_out = UniMessage()
     if icon_url:
@@ -147,15 +226,17 @@ async def _(msg: Message = CommandArg()):
     await msg_out.send(reply_to=True)
 
     # 附带相关谱面（最多 5 张，来自目录的 beatmap 建议）
-    beatmaps = hit.get("beatmaps") or []
+    beatmaps = _related_beatmaps(hit, local_detail)
     if beatmaps:
         beatmap_msg = UniMessage()
-        for beatmap in beatmaps[:5]:
+        for beatmap in beatmaps:
             title = beatmap.get("SongTitle") or beatmap.get("title") or ""
             diff = beatmap.get("DifficultyName") or beatmap.get("version") or ""
             bmid = beatmap.get("BeatmapID") or beatmap.get("id") or ""
             stars = beatmap.get("Difficulty") or ""
-            beatmap_msg += f"{title} [{diff}]\n{stars}⭐\n" + f"https://osu.ppy.sh/b/{bmid}\n"
+            if title or diff or stars:
+                beatmap_msg += f"{title} [{diff}]\n{stars}⭐\n"
+            beatmap_msg += f"https://osu.ppy.sh/b/{bmid}\n"
         await beatmap_msg.send()
 
 
@@ -164,32 +245,19 @@ async def _(msg: Message = CommandArg()):
 # ===========================================================================
 @myach.handle()
 async def _(event: Event, arg: Message = CommandArg()):
-    qq = event.get_user_id()
-    uid = await _get_bound_uid(qq)
-    if not uid:
-        await myach.finish("该账号尚未绑定，请输入 /bind 用户名 绑定账号")
-
-    text = arg.extract_plain_text().strip().lower()
-    mode = _MODE_MAP.get(text, "osu")
-
-    try:
-        achievements = await get_user_achievements(uid, mode)
-    except Exception as e:
-        logger.opt(exception=e).error(f"获取成就失败 uid={uid}")
-        await myach.finish(f"获取成就失败：{e}")
+    uid, mode, achievements = await _get_bound_achievement_request(event, arg, myach)
 
     if not achievements:
         await myach.finish("还没有获得任何成就哦，快去创造历史吧！")
 
-    # 确保目录已加载（为图标等字段补全）
-    if not load_achievements_catalog_disk():
-        await fetch_achievements_catalog()
-        achievements = await get_user_achievements(uid, mode)
+    achievements = _filter_achievements_by_mode(achievements, mode)
+    if not achievements:
+        await myach.finish(f"尚未获得 {mode.upper()} 模式的成就")
 
     # 排序：获得时间倒序
     achievements.sort(key=lambda a: a.get("achieved_at") or "", reverse=True)
 
-    rows = [
+    rows: list[AchievementRenderRow] = [
         {
             "name": a.get("name") or f"成就 {a.get('achievement_id')}",
             "icon": a.get("icon_url")
@@ -200,22 +268,13 @@ async def _(event: Event, arg: Message = CommandArg()):
         for a in achievements
     ]
 
-    try:
-        img = await draw_achievements(
-            {
-                "me_name": f"UID {uid}",
-                "me_avatar": f"https://a.ppy.sh/{uid}",
-                "title": "已获得成就",
-                "subtitle": f"共 {len(rows)} 个成就 · {mode.upper()}",
-                "total": len(rows),
-                "start": 1,
-                "end": len(rows),
-                "achievements": rows,
-            }
-        )
-    except Exception as e:
-        logger.opt(exception=e).error("渲染成就列表失败")
-        await myach.finish(f"渲染成就列表失败：{e}")
+    img = await _render_achievement_rows(
+        myach,
+        uid=uid,
+        title="已获得成就",
+        subtitle=f"共 {len(rows)} 个成就 · {mode.upper()}",
+        rows=rows,
+    )
     await UniMessage.image(raw=img).finish(reply_to=True)
 
 
@@ -224,30 +283,16 @@ async def _(event: Event, arg: Message = CommandArg()):
 # ===========================================================================
 @achrec.handle()
 async def _(event: Event, arg: Message = CommandArg()):
-    qq = event.get_user_id()
-    uid = await _get_bound_uid(qq)
-    if not uid:
-        await achrec.finish("该账号尚未绑定，请输入 /bind 用户名 绑定账号")
-
-    text = arg.extract_plain_text().strip().lower()
-    mode = _MODE_MAP.get(text, "osu")
+    uid, mode, achievements = await _get_bound_achievement_request(event, arg, achrec)
 
     # 全量目录
-    catalog = load_achievements_catalog_disk()
-    if not catalog:
-        catalog = await fetch_achievements_catalog()
+    catalog = await fetch_achievements_catalog()
     if not catalog:
         await achrec.finish("获取成就目录失败，请稍后再试")
 
-    # 已获得 id 集合
-    try:
-        achievements = await get_user_achievements(uid, mode)
-    except Exception as e:
-        logger.opt(exception=e).error(f"获取成就失败 uid={uid}")
-        await achrec.finish(f"获取成就失败：{e}")
     owned_ids = {a.get("achievement_id") for a in achievements if a.get("achievement_id") is not None}
 
-    # 未获得列表：优先推荐本模式成就，其次全模式
+    # 优先本模式，其次全模式；没有中文攻略时保留英文原文。
     mode_ids = [a["id"] for a in catalog if a.get("mode") == mode]
     all_ids = [a["id"] for a in catalog]
     ordered_ids = [i for i in mode_ids if i not in owned_ids] + [
@@ -260,7 +305,7 @@ async def _(event: Event, arg: Message = CommandArg()):
         await achrec.finish("太强了！所有成就都获得了，你就是 osu! 传奇！")
 
     # 组装图片数据 + 文本攻略
-    rows = []
+    rows: list[AchievementRenderRow] = []
     text_lines = []
     for i, ach in enumerate(recommended, start=1):
         name = ach.get("name", "")
@@ -269,11 +314,7 @@ async def _(event: Event, arg: Message = CommandArg()):
         )
         grouping = ach.get("grouping") or "成就"
         # 中文攻略
-        solution = ""
-        if name in medal_json:
-            solution = medal_json[name].get("MedalSolution", "")
-        if not solution:
-            solution = _strip_medal_html(ach.get("instructions") or "")
+        solution = _get_recommendation_solution(ach)
         rows.append(
             {
                 "name": name,
@@ -283,25 +324,15 @@ async def _(event: Event, arg: Message = CommandArg()):
             }
         )
         text_lines.append(f"{i}. {name}（{grouping}）")
-        if solution:
-            text_lines.append(f"   {solution}")
+        text_lines.append(f"   {solution}")
 
-    try:
-        img = await draw_achievements(
-            {
-                "me_name": f"UID {uid}",
-                "me_avatar": f"https://a.ppy.sh/{uid}",
-                "title": "成就推荐",
-                "subtitle": f"未获得成就推荐 · {mode.upper()} · 已获得 {len(owned_ids)} 个",
-                "total": len(rows),
-                "start": 1,
-                "end": len(rows),
-                "achievements": rows,
-            }
-        )
-    except Exception as e:
-        logger.opt(exception=e).error("渲染成就推荐失败")
-        await achrec.finish(f"渲染成就推荐失败：{e}")
+    img = await _render_achievement_rows(
+        achrec,
+        uid=uid,
+        title="成就推荐",
+        subtitle=f"未获得成就推荐 · {mode.upper()} · 已获得 {len(owned_ids)} 个",
+        rows=rows,
+    )
 
     # 图片 + 文本攻略
     msg_out = UniMessage.image(raw=img)

@@ -1,16 +1,35 @@
 """成就列表渲染（Jinja2 + Playwright，网格布局，风格与 friend 一致）。
 
-用于 /myach（已获得成就）与 /achrec（成就推荐）的图片输出。
+用于 /ma（已获得成就）与 /ar（成就推荐）的图片输出。
 """
 
 from pathlib import Path
 
 import jinja2
+from typing_extensions import TypedDict
 
 from .browser import persistent_page
 
 
-async def draw_achievements(data: dict) -> bytes:
+class AchievementRenderRow(TypedDict):
+    name: str
+    icon: str
+    grouping: str
+    achieved_at: str
+
+
+class AchievementRenderData(TypedDict):
+    me_name: str
+    me_avatar: str
+    title: str
+    subtitle: str
+    total: int
+    start: int
+    end: int
+    achievements: list[AchievementRenderRow]
+
+
+async def draw_achievements(data: AchievementRenderData) -> bytes:
     """渲染成就网格图片。
 
     Parameters
