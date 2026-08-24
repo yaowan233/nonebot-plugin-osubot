@@ -10,7 +10,7 @@ from sqlalchemy import select, delete
 from ..api import get_uid_by_name
 from ..info import bind_user_info
 from ..exceptions import NetworkError
-from ..database import UserData, SbUserData
+from ..database import UserData, UserOAuthData, SbUserData
 
 bind = on_command("bind", priority=11, block=True)
 unbind = on_command("unbind", priority=11, block=True)
@@ -62,6 +62,7 @@ async def _unbind(event: Event):
         user = await session.scalar(select(UserData).where(UserData.user_id == event.get_user_id()))
         if user:
             await session.execute(delete(UserData).where(UserData.user_id == event.get_user_id()))
+            await session.execute(delete(UserOAuthData).where(UserOAuthData.user_id == event.get_user_id()))
             await session.commit()
             await UniMessage.text("解绑成功！").send(reply_to=True)
         else:

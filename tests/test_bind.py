@@ -246,5 +246,5 @@ async def test_unbind_success(app: App):
             # .send() not .finish() — handler returns normally
 
     # Verify the delete + commit actually happened
-    session.execute.assert_called_once()
+    assert session.execute.call_count == 2
     session.commit.assert_called_once()

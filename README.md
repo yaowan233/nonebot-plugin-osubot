@@ -97,6 +97,9 @@ OSU_CLIENT=你的客户端ID
 OSU_KEY=你的客户端密钥
 ```
 
+若需使用 `/friend` 好友功能，请在同一个 osu! OAuth 应用中将回调地址设置为
+`https://mayumi.xyz/api/osubot/oauth/callback`。插件会通过公共中转站完成授权，无需新增配置或自行部署公网回调。
+
 ### 基础配置
 
 | 配置项 | 必填 | 默认值 | 说明 |

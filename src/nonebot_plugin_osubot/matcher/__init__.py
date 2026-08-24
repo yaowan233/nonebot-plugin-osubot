@@ -23,9 +23,11 @@ from .preview import generate_preview
 from .map_convert import change, convert, generate_full_ln
 from .update import update_info
 from .guess import hint, pic_hint, guess_pic, guess_audio, word_matcher, pic_word_matcher
+from .friend import friend
 
 __all__ = [
     "guess_audio",
+    "friend",
     "guess_pic",
     "word_matcher",
     "pic_word_matcher",

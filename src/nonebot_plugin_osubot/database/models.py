@@ -77,3 +77,15 @@ class ScoreHistoryData(Model):
     ended_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
+
+
+class UserOAuthData(Model):
+    """每个绑定用户的 osu! OAuth 用户级令牌（/friend 好友功能使用）。"""
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(Text, unique=True, index=True)  # 平台用户 ID
+    osu_id: Mapped[int] = mapped_column(Integer)
+    osu_name: Mapped[str] = mapped_column(Text)
+    access_token: Mapped[str] = mapped_column(Text)
+    refresh_token: Mapped[str] = mapped_column(Text)
+    token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
