@@ -32,7 +32,9 @@ nonebot-plugin-osubot 提供 osu! 四种模式的玩家资料、成绩、BP 分�
 项目修改自 [osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，并针对 NoneBot2 的命令交互、绘图和多平台使用进行了持续维护。
 
 > [!IMPORTANT]
-> 谱面变速和完整视频预览依赖 [FFmpeg](https://ffmpeg.org/download.html)。请先安装 FFmpeg 并确保可从 `PATH` 调用，或通过 `OSU_PREVIEW_FFMPEG_PATH` 指定可执行文件。
+> 原生谱面预览无需 FFmpeg；仅在原生渲染失败并回退旧完整视频链路时依赖
+> [FFmpeg](https://ffmpeg.org/download.html)。可将 FFmpeg 加入 `PATH`，或通过
+> `OSU_PREVIEW_FFMPEG_PATH` 指定可执行文件。
 
 ## 💿 安装
 
@@ -136,6 +138,14 @@ OSU_KEY=你的客户端密钥
 | `OSU_PREVIEW_TAIKO_FULL_FRAME_INTERVAL` | `30` | Taiko 完整视频帧间隔（毫秒） |
 | `OSU_PREVIEW_STD_CATCH_FULL_SCALE` | `0.5` | osu!/Catch 完整视频缩放倍率 |
 | `OSU_PREVIEW_STD_CATCH_FULL_FRAME_INTERVAL` | `30` | osu!/Catch 完整视频帧间隔（毫秒） |
+
+
+### 原生谱面预览
+
+插件通过 [osu-beatmap-preview-py](https://pypi.org/project/osu-beatmap-preview-py/)
+在 Python 进程内调用 Rust 渲染器，支持四种模式以及 GIF、PNG、MP4 输出。
+安装插件时会自动安装对应平台的预编译 wheel，无需下载可执行文件或新增配置；
+原生渲染失败时会自动回退现有浏览器渲染链路。
 
 ## ⚠️ 从 v6 升级到 v7
 

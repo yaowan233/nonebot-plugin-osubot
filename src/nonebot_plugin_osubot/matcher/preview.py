@@ -5,16 +5,12 @@ from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
-from ..utils import NGM, normalize_map_mode
 from ..api import osu_api
 from .utils import split_msg
-from .map_context import get_last_map_id, remember_map_and_set
-from ..file import download_osu
 from ..exceptions import NetworkError
-from ..mania import generate_preview_pic
-from ..draw.osu_preview import draw_osu_preview, draw_full_osu_preview
-from ..draw.catch_preview import draw_cath_preview
-from ..draw.taiko_preview import parse_map, map_to_image
+from ..utils import NGM, normalize_map_mode
+from .map_context import get_last_map_id, remember_map_and_set
+from ..draw.osu_preview import render_preview, draw_osu_preview, draw_full_osu_preview
 
 video_preview_commands = {"视频预览", "完整视频", "vpreview", "vp"}
 generate_preview = on_command(
@@ -55,57 +51,82 @@ async def _(event: Event, state: T_State):
 
     command = state["_prefix"]["command"][0]
     is_video_command = command in video_preview_commands
-    if is_video_command or is_gif_preview(state):
-        is_full = command == "完整预览" or is_video_command
-        if is_full:
+    want_gif = is_gif_preview(state)
+    is_full_video = is_video_command or (command == "完整预览" and want_gif)
+    mode_int = int(state["mode"])
+    source_mode = int(data["mode_int"])
 
-            async def send_estimate(seconds: float) -> None:
-                if seconds < 15:
-                    return
-                estimate = format_estimated_time(seconds)
-                await UniMessage.text(f"正在生成完整预览，预计还需约{estimate}，请稍候…").send(reply_to=True)
+    # ------------------------------------------------------------------
+    # 完整视频：视频命令，或带 +GIF 的完整预览。
+    # ------------------------------------------------------------------
+    if is_full_video:
 
-            video = await draw_full_osu_preview(
-                int(osu_id),
-                data["beatmapset_id"],
-                progress_callback=send_estimate,
-                target_mode=int(state["mode"]),
-            )
-            msg = UniMessage.video(raw=video.read_bytes(), name=video.name)
-        else:
-            pic = await draw_osu_preview(
-                int(osu_id),
-                data["beatmapset_id"],
-                False,
-                target_mode=int(state["mode"]),
-            )
-            msg = UniMessage.image(raw=pic)
+        async def send_estimate(seconds: float) -> None:
+            if seconds < 15:
+                return
+            estimate = format_estimated_time(seconds)
+            await UniMessage.text(f"正在生成完整预览，预计还需约{estimate}，请稍候…").send(reply_to=True)
+
+        video = await draw_full_osu_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            progress_callback=send_estimate,
+            target_mode=mode_int,
+            mods=state["mods"],
+            source_mode=source_mode,
+        )
+        msg = UniMessage.video(raw=video.read_bytes(), name=video.name)
         if state["mode"] == "0":
             msg += UniMessage.text(
                 f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
             )
-        await msg.finish(reply_to=not is_full)
+        await msg.finish(reply_to=False)
 
-    if state["mode"] == "3":
-        osu = await download_osu(data["beatmapset_id"], int(osu_id))
-        if state["_prefix"]["command"][0] == "完整预览":
-            pic = await generate_preview_pic(osu, True)
-        else:
-            pic = await generate_preview_pic(osu)
-        await UniMessage.image(raw=pic).finish(reply_to=True)
-    elif state["mode"] == "2":
-        pic = await draw_cath_preview(int(osu_id), data["beatmapset_id"], state["mods"])
-        await UniMessage.image(raw=pic).finish(reply_to=True)
-    elif state["mode"] == "1":
-        osu = await download_osu(data["beatmapset_id"], int(osu_id))
-        beatmap = parse_map(osu)
-        pic = map_to_image(beatmap)
-        await UniMessage.image(raw=pic).finish(reply_to=True)
-    elif state["mode"] == "0":
-        pic = await draw_osu_preview(int(osu_id), data["beatmapset_id"])
+    # ------------------------------------------------------------------
+    # GIF 预览（+GIF，非完整）：任意模式均通过 PyO3 原生渲染器输出 GIF。
+    # ------------------------------------------------------------------
+    if want_gif:
+        pic = await draw_osu_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            False,
+            target_mode=mode_int,
+            mods=state["mods"],
+            source_mode=source_mode,
+        )
+        msg = UniMessage.image(raw=pic)
+        if state["mode"] == "0":
+            msg += UniMessage.text(
+                f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
+            )
+        await msg.finish(reply_to=True)
+
+    # ------------------------------------------------------------------
+    # 静态预览：std -> gif（保持旧 UX）；taiko/ctb/mania -> png
+    # ------------------------------------------------------------------
+    if state["mode"] == "0":
+        pic = await render_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            0,
+            fmt="gif",
+            mods=state["mods"],
+            source_mode=source_mode,
+        )
         msg = UniMessage.image(raw=pic) + UniMessage.text(
             f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
         )
         await msg.finish(reply_to=True)
+    elif state["mode"] in ("1", "2", "3"):
+        pic = await render_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            mode_int,
+            fmt="png",
+            mods=state["mods"],
+            source_mode=source_mode,
+            full_image=command == "完整预览",
+        )
+        await UniMessage.image(raw=pic).finish(reply_to=True)
     else:
         await UniMessage.text(f"{NGM[state['mode']]}模式暂不支持预览").finish()

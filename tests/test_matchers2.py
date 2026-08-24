@@ -695,7 +695,14 @@ async def test_preview_ctb_gif_param_uses_osu_preview_gif(app: App):
                     )
                     ctx.should_finished()
 
-                draw.assert_awaited_once_with(12345, 67890, False, target_mode=2)
+                draw.assert_awaited_once_with(
+                    12345,
+                    67890,
+                    False,
+                    target_mode=2,
+                    mods=["GI", "F"],
+                    source_mode=0,
+                )
 
 
 @pytest.mark.asyncio
@@ -713,8 +720,16 @@ async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path, com
     video.write_bytes(b"video")
     event = fake_group_message_event_v11(message=Message(command))
 
-    async def render_full_preview(beatmap_id, beatmapset_id, progress_callback, target_mode):
+    async def render_full_preview(
+        beatmap_id,
+        beatmapset_id,
+        progress_callback,
+        target_mode,
+        mods,
+        source_mode,
+    ):
         assert target_mode == 3
+        assert source_mode == 3
         await progress_callback(65)
         return video
 
@@ -759,8 +774,6 @@ async def test_full_preview_without_gif_keeps_mania_image(app: App, tmp_path):
 
     session = make_mock_session()
     session.scalar.return_value = make_mock_user(osu_id=114514, osu_mode=3)
-    osu_file = tmp_path / "map.osu"
-    osu_file.write_text("osu file format v14", encoding="utf-8")
     event = fake_group_message_event_v11(message=Message("/完整预览 12345"))
 
     with patch_session(UTILS_MODULE, session):
@@ -768,23 +781,30 @@ async def test_full_preview_without_gif_keeps_mania_image(app: App, tmp_path):
             f"{PREVIEW_MODULE}.osu_api",
             new=AsyncMock(return_value={"beatmapset_id": 67890, "mode_int": 3}),
         ):
-            with patch(f"{PREVIEW_MODULE}.download_osu", new=AsyncMock(return_value=osu_file)):
-                with patch(
-                    f"{PREVIEW_MODULE}.generate_preview_pic",
-                    new=AsyncMock(return_value=b"full-image"),
-                ) as draw:
-                    async with app.test_matcher(generate_preview) as ctx:
-                        adapter = nonebot.get_adapter(OnebotV11Adapter)
-                        bot = ctx.create_bot(base=Bot, adapter=adapter)
-                        ctx.receive_event(bot, event)
-                        ctx.should_call_send(
-                            event,
-                            img_msg(event, b"full-image"),
-                            result={"message_id": 1},
-                        )
-                        ctx.should_finished()
+            with patch(
+                f"{PREVIEW_MODULE}.render_preview",
+                new=AsyncMock(return_value=b"full-image"),
+            ) as draw:
+                async with app.test_matcher(generate_preview) as ctx:
+                    adapter = nonebot.get_adapter(OnebotV11Adapter)
+                    bot = ctx.create_bot(base=Bot, adapter=adapter)
+                    ctx.receive_event(bot, event)
+                    ctx.should_call_send(
+                        event,
+                        img_msg(event, b"full-image"),
+                        result={"message_id": 1},
+                    )
+                    ctx.should_finished()
 
-                    draw.assert_awaited_once_with(osu_file, True)
+                draw.assert_awaited_once_with(
+                    12345,
+                    67890,
+                    3,
+                    fmt="png",
+                    mods=[],
+                    source_mode=3,
+                    full_image=True,
+                )
 
 
 # ============================================================
