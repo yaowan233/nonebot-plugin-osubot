@@ -24,11 +24,15 @@ async def _bid_to_sid(bid: int) -> int | None:
 async def _fetch_voice(raw_id: int) -> bytes | None:
     """
     优先将 raw_id 视为 bid，按具体谱面拉取音频；
-    仅在它不是有效 bid 时，才将其视为 sid 拉取谱面集默认音频。
+    若该 bid 的音频不可用，则退回到其谱面集默认音频；
+    仅在它不是有效 bid 时，才直接将其视为 sid 拉取谱面集默认音频。
     """
     sid = await _bid_to_sid(raw_id)
     if sid is not None:
-        return await get_preview_audio(raw_id)
+        voice = await get_preview_audio(raw_id)
+        if voice:
+            return voice
+        return await get_beatmapset_preview_audio(sid)
     return await get_beatmapset_preview_audio(raw_id)
 
 
