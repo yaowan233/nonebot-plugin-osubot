@@ -510,6 +510,7 @@ async def get_user_info(url: str) -> dict:
 #   3. 磁盘缓存 osufile/medals/achievements_catalog.json（离线兜底）
 # 目录字段统一规范化为：id/name/slug/icon_url/grouping/mode/instructions/description。
 
+
 class Achievement(TypedDict, total=False):
     id: int
     name: str
@@ -594,12 +595,7 @@ async def fetch_achievements_catalog(force: bool = False) -> list[Achievement]:
     now = time.time()
     cached = _achievements_cache.get("achievements")
     fetched_at = _achievements_cache.get("fetched_at", 0)
-    if (
-        isinstance(cached, list)
-        and not force
-        and isinstance(fetched_at, (int, float))
-        and now - fetched_at < 24 * 3600
-    ):
+    if isinstance(cached, list) and not force and isinstance(fetched_at, (int, float)) and now - fetched_at < 24 * 3600:
         return cached
 
     achievements: list[Achievement] = []
