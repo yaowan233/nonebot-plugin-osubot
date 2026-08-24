@@ -1,5 +1,7 @@
 """简单 matcher 测试：mu / osu_help / history / url_match / match / rating"""
 
+import importlib
+
 import pytest
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -445,7 +447,7 @@ async def test_match_success(app: App):
 
     event = fake_group_message_event_v11(message=Message("/match 114514"))
 
-    with patch(f"{MATCH_MODULE}.draw_match_history", new=AsyncMock(return_value=FAKE_IMG)):
+    with patch(f"{MATCH_MODULE}.draw_match_history", new=AsyncMock(return_value=[FAKE_IMG])):
         async with app.test_matcher(match) as ctx:
             adapter = nonebot.get_adapter(OnebotV11Adapter)
             bot = ctx.create_bot(base=Bot, adapter=adapter)
@@ -461,6 +463,62 @@ async def test_match_success(app: App):
                 result={"message_id": 1},
             )
             ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_match_multiple_images_always_tries_forward(app: App):
+    """多图发送不在 osubot 内部判断主号或分身。"""
+    try:
+        from nonebot_plugin_osubot.matcher.match import match
+    except ImportError:
+        pytest.skip()
+    import nonebot
+
+    pages = [b"PAGE_1", b"PAGE_2"]
+    event = fake_group_message_event_v11(message=Message("/match 114514"))
+    forward = AsyncMock(return_value=True)
+    one_by_one = AsyncMock()
+
+    with (
+        patch(f"{MATCH_MODULE}.draw_match_history", new=AsyncMock(return_value=pages)),
+        patch(f"{MATCH_MODULE}._send_forward", new=forward),
+        patch(f"{MATCH_MODULE}._send_one_by_one", new=one_by_one),
+    ):
+        async with app.test_matcher(match) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter, self_id="1919810")
+            ctx.receive_event(bot, event)
+
+    forward.assert_awaited_once_with(bot, event, pages)
+    one_by_one.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_match_send_retries_network_error_twice(app: App):
+    match_module = importlib.import_module(MATCH_MODULE)
+
+    operation = AsyncMock(side_effect=[match_module.NetworkError("first"), match_module.NetworkError("second"), "sent"])
+    with patch(f"{MATCH_MODULE}.asyncio.sleep", new=AsyncMock()) as sleep:
+        result = await match_module._send_with_retry(operation)
+
+    assert result == "sent"
+    assert operation.await_count == 3
+    assert sleep.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_match_forward_accepts_non_numeric_self_id(app: App):
+    match_module = importlib.import_module(MATCH_MODULE)
+    bot = MagicMock(self_id="bot-alpha")
+    bot.call_api = AsyncMock(return_value={"message_id": 1})
+    event = MagicMock(group_id=123, user_id=456)
+
+    with patch(f"{MATCH_MODULE}._OB11_OK", True):
+        sent = await match_module._send_forward(bot, event, [b"PAGE"])
+
+    assert sent is True
+    messages = bot.call_api.await_args.kwargs["messages"]
+    assert messages[0]["data"]["user_id"] == "bot-alpha"
 
 
 # ---------------------------------------------------------------------------
