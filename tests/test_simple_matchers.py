@@ -1,5 +1,7 @@
 """简单 matcher 测试：mu / osu_help / history / url_match / match / rating"""
 
+import importlib
+
 import pytest
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
@@ -489,6 +491,19 @@ async def test_match_multiple_images_always_tries_forward(app: App):
 
     forward.assert_awaited_once_with(bot, event, pages)
     one_by_one.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_match_send_retries_network_error_twice(app: App):
+    match_module = importlib.import_module(MATCH_MODULE)
+
+    operation = AsyncMock(side_effect=[match_module.NetworkError("first"), match_module.NetworkError("second"), "sent"])
+    with patch(f"{MATCH_MODULE}.asyncio.sleep", new=AsyncMock()) as sleep:
+        result = await match_module._send_with_retry(operation)
+
+    assert result == "sent"
+    assert operation.await_count == 3
+    assert sleep.await_count == 2
 
 
 # ---------------------------------------------------------------------------

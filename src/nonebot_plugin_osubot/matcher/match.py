@@ -24,18 +24,18 @@ from ..draw.match_history import draw_match_history
 
 match = on_command("match", aliases={"mp"}, priority=11, block=True)
 
-SEND_RETRY = 2
+SEND_RETRIES = 2
 SEND_RETRY_INTERVAL = 2
 USE_FORWARD = True  # 多图时用合并转发
 
 
 async def _send_with_retry(coro_factory):
     """对一个『返回 awaitable 的工厂』做重试，仅捕获 NetworkError。"""
-    for attempt in range(SEND_RETRY):
+    for attempt in range(SEND_RETRIES + 1):
         try:
             return await coro_factory()
         except NetworkError:
-            if attempt < SEND_RETRY - 1:
+            if attempt < SEND_RETRIES:
                 await asyncio.sleep(SEND_RETRY_INTERVAL)
                 continue
             raise

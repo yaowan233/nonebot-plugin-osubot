@@ -1,6 +1,19 @@
-from typing import Optional, List, Union
+from typing import Optional
 
-from pydantic import field_validator
+from pydantic import Field
+
+try:
+    from pydantic import field_validator
+
+    def _before_validator(field: str):
+        return field_validator(field, mode="before")
+
+except ImportError:  # Pydantic v1
+    from pydantic import validator
+
+    def _before_validator(field: str):
+        return validator(field, pre=True, allow_reuse=True)
+
 
 from .user import User
 from .score import Score
@@ -8,31 +21,37 @@ from .basemodel import Base
 from .beatmap import BeatmapCompact
 
 
+def normalize_mods(value) -> list[str]:
+    """Normalize legacy strings and lazer mod objects to acronym strings."""
+    if not value:
+        return []
+
+    result: list[str] = []
+    for mod in value:
+        acronym = (
+            mod.get("acronym")
+            if isinstance(mod, dict)
+            else mod
+            if isinstance(mod, str)
+            else getattr(mod, "acronym", None)
+        )
+        if acronym:
+            result.append(str(acronym))
+    return result
+
+
 class Game(Base):
     beatmap_id: int
-    # 【修改点 1】mods 兼容 str 和 dict/Mod 对象
-    mods: List[Union[str, dict]] = []
+    mods: list[str] = Field(default_factory=list)
 
     beatmap: BeatmapCompact
     scores: list[Score]
     team_type: str
 
-    # 【新增验证器】统一处理 game 级别的 mods
-    @field_validator("mods", mode="before")
+    @_before_validator("mods")
     @classmethod
     def parse_mods(cls, v):
-        if not v:
-            return []
-
-        result = []
-        for m in v:
-            if isinstance(m, dict):
-                result.append(m.get("acronym", ""))
-            elif isinstance(m, str):
-                result.append(m)
-            else:
-                result.append(getattr(m, "acronym", str(m)))
-        return result
+        return normalize_mods(v)
 
 
 class Detail(Base):
