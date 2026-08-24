@@ -711,33 +711,23 @@ OAUTH_SCOPES = "friends.read identify public"
 
 
 def get_oauth_client_id() -> int:
-    return plugin_config.osu_oauth_client_id or plugin_config.osu_client
+    return plugin_config.osu_client
 
 
 def get_oauth_client_secret() -> str:
-    return plugin_config.osu_oauth_client_secret or plugin_config.osu_key
+    return plugin_config.osu_key
 
 
-def get_oauth_redirect_uri() -> str:
-    uri = plugin_config.osu_oauth_redirect_uri
-    if not uri:
-        raise NetworkError("未配置 osu_oauth_redirect_uri（osu! OAuth 回调地址），请先在 NoneBot 配置中填写")
-    # 兼容误填占位符：剔除所有尖括号与首尾空白（如 https://<1.2.3.4>/...）
-    uri = uri.replace("<", "").replace(">", "").strip()
-    if not uri.startswith(("http://", "https://")):
-        raise NetworkError(
-            f"osu_oauth_redirect_uri 格式不正确: {uri!r}\n应为 https://<域名或IP>/osubot/oauth/callback 的形式"
-        )
-    return uri.rstrip("/")
-
-
-def build_oauth_authorize_url(state: str) -> str:
+def build_oauth_authorize_url(state: str, redirect_uri: str) -> str:
     """构造 osu! OAuth 授权链接（授权码流程）。"""
     from urllib.parse import urlencode
 
+    client_id = get_oauth_client_id()
+    if not client_id:
+        raise NetworkError("未配置 osu! OAuth client_id")
     params = {
-        "client_id": get_oauth_client_id(),
-        "redirect_uri": get_oauth_redirect_uri(),
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": OAUTH_SCOPES,
         "state": state,
@@ -757,7 +747,7 @@ def _oauth_error_detail(req) -> str:
     return f"（{detail}）" if detail else ""
 
 
-async def exchange_oauth_code(code: str) -> dict:
+async def exchange_oauth_code(code: str, redirect_uri: str) -> dict:
     """用授权码换取用户令牌。返回 {access_token, refresh_token, expires_in, ...}"""
     req = await safe_async_post(
         OAUTH_TOKEN_URL,
@@ -766,11 +756,12 @@ async def exchange_oauth_code(code: str) -> dict:
             "client_secret": get_oauth_client_secret(),
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": get_oauth_redirect_uri(),
+            "redirect_uri": redirect_uri,
         },
     )
-    if not req or req.status_code != 200:
-        raise NetworkError(f"OAuth 授权码兑换失败：HTTP {req.status_code if req else 'None'}{_oauth_error_detail(req)}")
+    if req is None or req.status_code != 200:
+        status_code = req.status_code if req is not None else "None"
+        raise NetworkError(f"OAuth 授权码兑换失败：HTTP {status_code}{_oauth_error_detail(req)}")
     return req.json()
 
 
@@ -785,27 +776,10 @@ async def refresh_oauth_token(refresh_token: str) -> dict:
             "refresh_token": refresh_token,
         },
     )
-    if not req or req.status_code != 200:
-        raise NetworkError(f"OAuth 令牌刷新失败：HTTP {req.status_code if req else 'None'}{_oauth_error_detail(req)}")
+    if req is None or req.status_code != 200:
+        status_code = req.status_code if req is not None else "None"
+        raise NetworkError(f"OAuth 令牌刷新失败：HTTP {status_code}{_oauth_error_detail(req)}")
     return req.json()
-
-
-def warn_oauth_config() -> None:
-    """启动自检：已配置回调地址但缺 client_id/secret 时提前警告，避免用户对着 401 排查。"""
-    try:
-        get_oauth_redirect_uri()
-    except NetworkError:
-        return  # 未配置回调地址，/friend 本身会提示，不重复警告
-    if not get_oauth_client_id():
-        logger.warning(
-            "osu! OAuth 未配置 client_id：请设置 osu_oauth_client_id 或 osu_client"
-            "（env: OSU_OAUTH_CLIENT_ID / OSU_CLIENT）"
-        )
-    elif not get_oauth_client_secret():
-        logger.warning(
-            "osu! OAuth 未配置 client_secret：请设置 osu_oauth_client_secret 或 osu_key"
-            "（env: OSU_OAUTH_CLIENT_SECRET / OSU_KEY；注意 OSU_CLIENT_SECRET 这个变量名不会被读取）"
-        )
 
 
 def _oauth_headers(access_token: str, version: str = "20220705") -> dict:
@@ -815,8 +789,8 @@ def _oauth_headers(access_token: str, version: str = "20220705") -> dict:
 async def get_me_with_token(access_token: str) -> dict:
     """GET /me：获取令牌所属用户的 id / username。"""
     req = await safe_async_get(f"{api}/me", headers=_oauth_headers(access_token))
-    if not req or req.status_code != 200:
-        raise NetworkError(f"OAuth 令牌无效：HTTP {req.status_code if req else 'None'}")
+    if req is None or req.status_code != 200:
+        raise NetworkError(f"OAuth 令牌无效：HTTP {req.status_code if req is not None else 'None'}")
     return req.json()
 
 
@@ -835,8 +809,8 @@ async def get_user_friends(access_token: str) -> list:
         f"{api}/friends",
         headers=_oauth_headers(access_token, "20241022"),
     )
-    if not req or req.status_code != 200:
-        raise NetworkError(f"获取好友列表失败：HTTP {req.status_code if req else 'None'}")
+    if req is None or req.status_code != 200:
+        raise NetworkError(f"获取好友列表失败：HTTP {req.status_code if req is not None else 'None'}")
     data = req.json()
     if not isinstance(data, list):
         return []

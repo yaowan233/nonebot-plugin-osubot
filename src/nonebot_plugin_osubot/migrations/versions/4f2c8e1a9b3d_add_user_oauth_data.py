@@ -16,7 +16,7 @@ import sqlalchemy as sa
 
 
 revision: str = "4f2c8e1a9b3d"
-down_revision: str | Sequence[str] | None = "68a04ea31d05"
+down_revision: str | Sequence[str] | None = "8c6e1a4d9b72"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -38,7 +38,7 @@ def upgrade(name: str = "") -> None:
         info={"bind_key": "nonebot_plugin_osubot"},
     )
     with op.batch_alter_table("nonebot_plugin_osubot_useroauthdata", schema=None) as batch_op:
-        batch_op.create_index(batch_op.f("ix_nonebot_plugin_osubot_useroauthdata_user_id"), ["user_id"], unique=False)
+        batch_op.create_index(batch_op.f("ix_nonebot_plugin_osubot_useroauthdata_user_id"), ["user_id"], unique=True)
     # ### end Alembic commands ###
 
 

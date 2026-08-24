@@ -9,15 +9,15 @@
   /friend <玩家名>   查询与对方是否互关（mutual）
 
 数据来源：osu! API v2 GET /friends，需要用户级 OAuth 令牌（friends.read）。
-每个绑定用户通过 /frbind（或 /bind 提示）完成授权，各自持自己的令牌。
+首次使用 /friend 时会自动发送授权链接，各绑定用户持有自己的令牌。
 """
 
 import re
-import secrets
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Literal
 
-from expiringdict import ExpiringDict
-from nonebot import get_driver, on_command
+from nonebot import on_command
 from nonebot.internal.adapter import Event, Message
 from nonebot.log import logger
 from nonebot.params import CommandArg
@@ -26,192 +26,23 @@ from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from ..api import (
-    build_oauth_authorize_url,
-    exchange_oauth_code,
-    get_me_with_token,
-    get_oauth_redirect_uri,
     get_osu_user,
     get_user_friends,
-    refresh_oauth_token,
-    warn_oauth_config,
 )
 from ..database import UserData, UserOAuthData
 from ..draw.friend import draw_friend_list
 from ..exceptions import NetworkError
+from ..friend_oauth import (
+    OAuthAuthorizationError,
+    begin_authorization,
+    complete_authorization,
+    delete_oauth,
+    discard_authorization,
+    get_valid_oauth,
+    wait_for_authorization,
+)
 
 friend = on_command("friend", aliases={"f"}, priority=11, block=True)
-frbind = on_command("frbind", aliases={"fb", "好友授权"}, priority=11, block=True)
-
-# OAuth state -> 平台用户 ID 的短期映射（防 CSRF + 回调路由回查）
-_oauth_states: ExpiringDict = ExpiringDict(max_len=2000, max_age_seconds=600)
-
-
-def build_friend_authorize_link(qq: str) -> str:
-    """生成指定用户的 osu! OAuth 授权链接；未配置回调地址时返回空串。"""
-    try:
-        state = secrets.token_urlsafe(16)
-        _oauth_states[state] = qq
-        return build_oauth_authorize_url(state)
-    except NetworkError:
-        return ""
-
-
-# ===========================================================================
-# OAuth 令牌管理
-# ===========================================================================
-async def _get_oauth(qq: str) -> UserOAuthData | None:
-    async with get_session() as session:
-        return await session.scalar(select(UserOAuthData).where(UserOAuthData.user_id == qq))
-
-
-async def _ensure_valid_oauth(oauth: UserOAuthData) -> UserOAuthData:
-    """令牌临近过期时自动刷新；刷新失败则返回原令牌（调用处报错时再提示重新授权）。"""
-    if oauth.token_expires_at and oauth.token_expires_at <= datetime.now() + timedelta(minutes=5):
-        try:
-            new = await refresh_oauth_token(oauth.refresh_token)
-        except NetworkError as e:
-            logger.warning(f"刷新 OAuth 令牌失败 (osu_id={oauth.osu_id}): {e}")
-            return oauth
-        oauth.access_token = new.get("access_token", oauth.access_token)
-        if new.get("refresh_token"):
-            oauth.refresh_token = new["refresh_token"]
-        if new.get("expires_in"):
-            oauth.token_expires_at = datetime.now() + timedelta(seconds=int(new["expires_in"]))
-        async with get_session() as session:
-            await session.merge(oauth)
-            await session.commit()
-    return oauth
-
-
-async def _get_valid_oauth(qq: str) -> UserOAuthData | None:
-    oauth = await _get_oauth(qq)
-    if oauth is None:
-        return None
-    return await _ensure_valid_oauth(oauth)
-
-
-async def _complete_oauth(code: str, state: str | None = None, qq: str | None = None) -> str:
-    """授权码 -> 令牌 -> 存库。state 优先（回调路由），否则用传入的 qq（手动 /frbind <code>）。"""
-    if qq is None:
-        qq = _oauth_states.get(state) if state else None
-    if not qq:
-        return "授权链接无效或已过期，请重新发送 /frbind 获取新链接。"
-    try:
-        token_data = await exchange_oauth_code(code)
-        access_token = token_data.get("access_token")
-        if not access_token:
-            return "OAuth 授权失败：响应中缺少 access_token，请重新发送 /frbind 重试。"
-        me = await get_me_with_token(access_token)
-    except NetworkError as e:
-        logger.error(f"OAuth 授权失败 (qq={qq}): {e}")
-        msg = str(e)
-        if "invalid_client" in msg:
-            hint = (
-                "osu! 拒绝了 client_id/client_secret（凭据认证失败）。\n"
-                "请检查 osu_oauth_client_id / osu_oauth_client_secret（或 osu_client / osu_key）"
-                "配置是否正确，修改后需重启 bot。"
-            )
-        elif "invalid_grant" in msg or "invalid_request" in msg:
-            hint = "授权码无效、已过期或已被使用，请重新发送 /frbind 获取新链接重新授权。"
-        else:
-            hint = ""
-        return f"OAuth 授权失败：{e}\n{hint}\n请重新发送 /frbind 重试。"
-
-    expires_at = None
-    if token_data.get("expires_in"):
-        expires_at = datetime.now() + timedelta(seconds=int(token_data["expires_in"]))
-
-    async with get_session() as session:
-        oauth = await session.scalar(select(UserOAuthData).where(UserOAuthData.user_id == qq))
-        if oauth is None:
-            oauth = UserOAuthData(
-                user_id=qq,
-                osu_id=int(me["id"]),
-                osu_name=me["username"],
-                access_token=access_token,
-                refresh_token=token_data.get("refresh_token", ""),
-                token_expires_at=expires_at,
-            )
-        else:
-            oauth.osu_id = int(me["id"])
-            oauth.osu_name = me["username"]
-            oauth.access_token = access_token
-            if token_data.get("refresh_token"):
-                oauth.refresh_token = token_data["refresh_token"]
-            oauth.token_expires_at = expires_at
-        session.add(oauth)
-        await session.commit()
-
-    return (
-        f"OAuth 授权成功！已绑定 osu! 账号 {me['username']}（uid {me['id']}）。\n"
-        "现在可以发送 /friend 查看好友列表，或 /friend <玩家名> 查询互关状态。"
-    )
-
-
-# ===========================================================================
-# /frbind：OAuth 授权
-# ===========================================================================
-def _extract_oauth_code(text: str) -> str:
-    """从用户粘贴的内容中提取授权码 code。
-
-    兼容三种粘贴形式：
-      1. 完整回调地址:  https://.../osubot/oauth/callback?code=XXXX&state=YYYY
-      2. query 片段:    code=XXXX&state=YYYY
-      3. 裸授权码:      XXXX（可能误带 &state 尾巴，自动截断）
-    """
-    text = (text or "").strip()
-    if not text:
-        return ""
-    # 1. 完整 URL → 解析 query 参数
-    if text.startswith(("http://", "https://")):
-        from urllib.parse import parse_qs, urlparse
-
-        qs = parse_qs(urlparse(text).query)
-        return qs.get("code", [""])[0]
-    # 2. 含 code= 的片段 → 取 code= 之后、& 之前
-    if "code=" in text:
-        after = text.split("code=")[-1]
-        return after.split("&")[0]
-    # 3. 裸授权码 → 截掉可能的 &state 尾巴
-    return text.split("&")[0]
-
-
-@frbind.handle()
-async def _frbind(event: Event, arg: Message = CommandArg()):
-    qq = event.get_user_id()
-    text = arg.extract_plain_text().strip()
-
-    # 手动粘贴授权码/回调地址：/frbind <code> 或 /frbind <完整网址>
-    if text:
-        code = _extract_oauth_code(text)
-        if not code:
-            await frbind.finish(
-                "未识别到授权码，请把授权后地址栏里 code= 后面的内容（或完整网址）发给我：/frbind <code>"
-            )
-        await frbind.finish(await _complete_oauth(code, qq=qq))
-
-    try:
-        redirect_uri = get_oauth_redirect_uri()
-    except NetworkError as e:
-        await frbind.finish(str(e))
-
-    oauth = await _get_oauth(qq)
-    prefix = ""
-    if oauth:
-        prefix = f"你已授权过 osu! 账号 {oauth.osu_name}（uid {oauth.osu_id}），重新授权将覆盖旧令牌。\n"
-
-    state = secrets.token_urlsafe(16)
-    _oauth_states[state] = qq
-    url = build_oauth_authorize_url(state)
-    await frbind.finish(
-        f"{prefix}请点击以下链接完成 osu! OAuth 授权（用于查询好友/互关）：\n{url}\n\n"
-        "授权完成后会自动回调绑定，无需任何操作。\n"
-        "如果无法自动回调（比如回调地址不可达），授权后浏览器地址栏会出现 "
-        "…/osubot/oauth/callback?code=XXXX&state=…，\n"
-        "把【整个网址】或【code= 后面、& 前面的那串】发给机器人即可：\n"
-        "/frbind <code>\n"
-        "（直接粘贴完整网址也可以，无需手动去掉 &state 部分）"
-    )
 
 
 # ===========================================================================
@@ -219,29 +50,37 @@ async def _frbind(event: Event, arg: Message = CommandArg()):
 # ===========================================================================
 @friend.handle()
 async def _friend(event: Event, arg: Message = CommandArg()):
-    qq = event.get_user_id()
+    platform_user_id = event.get_user_id()
 
     async with get_session() as session:
-        user_data = await session.scalar(select(UserData).where(UserData.user_id == qq))
+        user_data = await session.scalar(select(UserData).where(UserData.user_id == platform_user_id))
     if not user_data:
         await friend.finish("该账号尚未绑定，请输入 /bind 用户名 绑定账号")
-    oauth = await _get_valid_oauth(qq)
+    oauth = await get_valid_oauth(platform_user_id)
     if oauth is None:
-        # 已 /bind 但未授权：直接给出授权链接（回调地址未配置时退化为独立提示）
-        url = build_friend_authorize_link(qq)
-        if url:
-            await friend.finish(
-                "已完成 /bind 绑定，还需完成 osu! OAuth 授权后才能查询好友。\n"
-                f"请点击以下链接授权：\n{url}\n"
-                "（若无法自动回调，把授权后地址栏里 code= 后面的内容发给机器人：/frbind <code>）"
+        authorization = None
+        try:
+            authorization = await begin_authorization()
+            expires_minutes = max(1, (authorization.expires_in + 59) // 60)
+            await UniMessage.text(
+                f"首次查询需要授权读取 osu! 好友列表。请在 {expires_minutes} 分钟内点击链接完成授权，"
+                f"完成后本次查询会自动继续：\n{authorization.authorize_url}"
+            ).send(reply_to=True)
+            code = await wait_for_authorization(authorization)
+            oauth = await complete_authorization(
+                platform_user_id,
+                code,
+                authorization.redirect_uri,
             )
-        await friend.finish(
-            "已完成 /bind 绑定，但尚未完成 osu! OAuth 授权，无法获取好友列表。\n"
-            "请发送 /frbind 完成授权后再试（若提示未配置，需先设置 osu_oauth_redirect_uri）。"
-        )
+        except NetworkError as error:
+            await friend.finish(f"OAuth 授权失败：{error}")
+        finally:
+            if authorization is not None:
+                await discard_authorization(authorization)
+        await friend.send(f"OAuth 授权成功，已关联 osu! 账号 {oauth.osu_name}。正在继续查询好友……")
 
     text = arg.extract_plain_text().strip()
-    sort_type, sort_direction, text = _parse_sort(text)
+    sort, text = _parse_sort(text)
     range_match = re.match(r"#?\s*(\d+)(?:\s*-\s*(\d+))?", text)
     start = end = None
     if range_match and range_match.start() == 0:
@@ -254,10 +93,10 @@ async def _friend(event: Event, arg: Message = CommandArg()):
     try:
         friends = await get_user_friends(oauth.access_token)
     except NetworkError as e:
-        await friend.finish(
-            f"无法获取好友列表：{e}\n"
-            "若授权已失效，请重新授权（发送 /frbind 获取授权链接，或重新点击 /bind 回复中的授权链接）。"
-        )
+        if "HTTP 401" in str(e):
+            await delete_oauth(platform_user_id)
+            await friend.finish(f"无法获取好友列表：{e}\n授权已失效，请重新发送 /friend 完成授权。")
+        await friend.finish(f"无法获取好友列表：{e}\n请稍后重试。")
 
     # 玩家名模式：查询互关
     if rest:
@@ -268,7 +107,7 @@ async def _friend(event: Event, arg: Message = CommandArg()):
     if not friends:
         await friend.finish("你的好友列表还是空的哦～")
 
-    sorted_friends = _sort_friends(friends, sort_type, sort_direction)
+    sorted_friends = _sort_friends(friends, sort)
     filtered = _filter_friends(sorted_friends, conditions)
     if not filtered:
         await friend.finish("没有找到符合条件的好友，试试调整筛选条件吧")
@@ -290,7 +129,7 @@ async def _friend(event: Event, arg: Message = CommandArg()):
             {
                 "me_name": oauth.osu_name,
                 "me_avatar": f"https://a.ppy.sh/{oauth.osu_id}",
-                "sort_label": _sort_label(sort_type, sort_direction),
+                "sort_label": _sort_label(sort),
                 "total": total,
                 "start": start,
                 "end": start + len(selected) - 1,
@@ -335,7 +174,9 @@ async def _handle_pair(oauth: UserOAuthData, friends: list, name_text: str) -> N
         partner_oauth = await session.scalar(select(UserOAuthData).where(UserOAuthData.osu_id == partner_id))
     if partner_oauth is not None:
         try:
-            partner_oauth = await _ensure_valid_oauth(partner_oauth)
+            partner_oauth = await get_valid_oauth(partner_oauth.user_id)
+            if partner_oauth is None:
+                raise OAuthAuthorizationError("对方当前绑定账号与 OAuth 授权不一致")
             partner_friends = await get_user_friends(partner_oauth.access_token)
             partner_friend_count = len(partner_friends)
             partner_followed_me = any(f.target_id == oauth.osu_id for f in partner_friends)
@@ -366,65 +207,60 @@ async def _handle_pair(oauth: UserOAuthData, friends: list, name_text: str) -> N
 # ===========================================================================
 # 排序 / 筛选
 # ===========================================================================
-_SORT_SPECS = {
-    "p": ("pp", "desc"),
-    "pp": ("pp", "desc"),
-    "performance": ("pp", "desc"),
-    "p+": ("pp", "asc"),
-    "pp+": ("pp", "asc"),
-    "p2": ("pp", "asc"),
-    "pp2": ("pp", "asc"),
-    "a": ("acc", "desc"),
-    "acc": ("acc", "desc"),
-    "accuracy": ("acc", "desc"),
-    "a+": ("acc", "asc"),
-    "acc+": ("acc", "asc"),
-    "a2": ("acc", "asc"),
-    "acc2": ("acc", "asc"),
-    "pc": ("pc", "desc"),
-    "playcount": ("pc", "desc"),
-    "pc+": ("pc", "asc"),
-    "pc2": ("pc", "asc"),
-    "playcount+": ("pc", "asc"),
-    "pt": ("pt", "desc"),
-    "playtime": ("pt", "desc"),
-    "pt+": ("pt", "asc"),
-    "pt2": ("pt", "asc"),
-    "th": ("th", "desc"),
-    "h": ("th", "desc"),
-    "tth": ("th", "desc"),
-    "totalhits": ("th", "desc"),
-    "th+": ("th", "asc"),
-    "h+": ("th", "asc"),
-    "th2": ("th", "asc"),
-    "t": ("time", "asc"),
-    "time": ("time", "asc"),
-    "seen": ("time", "asc"),
-    "t-": ("time", "desc"),
-    "time-": ("time", "desc"),
-    "t2": ("time", "desc"),
-    "u": ("uid", "asc"),
-    "uid": ("uid", "asc"),
-    "u-": ("uid", "desc"),
-    "uid-": ("uid", "desc"),
-    "c": ("country", "asc"),
-    "country": ("country", "asc"),
-    "c-": ("country", "desc"),
-    "n": ("name", "asc"),
-    "name": ("name", "asc"),
-    "n-": ("name", "desc"),
-    "o": ("online", "true"),
-    "on": ("online", "true"),
-    "online": ("online", "true"),
-    "o-": ("online", "false"),
-    "off": ("online", "false"),
-    "offline": ("online", "false"),
-    "m": ("mutual", "true"),
-    "mu": ("mutual", "true"),
-    "mutual": ("mutual", "true"),
-    "m-": ("mutual", "false"),
-    "single": ("mutual", "false"),
+_SORT_FIELDS = {
+    "p": "pp",
+    "pp": "pp",
+    "performance": "pp",
+    "a": "acc",
+    "acc": "acc",
+    "accuracy": "acc",
+    "pc": "pc",
+    "playcount": "pc",
+    "pt": "pt",
+    "playtime": "pt",
+    "th": "th",
+    "h": "th",
+    "tth": "th",
+    "totalhits": "th",
+    "t": "time",
+    "time": "time",
+    "seen": "time",
+    "u": "uid",
+    "uid": "uid",
+    "c": "country",
+    "country": "country",
+    "n": "name",
+    "name": "name",
+    "o": "online",
+    "on": "online",
+    "online": "online",
+    "m": "mutual",
+    "mu": "mutual",
+    "mutual": "mutual",
 }
+
+_SORT_DEFAULT_DIRECTIONS = {
+    "pp": "desc",
+    "acc": "desc",
+    "pc": "desc",
+    "pt": "desc",
+    "th": "desc",
+    "time": "asc",
+    "uid": "asc",
+    "country": "asc",
+    "name": "asc",
+    "online": "desc",
+    "mutual": "desc",
+}
+
+SortDirection = Literal["asc", "desc"]
+
+
+@dataclass(frozen=True)
+class FriendSort:
+    field: str
+    direction: SortDirection
+
 
 _SORT_LABELS = {
     "pp": "PP",
@@ -441,22 +277,25 @@ _SORT_LABELS = {
 }
 
 
-def _parse_sort(text: str) -> tuple[str | None, str | None, str]:
-    """解析开头的 :xxx 排序标记。返回 (sort_type, direction, 剩余文本)。"""
-    m = re.match(r":\s*([\w+\-]+)", text)
+def _parse_sort(text: str) -> tuple[FriendSort | None, str]:
+    """解析开头的 :xxx 排序标记。"""
+    m = re.match(r":\s*([a-z]+)([+\-]|2)?", text, re.IGNORECASE)
     if not m:
-        return None, None, text
-    key = m.group(1).strip().lower()
-    spec = _SORT_SPECS.get(key)
-    if spec is None:
-        # 未识别的排序标记视为玩家名的一部分（如 :mode），直接透传
-        return None, None, text
-    return spec[0], spec[1], text[m.end() :].strip()
-
-
-def _sort_friends(friends: list, sort_type: str | None, direction: str | None) -> list:
-    """按 yumu-bot 语义排序；无排序时按名字升序（确定性输出）。"""
+        return None, text
+    sort_type = _SORT_FIELDS.get(m.group(1).lower())
     if sort_type is None:
+        # 未识别的排序标记视为玩家名的一部分（如 :mode），直接透传
+        return None, text
+    suffix = m.group(2)
+    direction: SortDirection = (
+        "asc" if suffix in ("+", "2") else "desc" if suffix == "-" else _SORT_DEFAULT_DIRECTIONS[sort_type]
+    )
+    return FriendSort(sort_type, direction), text[m.end() :].strip()
+
+
+def _sort_friends(friends: list, sort: FriendSort | None) -> list:
+    """按 yumu-bot 语义排序；无排序时按名字升序（确定性输出）。"""
+    if sort is None:
         return sorted(friends, key=lambda f: (f.target.username or "").lower())
 
     def pp(f):
@@ -487,49 +326,46 @@ def _sort_friends(friends: list, sort_type: str | None, direction: str | None) -
     def last_visit(f):
         if f.target and f.target.last_visit:
             try:
-                return datetime.fromisoformat(f.target.last_visit.replace("Z", "+00:00"))
+                value = datetime.fromisoformat(f.target.last_visit.replace("Z", "+00:00"))
+                if value.tzinfo is None:
+                    value = value.replace(tzinfo=timezone.utc)
+                return value.timestamp()
             except ValueError:
-                return datetime.min
-        return datetime.min
+                return float("-inf")
+        return float("-inf")
 
-    reverse = direction == "desc"
+    reverse = sort.direction == "desc"
 
-    if sort_type == "pp":
+    if sort.field == "pp":
         return sorted(friends, key=pp, reverse=reverse)
-    if sort_type == "acc":
+    if sort.field == "acc":
         return sorted(friends, key=acc, reverse=reverse)
-    if sort_type in ("pc", "pt", "th"):
-        return sorted(friends, key=num(sort_type), reverse=reverse)
-    if sort_type == "time":
+    if sort.field in ("pc", "pt", "th"):
+        return sorted(friends, key=num(sort.field), reverse=reverse)
+    if sort.field == "time":
         return sorted(friends, key=last_visit, reverse=reverse)
-    if sort_type == "uid":
+    if sort.field == "uid":
         return sorted(friends, key=lambda f: f.target_id, reverse=reverse)
-    if sort_type == "country":
+    if sort.field == "country":
         return sorted(
             friends,
             key=lambda f: (f.target.country_code or "") if f.target else "",
             reverse=reverse,
         )
-    if sort_type == "name":
+    if sort.field == "name":
         return sorted(friends, key=lambda f: (f.target.username or "").lower(), reverse=reverse)
-    if sort_type == "online":
-        online = [f for f in friends if f.target and f.target.is_online]
-        offline = [f for f in friends if not (f.target and f.target.is_online)]
-        return online + offline if direction != "false" else offline
-    if sort_type == "mutual":
-        mutual = [f for f in friends if f.mutual]
-        others = [f for f in friends if not f.mutual]
-        return mutual + others if direction != "false" else others
+    if sort.field == "online":
+        return sorted(friends, key=lambda f: bool(f.target and f.target.is_online), reverse=reverse)
+    if sort.field == "mutual":
+        return sorted(friends, key=lambda f: bool(f.mutual), reverse=reverse)
     return sorted(friends, key=lambda f: (f.target.username or "").lower())
 
 
-def _sort_label(sort_type: str | None, direction: str | None) -> str:
-    if sort_type is None:
+def _sort_label(sort: FriendSort | None) -> str:
+    if sort is None:
         return "默认"
-    label = _SORT_LABELS.get(sort_type, sort_type)
-    if sort_type in ("online", "mutual"):
-        return f"{label}：{'只看' if direction == 'true' else '排除'}"
-    return f"{label}{' ↑' if direction == 'asc' else ' ↓' if direction == 'desc' else ''}"
+    label = _SORT_LABELS.get(sort.field, sort.field)
+    return f"{label}{' ↑' if sort.direction == 'asc' else ' ↓'}"
 
 
 _CONDITION_PATTERN = re.compile(r'(\w+)\s*(!=|>=|<=|~=|~|=|>|<)\s*("[^"]*"|\'[^\']*\'|\S+)')
@@ -695,50 +531,3 @@ def _filter_friends(friends: list, conditions: list[tuple[str, str, str]]) -> li
                 filtered.append(f)
         result = filtered
     return result
-
-
-# ===========================================================================
-# OAuth 回调路由（FastAPI / Quart 驱动可自动挂载）
-# ===========================================================================
-def _register_callback_route() -> None:
-    driver = get_driver()
-    if driver.type not in ("fastapi", "quart"):
-        logger.warning(f"当前驱动 {driver.type} 无法自动挂载 OAuth 回调路由；用户可通过 /frbind <code> 手动完成授权")
-        return
-    app = driver.server_app
-    try:
-        redirect_uri = get_oauth_redirect_uri()
-    except NetworkError:
-        logger.info("未配置 osu_oauth_redirect_uri，暂不挂载 OAuth 回调路由")
-        return
-
-    if driver.type == "fastapi":
-        from fastapi import Request as FastAPIRequest
-
-        async def _callback(request: FastAPIRequest):
-            from fastapi.responses import PlainTextResponse
-
-            msg = await _complete_oauth(
-                request.query_params.get("code", ""),
-                request.query_params.get("state"),
-            )
-            return PlainTextResponse(msg)
-
-        app.add_api_route("/osubot/oauth/callback", _callback, methods=["GET"])
-    else:  # quart
-        from quart import request as quart_request
-
-        async def _callback():
-            msg = await _complete_oauth(
-                quart_request.args.get("code", ""),
-                quart_request.args.get("state"),
-            )
-            return msg
-
-        app.add_url_rule("/osubot/oauth/callback", "osubot_oauth_callback", _callback, methods=["GET"])
-
-    logger.info(f"OAuth 回调路由已挂载：/osubot/oauth/callback（回调地址 {redirect_uri}）")
-
-
-_register_callback_route()
-warn_oauth_config()
