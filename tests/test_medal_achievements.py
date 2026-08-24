@@ -121,6 +121,52 @@ def test_myach_mode_filter_keeps_global_and_selected_mode(medal_module):
     assert medal_module._filter_achievements_by_mode(achievements, "taiko") == achievements[:2]
 
 
+@pytest.mark.asyncio
+async def test_bound_achievement_request_uses_bound_mode_when_argument_is_empty(medal_module):
+    session = SimpleNamespace(scalar=AsyncMock(return_value=SimpleNamespace(osu_id=42, osu_mode=1)))
+
+    class SessionContext:
+        async def __aenter__(self):
+            return session
+
+        async def __aexit__(self, *args):
+            return None
+
+    event = SimpleNamespace(get_user_id=lambda: "10001")
+    arg = SimpleNamespace(extract_plain_text=lambda: "")
+    with (
+        patch.object(medal_module, "get_session", return_value=SessionContext()),
+        patch.object(medal_module, "get_user_achievements", new=AsyncMock(return_value=[])) as request,
+    ):
+        _, mode, _ = await medal_module._get_bound_achievement_request(event, arg, SimpleNamespace())
+
+    assert mode == "taiko"
+    request.assert_awaited_once_with(42, "taiko")
+
+
+def test_achieved_at_is_converted_to_local_time(medal_module):
+    class LocalDateTime:
+        def strftime(self, value):
+            assert value == "%Y-%m-%d"
+            return "2026-08-25"
+
+    class UtcDateTime:
+        def astimezone(self):
+            return LocalDateTime()
+
+        def strftime(self, value):
+            return "2026-08-24"
+
+    class FakeDateTime:
+        @classmethod
+        def fromisoformat(cls, value):
+            assert value == "2026-08-24T18:00:00+00:00"
+            return UtcDateTime()
+
+    with patch.object(medal_module, "datetime", FakeDateTime):
+        assert medal_module._format_achieved_at("2026-08-24T18:00:00Z") == "2026-08-25"
+
+
 def test_recommendations_prefer_chinese_and_fall_back_to_english(medal_module):
     with patch.dict(
         medal_module.medal_json,

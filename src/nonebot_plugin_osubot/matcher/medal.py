@@ -16,6 +16,7 @@ from sqlalchemy import select
 from ..api import Achievement, fetch_achievements_catalog, get_user_achievements
 from ..database import UserData
 from ..draw.medal import AchievementRenderRow, draw_achievements
+from ..utils import NGM
 
 medal_data_path = Path(__file__).parent.parent / "osufile" / "medals" / "medals.json"
 with open(medal_data_path, encoding="utf-8") as file:
@@ -117,16 +118,15 @@ def _format_achieved_at(value) -> str:
         return ""
     try:
         dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        return dt.strftime("%Y-%m-%d")
+        return dt.astimezone().strftime("%Y-%m-%d")
     except Exception:
         return str(value)
 
 
-async def _get_bound_uid(qq: str) -> int:
-    """查询 /bind 绑定的 osu uid。未绑定返回 0。"""
+async def _get_bound_user(qq: str) -> UserData | None:
+    """查询 /bind 绑定的用户记录。"""
     async with get_session() as session:
-        user_data = await session.scalar(select(UserData).where(UserData.user_id == qq))
-    return user_data.osu_id if user_data else 0
+        return await session.scalar(select(UserData).where(UserData.user_id == qq))
 
 
 async def _get_bound_achievement_request(
@@ -134,11 +134,13 @@ async def _get_bound_achievement_request(
     arg: Message,
     matcher: type[Matcher],
 ) -> tuple[int, str, list[dict]]:
-    uid = await _get_bound_uid(event.get_user_id())
-    if not uid:
+    user_data = await _get_bound_user(event.get_user_id())
+    if not user_data:
         await matcher.finish("该账号尚未绑定，请输入 /bind 用户名 绑定账号")
 
-    mode = _MODE_MAP.get(arg.extract_plain_text().strip().lower(), "osu")
+    uid = user_data.osu_id
+    mode_arg = arg.extract_plain_text().strip().lower()
+    mode = _MODE_MAP.get(mode_arg, "osu") if mode_arg else NGM.get(str(user_data.osu_mode), "osu")
     try:
         achievements = await get_user_achievements(uid, mode)
     except Exception as e:
