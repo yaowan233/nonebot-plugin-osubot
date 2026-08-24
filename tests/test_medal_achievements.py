@@ -127,16 +127,17 @@ def test_recommendations_prefer_chinese_and_fall_back_to_english(medal_module):
         {"Chinese": {"MedalSolution": "中文攻略"}, "English": {"MedalSolution": ""}},
         clear=True,
     ):
-        assert medal_module._get_recommendation_solution(
-            {"id": 1, "name": "Chinese", "instructions": "Chinese source"}
-        ) == "中文攻略"
-        assert medal_module._get_recommendation_solution(
-            {"id": 2, "name": "English", "instructions": "<i>English guide</i>"}
-        ) == "暂无中文攻略，英文原文：English guide"
         assert (
-            medal_module._get_recommendation_solution({"id": 3, "name": "Missing"})
-            == "暂无可用攻略"
+            medal_module._get_recommendation_solution({"id": 1, "name": "Chinese", "instructions": "Chinese source"})
+            == "中文攻略"
         )
+        assert (
+            medal_module._get_recommendation_solution(
+                {"id": 2, "name": "English", "instructions": "<i>English guide</i>"}
+            )
+            == "暂无中文攻略，英文原文：English guide"
+        )
+        assert medal_module._get_recommendation_solution({"id": 3, "name": "Missing"}) == "暂无可用攻略"
 
 
 def test_md_preserves_pack_and_related_beatmap_metadata(medal_module):
@@ -152,9 +153,7 @@ def test_md_preserves_pack_and_related_beatmap_metadata(medal_module):
 
 def test_strip_medal_html_handles_multiple_tables_scripts_and_entities(medal_module):
     value = (
-        "<TABLE><TR><TD>One</TD></TR></TABLE>"
-        "<table><tr><td>Two</td></tr></table>"
-        "<SCRIPT>alert('x')</SCRIPT>&amp; done"
+        "<TABLE><TR><TD>One</TD></TR></TABLE><table><tr><td>Two</td></tr></table><SCRIPT>alert('x')</SCRIPT>&amp; done"
     )
 
     result = medal_module._strip_medal_html(value)
