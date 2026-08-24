@@ -318,12 +318,9 @@ async def test_medal_not_found(app: App):
     except ImportError:
         pytest.skip()
 
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"error": "not found"}  # no "MedalID"
-
     event = fake_group_message_event_v11(message=Message("/medal Nonexistent"))
 
-    with patch(f"{MEDAL_MODULE}.safe_async_get", new=AsyncMock(return_value=mock_response)):
+    with patch(f"{MEDAL_MODULE}.fetch_achievements_catalog", new=AsyncMock(return_value=[])):
         async with app.test_matcher(medal) as ctx:
             adapter = nonebot.get_adapter(OnebotV11Adapter)
             bot = ctx.create_bot(base=Bot, adapter=adapter)

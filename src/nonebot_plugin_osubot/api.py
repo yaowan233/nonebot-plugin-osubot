@@ -1,5 +1,8 @@
 import asyncio
+import json
+import time
 from io import BytesIO
+from pathlib import Path
 from urllib.parse import quote, urlencode
 from datetime import datetime, timedelta
 from typing import Union, Literal, Optional
@@ -8,6 +11,7 @@ from nonebot.log import logger
 from expiringdict import ExpiringDict
 from nonebot import get_plugin_config
 from httpx import HTTPError, Response
+from typing_extensions import TypedDict
 
 from .network.manager import network_manager
 from .network.scheduler import ApiQueueFull, OsuApiScheduler
@@ -495,6 +499,184 @@ async def get_ppysb_uid(name: str) -> int:
 
 async def get_user_info(url: str) -> dict:
     return await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID是否正确")
+
+
+# ===========================================================================
+# 成就（Achievements）
+# ===========================================================================
+# osu! API v2 没有公开的成就列表接口。成就目录来源（按优先级）：
+#   1. inex.osekai.net/api/medals/get_all —— osekai 全量成就列表（首选，实时）
+#   2. 用户主页 HTML 的 data-initial-data 内嵌 JSON（兜底）
+#   3. 磁盘缓存 osufile/medals/achievements_catalog.json（离线兜底）
+# 目录字段统一规范化为：id/name/slug/icon_url/grouping/mode/instructions/description。
+
+
+class Achievement(TypedDict, total=False):
+    id: int
+    name: str
+    slug: str
+    icon_url: str
+    grouping: str
+    mode: str | None
+    instructions: str
+    description: str
+    solution: str
+    pack_id: str
+    beatmaps: list[dict]
+
+
+_achievements_cache: dict[str, object] = {}  # {"fetched_at": ts, "achievements": [...]}
+_OSEKAI_MEDALS_URL = "https://inex.osekai.net/api/medals/get_all"
+_ACHIEVEMENTS_PROFILE_FALLBACK_URL = "https://osu.ppy.sh/users/2"
+_ACH_CACHE_FILE = Path(__file__).parent / "osufile" / "medals" / "achievements_catalog.json"
+
+
+def _normalize_achievement(raw: dict) -> Achievement:
+    """将不同来源的成就字段规范化为统一结构。"""
+    if "Medal_ID" in raw:  # osekai get_all 格式
+        name = raw.get("Name", "")
+        link = raw.get("Link", "") or ""
+        if link and not link.startswith("http"):
+            link = f"https://assets.ppy.sh/medals/web/{link}"
+        return {
+            "id": int(raw["Medal_ID"]),
+            "name": name,
+            "slug": raw.get("Link", "") or "",
+            "icon_url": link,
+            "grouping": raw.get("Grouping") or "",
+            "mode": raw.get("Gamemode") or None,
+            "instructions": raw.get("Instructions") or raw.get("Solution") or "",
+            "description": raw.get("Description") or "",
+            "solution": raw.get("Solution") or "",
+            "pack_id": raw.get("Packs") or "",
+            "beatmaps": raw.get("beatmaps") or [],
+        }
+    # osu 用户主页 data-initial-data 格式
+    return {
+        "id": raw.get("id"),
+        "name": raw.get("name", ""),
+        "slug": raw.get("slug", ""),
+        "icon_url": raw.get("icon_url", ""),
+        "grouping": raw.get("grouping", ""),
+        "mode": raw.get("mode"),
+        "instructions": raw.get("instructions", ""),
+        "description": raw.get("description", ""),
+        "solution": raw.get("solution", ""),
+        "pack_id": raw.get("pack_id") or raw.get("PackID") or "",
+        "beatmaps": raw.get("beatmaps") or [],
+    }
+
+
+def _save_achievements_disk(achievements: list[Achievement]) -> None:
+    try:
+        _ACH_CACHE_FILE.write_text(json.dumps(achievements, ensure_ascii=False), encoding="utf-8")
+    except OSError as e:
+        logger.debug(f"成就目录磁盘缓存写入失败: {e}")
+
+
+def load_achievements_catalog_disk() -> list[Achievement]:
+    """从磁盘读取缓存的成就目录（无网络请求）。失败返回空列表。"""
+    try:
+        if _ACH_CACHE_FILE.exists():
+            data = json.loads(_ACH_CACHE_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return [_normalize_achievement(a) for a in data if isinstance(a, dict)]
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.debug(f"成就目录磁盘缓存读取失败: {e}")
+    return []
+
+
+async def fetch_achievements_catalog(force: bool = False) -> list[Achievement]:
+    """获取全量成就目录（缓存 24 小时）。
+
+    首选 osekai inex 接口，失败时回退 osu 用户主页 HTML。
+    返回 list[dict]，每项含 id/name/slug/icon_url/grouping/mode/instructions/description。
+    """
+    now = time.time()
+    cached = _achievements_cache.get("achievements")
+    fetched_at = _achievements_cache.get("fetched_at", 0)
+    if isinstance(cached, list) and not force and isinstance(fetched_at, (int, float)) and now - fetched_at < 24 * 3600:
+        return cached
+
+    achievements: list[Achievement] = []
+
+    # ── 首选：osekai inex 全量列表接口 ──
+    try:
+        req = await safe_async_get(_OSEKAI_MEDALS_URL, headers={"User-Agent": "Mozilla/5.0"})
+        if req and req.status_code == 200:
+            try:
+                payload = req.json()
+            except Exception:
+                payload = json.loads(req.content.decode("utf-8", "ignore"))
+            content = (payload or {}).get("content") or []
+            if content and isinstance(content, list):
+                for m in content:
+                    if not isinstance(m, dict) or not m.get("Medal_ID"):
+                        continue
+                    try:
+                        achievements.append(_normalize_achievement(m))
+                    except Exception:
+                        continue
+    except Exception as e:
+        logger.debug(f"osekai 成就目录获取失败: {e}")
+
+    # ── 兜底：osu 用户主页 HTML ──
+    if not achievements:
+        from html import unescape as _unescape
+        import re as _re
+
+        try:
+            req = await safe_async_get(
+                _ACHIEVEMENTS_PROFILE_FALLBACK_URL,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64)"},
+            )
+            if req and req.status_code == 200:
+                html = req.text if hasattr(req, "text") else req.content.decode("utf-8", "ignore")
+                m = _re.search(r'data-initial-data="([^"]*)"', html)
+                if m:
+                    payload = json.loads(_unescape(m.group(1)))
+                    achievements = [
+                        _normalize_achievement(a) for a in (payload.get("achievements") or []) if isinstance(a, dict)
+                    ]
+        except Exception:
+            pass
+
+    if achievements:
+        _save_achievements_disk(achievements)
+    else:
+        achievements = load_achievements_catalog_disk()
+        if not achievements and isinstance(cached, list):
+            achievements = cached
+
+    if achievements:
+        _achievements_cache["fetched_at"] = now
+        _achievements_cache["achievements"] = achievements
+    return achievements
+
+
+async def get_user_achievements(uid: int, mode: str = "osu") -> list[dict]:
+    """获取用户已获得的成就。
+
+    返回 list[dict]：{achievement_id, achieved_at, ...目录字段(若有)}。
+    目录字段尽量从全量目录补齐（name/icon_url/grouping 等）。
+    """
+    data = await get_user_info_data(uid, mode)
+    user_ach = data.user_achievements or []
+
+    catalog = await fetch_achievements_catalog()
+    by_id = {a.get("id"): a for a in catalog} if catalog else {}
+
+    result = []
+    for item in user_ach:
+        if not isinstance(item, dict):
+            continue
+        ach_id = item.get("achievement_id")
+        entry = {"achievement_id": ach_id, "achieved_at": item.get("achieved_at", "")}
+        detail = by_id.get(ach_id) if ach_id is not None else None
+        if detail:
+            entry.update(detail)
+        result.append(entry)
+    return result
 
 
 async def _get_preview_audio(urls: list[str]) -> bytes | None:
