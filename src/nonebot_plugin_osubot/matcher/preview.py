@@ -83,7 +83,7 @@ async def _(event: Event, state: T_State):
         await msg.finish(reply_to=False)
 
     # ------------------------------------------------------------------
-    # GIF 预览（+GIF，非完整）：任意模式 -> binary --fmt=gif --convert=...
+    # GIF 预览（+GIF，非完整）：任意模式均通过 PyO3 原生渲染器输出 GIF。
     # ------------------------------------------------------------------
     if want_gif:
         pic = await draw_osu_preview(

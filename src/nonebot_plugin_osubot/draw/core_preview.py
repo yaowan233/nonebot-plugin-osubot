@@ -84,3 +84,13 @@ def read_core_output(path: Path) -> bytes:
         return path.read_bytes()
     except OSError as error:
         raise CorePreviewError(f"读取原生渲染产物失败: {error}") from error
+
+
+def validate_core_output_readable(path: Path) -> None:
+    """Stream through a native artifact so read failures can trigger fallback."""
+    try:
+        with path.open("rb") as stream:
+            while stream.read(1024 * 1024):
+                pass
+    except OSError as error:
+        raise CorePreviewError(f"读取原生渲染产物失败: {error}") from error

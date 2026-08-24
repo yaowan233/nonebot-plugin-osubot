@@ -24,6 +24,7 @@ from .core_preview import (
     CorePreviewError,
     read_core_output,
     render_with_core,
+    validate_core_output_readable,
 )
 
 template_path = str(Path(__file__).parent / "osu_preview_templates")
@@ -148,7 +149,7 @@ async def _render_gif_chunk(
     )
 
     async with persistent_page("osu_preview", None, {"width": 1280, "height": 720}) as page:
-        await page.goto(f"file://{template_path}")
+        await page.goto(base_url)
         await page.set_content(html, wait_until="networkidle")
         await page.wait_for_function(
             f"() => document.querySelector('{img_selector}') &&"
@@ -393,7 +394,7 @@ async def _legacy_draw_osu_preview(
 
 
 # ===========================================================================
-# core 链路
+# PyO3 原生渲染链路
 # ===========================================================================
 async def _core_bytes(
     bid: int,
@@ -420,13 +421,15 @@ async def _core_full_video(
     target_mode: int | None,
     mods: Optional[Sequence[str]],
 ) -> Path:
-    return await render_with_core(
+    path = await render_with_core(
         bid,
         fmt="mp4",
         source_mode=source_mode,
         target_mode=target_mode,
         mods=mods,
     )
+    validate_core_output_readable(path)
+    return path
 
 
 _RenderResult = TypeVar("_RenderResult")
@@ -493,14 +496,22 @@ async def draw_full_osu_preview(
     mods: Optional[Sequence[str]] = None,
     source_mode: int | None = None,
 ) -> Path:
-    """Render a complete MP4; progress callbacks apply to the legacy fallback."""
+    """Render a complete MP4 and emit at most one time estimate."""
+    estimate_sent = False
+
+    async def send_estimate_once(seconds: float) -> None:
+        nonlocal estimate_sent
+        if progress_callback is None or estimate_sent:
+            return
+        try:
+            await progress_callback(seconds)
+        except Exception:
+            logger.exception("发送完整预览预计时间失败")
+        else:
+            estimate_sent = True
 
     async def render_core() -> Path:
-        if progress_callback is not None:
-            try:
-                await progress_callback(60.0)
-            except Exception:
-                logger.exception("发送原生完整预览预计时间失败")
+        await send_estimate_once(60.0)
         return await _core_full_video(beatmap_id, source_mode, target_mode, mods)
 
     return await _prefer_core(
@@ -508,7 +519,7 @@ async def draw_full_osu_preview(
         lambda: _legacy_draw_full_osu_preview(
             beatmap_id,
             beatmapset_id,
-            progress_callback=progress_callback,
+            progress_callback=send_estimate_once if progress_callback is not None else None,
             target_mode=target_mode,
         ),
         label="完整视频 ",
