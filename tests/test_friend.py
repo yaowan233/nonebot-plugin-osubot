@@ -1,17 +1,29 @@
+from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import Response
+from PIL import Image
 
 from utils import make_mock_session, make_mock_user, patch_session
 
 
-def _friend(*, uid: int, online: bool = False, mutual: bool = False, last_visit: str | None = None):
+def _friend(
+    *,
+    uid: int,
+    online: bool = False,
+    mutual: bool = False,
+    last_visit: str | None = None,
+    pp: float = 0,
+    country: str = "",
+):
     target = SimpleNamespace(
         username=f"user-{uid}",
         is_online=online,
         last_visit=last_visit,
+        statistics=SimpleNamespace(pp=pp),
+        country_code=country,
     )
     return SimpleNamespace(target_id=uid, mutual=mutual, target=target)
 
@@ -51,6 +63,42 @@ def test_last_visit_sort_accepts_missing_and_timezone_values(after_nonebot_init:
     ]
 
     assert [item.target_id for item in _sort_friends(friends, FriendSort("time", "asc"))] == [2, 1, 3]
+
+
+def test_combined_friend_filters(after_nonebot_init: None):
+    from nonebot_plugin_osubot.matcher.friend import _filter_friends, _parse_conditions
+
+    conditions, remaining = _parse_conditions("pp>=300 mutual=true country=JP")
+    friends = [
+        _friend(uid=1, pp=400, mutual=True, country="JP"),
+        _friend(uid=2, pp=250, mutual=True, country="JP"),
+        _friend(uid=3, pp=500, mutual=False, country="JP"),
+        _friend(uid=4, pp=600, mutual=True, country="CN"),
+    ]
+
+    assert remaining == ""
+    assert [item.target_id for item in _filter_friends(friends, conditions)] == [1]
+
+
+@pytest.mark.asyncio
+async def test_friend_avatar_uses_dedicated_cache_name(after_nonebot_init: None, tmp_path):
+    from nonebot_plugin_osubot.draw.friend import _load_avatar_data_uri
+
+    image = Image.new("RGBA", (128, 128), "red")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+
+    with patch("nonebot_plugin_osubot.draw.friend.user_cache_path", tmp_path):
+        with patch(
+            "nonebot_plugin_osubot.draw.friend.safe_async_get",
+            new=AsyncMock(return_value=Response(200, content=buffer.getvalue())),
+        ):
+            result = await _load_avatar_data_uri(42, "https://a.ppy.sh/42")
+
+    cache_dir = tmp_path / "42"
+    assert result.startswith("data:image/png;base64,")
+    assert (cache_dir / "friend-avatar-64.png").is_file()
+    assert list(cache_dir.glob("icon*.*")) == []
 
 
 @pytest.mark.asyncio

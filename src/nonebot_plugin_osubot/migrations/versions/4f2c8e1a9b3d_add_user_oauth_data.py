@@ -1,7 +1,7 @@
 """add user oauth data
 
 迁移 ID: 4f2c8e1a9b3d
-父迁移: 68a04ea31d05
+父迁移: 8c6e1a4d9b72
 创建时间: 2026-04-01 12:00:00.000000
 
 为 /friend 好友功能新增每个绑定用户的 osu! OAuth 用户级令牌表。

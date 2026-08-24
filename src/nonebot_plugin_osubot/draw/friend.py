@@ -1,6 +1,6 @@
 """好友列表面板渲染（Jinja2 + Playwright，风格与 rating 一致）。
 
-性能优化：头像优先使用本地磁盘缓存（data/osu/user/{uid}/icon.png），
+性能优化：头像优先使用专用本地磁盘缓存（data/osu/user/{uid}/friend-avatar-64.png），
 渲染时内联为 base64 data URI，避免每次 /f 都从 osu! 服务器现场下载全部头像。
 """
 
@@ -23,6 +23,7 @@ _avatar_sem = asyncio.Semaphore(8)
 _AVATAR_TTL = 7 * 24 * 3600
 # 头像渲染目标尺寸（模板中显示 60px 圆形，64px 足够）
 _AVATAR_SIZE = 64
+_AVATAR_CACHE_NAME = "friend-avatar-64.png"
 
 
 async def _load_avatar_data_uri(uid: int, url: str) -> str:
@@ -31,7 +32,7 @@ async def _load_avatar_data_uri(uid: int, url: str) -> str:
     下载失败时回退原始 URL（浏览器自行加载，功能不受影响）。
     """
     cache_dir = user_cache_path / str(uid)
-    cache_file = cache_dir / "icon.png"
+    cache_file = cache_dir / _AVATAR_CACHE_NAME
 
     # ── 命中缓存且在有效期内 → 直接读文件 ──
     if cache_file.exists():
