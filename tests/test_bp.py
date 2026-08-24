@@ -123,7 +123,7 @@ async def test_bp_success(app: App):
                 new=AsyncMock(return_value={"beatmapset_id": 13579, "mode_int": 0}),
             ) as get_map,
             patch(
-                "nonebot_plugin_osubot.matcher.preview.draw_osu_preview",
+                "nonebot_plugin_osubot.matcher.preview.render_preview",
                 new=AsyncMock(return_value=FAKE_IMG),
             ) as draw_preview,
         ):
@@ -143,7 +143,14 @@ async def test_bp_success(app: App):
 
     draw_map.assert_awaited_once_with("24680", [])
     get_map.assert_awaited_once_with("map", map_id=24680)
-    draw_preview.assert_awaited_once_with(24680, 13579)
+    draw_preview.assert_awaited_once_with(
+        24680,
+        13579,
+        0,
+        fmt="gif",
+        mods=[],
+        source_mode=0,
+    )
     assert draw_score.call_args.args[2] is True
 
 

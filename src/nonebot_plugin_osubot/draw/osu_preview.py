@@ -1,29 +1,29 @@
 import re
-import asyncio
-import base64
-import hashlib
-import shutil
-import tempfile
 import time
+import base64
+import shutil
+import asyncio
+import hashlib
+import tempfile
 from io import BytesIO
-from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
-from collections.abc import Awaitable, Callable, Sequence
-from typing import Optional
+from functools import lru_cache
+from dataclasses import dataclass
+from typing import TypeVar, Optional
+from collections.abc import Callable, Sequence, Awaitable
 
-from nonebot import get_plugin_config
 from nonebot.log import logger
+from nonebot import get_plugin_config
 
 from ..config import Config
 from ..file import map_path
 from .browser import persistent_page
 from .utils import load_osu_file_and_setup_template
 from .core_preview import (
+    PreviewFormat,
     CorePreviewError,
-    mods_to_cli,
+    read_core_output,
     render_with_core,
-    _mode_to_convert,
 )
 
 template_path = str(Path(__file__).parent / "osu_preview_templates")
@@ -397,39 +397,53 @@ async def _legacy_draw_osu_preview(
 # ===========================================================================
 async def _core_bytes(
     bid: int,
-    sid: int,
+    source_mode: int | None,
     target_mode: int | None,
     mods: Optional[Sequence[str]],
-    fmt: str = "gif",
+    fmt: PreviewFormat = "gif",
     time_range: Optional[str] = None,
 ) -> bytes:
     p = await render_with_core(
-        plugin_config.osu_preview_bin_path,
         bid,
         fmt=fmt,
-        convert=_mode_to_convert(target_mode),
-        mods=mods_to_cli(mods),
-        time=time_range,
-        timeout=plugin_config.osu_preview_timeout,
+        source_mode=source_mode,
+        target_mode=target_mode,
+        mods=mods,
+        time_range=time_range,
     )
-    return p.read_bytes()
+    return read_core_output(p)
 
 
 async def _core_full_video(
     bid: int,
-    sid: int,
+    source_mode: int | None,
     target_mode: int | None,
     mods: Optional[Sequence[str]],
 ) -> Path:
-    # 完整 mp4：--fmt=mp4，不传 --time、不传 --preview-30s => 全曲
     return await render_with_core(
-        plugin_config.osu_preview_bin_path,
         bid,
         fmt="mp4",
-        convert=_mode_to_convert(target_mode),
-        mods=mods_to_cli(mods),
-        timeout=plugin_config.osu_preview_video_timeout,
+        source_mode=source_mode,
+        target_mode=target_mode,
+        mods=mods,
     )
+
+
+_RenderResult = TypeVar("_RenderResult")
+
+
+async def _prefer_core(
+    core: Callable[[], Awaitable[_RenderResult]],
+    fallback: Callable[[], Awaitable[_RenderResult]],
+    *,
+    label: str,
+) -> _RenderResult:
+    """Apply the native-first fallback policy in one place."""
+    try:
+        return await core()
+    except CorePreviewError as error:
+        logger.warning("%s原生渲染失败，回退旧链路: %s", label, error)
+        return await fallback()
 
 
 def _to_bytes(result) -> bytes:
@@ -452,19 +466,23 @@ async def draw_osu_preview(
     full: bool = False,
     target_mode: int | None = None,
     mods: Optional[Sequence[str]] = None,
+    source_mode: int | None = None,
 ) -> bytes | Path:
-    """full=False -> gif bytes；full=True -> 完整 mp4 Path。优先 core，失败按配置回退。"""
+    """Render GIF bytes or a complete MP4 with an automatic legacy fallback."""
     if full:
-        return await draw_full_osu_preview(beatmap_id, beatmapset_id, target_mode=target_mode, mods=mods)
+        return await draw_full_osu_preview(
+            beatmap_id,
+            beatmapset_id,
+            target_mode=target_mode,
+            mods=mods,
+            source_mode=source_mode,
+        )
 
-    if plugin_config.osu_preview_use_core:
-        try:
-            return await _core_bytes(beatmap_id, beatmapset_id, target_mode, mods, fmt="gif")
-        except CorePreviewError as e:
-            if not plugin_config.osu_preview_fallback:
-                raise
-            logger.warning("core gif 渲染失败，回退旧链路: %s", e)
-    return await _legacy_draw_osu_preview(beatmap_id, beatmapset_id, full=False, target_mode=target_mode)
+    return await _prefer_core(
+        lambda: _core_bytes(beatmap_id, source_mode, target_mode, mods, fmt="gif"),
+        lambda: _legacy_draw_osu_preview(beatmap_id, beatmapset_id, full=False, target_mode=target_mode),
+        label="GIF ",
+    )
 
 
 async def draw_full_osu_preview(
@@ -473,17 +491,27 @@ async def draw_full_osu_preview(
     progress_callback: Callable[[float], Awaitable[None]] | None = None,
     target_mode: int | None = None,
     mods: Optional[Sequence[str]] = None,
+    source_mode: int | None = None,
 ) -> Path:
-    """完整 mp4 Path。core 模式无分片进度，progress_callback 仅 fallback 旧链路生效。"""
-    if plugin_config.osu_preview_use_core:
-        try:
-            return await _core_full_video(beatmap_id, beatmapset_id, target_mode, mods)
-        except CorePreviewError as e:
-            if not plugin_config.osu_preview_fallback:
-                raise
-            logger.warning("core 完整视频失败，回退旧链路: %s", e)
-    return await _legacy_draw_full_osu_preview(
-        beatmap_id, beatmapset_id, progress_callback=progress_callback, target_mode=target_mode
+    """Render a complete MP4; progress callbacks apply to the legacy fallback."""
+
+    async def render_core() -> Path:
+        if progress_callback is not None:
+            try:
+                await progress_callback(60.0)
+            except Exception:
+                logger.exception("发送原生完整预览预计时间失败")
+        return await _core_full_video(beatmap_id, source_mode, target_mode, mods)
+
+    return await _prefer_core(
+        render_core,
+        lambda: _legacy_draw_full_osu_preview(
+            beatmap_id,
+            beatmapset_id,
+            progress_callback=progress_callback,
+            target_mode=target_mode,
+        ),
+        label="完整视频 ",
     )
 
 
@@ -495,10 +523,12 @@ async def render_preview(
     sid: int,
     mode: int,
     *,
-    fmt: str = "png",
+    fmt: PreviewFormat = "png",
     mods: Optional[Sequence[str]] = None,
     time_range: Optional[str] = None,
     progress_callback: Callable[[float], Awaitable[None]] | None = None,
+    source_mode: int | None = None,
+    full_image: bool = False,
 ) -> bytes | Path:
     """统一渲染入口。
 
@@ -509,37 +539,38 @@ async def render_preview(
     mode = int(mode)
 
     if fmt == "mp4":
-        return await draw_full_osu_preview(bid, sid, progress_callback=progress_callback, target_mode=mode, mods=mods)
+        return await draw_full_osu_preview(
+            bid,
+            sid,
+            progress_callback=progress_callback,
+            target_mode=mode,
+            mods=mods,
+            source_mode=source_mode,
+        )
 
-    if plugin_config.osu_preview_use_core:
-        try:
-            return await _core_bytes(bid, sid, mode, mods, fmt=fmt, time_range=time_range)
-        except CorePreviewError as e:
-            if not plugin_config.osu_preview_fallback:
-                raise
-            logger.warning("core 渲染失败，回退旧链路: mode=%s fmt=%s %s", mode, fmt, e)
+    async def fallback() -> bytes:
+        if fmt == "gif":
+            return await _legacy_draw_osu_preview(bid, sid, full=False, target_mode=mode)
+        if mode == 1:
+            from ..file import download_osu
+            from .taiko_preview import parse_map, map_to_image
 
-    # ---- fallback ----
-    if fmt == "gif":
-        # 旧浏览器链路自带模式转换（_convert_preview_mode），任意 mode 都适用
-        return await _legacy_draw_osu_preview(bid, sid, full=False, target_mode=mode)
+            osu = await download_osu(sid, bid)
+            return _to_bytes(map_to_image(parse_map(osu)))
+        if mode == 2:
+            from .catch_preview import draw_cath_preview
 
-    # fmt == "png"：按模式走各自旧实现
-    if mode == 1:
-        from ..file import download_osu
-        from .taiko_preview import parse_map, map_to_image
+            return _to_bytes(await draw_cath_preview(bid, sid, mods or []))
+        if mode == 3:
+            from ..file import download_osu
+            from ..mania import generate_preview_pic
 
-        osu = await download_osu(sid, bid)
-        return _to_bytes(map_to_image(parse_map(osu)))
-    if mode == 2:
-        from .catch_preview import draw_cath_preview
+            osu = await download_osu(sid, bid)
+            return _to_bytes(await generate_preview_pic(osu, full_image))
+        return await _legacy_draw_osu_preview(bid, sid, full=False, target_mode=0)
 
-        return _to_bytes(await draw_cath_preview(bid, sid, mods or []))
-    if mode == 3:
-        from ..file import download_osu
-        from ..mania import generate_preview_pic
-
-        osu = await download_osu(sid, bid)
-        return _to_bytes(await generate_preview_pic(osu))
-    # mode 0 要 png 的旧实现不存在，退化为 gif bytes
-    return await _legacy_draw_osu_preview(bid, sid, full=False, target_mode=0)
+    return await _prefer_core(
+        lambda: _core_bytes(bid, source_mode, mode, mods, fmt=fmt, time_range=time_range),
+        fallback,
+        label=f"{mode=} {fmt=} ",
+    )

@@ -1,151 +1,86 @@
-"""Rust 二进制 osu-beatmap-preview 的异步封装。
-
-调用本地编译好的 osu-beatmap-preview 可执行文件渲染谱面预览图/视频，
-替代原先基于浏览器(gif.js) + ffmpeg 的渲染链路。
-
-二进制 stdout 输出 JSON，产物绝对路径在 "preview-img" 字段。
-"""
+"""In-process adapter for the PyO3 osu! beatmap preview renderer."""
 
 from __future__ import annotations
 
 import asyncio
-import json
-import logging
 from pathlib import Path
-from typing import Optional
+from typing import Literal
 from collections.abc import Sequence
 
-logger = logging.getLogger("nonebot_plugin_osubot.core_preview")
+from nonebot import get_plugin_config
+from osu_beatmap_preview import PreviewError, generate_preview_async
+
+from ..config import Config
+
+PreviewFormat = Literal["png", "gif", "mp4"]
+ConvertMode = Literal["taiko", "ctb", "mania"]
 
 
-class CorePreviewError(Exception):
-    """core 渲染失败时抛出，供上层决定是否 fallback。"""
+class CorePreviewError(RuntimeError):
+    """Raised when the native renderer cannot produce a usable artifact."""
 
 
-# mode(int/str) -> 二进制的 --convert 取值。0/std 不需要 convert。
-_CONVERT_MAP = {
-    "0": None,
-    "1": "taiko",
-    "2": "ctb",
-    "3": "mania",
+_CONVERT_MAP: dict[int, ConvertMode] = {
+    1: "taiko",
+    2: "ctb",
+    3: "mania",
 }
-
-# 这些不是 osu 真实 mod，拼 --mods 时必须剔除（GIF 是插件自定义的伪 mod）。
 _NON_OSU_MODS = {"GI", "F", "GIF"}
+_plugin_config = get_plugin_config(Config)
+_render_semaphore = asyncio.Semaphore(_plugin_config.osu_render_max_concurrency)
 
 
-def _mode_to_convert(mode: int | str | None) -> Optional[str]:
-    if mode is None:
+def mode_to_convert(source_mode: int | None, target_mode: int | None) -> ConvertMode | None:
+    """Return a conversion only for standard maps targeting another ruleset."""
+    if source_mode != 0 or target_mode in {None, 0, source_mode}:
         return None
-    return _CONVERT_MAP.get(str(mode))
+    return _CONVERT_MAP.get(target_mode)
 
 
-def mods_to_cli(mods: Optional[Sequence[str]]) -> Optional[str]:
-    """把 state["mods"]（如 ["HD","HR","GI","F"]）转成二进制的 --mods 串（如 "hd+hr"）。
-
-    - 剔除 GIF 伪 mod（可能被切成 "GI","F"，也可能整段 "GIF"）。
-    - 全小写，用 "+" 连接。
-    - 无有效 mod 时返回 None（不传 --mods）。
-    """
+def mods_to_renderer(mods: Sequence[str] | None) -> str | None:
+    """Normalize osubot mods while dropping the matcher-only GIF marker."""
     if not mods:
         return None
-    cleaned = [m for m in mods if m and m.upper() not in _NON_OSU_MODS]
-    if not cleaned:
-        return None
-    return "+".join(m.lower() for m in cleaned)
+    cleaned = [mod.lower() for mod in mods if mod and mod.upper() not in _NON_OSU_MODS]
+    return "+".join(cleaned) or None
 
 
 async def render_with_core(
-    bin_path: Path,
-    bid: int | str,
-    fmt: str,
+    beatmap_id: int | str,
+    fmt: PreviewFormat,
     *,
-    convert: Optional[str] = None,
-    mods: Optional[str] = None,
-    time: Optional[str] = None,
-    gif_clip: bool = False,
-    gif_clip_label: bool = False,
-    preview_30s: bool = False,
-    gap: Optional[int] = None,
-    no_cache: bool = False,
-    timeout: float = 120.0,
+    source_mode: int | None = None,
+    target_mode: int | None = None,
+    mods: Sequence[str] | None = None,
+    time_range: str | None = None,
 ) -> Path:
-    """调用二进制渲染，返回产物文件的绝对 Path。
-
-    Args:
-        bin_path: 二进制绝对路径。
-        bid: beatmap id。
-        fmt: "png" | "gif" | "mp4"。
-        convert: "taiko" | "ctb" | "mania" | None(std)。
-        mods: 已格式化的 mod 串，如 "hd+hr"。
-        time: 形如 "t1+t2"（秒）。仅截取片段时用；全曲 mp4 不要传。
-        gif_clip / gif_clip_label / preview_30s / gap / no_cache: 透传同名 flag。
-        timeout: 单次渲染超时（秒）。
-
-    Returns:
-        产物文件 Path（gif/png/mp4）。
-
-    Raises:
-        CorePreviewError: 二进制缺失、超时、非零退出、JSON 解析失败或产物不存在。
-    """
-    bin_path = Path(bin_path) if bin_path else None
-    if bin_path is None or not bin_path.is_file():
-        if bin_path is None:
-            raise CorePreviewError(
-                "未配置 osu_preview_bin_path（OSU_PREVIEW_BIN_PATH），无法使用二进制渲染，已回退旧链路"
+    """Render a preview in-process and return its validated output path."""
+    try:
+        async with _render_semaphore:
+            result = await generate_preview_async(
+                beatmap_id,
+                format=fmt,
+                convert=mode_to_convert(source_mode, target_mode),
+                mods=mods_to_renderer(mods),
+                times=time_range,
             )
-        raise CorePreviewError(f"osu-beatmap-preview 二进制不存在: {bin_path}")
+        output = result.get("preview-img")
+        if not isinstance(output, str) or not output:
+            raise CorePreviewError("原生渲染结果缺少 preview-img")
 
-    cmd: list[str] = [str(bin_path), "--bid", str(bid), "--fmt", fmt]
-    if convert:
-        cmd += ["--convert", convert]
-    if mods:
-        cmd += ["--mods", mods]
-    if time:
-        cmd += ["--time", time]
-    if gif_clip:
-        cmd.append("--gif-clip")
-    if gif_clip_label:
-        cmd.append("--gif-clip-label")
-    if preview_30s:
-        cmd.append("--preview-30s")
-    if gap is not None:
-        cmd += ["--gap", str(gap)]
-    if no_cache:
-        cmd.append("--no-cache")
+        path = Path(output)
+        if not path.is_file() or path.stat().st_size == 0:
+            raise CorePreviewError(f"原生渲染产物不存在或为空: {path}")
+        return path
+    except CorePreviewError:
+        raise
+    except (PreviewError, OSError, TypeError, ValueError) as error:
+        raise CorePreviewError(f"原生渲染失败: {error}") from error
 
-    logger.debug("core_preview cmd: %s", " ".join(cmd))
 
+def read_core_output(path: Path) -> bytes:
+    """Read a native artifact while preserving the adapter's error contract."""
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-    except FileNotFoundError as e:
-        raise CorePreviewError(f"无法启动二进制: {e}") from e
-    except asyncio.TimeoutError as e:
-        raise CorePreviewError(f"渲染超时({timeout}s): bid={bid} fmt={fmt}") from e
-
-    if proc.returncode != 0:
-        err = (stderr or b"").decode("utf-8", "ignore").strip()
-        raise CorePreviewError(f"二进制退出码 {proc.returncode}: {err[-500:]}")
-
-    out = (stdout or b"").decode("utf-8", "ignore").strip()
-    if not out:
-        raise CorePreviewError("二进制无 stdout 输出")
-
-    try:
-        data = json.loads(out)
-    except json.JSONDecodeError as e:
-        raise CorePreviewError(f"stdout 非合法 JSON: {out[:200]}") from e
-
-    img = data.get("preview-img")
-    if not img:
-        raise CorePreviewError(f"JSON 缺少 preview-img 字段: {data}")
-
-    p = Path(img)
-    if not p.is_file():
-        raise CorePreviewError(f"产物文件不存在: {p}")
-    return p
+        return path.read_bytes()
+    except OSError as error:
+        raise CorePreviewError(f"读取原生渲染产物失败: {error}") from error

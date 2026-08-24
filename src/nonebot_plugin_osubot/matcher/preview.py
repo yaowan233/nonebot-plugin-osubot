@@ -5,12 +5,12 @@ from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
-from ..utils import NGM, normalize_map_mode
 from ..api import osu_api
 from .utils import split_msg
-from .map_context import get_last_map_id, remember_map_and_set
 from ..exceptions import NetworkError
-from ..draw.osu_preview import draw_osu_preview, draw_full_osu_preview, render_preview
+from ..utils import NGM, normalize_map_mode
+from .map_context import get_last_map_id, remember_map_and_set
+from ..draw.osu_preview import render_preview, draw_osu_preview, draw_full_osu_preview
 
 video_preview_commands = {"视频预览", "完整视频", "vpreview", "vp"}
 generate_preview = on_command(
@@ -52,19 +52,14 @@ async def _(event: Event, state: T_State):
     command = state["_prefix"]["command"][0]
     is_video_command = command in video_preview_commands
     want_gif = is_gif_preview(state)
-    is_full = command == "完整预览" or is_video_command
+    is_full_video = is_video_command or (command == "完整预览" and want_gif)
     mode_int = int(state["mode"])
+    source_mode = int(data["mode_int"])
 
     # ------------------------------------------------------------------
-    # 完整视频：视频命令 / 完整预览（无论是否带 +GIF），所有模式统一 mp4。
-    # 【行为变更】旧代码里 "完整预览"(不带+GIF) 的 std 分支只发 10s gif、
-    # mania 发整张静态图；现在统一为完整 mp4。如需恢复旧行为，把这里改成
-    # 按 mode 分支调用 render_preview(fmt="png"/"gif") 即可。
+    # 完整视频：视频命令，或带 +GIF 的完整预览。
     # ------------------------------------------------------------------
-    if is_full:
-        # core 链路没有分片进度，开头先发一句固定提示（A 决策）；
-        # 若回退到旧链路，send_estimate 仍会在采样后补发预计时间。
-        await UniMessage.text("正在生成完整预览，请稍候…").send(reply_to=True)
+    if is_full_video:
 
         async def send_estimate(seconds: float) -> None:
             if seconds < 15:
@@ -78,6 +73,7 @@ async def _(event: Event, state: T_State):
             progress_callback=send_estimate,
             target_mode=mode_int,
             mods=state["mods"],
+            source_mode=source_mode,
         )
         msg = UniMessage.video(raw=video.read_bytes(), name=video.name)
         if state["mode"] == "0":
@@ -96,6 +92,7 @@ async def _(event: Event, state: T_State):
             False,
             target_mode=mode_int,
             mods=state["mods"],
+            source_mode=source_mode,
         )
         msg = UniMessage.image(raw=pic)
         if state["mode"] == "0":
@@ -108,13 +105,28 @@ async def _(event: Event, state: T_State):
     # 静态预览：std -> gif（保持旧 UX）；taiko/ctb/mania -> png
     # ------------------------------------------------------------------
     if state["mode"] == "0":
-        pic = await render_preview(int(osu_id), data["beatmapset_id"], 0, fmt="gif", mods=state["mods"])
+        pic = await render_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            0,
+            fmt="gif",
+            mods=state["mods"],
+            source_mode=source_mode,
+        )
         msg = UniMessage.image(raw=pic) + UniMessage.text(
             f"点击预览：\nhttps://beatmap.try-z.net/?b={osu_id}\nhttps://beatmap.try-z.net/dev/?b={osu_id}"
         )
         await msg.finish(reply_to=True)
     elif state["mode"] in ("1", "2", "3"):
-        pic = await render_preview(int(osu_id), data["beatmapset_id"], mode_int, fmt="png", mods=state["mods"])
+        pic = await render_preview(
+            int(osu_id),
+            data["beatmapset_id"],
+            mode_int,
+            fmt="png",
+            mods=state["mods"],
+            source_mode=source_mode,
+            full_image=command == "完整预览",
+        )
         await UniMessage.image(raw=pic).finish(reply_to=True)
     else:
         await UniMessage.text(f"{NGM[state['mode']]}模式暂不支持预览").finish()

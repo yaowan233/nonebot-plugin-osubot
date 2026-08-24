@@ -32,7 +32,9 @@ nonebot-plugin-osubot 提供 osu! 四种模式的玩家资料、成绩、BP 分�
 项目修改自 [osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，并针对 NoneBot2 的命令交互、绘图和多平台使用进行了持续维护。
 
 > [!IMPORTANT]
-> 谱面变速和完整视频预览依赖 [FFmpeg](https://ffmpeg.org/download.html)。请先安装 FFmpeg 并确保可从 `PATH` 调用，或通过 `OSU_PREVIEW_FFMPEG_PATH` 指定可执行文件。
+> 原生谱面预览无需 FFmpeg；仅在原生渲染失败并回退旧完整视频链路时依赖
+> [FFmpeg](https://ffmpeg.org/download.html)。可将 FFmpeg 加入 `PATH`，或通过
+> `OSU_PREVIEW_FFMPEG_PATH` 指定可执行文件。
 
 ## 💿 安装
 
@@ -135,19 +137,12 @@ OSU_KEY=你的客户端密钥
 | `OSU_PREVIEW_STD_CATCH_FULL_FRAME_INTERVAL` | `30` | osu!/Catch 完整视频帧间隔（毫秒） |
 
 
-### 二进制预览配置（osu-beatmap-preview，可选）
+### 原生谱面预览
 
-使用 [osu-beatmap-preview](https://github.com/2710165659/osu-beatmap-preview)（Rust 单可执行文件，支持四种模式、GIF/PNG/MP4、转谱与变速）可替代默认的浏览器 + FFmpeg 渲染链路，速度更快且无需 FFmpeg。未配置二进制或渲染失败时自动回退旧链路（可用 `OSU_PREVIEW_FALLBACK` 关闭回退）。
-
-| 配置项 | 默认值 | 说明 |
-| --- | --- | --- |
-| `OSU_PREVIEW_BIN_PATH` | 无 | osu-beatmap-preview 可执行文件绝对路径；不配置则使用旧浏览器链路 |
-| `OSU_PREVIEW_USE_CORE` | `true` | 是否启用二进制渲染 |
-| `OSU_PREVIEW_FALLBACK` | `true` | 二进制缺失/失败时是否回退旧浏览器链路 |
-| `OSU_PREVIEW_TIMEOUT` | `120` | GIF/PNG 单次渲染超时（秒） |
-| `OSU_PREVIEW_VIDEO_TIMEOUT` | `300` | 完整 MP4 渲染超时（秒） |
-
-二进制请从项目的 [Releases](https://github.com/2710165659/osu-beatmap-preview/releases) 下载对应平台版本。
+插件通过 [osu-beatmap-preview-py](https://pypi.org/project/osu-beatmap-preview-py/)
+在 Python 进程内调用 Rust 渲染器，支持四种模式以及 GIF、PNG、MP4 输出。
+安装插件时会自动安装对应平台的预编译 wheel，无需下载可执行文件或新增配置；
+原生渲染失败时会自动回退现有浏览器渲染链路。
 
 ## ⚠️ 从 v6 升级到 v7
 
