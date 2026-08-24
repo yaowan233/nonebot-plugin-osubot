@@ -41,7 +41,7 @@ async def _send_with_retry(coro_factory):
             raise
 
 
-def _build_nodes(self_id: int, images: list[bytes]) -> list[dict]:
+def _build_nodes(self_id: object, images: list[bytes]) -> list[dict]:
     """构造 OneBot v11 合并转发的标准 node 列表（原始 dict 形式，兼容性最好）。"""
     nodes = []
     for i, img in enumerate(images, start=1):
@@ -71,10 +71,8 @@ async def _send_forward(bot, event, images: list[bytes]) -> bool:
 
     group_id = getattr(event, "group_id", None)
     user_id = getattr(event, "user_id", None)
-    self_id = int(bot.self_id)
-
     try:
-        nodes = _build_nodes(self_id, images)
+        nodes = _build_nodes(bot.self_id, images)
     except Exception:
         return False
 

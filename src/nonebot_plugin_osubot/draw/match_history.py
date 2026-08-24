@@ -51,7 +51,7 @@ def _format_time_range(match: dict) -> tuple[str, str]:
 
 def _chunk_games(games: list[dict], max_rows: int = MAX_ROWS_PER_PAGE) -> list[list[dict]]:
     """按最大行数将 games 列表分页"""
-    chunks: list[dict] = []
+    chunks: list[list[dict]] = []
     current: list[dict] = []
     rows = 0
     for game in games:
@@ -297,7 +297,6 @@ async def draw_match_history(
     ordered_modes = team_modes + other_modes
 
     pages: list[bytes] = []
-    first_data: dict | None = None
     for mode_type in ordered_modes:
         data = prepare_match_data(
             match_info,
@@ -305,10 +304,21 @@ async def draw_match_history(
             team_type_filter=mode_type,
             include_failed_scores=is_room,
         )
-        if first_data is None:
-            first_data = data
         chunks = _chunk_games(data["games"])
         page_count = len(chunks)
+
+        # agent_tools 的兼容入口只消费一张图片和结构化数据；避免把其余页面
+        # 都交给 Playwright 渲染后再丢弃。
+        if return_data:
+            page_data = {
+                **data,
+                "games": chunks[0],
+                "page_index": 1,
+                "page_count": page_count,
+            }
+            img = await draw_match_card(page_data)
+            return compress_jpeg(img), data
+
         for page_index, chunk in enumerate(chunks, start=1):
             page_data = {
                 **data,
@@ -319,6 +329,4 @@ async def draw_match_history(
             img = await draw_match_card(page_data)
             pages.append(compress_jpeg(img))
 
-    if return_data:
-        return pages[0], first_data or {}
     return pages

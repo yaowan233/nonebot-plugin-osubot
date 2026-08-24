@@ -506,6 +506,21 @@ async def test_match_send_retries_network_error_twice(app: App):
     assert sleep.await_count == 2
 
 
+@pytest.mark.asyncio
+async def test_match_forward_accepts_non_numeric_self_id(app: App):
+    match_module = importlib.import_module(MATCH_MODULE)
+    bot = MagicMock(self_id="bot-alpha")
+    bot.call_api = AsyncMock(return_value={"message_id": 1})
+    event = MagicMock(group_id=123, user_id=456)
+
+    with patch(f"{MATCH_MODULE}._OB11_OK", True):
+        sent = await match_module._send_forward(bot, event, [b"PAGE"])
+
+    assert sent is True
+    messages = bot.call_api.await_args.kwargs["messages"]
+    assert messages[0]["data"]["user_id"] == "bot-alpha"
+
+
 # ---------------------------------------------------------------------------
 # /rating
 # ---------------------------------------------------------------------------

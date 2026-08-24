@@ -168,15 +168,52 @@ async def test_lazer_room_conversion_satisfies_match_schema(after_nonebot_init, 
 
 
 @pytest.mark.asyncio
+async def test_fetch_room_event_metadata_parses_events(after_nonebot_init, monkeypatch):
+    from nonebot_plugin_osubot import match_room
+
+    monkeypatch.setattr(
+        match_room,
+        "api_info",
+        AsyncMock(
+            return_value={
+                "events": [
+                    {"event_type": "game_aborted", "playlist_item_id": "8"},
+                    {"event_type": "game_aborted", "playlist_item_id": None},
+                ],
+                "playlist": [
+                    {
+                        "id": "7",
+                        "details": {
+                            "room_type": "team_versus",
+                            "teams": {"1": "red", "2": "blue", "3": "invalid"},
+                        },
+                    }
+                ],
+            }
+        ),
+    )
+
+    metadata = await match_room.fetch_room_event_metadata("42")
+
+    assert metadata.aborted_playlist_ids == {8}
+    assert metadata.room_types_by_playlist == {7: "team_versus"}
+    assert metadata.teams_by_playlist == {7: {"1": "red", "2": "blue"}}
+    assert metadata.fallback_teams == {"1": "red", "2": "blue"}
+
+
+@pytest.mark.asyncio
 async def test_draw_match_history_keeps_return_data_contract(after_nonebot_init, monkeypatch):
     from nonebot_plugin_osubot.draw import match_history
 
     monkeypatch.setattr(match_history, "api_info", AsyncMock(return_value=_traditional_match()))
-    monkeypatch.setattr(match_history, "draw_match_card", AsyncMock(return_value=b"image"))
+    draw_card = AsyncMock(return_value=b"image")
+    monkeypatch.setattr(match_history, "draw_match_card", draw_card)
     monkeypatch.setattr(match_history, "compress_jpeg", lambda image: image)
+    monkeypatch.setattr(match_history, "_chunk_games", lambda games: [games, games])
 
     image, data = await match_history.draw_match_history("1", query_type="match", return_data=True)
 
     assert image == b"image"
     assert data["match_id"] == "1"
     assert data["games"][0]["winner"] == "red"
+    draw_card.assert_awaited_once()
