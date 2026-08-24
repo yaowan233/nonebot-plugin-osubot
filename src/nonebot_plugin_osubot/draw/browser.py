@@ -1,15 +1,17 @@
 """HTMLRender 0.8 Playwright lease 上的持久页面池。"""
 
-import asyncio
 import os
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from pathlib import Path
+import re
+import asyncio
 from typing import Any
+from pathlib import Path
+from dataclasses import dataclass
+from contextlib import asynccontextmanager
 from urllib.parse import unquote, urlsplit
+from collections.abc import Mapping, Callable, Awaitable
 
-from nonebot import get_plugin_config
 from nonebot.log import logger
+from nonebot import get_plugin_config
 from nonebot_plugin_htmlrender import get_default_application
 
 from ..config import Config
@@ -208,30 +210,45 @@ def _file_uri_to_path(uri: str) -> Path:
     return Path(path)
 
 
-async def _install_remote_filehost_route(page: Any, app: Any) -> None:
-    """Proxy local file requests through htmlrender's configured filehost."""
-    strategy = app.resources.strategy
-    policy = getattr(strategy.remote_local_policy, "value", strategy.remote_local_policy)
-    if not strategy.is_remote or policy != "filehost":
-        return
+def _make_published_resource_handler(
+    capability_headers: dict[str, str],
+) -> Callable[[Any], Awaitable[None]]:
+    async def handle_published_resource(route: Any) -> None:
+        authoritative = {name.lower() for name in capability_headers}
+        headers = {name: value for name, value in route.request.headers.items() if name.lower() not in authoritative}
+        headers.update(capability_headers)
+        response = await route.fetch(headers=headers, max_redirects=0)
+        await route.fulfill(response=response)
 
-    async def handle_local_file(route: Any) -> None:
-        resolution = await app.resources.to_resource_url(
-            _file_uri_to_path(route.request.url),
-            strict=True,
-        )
-        headers = dict(resolution.request_headers_by_url.get(resolution.value, {}))
-        response = await page.context.request.get(
-            resolution.value,
-            headers=headers,
-            max_redirects=0,
-        )
-        try:
-            await route.fulfill(response=response)
-        finally:
-            await response.dispose()
+    return handle_published_resource
 
-    await page.route("file://**", handle_local_file)
+
+async def _install_published_resource_routes(
+    page: Any,
+    authorization: Mapping[str, Mapping[str, str]],
+) -> None:
+    """Authorize only the exact filehost URLs published by htmlrender."""
+    for url, capability_headers in authorization.items():
+        await page.route(
+            re.compile(f"^{re.escape(url)}$"),
+            _make_published_resource_handler(dict(capability_headers)),
+        )
+
+
+async def _resolve_remote_goto_uri(page: Any, app: Any, goto_uri: str) -> str:
+    """Publish a bot-local navigation target before a remote browser sees it."""
+    if not app.resources.strategy.is_remote or urlsplit(goto_uri).scheme != "file":
+        return goto_uri
+
+    resolution = await app.resources.to_resource_url(
+        _file_uri_to_path(goto_uri),
+        strict=True,
+    )
+    await _install_published_resource_routes(
+        page,
+        resolution.request_headers_by_url,
+    )
+    return resolution.value
 
 
 async def _create_page(
@@ -253,12 +270,12 @@ async def _create_page(
         # 原始 ProviderLifecycleError 为 "generator didn't stop after athrow()"。
         raise
     try:
-        await _install_remote_filehost_route(page, app)
         if goto_uri:
-            # 持久页导航主要用于建立 file:// 基准地址。等待完整 load 会被
+            resolved_goto_uri = await _resolve_remote_goto_uri(page, app, goto_uri)
+            # 持久页导航主要用于建立模板基准地址。等待完整 load 会被
             # 模板中的远程头像、封面等资源拖住；具体渲染函数会自行等待
             # 必需资源，并设置更短的超时兜底。
-            await page.goto(goto_uri, wait_until="domcontentloaded")
+            await page.goto(resolved_goto_uri, wait_until="domcontentloaded")
     except BaseException:
         await lease.__aexit__(None, None, None)
         raise

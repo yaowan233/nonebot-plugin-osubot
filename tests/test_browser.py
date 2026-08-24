@@ -13,7 +13,6 @@ class FakePage:
         self.viewport_calls = []
         self.evaluate_calls = []
         self.route_calls = []
-        self.context = SimpleNamespace(request=FakeAPIRequest())
 
     def is_closed(self):
         return self.closed
@@ -21,10 +20,7 @@ class FakePage:
     async def goto(self, uri, *, wait_until):
         self.goto_calls.append((uri, wait_until))
         if self.fail_file_navigation and uri.startswith("file://"):
-            if not self.route_calls:
-                raise RuntimeError("NS_ERROR_FILE_NOT_FOUND")
-            _, handler = self.route_calls[-1]
-            await handler(FakeRoute(uri))
+            raise RuntimeError("NS_ERROR_FILE_NOT_FOUND")
 
     async def route(self, pattern, handler):
         self.route_calls.append((pattern, handler))
@@ -74,29 +70,24 @@ class FakePlaywright:
 
 class FakeRoute:
     def __init__(self, url):
-        self.request = SimpleNamespace(url=url)
+        self.request = SimpleNamespace(
+            url=url,
+            headers={"Accept": "text/html", "x-htmlrender-filehost-request": "stale"},
+        )
+        self.fetch_calls = []
         self.fulfilled = None
+
+    async def fetch(self, **kwargs):
+        response = FakeAPIResponse()
+        self.fetch_calls.append((kwargs, response))
+        return response
 
     async def fulfill(self, **kwargs):
         self.fulfilled = kwargs
 
 
 class FakeAPIResponse:
-    def __init__(self):
-        self.disposed = False
-
-    async def dispose(self):
-        self.disposed = True
-
-
-class FakeAPIRequest:
-    def __init__(self):
-        self.calls = []
-
-    async def get(self, url, **kwargs):
-        response = FakeAPIResponse()
-        self.calls.append((url, kwargs, response))
-        return response
+    pass
 
 
 class FakeResources:
@@ -166,7 +157,7 @@ async def test_persistent_page_reuses_lease_and_updates_viewport(browser_pool):
 
 
 @pytest.mark.asyncio
-async def test_persistent_page_routes_local_templates_for_remote_filehost(browser_pool, tmp_path):
+async def test_persistent_page_publishes_local_templates_for_remote_filehost(browser_pool, tmp_path):
     browser, playwright = browser_pool
     app = browser.get_default_application()
     app.resources = FakeResources()
@@ -182,16 +173,31 @@ async def test_persistent_page_routes_local_templates_for_remote_filehost(browse
         pass
 
     page = playwright.leases[0].page
-    assert page.route_calls
     assert app.resources.resolve_calls[0][0] == template
     assert app.resources.resolve_calls[0][1] == {"strict": True}
-    url, options, response = page.context.request.calls[0]
-    assert url == "http://osubot:8080/_htmlrender/assets/recommend.html"
+    assert page.goto_calls == [
+        (
+            "http://osubot:8080/_htmlrender/assets/recommend.html",
+            "domcontentloaded",
+        )
+    ]
+    assert len(page.route_calls) == 1
+    pattern, handler = page.route_calls[0]
+    url = "http://osubot:8080/_htmlrender/assets/recommend.html"
+    assert pattern.fullmatch(url)
+    assert not pattern.fullmatch(f"{url}/other")
+
+    route = FakeRoute(url)
+    await handler(route)
+    options, response = route.fetch_calls[0]
     assert options == {
-        "headers": {"X-HTMLRender-Filehost-Request": "guard"},
+        "headers": {
+            "Accept": "text/html",
+            "X-HTMLRender-Filehost-Request": "guard",
+        },
         "max_redirects": 0,
     }
-    assert response.disposed
+    assert route.fulfilled == {"response": response}
 
 
 @pytest.mark.asyncio
