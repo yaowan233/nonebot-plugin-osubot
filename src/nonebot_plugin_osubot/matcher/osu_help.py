@@ -25,6 +25,6 @@ async def _help(arg: Message = CommandArg()):
     topic = TOPIC_ALIASES.get(arg, arg)
     if topic in HELP_TOPICS:
         await UniMessage.text(get_command_help(topic)).finish(reply_to=True)
-    await UniMessage.text(
-        f"没有找到该帮助主题。可用主题：{TOPIC_LABELS}\n发送 /oh 查看完整命令表。"
-    ).finish(reply_to=True)
+    await UniMessage.text(f"没有找到该帮助主题。可用主题：{TOPIC_LABELS}\n发送 /oh 查看完整命令表。").finish(
+        reply_to=True
+    )
