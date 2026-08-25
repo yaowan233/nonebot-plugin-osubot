@@ -109,6 +109,12 @@ async def test_osu_help_default(app: App):
         ctx.should_finished()
 
 
+def test_osu_help_default_image_is_complete_command_reference(after_nonebot_init: None):
+    from nonebot_plugin_osubot.matcher.osu_help import img1, img2
+
+    assert img1 == img2
+
+
 @pytest.mark.asyncio
 async def test_osu_help_detail(app: App):
     """/osuhelp detail：发送详情图片。"""
