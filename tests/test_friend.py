@@ -102,6 +102,26 @@ async def test_friend_avatar_uses_dedicated_cache_name(after_nonebot_init: None,
 
 
 @pytest.mark.asyncio
+async def test_oauth_url_message_is_recalled(after_nonebot_init: None):
+    from nonebot_plugin_osubot.matcher.friend import _recall_oauth_message
+
+    receipt = SimpleNamespace(recall=AsyncMock())
+
+    await _recall_oauth_message(receipt)
+
+    receipt.recall.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
+async def test_oauth_url_recall_failure_does_not_break_authorization(after_nonebot_init: None):
+    from nonebot_plugin_osubot.matcher.friend import _recall_oauth_message
+
+    receipt = SimpleNamespace(recall=AsyncMock(side_effect=RuntimeError("recall unsupported")))
+
+    await _recall_oauth_message(receipt)
+
+
+@pytest.mark.asyncio
 async def test_relay_authorization_round_trip(after_nonebot_init: None):
     from nonebot_plugin_osubot.friend_oauth import begin_authorization, wait_for_authorization
 

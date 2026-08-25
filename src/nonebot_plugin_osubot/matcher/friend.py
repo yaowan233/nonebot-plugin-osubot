@@ -22,6 +22,7 @@ from nonebot.internal.adapter import Event, Message
 from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot_plugin_alconna import UniMessage
+from nonebot_plugin_alconna.uniseg import Receipt
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
@@ -45,6 +46,18 @@ from ..friend_oauth import (
 friend = on_command("friend", aliases={"f"}, priority=11, block=True)
 
 
+async def _recall_oauth_message(receipt: Receipt | None) -> None:
+    """尽力撤回包含一次性 OAuth URL 的消息。"""
+    if receipt is None:
+        return
+    try:
+        await receipt.recall()
+    except Exception as error:
+        # 部分适配器虽然暴露撤回接口，仍可能因权限或消息时限拒绝操作；
+        # 撤回失败不应破坏已经完成的授权。
+        logger.debug(f"撤回 OAuth 授权链接失败: {error}")
+
+
 # ===========================================================================
 # /friend：好友列表 / 互关查询
 # ===========================================================================
@@ -59,10 +72,11 @@ async def _friend(event: Event, arg: Message = CommandArg()):
     oauth = await get_valid_oauth(platform_user_id)
     if oauth is None:
         authorization = None
+        authorization_message = None
         try:
             authorization = await begin_authorization()
             expires_minutes = max(1, (authorization.expires_in + 59) // 60)
-            await UniMessage.text(
+            authorization_message = await UniMessage.text(
                 f"首次查询需要授权读取 osu! 好友列表。请在 {expires_minutes} 分钟内点击链接完成授权，"
                 f"完成后本次查询会自动继续：\n{authorization.authorize_url}"
             ).send(reply_to=True)
@@ -75,6 +89,7 @@ async def _friend(event: Event, arg: Message = CommandArg()):
         except NetworkError as error:
             await friend.finish(f"OAuth 授权失败：{error}")
         finally:
+            await _recall_oauth_message(authorization_message)
             if authorization is not None:
                 await discard_authorization(authorization)
         await friend.send(f"OAuth 授权成功，已关联 osu! 账号 {oauth.osu_name}。正在继续查询好友……")
