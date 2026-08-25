@@ -727,9 +727,11 @@ async def test_full_preview_gif_param_sends_cached_video(app: App, tmp_path, com
         target_mode,
         mods,
         source_mode,
+        total_length,
     ):
         assert target_mode == 3
         assert source_mode == 3
+        assert total_length is None
         await progress_callback(65)
         return video
 

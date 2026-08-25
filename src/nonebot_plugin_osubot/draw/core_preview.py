@@ -53,6 +53,7 @@ async def render_with_core(
     target_mode: int | None = None,
     mods: Sequence[str] | None = None,
     time_range: str | None = None,
+    fps: int | None = None,
 ) -> Path:
     """Render a preview in-process and return its validated output path."""
     try:
@@ -63,6 +64,7 @@ async def render_with_core(
                 convert=mode_to_convert(source_mode, target_mode),
                 mods=mods_to_renderer(mods),
                 times=time_range,
+                fps=fps,
             )
         output = result.get("preview-img")
         if not isinstance(output, str) or not output:

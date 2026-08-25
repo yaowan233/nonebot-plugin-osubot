@@ -94,4 +94,5 @@ async def test_full_video_estimate_is_sent_once_when_native_falls_back(monkeypat
     )
 
     assert result == video
-    estimate.assert_awaited_once_with(60.0)
+    # 原生渲染立即失败，延迟预估任务被取消；仅旧链路的 120s 预估被发送一次
+    estimate.assert_awaited_once_with(120.0)

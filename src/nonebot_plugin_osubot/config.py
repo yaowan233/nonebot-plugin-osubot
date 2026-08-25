@@ -22,6 +22,7 @@ class Config(BaseModel):
     osu_preview_taiko_full_frame_interval: int = 30
     osu_preview_std_catch_full_scale: float = 0.5
     osu_preview_std_catch_full_frame_interval: int = 30
+    osu_preview_video_fps: int = Field(default=24, ge=1, le=60)
     osu_score_history_enabled: bool = True
     osu_score_history_sync_hour: int = Field(default=2, ge=0, le=23)
     osu_score_history_concurrency: int = Field(default=2, ge=1, le=20)

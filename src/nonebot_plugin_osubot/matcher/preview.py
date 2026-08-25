@@ -74,6 +74,7 @@ async def _(event: Event, state: T_State):
             target_mode=mode_int,
             mods=state["mods"],
             source_mode=source_mode,
+            total_length=data.get("total_length"),
         )
         msg = UniMessage.video(raw=video.read_bytes(), name=video.name)
         if state["mode"] == "0":

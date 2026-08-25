@@ -5,6 +5,7 @@ import shutil
 import asyncio
 import hashlib
 import tempfile
+import contextlib
 from io import BytesIO
 from pathlib import Path
 from functools import lru_cache
@@ -35,8 +36,24 @@ taiko_skin_files = {
 full_preview_chunk_duration = 5_000
 taiko_full_preview_chunk_duration = 10_000
 full_preview_cache_version = 9
+# 原生渲染耗时实测：15fps 软编约 0.6 倍视频时长，随帧率近似线性增长，再加固定开销兜底
+core_estimate_base_seconds = 10.0
+core_estimate_reference_fps = 15.0
+core_estimate_per_video_second = 0.7
 plugin_config = get_plugin_config(Config)
 _full_preview_locks: dict[Path, asyncio.Lock] = {}
+
+
+def _core_video_fps() -> int:
+    return max(1, min(int(plugin_config.osu_preview_video_fps), 60))
+
+
+def estimate_core_full_video_seconds(total_length: float | None, fps: int | None = None) -> float:
+    """Estimate native full-video render time from the beatmap length."""
+    if not total_length or total_length <= 0:
+        return 60.0
+    fps_scale = (fps or _core_video_fps()) / core_estimate_reference_fps
+    return core_estimate_base_seconds + core_estimate_per_video_second * fps_scale * total_length
 
 
 @dataclass(slots=True)
@@ -427,6 +444,7 @@ async def _core_full_video(
         source_mode=source_mode,
         target_mode=target_mode,
         mods=mods,
+        fps=_core_video_fps(),
     )
     validate_core_output_readable(path)
     return path
@@ -495,6 +513,7 @@ async def draw_full_osu_preview(
     target_mode: int | None = None,
     mods: Optional[Sequence[str]] = None,
     source_mode: int | None = None,
+    total_length: float | None = None,
 ) -> Path:
     """Render a complete MP4 and emit at most one time estimate."""
     estimate_sent = False
@@ -511,8 +530,23 @@ async def draw_full_osu_preview(
             estimate_sent = True
 
     async def render_core() -> Path:
-        await send_estimate_once(60.0)
-        return await _core_full_video(beatmap_id, source_mode, target_mode, mods)
+        estimate_seconds = estimate_core_full_video_seconds(total_length)
+        estimate_task: asyncio.Task | None = None
+        if progress_callback is not None:
+
+            async def delayed_estimate() -> None:
+                # 延迟发送：缓存命中或快速失败时不会打扰用户
+                await asyncio.sleep(min(10.0, estimate_seconds * 0.1))
+                await send_estimate_once(estimate_seconds)
+
+            estimate_task = asyncio.create_task(delayed_estimate())
+        try:
+            return await _core_full_video(beatmap_id, source_mode, target_mode, mods)
+        finally:
+            if estimate_task is not None:
+                estimate_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await estimate_task
 
     return await _prefer_core(
         render_core,
@@ -540,6 +574,7 @@ async def render_preview(
     progress_callback: Callable[[float], Awaitable[None]] | None = None,
     source_mode: int | None = None,
     full_image: bool = False,
+    total_length: float | None = None,
 ) -> bytes | Path:
     """统一渲染入口。
 
@@ -557,6 +592,7 @@ async def render_preview(
             target_mode=mode,
             mods=mods,
             source_mode=source_mode,
+            total_length=total_length,
         )
 
     async def fallback() -> bytes:
