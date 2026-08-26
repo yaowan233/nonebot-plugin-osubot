@@ -3,10 +3,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
+from nonebug import App
 from httpx import Response
 from PIL import Image
 
+from fake import fake_group_message_event_v11
 from utils import make_mock_session, make_mock_user, patch_session
+
+MODULE = "nonebot_plugin_osubot.matcher.friend"
+FAKE_IMG = b"friend-list-image"
 
 
 def _friend(
@@ -20,12 +26,135 @@ def _friend(
 ):
     target = SimpleNamespace(
         username=f"user-{uid}",
+        avatar_url=f"https://a.ppy.sh/{uid}",
         is_online=online,
+        is_supporter=False,
         last_visit=last_visit,
         statistics=SimpleNamespace(pp=pp),
         country_code=country,
     )
     return SimpleNamespace(target_id=uid, mutual=mutual, target=target)
+
+
+@pytest.mark.asyncio
+async def test_friend_authorization_timeout_is_silent(app: App):
+    from nonebot_plugin_osubot.friend_oauth import AuthorizationSession, OAuthAuthorizationTimeout
+    from nonebot_plugin_osubot.matcher.friend import friend
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    authorization = AuthorizationSession(
+        session_id="session-id",
+        poll_token="poll-token",
+        expires_in=60,
+        redirect_uri="https://mayumi.xyz/api/osubot/oauth/callback",
+        authorize_url="https://osu.ppy.sh/oauth/authorize?...",
+    )
+    event = fake_group_message_event_v11(message=Message("/friend"))
+    prompt = (
+        "首次查询需要授权读取 osu! 好友列表。请在 1 分钟内点击链接完成授权，"
+        "完成后本次查询会自动继续：\nhttps://osu.ppy.sh/oauth/authorize?..."
+    )
+
+    with patch_session(MODULE, session):
+        with patch(f"{MODULE}.get_valid_oauth", new=AsyncMock(return_value=None)):
+            with patch(f"{MODULE}.begin_authorization", new=AsyncMock(return_value=authorization)):
+                with patch(
+                    f"{MODULE}.wait_for_authorization",
+                    new=AsyncMock(side_effect=OAuthAuthorizationTimeout("授权链接已过期，请重新发送 /friend")),
+                ):
+                    with patch(f"{MODULE}._recall_oauth_message", new=AsyncMock()) as recall:
+                        with patch(f"{MODULE}.discard_authorization", new=AsyncMock()) as discard:
+                            async with app.test_matcher(friend) as ctx:
+                                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                                ctx.receive_event(bot, event)
+                                ctx.should_call_send(
+                                    event,
+                                    Message([MessageSegment.reply(1), MessageSegment.text(prompt)]),
+                                    result={"message_id": 1},
+                                )
+
+    recall.assert_awaited_once()
+    discard.assert_awaited_once_with(authorization)
+
+
+@pytest.mark.asyncio
+async def test_pending_authorization_raises_timeout(after_nonebot_init: None):
+    from nonebot_plugin_osubot.friend_oauth import (
+        AuthorizationSession,
+        OAuthAuthorizationTimeout,
+        wait_for_authorization,
+    )
+
+    authorization = AuthorizationSession(
+        session_id="session-id",
+        poll_token="poll-token",
+        expires_in=1,
+        redirect_uri="https://mayumi.xyz/api/osubot/oauth/callback",
+        authorize_url="https://osu.ppy.sh/oauth/authorize?...",
+    )
+
+    with patch("nonebot_plugin_osubot.friend_oauth.monotonic", side_effect=[0, 0, 0, 2]):
+        with patch(
+            "nonebot_plugin_osubot.friend_oauth.safe_async_get",
+            new=AsyncMock(return_value=Response(202, json={"status": "pending"})),
+        ):
+            with patch("nonebot_plugin_osubot.friend_oauth.asyncio.sleep", new=AsyncMock()):
+                with pytest.raises(OAuthAuthorizationTimeout):
+                    await wait_for_authorization(authorization)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("command", "expected_start", "expected_end"),
+    [("/friend", 1, 50), ("/friend 11-75", 11, 60)],
+)
+async def test_friend_list_render_is_limited(
+    app: App,
+    command: str,
+    expected_start: int,
+    expected_end: int,
+):
+    from nonebot_plugin_osubot.matcher.friend import friend
+
+    import base64
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user()
+    oauth = SimpleNamespace(access_token="access", osu_name="test-player", osu_id=42)
+    friends = [_friend(uid=index) for index in range(1, 76)]
+    event = fake_group_message_event_v11(message=Message(command))
+    draw = AsyncMock(return_value=FAKE_IMG)
+
+    with patch_session(MODULE, session):
+        with patch(f"{MODULE}.get_valid_oauth", new=AsyncMock(return_value=oauth)):
+            with patch(f"{MODULE}.get_user_friends", new=AsyncMock(return_value=friends)):
+                with patch(f"{MODULE}.draw_friend_list", new=draw):
+                    async with app.test_matcher(friend) as ctx:
+                        adapter = nonebot.get_adapter(OnebotV11Adapter)
+                        bot = ctx.create_bot(base=Bot, adapter=adapter)
+                        ctx.receive_event(bot, event)
+                        ctx.should_call_send(
+                            event,
+                            Message(
+                                [
+                                    MessageSegment.reply(1),
+                                    MessageSegment.image(file=f"base64://{base64.b64encode(FAKE_IMG).decode()}"),
+                                ]
+                            ),
+                            result={"message_id": 1},
+                        )
+                        ctx.should_finished()
+
+    payload = draw.await_args.args[0]
+    assert payload["total"] == 75
+    assert payload["start"] == expected_start
+    assert payload["end"] == expected_end
+    assert len(payload["friends"]) == 50
 
 
 def test_sort_suffixes_apply_to_every_field(after_nonebot_init: None):

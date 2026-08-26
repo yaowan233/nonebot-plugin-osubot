@@ -1,7 +1,7 @@
 """好友功能：查询好友列表与互关状态（移植自 yumu-bot 的 !friend / !f）。
 
 用法（触发前缀已改为 /）：
-  /friend            查看自己的全部好友列表（无条数上限）
+  /friend            查看自己的好友列表（单张图片最多 50 位）
   /friend :pp        按 PP 排序（:acc/:pc/:pt/:th/:t/:u/:c/:n/:o/:m，
                      后缀 + 或 2 表示升序，- 表示降序）
   /friend 1-30       查看第 1-30 位好友
@@ -35,6 +35,7 @@ from ..draw.friend import draw_friend_list
 from ..exceptions import NetworkError
 from ..friend_oauth import (
     OAuthAuthorizationError,
+    OAuthAuthorizationTimeout,
     begin_authorization,
     complete_authorization,
     delete_oauth,
@@ -44,6 +45,7 @@ from ..friend_oauth import (
 )
 
 friend = on_command("friend", aliases={"f"}, priority=11, block=True)
+FRIEND_LIST_RENDER_LIMIT = 50
 
 
 async def _recall_oauth_message(receipt: Receipt | None) -> None:
@@ -86,6 +88,8 @@ async def _friend(event: Event, arg: Message = CommandArg()):
                 code,
                 authorization.redirect_uri,
             )
+        except OAuthAuthorizationTimeout:
+            return
         except NetworkError as error:
             await friend.finish(f"OAuth 授权失败：{error}")
         finally:
@@ -128,12 +132,11 @@ async def _friend(event: Event, arg: Message = CommandArg()):
         await friend.finish("没有找到符合条件的好友，试试调整筛选条件吧")
     total = len(filtered)
 
-    # 取消单指令条数上限：未显式指定范围时默认展示全部好友
     start = start or 1
     end = end or total
     if end < start:
         start, end = end, start  # 反向范围自动纠正
-    end = min(end, total)
+    end = min(end, total, start + FRIEND_LIST_RENDER_LIMIT - 1)
 
     selected = filtered[start - 1 : end]
     if not selected:

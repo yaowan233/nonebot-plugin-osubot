@@ -29,6 +29,10 @@ class OAuthAuthorizationError(NetworkError):
     pass
 
 
+class OAuthAuthorizationTimeout(OAuthAuthorizationError):
+    """用户未在授权会话有效期内完成 OAuth。"""
+
+
 class OAuthAccountMismatch(OAuthAuthorizationError):
     pass
 
@@ -102,7 +106,7 @@ async def wait_for_authorization(session: AuthorizationSession, poll_interval: f
             await asyncio.sleep(min(poll_interval, max(0.0, deadline - monotonic())))
             continue
         if response.status_code == 410:
-            raise OAuthAuthorizationError("授权链接已过期，请重新发送 /friend")
+            raise OAuthAuthorizationTimeout("授权链接已过期，请重新发送 /friend")
         if response.status_code != 200:
             raise OAuthAuthorizationError(f"OAuth 中转站查询失败（HTTP {response.status_code}）")
 
@@ -112,7 +116,7 @@ async def wait_for_authorization(session: AuthorizationSession, poll_interval: f
         if data.get("status") == "error":
             raise OAuthAuthorizationError("你取消了 osu! 授权，请重新发送 /friend 后再试")
         raise OAuthAuthorizationError("OAuth 中转站返回了未知状态")
-    raise OAuthAuthorizationError("授权链接已过期，请重新发送 /friend")
+    raise OAuthAuthorizationTimeout("授权链接已过期，请重新发送 /friend")
 
 
 async def discard_authorization(session: AuthorizationSession) -> None:
