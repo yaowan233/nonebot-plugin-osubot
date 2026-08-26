@@ -157,14 +157,76 @@ def _decode_data_uri(uri: str) -> bytes:
 def _background_jpeg(cover_uri: str) -> bytes:
     """Cache only the map artwork treatment, never a rendered score card."""
     with Image.open(BytesIO(_decode_data_uri(cover_uri))) as source:
-        background = ImageOps.fit(source.convert("RGB"), (720, 450), method=Image.Resampling.BILINEAR)
-    background = background.filter(ImageFilter.GaussianBlur(5))
+        background = ImageOps.fit(source.convert("RGB"), (WIDTH, HEIGHT), method=Image.Resampling.BILINEAR)
+    background = background.filter(ImageFilter.GaussianBlur(10))
     background = ImageEnhance.Color(background).enhance(1.3)
     background = ImageEnhance.Brightness(background).enhance(0.68)
+    atmosphere = Image.frombytes("RGBA", (WIDTH, HEIGHT), _atmosphere_rgba())
+    background = background.convert("RGBA")
+    background.alpha_composite(atmosphere)
+    atmosphere.close()
     result = BytesIO()
-    background.save(result, "JPEG", quality=72)
+    flattened = background.convert("RGB")
+    flattened.save(result, "JPEG", quality=72)
+    flattened.close()
     background.close()
     return result.getvalue()
+
+
+@lru_cache(maxsize=1)
+def _atmosphere_rgba() -> bytes:
+    """Pre-rasterize cover-independent ambience once per process.
+
+    Rendering the full-canvas gradients and 4 px grain as SVG made resvg
+    repaint tens of thousands of pattern tiles for every score. The result is
+    static, so compose it into the per-cover background cache instead.
+    """
+    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+
+    shade_row = Image.new("RGBA", (WIDTH, 1))
+    shade_pixels = []
+    split = round(WIDTH * 0.45)
+    for x in range(WIDTH):
+        if x <= split:
+            ratio = x / max(1, split)
+            alpha = round(240 + (204 - 240) * ratio)
+        else:
+            ratio = (x - split) / max(1, WIDTH - 1 - split)
+            alpha = round(204 + (230 - 204) * ratio)
+        shade_pixels.append((6, 12, 22, alpha))
+    shade_row.putdata(shade_pixels)
+    shade = shade_row.resize((WIDTH, HEIGHT), Image.Resampling.NEAREST)
+    overlay.alpha_composite(shade)
+    shade.close()
+    shade_row.close()
+
+    for colour, center, size, opacity in (
+        ((255, 79, 150), (round(WIDTH * 0.80), round(HEIGHT * 0.22)), (1380, 860), 0.22),
+        ((76, 225, 231), (round(WIDTH * 0.18), round(HEIGHT * 0.80)), (1296, 810), 0.18),
+    ):
+        radial = ImageOps.invert(Image.radial_gradient("L")).resize(size, Image.Resampling.BILINEAR)
+        radial = radial.point(lambda value, maximum=round(255 * opacity): value * maximum // 255)
+        mask = Image.new("L", (WIDTH, HEIGHT), 0)
+        mask.paste(radial, (center[0] - size[0] // 2, center[1] - size[1] // 2))
+        glow = Image.new("RGBA", (WIDTH, HEIGHT), (*colour, 0))
+        glow.putalpha(mask)
+        overlay.alpha_composite(glow)
+        glow.close()
+        mask.close()
+        radial.close()
+
+    grain_mask = Image.new("L", (WIDTH, HEIGHT), 0)
+    grain_points = [(x, y) for y in range(1, HEIGHT, 4) for x in range(1, WIDTH, 4)]
+    ImageDraw.Draw(grain_mask).point(grain_points, fill=31)
+    grain = Image.new("RGBA", (WIDTH, HEIGHT), (255, 255, 255, 0))
+    grain.putalpha(grain_mask)
+    overlay.alpha_composite(grain)
+    grain.close()
+    grain_mask.close()
+
+    raw = overlay.tobytes()
+    overlay.close()
+    return raw
 
 
 def _mode_code(data: dict) -> str:
@@ -300,7 +362,8 @@ def _render_map_strip(data: dict) -> str:
         quick_items.append(("时长", str(data.get("length", "--"))))
 
     parts = [
-        '<rect x="44" y="109" width="190" height="114" rx="12" fill="#111925" filter="url(#cover-shadow)"/>',
+        '<rect x="50" y="117" width="190" height="114" rx="12" fill="#00000073"/>',
+        '<rect x="44" y="109" width="190" height="114" rx="12" fill="#111925"/>',
         _image(data.get("cover"), 44, 109, 190, 114, clip="map-cover"),
         '<rect x="44.5" y="109.5" width="189" height="113" rx="11.5" fill="none" stroke="#ffffff32"/>',
         _text(info_x, 151, title, title_size, weight=700),
@@ -657,18 +720,9 @@ def build_score_svg(data: dict) -> str:
   <clipPath id="canvas"><rect width="1440" height="900" rx="20"/></clipPath>
   <clipPath id="map-cover"><rect x="44" y="109" width="190" height="114" rx="12"/></clipPath>
   <linearGradient id="mode-accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="{accent}"/><stop offset="1" stop-color="{accent_dark}"/></linearGradient>
-  <linearGradient id="cover-shade" x1="0" y1="0" x2="1" y2=".55"><stop stop-color="#060c16" stop-opacity=".94"/><stop offset=".45" stop-color="#060c16" stop-opacity=".80"/><stop offset="1" stop-color="#060c16" stop-opacity=".90"/></linearGradient>
-  <radialGradient id="pink-glow" cx="80%" cy="22%" r="48%"><stop stop-color="#ff4f96" stop-opacity=".22"/><stop offset="1" stop-color="#ff4f96" stop-opacity="0"/></radialGradient>
-  <radialGradient id="cyan-glow" cx="18%" cy="80%" r="45%"><stop stop-color="#4ce1e7" stop-opacity=".18"/><stop offset="1" stop-color="#4ce1e7" stop-opacity="0"/></radialGradient>
   <radialGradient id="rank-glow"><stop stop-color="#ff4f96" stop-opacity=".18"/><stop offset=".68" stop-color="#ff4f96" stop-opacity="0"/></radialGradient>
-  <pattern id="grain" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx=".8" cy=".8" r=".6" fill="#fff"/></pattern>
-  <filter id="cover-shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity=".8"/></filter>
 </defs>
 <g clip-path="url(#canvas)">
-  <rect width="1440" height="900" fill="url(#cover-shade)"/>
-  <rect width="1440" height="900" fill="url(#pink-glow)"/>
-  <rect width="1440" height="900" fill="url(#cyan-glow)"/>
-  <rect width="1440" height="900" fill="url(#grain)" opacity=".12"/>
   {_render_header(data)}
   {_render_map_strip(data)}
   {_render_hero_metrics(data)}
@@ -697,8 +751,8 @@ def _render_score_svg_sync(data: dict) -> BytesIO:
         _active_image_layer.reset(image_token)
     overlay = render_svg_png(svg, width=WIDTH, height=HEIGHT)
 
-    with Image.open(BytesIO(_background_jpeg(str(data["cover"])))) as small_background:
-        card = small_background.resize((WIDTH, HEIGHT), Image.Resampling.BILINEAR).convert("RGBA")
+    with Image.open(BytesIO(_background_jpeg(str(data["cover"])))) as cached_background:
+        card = cached_background.convert("RGBA")
     background = Image.new("RGBA", (WIDTH, HEIGHT), (4, 7, 13, 255))
     rounded_mask = Image.new("L", (WIDTH, HEIGHT), 0)
     ImageDraw.Draw(rounded_mask).rounded_rectangle((0, 0, WIDTH - 1, HEIGHT - 1), radius=20, fill=255)

@@ -1,3 +1,5 @@
+import statistics
+import time
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 
@@ -143,3 +145,93 @@ def test_mania_score_judgements_show_yellow_rainbow_ratio():
     assert 'data-role="mania-ratio"' in mania_svg
     assert ">黄彩比 12.5 : 1</text>" in mania_svg
     assert 'data-role="mania-ratio"' not in _render_judgements({"ratio": None})
+
+
+@pytest.mark.asyncio
+@pytest.mark.no_cover
+async def test_native_score_raster_stays_inside_local_budget():
+    """Keep the refined score layout inside the documented hot-path budget."""
+    import base64
+
+    from nonebot_plugin_osubot.draw.score_svg import (
+        _atmosphere_rgba,
+        _background_jpeg,
+        render_score_svg,
+    )
+    from nonebot_plugin_osubot.draw.svg_render import warm_up_native_renderer
+
+    cover = BytesIO()
+    avatar = BytesIO()
+    Image.new("RGB", (640, 360), "#244466").save(cover, "JPEG")
+    Image.new("RGBA", (64, 64), "#44ddaa").save(avatar, "PNG")
+
+    def data_uri(mime: str, raw: bytes) -> str:
+        return f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+
+    cover_uri = data_uri("jpeg", cover.getvalue())
+    avatar_uri = data_uri("png", avatar.getvalue())
+    data = {
+        "mode_code": "STD",
+        "ended_at": "2026.01.25 03:06:43",
+        "status": "RANKED",
+        "score_version": "lazer",
+        "title": "Crystalia",
+        "artist": "DJ TOTTO",
+        "version": "Meal's Ultra",
+        "cover": cover_uri,
+        "avatar": avatar_uri,
+        "rank_image": avatar_uri,
+        "mods": [{"name": "HD"}, {"name": "DT", "speed_change": "1.50x"}],
+        "owners": [{"username": f"Mapper {index}", "avatar": avatar_uri} for index in range(20)],
+        "dimensions": [
+            {"name": "CS", "current": "3.3", "current_pos": 30, "changed": False},
+            {"name": "AR", "current": "10.6", "current_pos": 96.4, "changed": True},
+            {"name": "OD", "current": "10.8", "current_pos": 98.2, "changed": True},
+            {"name": "HP", "current": "6.0", "current_pos": 54.5, "changed": False},
+        ],
+        "judgements": [
+            {"label": "300", "value": 551, "display": "551"},
+            {"label": "100", "value": 22, "display": "22"},
+            {"label": "50", "value": 0, "display": "0"},
+            {"label": "MISS", "value": 0, "display": "0"},
+        ],
+        "pp_targets": [
+            {"label": "96% ACC", "value": "1,512"},
+            {"label": "98% ACC", "value": "1,903"},
+            {"label": "IF FC", "value": "1,858"},
+            {"label": "SS PP", "value": "2,012"},
+        ],
+        "dimension_max": 11,
+        "stars": "12.14",
+        "bpm": "405",
+        "objects": "573",
+        "length": "1:18",
+        "map_id": 1475722,
+        "score": "19,279,990",
+        "pp": "1,857",
+        "accuracy": "97.44",
+        "combo": "881 / 882x",
+        "username": "mrekk",
+        "user_id": 7562902,
+        "country": "AU",
+        "global_rank": 1,
+        "country_rank": 1,
+        "profile_third_value": "Lv.107",
+    }
+
+    await warm_up_native_renderer()
+    _background_jpeg.cache_clear()
+    _atmosphere_rgba.cache_clear()
+    cold_started = time.perf_counter()
+    await render_score_svg(data)
+    cold_elapsed = time.perf_counter() - cold_started
+    samples = []
+    for _index in range(3):
+        started = time.perf_counter()
+        await render_score_svg(data)
+        samples.append(time.perf_counter() - started)
+
+    # The full first render has a documented local budget of 800 ms.
+    assert cold_elapsed < 0.8, cold_elapsed
+    # Raster plus final encoding have a combined local budget of 500 ms.
+    assert statistics.median(samples) < 0.5, samples
