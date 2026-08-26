@@ -257,16 +257,10 @@ def _render_map_strip(data: dict) -> str:
     except ValueError:
         star_text_colour = "#ffd966"
 
-    mod_items = [
-        item
-        for item in list(data.get("mods") or [])
-        if str(item.get("name") or "").upper() != "NM"
-    ][:8]
+    mod_items = [item for item in list(data.get("mods") or []) if str(item.get("name") or "").upper() != "NM"][:8]
     mod_names = [str(item.get("name") or "") for item in mod_items]
     speed_changes = {
-        name: str(item["speed_change"])
-        for name, item in zip(mod_names, mod_items)
-        if item.get("speed_change")
+        name: str(item["speed_change"]) for name, item in zip(mod_names, mod_items) if item.get("speed_change")
     }
     estimated_mod_width = sum(45 + (56 if item.get("speed_change") else 0) for item in mod_items)
     reserved = star_width + 12 + (estimated_mod_width + 12 if mod_items else 0)
@@ -451,9 +445,7 @@ def _render_identity(data: dict) -> str:
             row = index // 10
             x = left + 2 + column * 24 + (12 if row else 0)
             y = section_top + 29 + row * 27
-            parts.append(
-                _queue_pillow_image(owner.get("avatar"), x, y, 26, 26, circle=True, border_width=2)
-            )
+            parts.append(_queue_pillow_image(owner.get("avatar"), x, y, 26, 26, circle=True, border_width=2))
     return "".join(parts)
 
 
@@ -478,7 +470,7 @@ def _render_judgements(data: dict) -> str:
     if ratio:
         parts.append(
             f'<g data-role="mania-ratio">'
-            f'{_text(left + width, 654, f"黄彩比 {ratio}", 12, fill="#fbbf24", weight=700, anchor="end")}'
+            f"{_text(left + width, 654, f'黄彩比 {ratio}', 12, fill='#fbbf24', weight=700, anchor='end')}"
             "</g>"
         )
     judgements = list(data.get("judgements") or [])
@@ -586,10 +578,8 @@ def _render_dimensions(data: dict) -> str:
         parts.extend(
             [
                 _text(left, center_y + 5, item.get("name", ""), 15, fill="#cbd5e1", weight=700),
-                f'<rect x="{track_x}" y="{center_y - 4}" width="{track_width}" height="8" rx="4" '
-                'fill="#ffffff1f"/>',
-                f'<rect x="{track_x}" y="{center_y - 4}" width="{fill_width}" height="8" rx="4" '
-                f'fill="{colour}"/>',
+                f'<rect x="{track_x}" y="{center_y - 4}" width="{track_width}" height="8" rx="4" fill="#ffffff1f"/>',
+                f'<rect x="{track_x}" y="{center_y - 4}" width="{fill_width}" height="8" rx="4" fill="{colour}"/>',
                 _text(
                     right,
                     center_y + 6,
