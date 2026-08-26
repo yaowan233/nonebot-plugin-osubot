@@ -340,34 +340,34 @@ async def render_score_template(
 
     mode = score_info.ruleset_id % 4
     mode_names = ["标准模式", "太鼓模式", "接水果模式", "键盘模式"]
-    mode_codes = ["OSU", "TAIKO", "CATCH", "MANIA"]
+    mode_codes = ["STD", "TAIKO", "CTB", "MANIA"]
     stats = score_info.statistics
 
     if mode == 0:
         judgements = [
-            ("GREAT / 300", stats.great),
-            ("OK / 100", stats.ok),
-            ("MEH / 50", stats.meh),
-            ("MISS / 失误", stats.miss),
+            ("300", stats.great),
+            ("100", stats.ok),
+            ("50", stats.meh),
+            ("MISS", stats.miss),
         ]
         judge_cols = 2
         ratio = None
     elif mode == 1:
-        judgements = [("GREAT / 良", stats.great), ("OK / 可", stats.ok), ("MISS / 失误", stats.miss)]
+        judgements = [("良", stats.great), ("可", stats.ok), ("不可", stats.miss)]
         judge_cols = 3
         ratio = None
     elif mode == 2:
         judgements = [
-            ("FRUIT / 水果", stats.great),
-            ("LARGE DROPLET", stats.large_tick_hit),
-            ("SMALL DROPLET", stats.small_tick_miss),
-            ("MISS / 失误", stats.miss),
+            ("水果", stats.great),
+            ("大果", stats.large_tick_hit),
+            ("小果", stats.small_tick_miss),
+            ("MISS", stats.miss),
         ]
         judge_cols = 2
         ratio = None
     else:
         judgements = [
-            ("MAX / 彩 300", stats.perfect),
+            ("MAX 300", stats.perfect),
             ("300", stats.great),
             ("200", stats.good),
             ("100", stats.ok),
@@ -406,7 +406,7 @@ async def render_score_template(
         )
 
     accuracy_pp = {}
-    target_accuracies = (96, 98) if mode in {0, 1, 3} else ()
+    target_accuracies = (96, 98)
     try:
         calculator = get_osu_calculator()
         for target_accuracy in target_accuracies:
@@ -444,18 +444,25 @@ async def render_score_template(
         pp_targets = [
             ("96% ACC", accuracy_pp[96]),
             ("98% ACC", accuracy_pp[98]),
+            ("IF FC", if_pp),
             ("SS PP", ss_pp),
         ]
         pp_items = []
     elif mode == 2:
         pp_components = [("PP 值", display_pp)]
-        pp_targets = [("IF FC", if_pp), ("SS PP", ss_pp)]
+        pp_targets = [
+            ("96% ACC", accuracy_pp[96]),
+            ("98% ACC", accuracy_pp[98]),
+            ("IF FC", if_pp),
+            ("SS PP", ss_pp),
+        ]
         pp_items = []
     elif mode == 3:
         pp_components = [("PP 值", display_pp)]
         pp_targets = [
             ("96% ACC", accuracy_pp[96]),
             ("98% ACC", accuracy_pp[98]),
+            ("IF FC", if_pp),
             ("SS PP", ss_pp),
         ]
         pp_items = []

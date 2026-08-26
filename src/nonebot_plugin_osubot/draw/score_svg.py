@@ -1,4 +1,4 @@
-"""Native SVG renderer for the fixed 1440x900 single-score card."""
+"""Native resvg renderer for the refined 1440x900 single-score card."""
 
 # SVG geometry is materially clearer when markup remains on one line.
 # ruff: noqa: E501
@@ -20,7 +20,16 @@ WIDTH = 1440
 HEIGHT = 900
 PINK = "#ff4f96"
 CYAN = "#4ce1e7"
-PURPLE = "#9f7cff"
+GREEN = "#66f2a3"
+
+_MODE_STYLES = {
+    "STD": (PINK, "#e93689"),
+    "OSU": (PINK, "#e93689"),
+    "TAIKO": ("#38bdf8", "#0284c7"),
+    "CTB": ("#10b981", "#047857"),
+    "CATCH": ("#10b981", "#047857"),
+    "MANIA": ("#8b5cf6", "#6d28d9"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,23 +116,6 @@ def _text_width(value: object, size: int) -> float:
     return font_for_text(value, size).getlength(str(value))
 
 
-def _supporter_hearts(x: float, y: float, level: int) -> str:
-    """Draw touching heart glyphs without font side bearings between them."""
-    parts = []
-    for index in range(level):
-        left = x + index * 8
-        parts.append(
-            f'<path d="M{left + 4.5} {y + 8.5}'
-            f"C{left + 3.8} {y + 7.7} {left} {y + 5.4} {left} {y + 2.8}"
-            f"C{left} {y + 0.9} {left + 1.4} {y} {left + 2.8} {y}"
-            f"C{left + 3.8} {y} {left + 4.5} {y + 0.7} {left + 4.5} {y + 1.4}"
-            f"C{left + 4.5} {y + 0.7} {left + 5.2} {y} {left + 6.2} {y}"
-            f"C{left + 7.6} {y} {left + 9} {y + 0.9} {left + 9} {y + 2.8}"
-            f'C{left + 9} {y + 5.4} {left + 5.2} {y + 7.7} {left + 4.5} {y + 8.5}Z" fill="#fff"/>'
-        )
-    return "".join(parts)
-
-
 def _star_colour(value: object) -> str:
     try:
         stars = float(value)
@@ -166,373 +158,541 @@ def _background_jpeg(cover_uri: str) -> bytes:
     """Cache only the map artwork treatment, never a rendered score card."""
     with Image.open(BytesIO(_decode_data_uri(cover_uri))) as source:
         background = ImageOps.fit(source.convert("RGB"), (720, 450), method=Image.Resampling.BILINEAR)
-    background = background.filter(ImageFilter.GaussianBlur(7))
-    background = ImageEnhance.Color(background).enhance(1.15)
-    background = ImageEnhance.Brightness(background).enhance(0.55)
+    background = background.filter(ImageFilter.GaussianBlur(5))
+    background = ImageEnhance.Color(background).enhance(1.3)
+    background = ImageEnhance.Brightness(background).enhance(0.68)
     result = BytesIO()
     background.save(result, "JPEG", quality=72)
     background.close()
     return result.getvalue()
 
 
-def _render_identity(data: dict) -> str:
-    username = str(data.get("username") or "")
-    support_level = max(0, int(data.get("support_level") or 0))
-    supporter_width = 12 + support_level * 8 if support_level else 0
-    username_max_width = 191 - (supporter_width + 8 if support_level else 0)
-    username_size = fit_text(username, username_max_width, 20, 13)
-    username_width = min(username_max_width, _text_width(username, username_size))
+def _mode_code(data: dict) -> str:
+    code = str(data.get("mode_code") or "STD").upper()
+    return "CTB" if code == "CATCH" else "STD" if code == "OSU" else code
+
+
+def _mode_style(data: dict) -> tuple[str, str]:
+    return _MODE_STYLES.get(_mode_code(data), _MODE_STYLES["STD"])
+
+
+def _mode_icon(code: str, x: float, y: float) -> str:
+    if code == "MANIA":
+        mark = (
+            f'<circle cx="{x}" cy="{y}" r="6.5" fill="none" stroke="#fff" stroke-width="1.5"/>'
+            f'<path d="M{x - 3.2} {y + 3}V{y - 2}M{x} {y + 3}V{y - 4}M{x + 3.2} {y + 3}V{y - 1}" '
+            'stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>'
+        )
+    elif code == "TAIKO":
+        mark = (
+            f'<circle cx="{x}" cy="{y}" r="6.5" fill="none" stroke="#fff" stroke-width="1.5"/>'
+            f'<circle cx="{x}" cy="{y}" r="3.2" fill="none" stroke="#fff" stroke-width="1.4"/>'
+        )
+    elif code == "CTB":
+        mark = (
+            f'<circle cx="{x}" cy="{y}" r="6.5" fill="none" stroke="#fff" stroke-width="1.5"/>'
+            f'<circle cx="{x - 2.1}" cy="{y - 2.2}" r="1.2" fill="#fff"/>'
+            f'<circle cx="{x + 2.5}" cy="{y}" r="1.2" fill="#fff"/>'
+            f'<circle cx="{x - 1}" cy="{y + 3}" r="1.2" fill="#fff"/>'
+        )
+    else:
+        mark = (
+            f'<circle cx="{x}" cy="{y}" r="6.5" fill="none" stroke="#fff" stroke-width="1.5"/>'
+            f'<circle cx="{x}" cy="{y}" r="2.2" fill="#fff"/>'
+        )
+    return f'<g data-role="mode-icon">{mark}</g>'
+
+
+def _render_header(data: dict) -> str:
+    code = _mode_code(data)
+    pill_width = max(64, round(_text_width(code, 12) + 39))
     parts = [
-        '<rect x="47" y="553" width="300" height="310" fill="#111925f2"/>',
-        '<circle cx="92" cy="612" r="34" fill="#4ce1e72d"/>',
-        _image(data.get("avatar"), 63, 583, 58, 58, clip="player-avatar"),
-        _text(136, 604, username, username_size, weight=700),
-        _text(136, 625, f"UID {data.get('user_id', '')} · {data.get('country', '')}", 11, fill="#ffffff99"),
+        f'<rect x="44" y="27" width="{pill_width}" height="26" rx="6" fill="url(#mode-accent)"/>',
+        _mode_icon(code, 58, 40),
+        _text(70, 45, code, 12, weight=800),
+        _text(44 + pill_width + 12, 46, "单曲成绩结算", 13, fill="#94a3b8", weight=700),
+        '<path d="M44 64H1396" stroke="#ffffff1f"/>',
     ]
-    if support_level:
-        supporter_x = 136 + username_width + 8
-        parts.extend(
-            [
-                f'<rect x="{supporter_x}" y="585" width="{supporter_width}" height="20" rx="10" fill="#e93689"/>',
-                _supporter_hearts(
-                    supporter_x + (supporter_width - (support_level * 8 + 1)) / 2,
-                    591,
-                    support_level,
-                ),
-            ]
-        )
-    team = data.get("team") or {}
-    if team:
-        parts.extend(
-            [
-                _image(team.get("icon"), 136, 632, 24, 14),
-                _text(166, 644, f"[{team.get('short_name', '')}] {team.get('name', '')}", 10, fill="#ffffff99"),
-            ]
-        )
-
-    stat_values = (
-        ("全球排名", f"#{data['global_rank']}" if data.get("global_rank") else "—"),
-        ("地区排名", f"#{data['country_rank']}" if data.get("country_rank") else "—"),
-        (data.get("profile_third_label", "玩家等级"), data.get("profile_third_value", "—")),
+    right = 1396
+    date_label = f"达成时间: {data.get('ended_at', '')}"
+    date_width = _text_width(date_label, 12)
+    parts.append(_text(right, 46, date_label, 12, fill="#cbd5e1", weight=700, anchor="end"))
+    status = str(data.get("status") or "").upper()
+    status_width = max(66, round(_text_width(status, 11) + 18))
+    status_x = right - date_width - 14 - status_width
+    parts.extend(
+        [
+            f'<rect x="{status_x}" y="28" width="{status_width}" height="24" rx="6" '
+            'fill="#ffffff14" stroke="#ffffff2e"/>',
+            _text(status_x + status_width / 2, 45, status, 11, weight=800, anchor="middle"),
+        ]
     )
-    parts.append('<path d="M67 671H327M67 727H327" stroke="#ffffff20"/>')
-    for index, (label, value) in enumerate(stat_values):
-        x = 68 + index * 86
-        if index:
-            parts.append(f'<path d="M{x - 8} 671V727" stroke="#ffffff16"/>')
-        parts.extend([_text(x, 691, label, 10, fill="#ffffff88"), _text(x, 715, value, 16, weight=700)])
-
-    owners = list(data.get("owners") or [])[:8]
-    parts.append(_text(68, 752, "谱师" if len(owners) == 1 else f"合作谱师 · {len(owners)} 人", 11, fill=CYAN))
-    for index, owner in enumerate(owners):
-        if len(owners) == 1:
-            x, y, avatar_size, text_x, text_y, text_size = 68, 766, 44, 122, 794, 16
-        else:
-            column = index % 2
-            row = index // 2
-            x = 68 + column * 132
-            y = 766 + row * 25
-            avatar_size, text_x, text_y, text_size = 23, x + 30, y + 17, 11
-        parts.append(
-            _queue_pillow_image(
-                owner.get("avatar"),
-                x,
-                y,
-                avatar_size,
-                avatar_size,
-                circle=True,
-                border_width=2 if len(owners) == 1 else 1,
-            )
-        )
-        parts.append(
-            _text(
-                text_x,
-                text_y,
-                owner.get("username", ""),
-                text_size,
-                fill="#ffffffdd",
-            )
+    score_version = data.get("score_version")
+    if score_version:
+        badge_text = "Lazer" if score_version == "lazer" else "Stable"
+        badge_colour = CYAN if score_version == "lazer" else PINK
+        badge_x = status_x - 76
+        parts.extend(
+            [
+                f'<rect x="{badge_x}" y="28" width="62" height="24" rx="6" fill="{badge_colour}" '
+                f'fill-opacity=".14" stroke="{badge_colour}" stroke-opacity=".4"/>',
+                f'<circle cx="{badge_x + 10}" cy="40" r="2.5" fill="{badge_colour}"/>',
+                _text(badge_x + 18, 45, badge_text, 11, fill=badge_colour, weight=800),
+            ]
         )
     return "".join(parts)
+
+
+def _render_map_strip(data: dict) -> str:
+    info_x = 256
+    title = str(data.get("title") or "")
+    artist = str(data.get("artist") or "")
+    version = str(data.get("version") or "")
+    stars = str(data.get("stars") or "0")
+    star_label = f"★ {stars}"
+    star_width = max(72, round(_text_width(star_label, 14) + 24))
+    star_colour = _star_colour(stars)
+    try:
+        star_text_colour = "#101925" if float(stars) < 6.5 else "#ffd966"
+    except ValueError:
+        star_text_colour = "#ffd966"
+
+    mod_items = [
+        item
+        for item in list(data.get("mods") or [])
+        if str(item.get("name") or "").upper() != "NM"
+    ][:8]
+    mod_names = [str(item.get("name") or "") for item in mod_items]
+    speed_changes = {
+        name: str(item["speed_change"])
+        for name, item in zip(mod_names, mod_items)
+        if item.get("speed_change")
+    }
+    estimated_mod_width = sum(45 + (56 if item.get("speed_change") else 0) for item in mod_items)
+    reserved = star_width + 12 + (estimated_mod_width + 12 if mod_items else 0)
+    title_max = max(190, min(440, 980 - info_x - reserved))
+    title_size = fit_text(title, title_max, 32, 18)
+    title_width = min(title_max, _text_width(title, title_size))
+    star_x = round(info_x + title_width + 12)
+    mods_x = star_x + star_width + 12
+    mods_svg = mod_strip(
+        mod_names,
+        speed_changes,
+        x=mods_x,
+        y=126,
+        icon_size=32,
+        max_width=max(0, 980 - mods_x),
+        preserve_artwork_ratio=True,
+        text_renderer=_text,
+    )
+
+    accent, _accent_dark = _mode_style(data)
+    artist_size = fit_text(artist, 285, 15, 11)
+    artist_width = min(285, _text_width(artist, artist_size))
+    version_width = max(70, min(265, round(_text_width(version, 13) + 20)))
+    version_x = round(info_x + artist_width + 28)
+    map_id_x = version_x + version_width + 28
+    quick_items = [
+        ("速度", f"{data.get('bpm', '--')} BPM"),
+        ("物件", str(data.get("objects", "--"))),
+    ]
+    if _mode_code(data) == "MANIA":
+        keys = next(
+            (item.get("current") for item in data.get("dimensions", []) if item.get("name") == "KEYS"),
+            None,
+        )
+        quick_items.append(("键位", f"{keys}K" if keys else str(data.get("length", "--"))))
+    else:
+        quick_items.append(("时长", str(data.get("length", "--"))))
+
+    parts = [
+        '<rect x="44" y="109" width="190" height="114" rx="12" fill="#111925" filter="url(#cover-shadow)"/>',
+        _image(data.get("cover"), 44, 109, 190, 114, clip="map-cover"),
+        '<rect x="44.5" y="109.5" width="189" height="113" rx="11.5" fill="none" stroke="#ffffff32"/>',
+        _text(info_x, 151, title, title_size, weight=700),
+        f'<rect x="{star_x}" y="126" width="{star_width}" height="28" rx="14" '
+        f'fill="{star_colour}" stroke="#ffffff33"/>',
+        _text(
+            star_x + star_width / 2,
+            146,
+            star_label,
+            14,
+            fill=star_text_colour,
+            weight=700,
+            anchor="middle",
+        ),
+        mods_svg,
+        _text(info_x, 184, artist, artist_size, fill="#cbd5e1", weight=700),
+        _text(version_x - 16, 184, "•", 13, fill="#cbd5e1", anchor="middle"),
+        f'<rect x="{version_x}" y="165" width="{version_width}" height="24" rx="6" '
+        f'fill="{accent}" fill-opacity=".14" stroke="{accent}" stroke-opacity=".7"/>',
+        _text(version_x + version_width / 2, 182, version, 13, fill=accent, weight=700, anchor="middle"),
+        _text(map_id_x - 16, 184, "•", 13, fill="#cbd5e1", anchor="middle"),
+        _text(map_id_x, 184, f"ID: {data.get('map_id', '')}", 14, fill="#94a3b8", weight=700),
+    ]
+    cursor = info_x
+    for label, value in quick_items:
+        prefix = f"{label}: "
+        parts.append(_text(cursor, 215, prefix, 13, fill="#94a3b8", weight=700))
+        value_x = cursor + _text_width(prefix, 13)
+        parts.append(_text(value_x, 215, value, 13, fill="#f1f5f9", weight=700))
+        cursor = value_x + _text_width(value, 13) + 28
+    return "".join(parts)
+
+
+def _render_hero_metrics(data: dict) -> str:
+    score = str(data.get("score") or "0")
+    score_size = fit_text(score, 900, 96, 58)
+    pp_value = str(data.get("pp") or "0")
+    pp_width = _text_width(pp_value, 34)
+    combo = str(data.get("combo") or "0x")
+    combo_is_full = bool(data.get("combo_is_full"))
+    combo_display = combo[:-1] if combo_is_full and combo.endswith("x") else combo
+    combo_colour = GREEN if combo_is_full else "#ffffff"
+    parts = [
+        _text(44, 318, "最终得分", 13, fill="#94a3b8", weight=700),
+        _text(44, 409, score, score_size, weight=800),
+        '<path d="M44 493H980" stroke="#ffffff1f"/>',
+        _text(44, 522, "本次表现", 12, fill="#94a3b8", weight=700),
+        _text(44, 559, pp_value, 34, fill=CYAN, weight=700),
+        _text(48 + pp_width, 559, "pp", 16, fill=PINK, weight=700),
+        _text(210, 522, "准确率", 12, fill="#94a3b8", weight=700),
+        _text(210, 559, f"{data.get('accuracy', '0')}%", 34, weight=700),
+        _text(405, 522, "最大连击", 12, fill="#94a3b8", weight=700),
+        _text(405, 559, combo_display, 34, fill=combo_colour, weight=700),
+    ]
+    if combo_is_full:
+        marker_x = 405 + _text_width(combo_display, 34) + 10
+        parts.append(_text(marker_x, 558, "★ PERFECT", 16, fill=GREEN, weight=700))
+    return "".join(parts)
+
+
+def _render_identity(data: dict) -> str:
+    left = 68
+    owners = list(data.get("owners") or [])[:20]
+    owner_count = len(owners)
+    heading = "玩家 & 合作谱师" if owner_count > 1 else "玩家 & 谱师"
+    username = str(data.get("username") or "")
+    team = data.get("team") or {}
+    if team:
+        player_meta = f"[{team.get('short_name', '')}] {team.get('name', '')}"
+    else:
+        ranks = []
+        if data.get("global_rank"):
+            ranks.append(f"全球 #{data['global_rank']}")
+        if data.get("country_rank"):
+            ranks.append(f"{data.get('country', '')} #{data['country_rank']}")
+        player_meta = " · ".join(ranks) or f"UID {data.get('user_id', '')}"
+    stat_bits = []
+    if data.get("global_rank"):
+        stat_bits.append(f"全球排名: #{data['global_rank']}")
+    if data.get("country_rank"):
+        stat_bits.append(f"地区: {data.get('country', '')} #{data['country_rank']}")
+    third = str(data.get("profile_third_value") or "")
+    if third and third != "—":
+        stat_bits.append(third)
+    stat_line = "  ·  ".join(stat_bits) or f"UID {data.get('user_id', '')}"
+    parts = [
+        _text(left, 655, heading, 15, fill="#94a3b8", weight=700),
+        _queue_pillow_image(data.get("avatar"), left, 669, 44, 44, circle=True, border_width=2),
+        _text(left + 56, 687, username, fit_text(username, 210, 19, 13), weight=700),
+        _text(left + 56, 708, player_meta, 13, fill="#94a3b8"),
+        '<path d="M68 728H368" stroke="#ffffff1a"/>',
+        _text(left, 752, stat_line, fit_text(stat_line, 298, 13, 10), fill="#94a3b8", weight=700),
+    ]
+    if not owners:
+        return "".join(parts)
+
+    section_top = 785 if owner_count <= 2 else 743 if owner_count <= 8 else 780
+    if owner_count == 1:
+        title = "谱面谱师"
+    elif owner_count <= 8:
+        title = f"合作谱师 · {owner_count} 人"
+    else:
+        title = f"合作谱师 · {owner_count} 人合作谱面"
+    parts.extend(
+        [
+            f'<path d="M68 {section_top}H368" stroke="#ffffff1a"/>',
+            _text(left, section_top + 21, title, 12, fill=CYAN, weight=700),
+        ]
+    )
+    if owner_count == 1:
+        owner = owners[0]
+        parts.extend(
+            [
+                _queue_pillow_image(
+                    owner.get("avatar"),
+                    left,
+                    section_top + 29,
+                    28,
+                    28,
+                    circle=True,
+                    border_width=1,
+                ),
+                _text(left + 38, section_top + 50, owner.get("username", ""), 15, weight=700),
+            ]
+        )
+    elif owner_count <= 8:
+        for index, owner in enumerate(owners):
+            column = index % 2
+            row = index // 2
+            x = left + column * 150
+            y = section_top + 29 + row * 25
+            name = str(owner.get("username") or "")
+            parts.extend(
+                [
+                    _queue_pillow_image(owner.get("avatar"), x, y, 22, 22, circle=True, border_width=1),
+                    _text(x + 30, y + 17, name, fit_text(name, 112, 13, 9), fill="#e2e8f0"),
+                ]
+            )
+    else:
+        for index, owner in enumerate(owners):
+            column = index % 10
+            row = index // 10
+            x = left + 2 + column * 24 + (12 if row else 0)
+            y = section_top + 29 + row * 27
+            parts.append(
+                _queue_pillow_image(owner.get("avatar"), x, y, 26, 26, circle=True, border_width=2)
+            )
+    return "".join(parts)
+
+
+def _judgement_colours(data: dict, count: int) -> list[str]:
+    code = _mode_code(data)
+    if code == "MANIA":
+        colours = ["#00f0ff", "#fbbf24", "#10b981", "#38bdf8", "#94a3b8", PINK]
+    elif code == "TAIKO":
+        colours = ["#38bdf8", "#fbbf24", PINK]
+    elif code == "CTB":
+        colours = ["#10b981", "#38bdf8", "#fbbf24", PINK]
+    else:
+        colours = [CYAN, "#10b981", "#fbbf24", PINK]
+    return [colours[index % len(colours)] for index in range(count)]
 
 
 def _render_judgements(data: dict) -> str:
-    left = 347
-    parts = [
-        f'<rect x="{left}" y="553" width="341" height="310" fill="#111925ed"/>',
-        _text(left + 24, 592, "判定明细", 20, weight=700),
-    ]
+    left = 408
+    width = 330
+    parts = [_text(left, 655, "判定明细", 15, fill="#94a3b8", weight=700)]
     ratio = str(data.get("ratio") or "")
     if ratio:
-        ratio_left = left + 167
-        ratio_width = 150
-        ratio_size = fit_text(ratio, 82, 15, 11)
-        parts.extend(
-            [
-                f'<g data-role="mania-ratio"><rect x="{ratio_left}" y="566" width="{ratio_width}" height="32" '
-                'rx="2" fill="#ffd9660d" stroke="#ffd96666"/>',
-                f'<rect x="{ratio_left}" y="566" width="3" height="32" fill="#ffd966"/>',
-                _text(ratio_left + 11, 587, "黄彩比", 11, fill="#ffd966", weight=700),
-                _text(
-                    ratio_left + ratio_width - 10,
-                    588,
-                    ratio,
-                    ratio_size,
-                    weight=700,
-                    anchor="end",
-                ),
-                "</g>",
-            ]
+        parts.append(
+            f'<g data-role="mania-ratio">'
+            f'{_text(left + width, 654, f"黄彩比 {ratio}", 12, fill="#fbbf24", weight=700, anchor="end")}'
+            "</g>"
         )
     judgements = list(data.get("judgements") or [])
-    columns = max(2, min(3, int(data.get("judge_cols") or 2)))
-    for index, item in enumerate(judgements):
+    count = len(judgements)
+    if not count:
+        return "".join(parts)
+    colours = _judgement_colours(data, count)
+    if count == 3:
+        columns, gap_x, gap_y = 1, 0, 8
+    elif count == 6:
+        columns, gap_x, gap_y = 3, 8, 8
+    else:
+        columns, gap_x, gap_y = 2, 10, 10
+    rows = (count + columns - 1) // columns
+    cell_width = (width - gap_x * (columns - 1)) / columns
+    cell_height = (188 - gap_y * (rows - 1)) / rows
+    for index, (item, colour) in enumerate(zip(judgements, colours)):
         column = index % columns
         row = index // columns
-        cell_width = 292 / columns
-        x = left + 24 + column * cell_width
-        y = 626 + row * 69
-        colour = (CYAN, PURPLE, PINK)[column % 3]
+        x = left + column * (cell_width + gap_x)
+        y = 668 + row * (cell_height + gap_y)
+        opacity = 1 if item.get("value") else 0.45
         parts.extend(
             [
-                f'<rect x="{x}" y="{y}" width="2" height="48" fill="{colour}"/>',
-                _text(x + 11, y + 14, item.get("label", ""), 11, fill="#ffffff99"),
-                _text(
-                    x + 11,
-                    y + 43,
-                    item.get("display", "0"),
-                    27,
-                    fill="#ffffff70" if not item.get("value") else "#ffffff",
-                    weight=700,
-                ),
+                f'<rect x="{x}" y="{y}" width="{cell_width}" height="{cell_height}" rx="10" '
+                f'fill="#ffffff" fill-opacity="{0.05 * opacity}"/>',
+                f'<path d="M{x + 5} {y + 5}V{y + cell_height - 5}" stroke="{colour}" stroke-width="5" '
+                f'stroke-linecap="round" opacity="{opacity}"/>',
             ]
         )
-    summary = (
-        ("总判定", data.get("judgement_total", "0"), CYAN),
-        ("失误率", data.get("miss_rate", "0%"), PINK),
-        ("连击完成", data.get("combo_completion", "0%"), PURPLE),
-    )
-    for index, (label, value, colour) in enumerate(summary):
-        x = left + 24 + index * 97
-        parts.extend(
-            [
-                f'<rect x="{x}" y="802" width="97" height="3" fill="{colour}"/>',
-                f'<rect x="{x}" y="805" width="97" height="45" fill="#09121d99"/>',
-                _text(x + 8, 823, label, 10, fill=colour),
-                _text(x + 8, 843, value, 16, weight=700),
-            ]
-        )
-    return "".join(parts)
-
-
-def _render_dimensions(data: dict) -> str:
-    left = 688
-    parts = [
-        f'<rect x="{left}" y="553" width="334" height="310" fill="#111925e9"/>',
-        _text(left + 24, 592, "谱面参数", 20, weight=700),
-        _text(left + 82, 622, "0", 10, fill="#ffffff88"),
-        _text(left + 176, 622, "5", 10, fill="#ffffff88", anchor="middle"),
-        _text(left + 270, 622, data.get("dimension_max", 10), 10, fill="#ffffff88", anchor="end"),
-        _text(left + 310, 622, "当前", 10, fill="#ffffff88", anchor="end"),
-    ]
-    for index, item in enumerate(data.get("dimensions") or []):
-        y = 651 + index * 49
-        start = left + 82
-        end = left + 270
-        current = start + (end - start) * float(item.get("current_pos") or 0) / 100
-        original = start + (end - start) * float(item.get("original_pos") or 0) / 100
-        changed = bool(item.get("changed"))
-        parts.extend(
-            [
-                f'<path d="M{start} {y}H{end}" stroke="#ffffff40"/>',
-                _text(left + 24, y + 5, item.get("name", ""), 13, weight=700),
-                f'<rect x="{current - 5}" y="{y - 5}" width="10" height="10" '
-                f'fill="{PINK if changed else CYAN}" transform="rotate(45 {current} {y})"/>',
-                _text(
-                    left + 310,
-                    y + 6,
-                    item.get("current", ""),
-                    18,
-                    weight=700,
-                    anchor="end",
-                    fill=PINK if changed else "#ffffff",
-                ),
-            ]
-        )
-        if changed:
+        if columns == 1:
             parts.extend(
                 [
-                    f'<circle cx="{original}" cy="{y}" r="4" fill="#111925" stroke="{CYAN}" stroke-width="2"/>',
-                    _text(original, y - 10, item.get("original", ""), 9, fill=CYAN, anchor="middle"),
+                    _text(
+                        x + 20,
+                        y + cell_height / 2 + 6,
+                        item.get("label", ""),
+                        16,
+                        fill="#94a3b8",
+                        weight=700,
+                        opacity=opacity,
+                    ),
+                    _text(
+                        x + cell_width - 16,
+                        y + cell_height / 2 + 8,
+                        item.get("display", "0"),
+                        24,
+                        weight=700,
+                        anchor="end",
+                        opacity=opacity,
+                    ),
+                ]
+            )
+        else:
+            parts.extend(
+                [
+                    _text(
+                        x + 18,
+                        y + cell_height * 0.43,
+                        item.get("label", ""),
+                        13 if columns == 3 else 14,
+                        fill="#94a3b8",
+                        weight=700,
+                        opacity=opacity,
+                    ),
+                    _text(
+                        x + 18,
+                        y + cell_height * 0.78,
+                        item.get("display", "0"),
+                        22 if columns == 3 else 26,
+                        weight=700,
+                        opacity=opacity,
+                    ),
                 ]
             )
     return "".join(parts)
 
 
-def _render_pp(data: dict) -> str:
-    left = 1022
-    width = 376
+def _render_dimensions(data: dict) -> str:
+    left = 778
+    right = 1038
     parts = [
-        f'<rect x="{left}" y="553" width="{width}" height="310" fill="#111925e7"/>',
-        _text(left + 24, 592, "PP 构成" if data.get("pp_components") else "PP 数据", 20, weight=700),
+        _text(left, 655, "谱面参数", 15, fill="#94a3b8", weight=700),
+        _text(
+            right,
+            654,
+            f"0 – {data.get('dimension_max', 10)}",
+            11,
+            fill="#94a3b8",
+            weight=700,
+            anchor="end",
+        ),
     ]
-    if data.get("pp_has_breakdown"):
-        total_pp = str(data.get("total_pp") or "0")
-        right = left + 352
-        suffix_width = _text_width("pp", 11)
-        value_right = right - suffix_width - 4
-        label_right = value_right - _text_width(total_pp, 23) - 9
+    dimensions = list(data.get("dimensions") or [])
+    for index, item in enumerate(dimensions):
+        center_y = 668 + 188 * (index + 0.5) / len(dimensions)
+        track_x = left + 51
+        track_width = 145
+        fill_width = track_width * float(item.get("current_pos") or 0) / 100
+        changed = bool(item.get("changed"))
+        colour = PINK if changed else CYAN
+        current = str(item.get("current", ""))
+        if item.get("name") == "KEYS":
+            current = f"{current}K"
         parts.extend(
             [
-                _text(label_right, 592, "总 PP", 11, fill="#ffffffb0", anchor="end"),
-                _text(value_right, 592, total_pp, 23, weight=700, anchor="end"),
-                _text(right, 592, "pp", 11, fill=PINK, weight=700, anchor="end"),
+                _text(left, center_y + 5, item.get("name", ""), 15, fill="#cbd5e1", weight=700),
+                f'<rect x="{track_x}" y="{center_y - 4}" width="{track_width}" height="8" rx="4" '
+                'fill="#ffffff1f"/>',
+                f'<rect x="{track_x}" y="{center_y - 4}" width="{fill_width}" height="8" rx="4" '
+                f'fill="{colour}"/>',
+                _text(
+                    right,
+                    center_y + 6,
+                    current,
+                    18,
+                    fill=PINK if changed else "#ffffff",
+                    weight=700,
+                    anchor="end",
+                ),
             ]
         )
-    components = list(data.get("pp_components") or data.get("pp_items") or [])
-    count = max(1, len(components))
-    cell_width = 328 / count
-    for index, item in enumerate(components):
-        x = left + 24 + index * cell_width
-        colour = (CYAN, PURPLE, PINK)[index % 3]
-        parts.extend(
-            [
-                f'<rect x="{x}" y="618" width="{cell_width}" height="74" fill="#09121d99" stroke="#ffffff18"/>',
-                f'<rect x="{x}" y="618" width="{cell_width}" height="3" fill="{colour}"/>',
-                _text(x + 10, 644, item.get("label", ""), 11, fill=colour),
-                _text(x + 10, 677, f"{item.get('value', '0')} pp", 19, weight=700),
-            ]
-        )
-    parts.append(_text(left + 24, 725, data.get("pp_target_title", "准确率推演"), 11, fill="#ffffff99"))
-    targets = list(data.get("pp_targets") or [])
-    target_width = 328 / max(1, min(4, len(targets)))
+    return "".join(parts)
+
+
+def _projection_label(label: object) -> str:
+    labels = {
+        "96% ACC": "96% 准确率",
+        "98% ACC": "98% 准确率",
+        "IF FC": "无失误推演 (IF FC)",
+        "SS PP": "全准理论上限 (SS)",
+    }
+    return labels.get(str(label).upper(), str(label))
+
+
+def _render_pp(data: dict) -> str:
+    left = 1078
+    width = 294
+    parts = [_text(left, 655, "表现推演", 15, fill="#94a3b8", weight=700)]
+    targets = list(data.get("pp_targets") or data.get("pp_items") or [])
+    if not targets:
+        return "".join(parts)
+    card_height = min(42, (188 - 6 * (len(targets) - 1)) / len(targets))
+    gap = (188 - card_height * len(targets)) / max(1, len(targets) - 1) if len(targets) > 1 else 0
     for index, item in enumerate(targets):
-        column = index % 4
-        row = index // 4
-        x = left + 24 + column * target_width
-        y = 742 + row * 54
-        colour = (CYAN, PURPLE, PINK, "#ffd966")[column]
+        y = 668 + index * (card_height + gap)
+        label = _projection_label(item.get("label", ""))
+        is_ss = "SS" in str(item.get("label", "")).upper()
+        stroke = PINK if is_ss else "none"
         parts.extend(
             [
-                f'<rect x="{x}" y="{y}" width="{target_width}" height="52" fill="#09121da8" stroke="#ffffff18"/>',
-                f'<rect x="{x}" y="{y}" width="2" height="52" fill="{colour}"/>',
-                _text(x + 8, y + 19, item.get("label", ""), 9, fill=colour),
-                _text(x + 8, y + 42, f"{item.get('value', '0')} pp", 15, weight=700),
+                f'<rect x="{left}" y="{y}" width="{width}" height="{card_height}" rx="8" '
+                f'fill="{PINK if is_ss else "#ffffff"}" fill-opacity="{0.18 if is_ss else 0.05}" '
+                f'stroke="{stroke}" stroke-opacity=".45"/>',
+                _text(
+                    left + 12,
+                    y + card_height / 2 + 5,
+                    label,
+                    13,
+                    fill="#ff7184" if is_ss else "#94a3b8",
+                    weight=700,
+                ),
+                _text(
+                    left + width - 12,
+                    y + card_height / 2 + 6,
+                    f"{item.get('value', '0')} pp",
+                    18 if is_ss else 17,
+                    fill=PINK if is_ss else "#ffffff",
+                    weight=700,
+                    anchor="end",
+                ),
             ]
         )
     return "".join(parts)
 
 
 def build_score_svg(data: dict) -> str:
-    title = str(data.get("title") or "")
-    artist = str(data.get("artist") or "")
-    version = str(data.get("version") or "")
-    score = str(data.get("score") or "0")
-    title_size = fit_text(title, 640, 54, 30)
-    artist_size = fit_text(artist, 300, 18, 12)
-    score_size = fit_text(score, 620, 78, 50)
-    star_colour = _star_colour(data.get("stars"))
-    star_text = "#101925" if float(data.get("stars") or 0) < 6.5 else "#ffd966"
-
-    mod_items = [item for item in list(data.get("mods") or []) if str(item.get("name") or "").upper() != "NM"][:8]
-    mod_names = [str(item.get("name") or "") for item in mod_items]
-    speed_changes = {
-        name: str(item["speed_change"]) for name, item in zip(mod_names, mod_items) if item.get("speed_change")
-    }
-    mods_svg = mod_strip(
-        mod_names,
-        speed_changes,
-        x=408,
-        y=226,
-        icon_size=36,
-        max_width=560,
-        preserve_artwork_ratio=True,
-        text_renderer=_text,
-    )
-
-    score_version = data.get("score_version")
-    version_badge = ""
-    if score_version:
-        badge_text = "Lazer" if score_version == "lazer" else "Stable"
-        badge_colour = PURPLE if score_version == "lazer" else PINK
-        version_badge = (
-            f'<rect x="1103" y="39" width="58" height="22" rx="11" fill="{badge_colour}33" stroke="{badge_colour}"/>'
-            + _text(1132, 54, badge_text, 10, fill=badge_colour, weight=700, anchor="middle")
-        )
-
-    mode_label = f"单曲成绩 / {data.get('mode_name', '')}"
-    date_label = f"{data.get('ended_at', '')} · {data.get('status', '')}"
-    pp_label = f"{data.get('pp', '0')}pp"
-    accuracy_label = f"{data.get('accuracy', '0')}%"
-    map_label = f"{data.get('status', '')} · {data.get('map_id', '')}"
-    star_label = f"★ {data.get('stars', '0')}"
-    bpm_label = f"{data.get('bpm', '--')} BPM"
-    artist_width = min(300, _text_width(artist, artist_size))
-    version_x = round(408 + artist_width + 12)
-    version_width = round(max(90, min(260, _text_width(version, 13) + 24)))
+    accent, accent_dark = _mode_style(data)
     identity_svg = _render_identity(data)
     judgements_svg = _render_judgements(data)
     dimensions_svg = _render_dimensions(data)
     pp_svg = _render_pp(data)
-
-    rank_image = _queue_pillow_image(data.get("rank_image"), 1018, 91, 350, 390, contain=True)
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">
+    rank_image = _queue_pillow_image(data.get("rank_image"), 1046, 168, 320, 340, contain=True)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">
 <defs>
-  <linearGradient id="shade" x1="0" x2="1"><stop stop-color="#07101dfc" offset="0"/><stop stop-color="#07101d92" offset=".58"/><stop stop-color="#07101de8" offset="1"/></linearGradient>
-  <linearGradient id="aurora"><stop stop-color="#4ce1e720"/><stop offset=".55" stop-color="#9f7cff14"/><stop offset="1" stop-color="#ff4f9630"/></linearGradient>
-  <clipPath id="cover"><rect x="47" y="170" width="294" height="170" rx="2"/></clipPath>
-  <clipPath id="player-avatar"><circle cx="92" cy="612" r="29"/></clipPath>
-  <filter id="rank-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity=".65"/></filter>
+  <clipPath id="canvas"><rect width="1440" height="900" rx="20"/></clipPath>
+  <clipPath id="map-cover"><rect x="44" y="109" width="190" height="114" rx="12"/></clipPath>
+  <linearGradient id="mode-accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="{accent}"/><stop offset="1" stop-color="{accent_dark}"/></linearGradient>
+  <linearGradient id="cover-shade" x1="0" y1="0" x2="1" y2=".55"><stop stop-color="#060c16" stop-opacity=".94"/><stop offset=".45" stop-color="#060c16" stop-opacity=".80"/><stop offset="1" stop-color="#060c16" stop-opacity=".90"/></linearGradient>
+  <radialGradient id="pink-glow" cx="80%" cy="22%" r="48%"><stop stop-color="#ff4f96" stop-opacity=".22"/><stop offset="1" stop-color="#ff4f96" stop-opacity="0"/></radialGradient>
+  <radialGradient id="cyan-glow" cx="18%" cy="80%" r="45%"><stop stop-color="#4ce1e7" stop-opacity=".18"/><stop offset="1" stop-color="#4ce1e7" stop-opacity="0"/></radialGradient>
+  <radialGradient id="rank-glow"><stop stop-color="#ff4f96" stop-opacity=".18"/><stop offset=".68" stop-color="#ff4f96" stop-opacity="0"/></radialGradient>
+  <pattern id="grain" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx=".8" cy=".8" r=".6" fill="#fff"/></pattern>
+  <filter id="cover-shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity=".8"/></filter>
 </defs>
-<rect width="1440" height="900" fill="url(#shade)"/>
-<rect width="1440" height="900" fill="url(#aurora)"/>
-<path d="M47 78H1398" stroke="#ffffff28"/>
-{_text(47, 49, "OSU!", 13, fill=PINK, weight=700)}
-{_text(88, 49, mode_label, 13, weight=700)}
-{version_badge}
-{_text(1398, 54, date_label, 11, fill="#ffffffaa", anchor="end")}
-
-{_text(408, 147, title, title_size, weight=700)}
-{_text(408, 184, artist, artist_size, fill="#ffffffb5", weight=700)}
-<rect x="{version_x}" y="158" width="{version_width}" height="30" fill="#08101bc9" stroke="#ffffff30"/>
-<rect x="{version_x}" y="158" width="4" height="30" fill="{PINK}"/>
-{_text(version_x + 14, 179, version, 13, weight=700)}
-{mods_svg}
-{_text(408, 345, score, score_size, weight=700)}
-{_text(408, 382, "本次表现", 11, fill="#ffffff88")}
-{_text(408, 416, pp_label, 28, weight=700)}
-{_text(560, 382, "准确率", 11, fill="#ffffff88")}
-{_text(560, 416, accuracy_label, 28, weight=700)}
-{_text(730, 382, "最大连击", 11, fill="#ffffff88")}
-{_text(730, 416, data.get("combo", "0x"), 28, fill=CYAN if data.get("combo_is_full") else "#ffffff", weight=700)}
-
-<rect x="61" y="184" width="294" height="170" fill="{PINK}"/>
-{_image(data.get("cover"), 47, 170, 294, 170, clip="cover")}
-<rect x="57" y="306" width="142" height="25" fill="#07101ddd"/>
-{_text(67, 324, map_label, 10, weight=700)}
-<rect x="253" y="180" width="78" height="28" rx="14" fill="{star_colour}" stroke="#ffffff77"/>
-{_text(292, 200, star_label, 14, fill=star_text, weight=700, anchor="middle")}
-<rect x="47" y="363" width="294" height="61" fill="#08101b9e" stroke="#ffffff20"/>
-<path d="M120 363V424M194 363V424M267 363V424" stroke="#ffffff18"/>
-{_text(57, 383, "速度", 10, fill="#ffffff88")}{_text(57, 407, bpm_label, 15, weight=700)}
-{_text(130, 383, "长度", 10, fill="#ffffff88")}{_text(130, 407, data.get("length", "--"), 15, weight=700)}
-{_text(204, 383, "物件", 10, fill="#ffffff88")}{_text(204, 407, data.get("objects", "--"), 15, weight=700)}
-{_text(277, 383, "谱面 ID", 10, fill="#ffffff88")}{_text(277, 407, data.get("map_id", "--"), 13, weight=700)}
-
-{rank_image}
-
-<rect x="47" y="549" width="1351" height="4" fill="#4ce1e7"/>
-<rect x="347" y="549" width="341" height="4" fill="#ff4f96"/>
-<rect x="688" y="549" width="334" height="4" fill="#9f7cff"/>
-<rect x="1022" y="549" width="376" height="4" fill="#ffd966"/>
-{identity_svg}
-{judgements_svg}
-{dimensions_svg}
-{pp_svg}
-<rect x="47" y="553" width="1351" height="310" fill="none" stroke="#ffffff26"/>
-<path d="M347 553V863M688 553V863M1022 553V863" stroke="#ffffff20"/>
+<g clip-path="url(#canvas)">
+  <rect width="1440" height="900" fill="url(#cover-shade)"/>
+  <rect width="1440" height="900" fill="url(#pink-glow)"/>
+  <rect width="1440" height="900" fill="url(#cyan-glow)"/>
+  <rect width="1440" height="900" fill="url(#grain)" opacity=".12"/>
+  {_render_header(data)}
+  {_render_map_strip(data)}
+  {_render_hero_metrics(data)}
+  <ellipse cx="1206" cy="333" rx="175" ry="175" fill="url(#rank-glow)"/>
+  {rank_image}
+  <rect x="44" y="618" width="1352" height="256" rx="18" fill="#0a121e" fill-opacity=".88" stroke="#ffffff24"/>
+  <path d="M388 636V856M758 636V856M1058 636V856" stroke="#ffffff1a"/>
+  {identity_svg}
+  {judgements_svg}
+  {dimensions_svg}
+  {pp_svg}
+  <rect x=".5" y=".5" width="1439" height="899" rx="19.5" fill="none" stroke="#ffffff1a"/>
+</g>
 </svg>"""
-    return svg
 
 
 def _render_score_svg_sync(data: dict) -> BytesIO:
@@ -548,7 +708,13 @@ def _render_score_svg_sync(data: dict) -> BytesIO:
     overlay = render_svg_png(svg, width=WIDTH, height=HEIGHT)
 
     with Image.open(BytesIO(_background_jpeg(str(data["cover"])))) as small_background:
-        background = small_background.resize((WIDTH, HEIGHT), Image.Resampling.BILINEAR).convert("RGBA")
+        card = small_background.resize((WIDTH, HEIGHT), Image.Resampling.BILINEAR).convert("RGBA")
+    background = Image.new("RGBA", (WIDTH, HEIGHT), (4, 7, 13, 255))
+    rounded_mask = Image.new("L", (WIDTH, HEIGHT), 0)
+    ImageDraw.Draw(rounded_mask).rounded_rectangle((0, 0, WIDTH - 1, HEIGHT - 1), radius=20, fill=255)
+    background.paste(card, (0, 0), rounded_mask)
+    card.close()
+    rounded_mask.close()
     with Image.open(BytesIO(overlay)) as foreground:
         background.alpha_composite(foreground.convert("RGBA"))
 
@@ -572,6 +738,7 @@ def _render_score_svg_sync(data: dict) -> BytesIO:
             mask_draw = ImageDraw.Draw(mask)
             mask_draw.ellipse((0, 0, frame.width - 1, frame.height - 1), fill=255)
             frame.putalpha(mask)
+            mask.close()
             if item.border_width:
                 frame_draw = ImageDraw.Draw(frame)
                 inset = item.border_width // 2
@@ -597,12 +764,14 @@ def _render_score_svg_sync(data: dict) -> BytesIO:
             anchor=anchor,
         )
     result = BytesIO()
-    background.convert("RGB").save(result, "JPEG", quality=92)
+    flattened = background.convert("RGB")
+    flattened.save(result, "JPEG", quality=92)
+    flattened.close()
     background.close()
     result.seek(0)
     return result
 
 
 async def render_score_svg(data: dict) -> BytesIO:
-    """Render a fresh card off the event loop; only static artwork is cached."""
+    """Render one refined score card off the event loop through resvg."""
     return await asyncio.to_thread(_render_score_svg_sync, data)

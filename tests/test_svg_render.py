@@ -103,8 +103,9 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
 
     svg = build_score_svg(data)
     assert 'data-role="mod-settings"' in svg
-    assert 'width="50.625" height="36"' in svg
-    assert 'x="521.625" y="226" width="50.625" height="36"' in svg
+    assert 'width="45.0" height="32"' in svg
+    assert '<rect x="44" y="109" width="190" height="114" rx="12"' in svg
+    assert '<rect x="44" y="618" width="1352" height="256" rx="18"' in svg
     assert ">NM</text>" not in svg
 
     result = await render_score_svg(data)
@@ -112,11 +113,11 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
     with Image.open(result) as image:
         assert image.format == "JPEG"
         assert image.size == (1440, 900)
-        # The rank art and white title both occupy the top half. A missing file
-        # URI or font regression leaves these sample areas nearly black.
-        assert image.crop((1040, 100, 1360, 460)).convert("L").getextrema()[1] > 150
-        assert image.crop((400, 95, 750, 160)).convert("L").getextrema()[1] > 150
-        rate_region = image.crop((465, 236, 515, 256)).convert("RGB")
+        # The refined layout keeps the rank at right, the map strip at top-left,
+        # and the official mod strip directly after the star pill.
+        assert image.crop((1040, 160, 1370, 510)).convert("L").getextrema()[1] > 150
+        assert image.crop((250, 110, 700, 225)).convert("L").getextrema()[1] > 150
+        rate_region = image.crop((430, 120, 800, 165)).convert("RGB")
         assert any(
             red > 170 and red > green * 1.35
             for y in range(rate_region.height)
@@ -140,6 +141,5 @@ def test_mania_score_judgements_show_yellow_rainbow_ratio():
     )
 
     assert 'data-role="mania-ratio"' in mania_svg
-    assert ">黄彩比</text>" in mania_svg
-    assert ">12.5 : 1</text>" in mania_svg
+    assert ">黄彩比 12.5 : 1</text>" in mania_svg
     assert 'data-role="mania-ratio"' not in _render_judgements({"ratio": None})
