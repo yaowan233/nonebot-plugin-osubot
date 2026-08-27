@@ -106,7 +106,7 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
     svg = build_score_svg(data)
     assert 'data-role="mod-settings"' in svg
     assert 'width="45.0" height="32"' in svg
-    assert '<rect x="44" y="109" width="190" height="114" rx="12"' in svg
+    assert '<rect x="44" y="101" width="228" height="137" rx="13"' in svg
     assert '<rect x="44" y="618" width="1352" height="256" rx="18"' in svg
     assert ">NM</text>" not in svg
 
@@ -145,6 +145,25 @@ def test_mania_score_judgements_show_yellow_rainbow_ratio():
     assert 'data-role="mania-ratio"' in mania_svg
     assert ">黄彩比 12.5 : 1</text>" in mania_svg
     assert 'data-role="mania-ratio"' not in _render_judgements({"ratio": None})
+
+
+def test_score_atmosphere_has_no_visible_column_seams():
+    """Cached background ambience must remain continuous across the canvas."""
+    from nonebot_plugin_osubot.draw.score_svg import HEIGHT, WIDTH, _atmosphere_rgba
+
+    atmosphere = Image.frombytes("RGBA", (WIDTH, HEIGHT), _atmosphere_rgba())
+    background = Image.new("RGBA", (WIDTH, HEIGHT), "#587080")
+    background.alpha_composite(atmosphere)
+    column_colours = list(background.convert("RGB").resize((WIDTH // 4, 1), Image.Resampling.BOX).get_flattened_data())
+    jumps = [
+        (
+            sum(abs(previous - current) for previous, current in zip(column_colours[x - 1], column_colours[x])),
+            x * 4,
+        )
+        for x in range(1, len(column_colours))
+    ]
+
+    assert max(jumps)[0] <= 3, max(jumps)
 
 
 @pytest.mark.asyncio
