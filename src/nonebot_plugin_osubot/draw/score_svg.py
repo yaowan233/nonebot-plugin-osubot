@@ -311,7 +311,7 @@ def _render_header(data: dict) -> str:
 
 
 def _render_map_strip(data: dict) -> str:
-    info_x = 292
+    info_x = 324
     title = str(data.get("title") or "")
     artist = str(data.get("artist") or "")
     version = str(data.get("version") or "")
@@ -331,8 +331,8 @@ def _render_map_strip(data: dict) -> str:
     }
     estimated_mod_width = sum(45 + (56 if item.get("speed_change") else 0) for item in mod_items)
     reserved = star_width + 12 + (estimated_mod_width + 12 if mod_items else 0)
-    title_max = max(190, min(440, 980 - info_x - reserved))
-    title_size = fit_text(title, title_max, 36, 20)
+    title_max = max(190, min(440, 1020 - info_x - reserved))
+    title_size = fit_text(title, title_max, 40, 22)
     title_width = min(title_max, _text_width(title, title_size))
     star_x = round(info_x + title_width + 12)
     mods_x = star_x + star_width + 12
@@ -342,7 +342,7 @@ def _render_map_strip(data: dict) -> str:
         x=mods_x,
         y=126,
         icon_size=32,
-        max_width=max(0, 980 - mods_x),
+        max_width=max(0, 1020 - mods_x),
         preserve_artwork_ratio=True,
         text_renderer=_text,
     )
@@ -367,10 +367,10 @@ def _render_map_strip(data: dict) -> str:
         quick_items.append(("时长", str(data.get("length", "--"))))
 
     parts = [
-        '<rect x="50" y="109" width="228" height="137" rx="13" fill="#00000073"/>',
-        '<rect x="44" y="101" width="228" height="137" rx="13" fill="#111925"/>',
-        _image(data.get("cover"), 44, 101, 228, 137, clip="map-cover"),
-        '<rect x="44.5" y="101.5" width="227" height="136" rx="12.5" fill="none" stroke="#ffffff32"/>',
+        '<rect x="50" y="99" width="260" height="156" rx="14" fill="#00000073"/>',
+        '<rect x="44" y="91" width="260" height="156" rx="14" fill="#111925"/>',
+        _image(data.get("cover"), 44, 91, 260, 156, clip="map-cover"),
+        '<rect x="44.5" y="91.5" width="259" height="155" rx="13.5" fill="none" stroke="#ffffff32"/>',
         _text(info_x, 151, title, title_size, weight=700),
         f'<rect x="{star_x}" y="126" width="{star_width}" height="28" rx="14" '
         f'fill="{star_colour}" stroke="#ffffff33"/>',
@@ -404,7 +404,7 @@ def _render_map_strip(data: dict) -> str:
 
 def _render_hero_metrics(data: dict) -> str:
     score = str(data.get("score") or "0")
-    score_size = fit_text(score, 900, 80, 52)
+    score_size = fit_text(score, 900, 68, 46)
     pp_value = str(data.get("pp") or "0")
     pp_width = _text_width(pp_value, 34)
     combo = str(data.get("combo") or "0x")
@@ -723,7 +723,7 @@ def build_score_svg(data: dict) -> str:
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">
 <defs>
   <clipPath id="canvas"><rect width="1440" height="900" rx="20"/></clipPath>
-  <clipPath id="map-cover"><rect x="44" y="101" width="228" height="137" rx="13"/></clipPath>
+  <clipPath id="map-cover"><rect x="44" y="91" width="260" height="156" rx="14"/></clipPath>
   <linearGradient id="mode-accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="{accent}"/><stop offset="1" stop-color="{accent_dark}"/></linearGradient>
   <radialGradient id="rank-glow"><stop stop-color="#ff4f96" stop-opacity=".18"/><stop offset=".68" stop-color="#ff4f96" stop-opacity="0"/></radialGradient>
 </defs>

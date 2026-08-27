@@ -106,7 +106,7 @@ async def test_native_score_renderer_preserves_text_and_bundled_images():
     svg = build_score_svg(data)
     assert 'data-role="mod-settings"' in svg
     assert 'width="45.0" height="32"' in svg
-    assert '<rect x="44" y="101" width="228" height="137" rx="13"' in svg
+    assert '<rect x="44" y="91" width="260" height="156" rx="14"' in svg
     assert '<rect x="44" y="618" width="1352" height="256" rx="18"' in svg
     assert ">NM</text>" not in svg
 
