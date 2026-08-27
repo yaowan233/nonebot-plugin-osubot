@@ -311,13 +311,13 @@ def _render_header(data: dict) -> str:
 
 
 def _render_map_strip(data: dict) -> str:
-    info_x = 324
+    info_x = 368
     title = str(data.get("title") or "")
     artist = str(data.get("artist") or "")
     version = str(data.get("version") or "")
     stars = str(data.get("stars") or "0")
     star_label = f"★ {stars}"
-    star_width = max(72, round(_text_width(star_label, 14) + 24))
+    star_width = max(78, round(_text_width(star_label, 16) + 26))
     star_colour = _star_colour(stars)
     try:
         star_text_colour = "#101925" if float(stars) < 6.5 else "#ffd966"
@@ -329,10 +329,10 @@ def _render_map_strip(data: dict) -> str:
     speed_changes = {
         name: str(item["speed_change"]) for name, item in zip(mod_names, mod_items) if item.get("speed_change")
     }
-    estimated_mod_width = sum(45 + (56 if item.get("speed_change") else 0) for item in mod_items)
+    estimated_mod_width = sum(51 + (63 if item.get("speed_change") else 0) for item in mod_items)
     reserved = star_width + 12 + (estimated_mod_width + 12 if mod_items else 0)
-    title_max = max(190, min(440, 1020 - info_x - reserved))
-    title_size = fit_text(title, title_max, 40, 22)
+    title_max = max(190, min(440, 1030 - info_x - reserved))
+    title_size = fit_text(title, title_max, 46, 24)
     title_width = min(title_max, _text_width(title, title_size))
     star_x = round(info_x + title_width + 12)
     mods_x = star_x + star_width + 12
@@ -340,17 +340,17 @@ def _render_map_strip(data: dict) -> str:
         mod_names,
         speed_changes,
         x=mods_x,
-        y=126,
-        icon_size=32,
-        max_width=max(0, 1020 - mods_x),
+        y=122,
+        icon_size=36,
+        max_width=max(0, 1030 - mods_x),
         preserve_artwork_ratio=True,
         text_renderer=_text,
     )
 
     accent, _accent_dark = _mode_style(data)
-    artist_size = fit_text(artist, 285, 15, 11)
+    artist_size = fit_text(artist, 285, 17, 12)
     artist_width = min(285, _text_width(artist, artist_size))
-    version_width = max(70, min(265, round(_text_width(version, 13) + 20)))
+    version_width = max(76, min(280, round(_text_width(version, 14) + 22)))
     version_x = round(info_x + artist_width + 28)
     map_id_x = version_x + version_width + 28
     quick_items = [
@@ -367,38 +367,38 @@ def _render_map_strip(data: dict) -> str:
         quick_items.append(("时长", str(data.get("length", "--"))))
 
     parts = [
-        '<rect x="50" y="99" width="260" height="156" rx="14" fill="#00000073"/>',
-        '<rect x="44" y="91" width="260" height="156" rx="14" fill="#111925"/>',
-        _image(data.get("cover"), 44, 91, 260, 156, clip="map-cover"),
-        '<rect x="44.5" y="91.5" width="259" height="155" rx="13.5" fill="none" stroke="#ffffff32"/>',
+        '<rect x="50" y="88" width="300" height="180" rx="15" fill="#00000073"/>',
+        '<rect x="44" y="80" width="300" height="180" rx="15" fill="#111925"/>',
+        _image(data.get("cover"), 44, 80, 300, 180, clip="map-cover"),
+        '<rect x="44.5" y="80.5" width="299" height="179" rx="14.5" fill="none" stroke="#ffffff32"/>',
         _text(info_x, 151, title, title_size, weight=700),
-        f'<rect x="{star_x}" y="126" width="{star_width}" height="28" rx="14" '
+        f'<rect x="{star_x}" y="122" width="{star_width}" height="32" rx="16" '
         f'fill="{star_colour}" stroke="#ffffff33"/>',
         _text(
             star_x + star_width / 2,
-            146,
+            145,
             star_label,
-            14,
+            16,
             fill=star_text_colour,
             weight=700,
             anchor="middle",
         ),
         mods_svg,
-        _text(info_x, 184, artist, artist_size, fill="#cbd5e1", weight=700),
-        _text(version_x - 16, 184, "•", 13, fill="#cbd5e1", anchor="middle"),
-        f'<rect x="{version_x}" y="165" width="{version_width}" height="24" rx="6" '
+        _text(info_x, 186, artist, artist_size, fill="#cbd5e1", weight=700),
+        _text(version_x - 16, 186, "•", 14, fill="#cbd5e1", anchor="middle"),
+        f'<rect x="{version_x}" y="164" width="{version_width}" height="26" rx="7" '
         f'fill="{accent}" fill-opacity=".14" stroke="{accent}" stroke-opacity=".7"/>',
-        _text(version_x + version_width / 2, 182, version, 13, fill=accent, weight=700, anchor="middle"),
-        _text(map_id_x - 16, 184, "•", 13, fill="#cbd5e1", anchor="middle"),
-        _text(map_id_x, 184, f"ID: {data.get('map_id', '')}", 14, fill="#94a3b8", weight=700),
+        _text(version_x + version_width / 2, 183, version, 14, fill=accent, weight=700, anchor="middle"),
+        _text(map_id_x - 16, 186, "•", 14, fill="#cbd5e1", anchor="middle"),
+        _text(map_id_x, 186, f"ID: {data.get('map_id', '')}", 15, fill="#94a3b8", weight=700),
     ]
     cursor = info_x
     for label, value in quick_items:
         prefix = f"{label}: "
-        parts.append(_text(cursor, 215, prefix, 13, fill="#94a3b8", weight=700))
-        value_x = cursor + _text_width(prefix, 13)
-        parts.append(_text(value_x, 215, value, 13, fill="#f1f5f9", weight=700))
-        cursor = value_x + _text_width(value, 13) + 28
+        parts.append(_text(cursor, 219, prefix, 14, fill="#94a3b8", weight=700))
+        value_x = cursor + _text_width(prefix, 14)
+        parts.append(_text(value_x, 219, value, 14, fill="#f1f5f9", weight=700))
+        cursor = value_x + _text_width(value, 14) + 30
     return "".join(parts)
 
 
@@ -723,7 +723,7 @@ def build_score_svg(data: dict) -> str:
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}">
 <defs>
   <clipPath id="canvas"><rect width="1440" height="900" rx="20"/></clipPath>
-  <clipPath id="map-cover"><rect x="44" y="91" width="260" height="156" rx="14"/></clipPath>
+  <clipPath id="map-cover"><rect x="44" y="80" width="300" height="180" rx="15"/></clipPath>
   <linearGradient id="mode-accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="{accent}"/><stop offset="1" stop-color="{accent_dark}"/></linearGradient>
   <radialGradient id="rank-glow"><stop stop-color="#ff4f96" stop-opacity=".18"/><stop offset=".68" stop-color="#ff4f96" stop-opacity="0"/></radialGradient>
 </defs>
