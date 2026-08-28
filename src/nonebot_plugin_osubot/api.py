@@ -759,9 +759,7 @@ async def g0v0_get_osu_user(identifier: str) -> dict:
 
     for candidate in candidates:
         try:
-            return await g0v0_make_request(
-                f"{g0v0_api}/users/{quote(candidate)}", "未找到该玩家，请确认玩家ID是否正确"
-            )
+            return await g0v0_make_request(f"{g0v0_api}/users/{quote(candidate)}", "未找到该玩家，请确认玩家ID是否正确")
         except NetworkError:
             continue
 

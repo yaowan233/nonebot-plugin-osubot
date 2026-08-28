@@ -28,7 +28,9 @@ async def _(event: Event, mode: Message = CommandArg()):
         if source == "g0v0":
             user = await session.scalar(select(G0v0UserData).where(G0v0UserData.user_id == uid))
             if not user:
-                await UniMessage.text("该账号尚未绑定 g0v0 服务器，请输入 /gubind 用户名 绑定账号").finish(reply_to=True)
+                await UniMessage.text("该账号尚未绑定 g0v0 服务器，请输入 /gubind 用户名 绑定账号").finish(
+                    reply_to=True
+                )
             if not mode_input:
                 current = NGM[str(user.osu_mode)]
                 await UniMessage.text(
@@ -55,9 +57,7 @@ async def _(event: Event, mode: Message = CommandArg()):
                 ).finish(reply_to=True)
             parsed = parse_mode(mode_input)
             if parsed is not None:
-                await session.execute(
-                    update(UserData).where(UserData.user_id == uid).values(osu_mode=int(parsed))
-                )
+                await session.execute(update(UserData).where(UserData.user_id == uid).values(osu_mode=int(parsed)))
                 await session.commit()
                 msg = f"已将默认模式更改为 {NGM[parsed]}（{parsed}）"
             else:
