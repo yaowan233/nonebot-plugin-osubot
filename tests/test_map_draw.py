@@ -1,6 +1,20 @@
 from types import SimpleNamespace
 
 
+def test_nominations_resolve_related_user_names():
+    from nonebot_plugin_osubot.draw.map import _nominations_text
+
+    payload = {
+        "current_nominations": [{"user_id": 1}, {"user_id": 2}],
+        "related_users": [
+            {"id": 1, "username": "First"},
+            {"id": 2, "username": "Second"},
+        ],
+    }
+
+    assert _nominations_text(payload) == "First / Second"
+
+
 def test_mania_conversion_uses_converted_objects_and_forced_keys():
     from nonebot_plugin_osubot.draw.map import _apply_ruleset_metadata
 

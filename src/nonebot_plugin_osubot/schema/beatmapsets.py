@@ -1,5 +1,7 @@
 from typing import Optional
 
+from pydantic import Field
+
 from .beatmap import Gds
 from .basemodel import Base
 
@@ -44,3 +46,6 @@ class BeatmapSets(Base):
     language_id: int
     genre_id: int
     beatmaps: list[BidData]
+    current_nominations: list[dict] = Field(default_factory=list)
+    related_users: list[dict] = Field(default_factory=list)
+    nominations_summary: Optional[dict] = None

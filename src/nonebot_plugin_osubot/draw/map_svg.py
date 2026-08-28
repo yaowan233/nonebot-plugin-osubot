@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 from .svg_components import STAR_STOPS, fitted_text, image, mod_strip, number, star_color, text
-from .svg_render import escape_text, render_svg_jpeg_async, text_width
+from .svg_render import escape_text, render_svg_jpeg_async, text_width, truncate_text
 
 
 WIDTH = 1400
+MAP_WIDTH = 1440
+MAP_HEIGHT = 920
 PINK = "#ff4d96"
 CYAN = "#43d5df"
 PANEL = "#101b28"
@@ -126,7 +128,7 @@ def _scenario_panel(scenario: dict, y: float = 860) -> str:
     return f'<g data-role="performance-scenario">{_panel(612, y, 771, 158)}{text(642, y + 27, "PP 情景计算", 16, weight=700)}{text(642, y + 48, scenario["label"], 10, fill="#ffffffbb")}{text(1355, y + 30, summary, 15, fill=PINK, anchor="end", weight=700)}{"".join(cards)}</g>'
 
 
-def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[str, int]:
+def _build_map_svg_legacy(payload: dict, *, external_background: bool = False) -> tuple[str, int]:
     beatmapset, beatmap = payload["set"], payload["map"]
     mods = [str(mod) for mod in beatmap.get("mods") or [] if str(mod).upper() != "NM"]
     stats = beatmap.get("stats") or []
@@ -205,6 +207,276 @@ def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[
 <g data-role="map-stats-panel">{_panel(612, stats_panel_y, 771, stats_panel_height)}{stats_header}{"".join(stats_svg)}<line x1="632" y1="592" x2="1363" y2="592" stroke="#ffffff1a"/><g data-role="object-composition">{text(646, 625, "物件构成", 11, fill="#ffffffcc", weight=700)}{"".join(object_bar)}{text(1360, 625, f"{payload['map']['object_labels'][0]} {number(objects[0])}  ·  {payload['map']['object_labels'][1]} {number(objects[1])}  ·  {payload['map']['object_labels'][2]} {number(objects[2])}", 10, anchor="end")}</g></g>
 {_panel(612, 679, 771, 164)}{_metric(642, 711, "BPM", number(beatmap["bpm"], 1), width=180)}{_metric(880, 711, "时长", beatmap["duration"], color=PINK, width=180)}{_metric(1118, 711, "物件数", number(beatmap["objects"]), width=180)}{_metric(642, 777, "最大连击", number(beatmap["max_combo"]) + "x", color=PINK, width=180)}{_metric(880, 777, "谱面 ID", str(beatmap["id"]), width=180)}{_metric(1118, 777, "谱面组 ID", str(beatmapset["id"]), color=PINK, width=180)}{scenario_svg}</svg>"""
     return svg, height
+
+
+def _map_panel(
+    x: float, y: float, width: float, height: float, *, radius: float = 16, stroke: str = "#ffffff22"
+) -> str:
+    return f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="{radius}" fill="#08131fee" stroke="{stroke}"/>'
+
+
+def _section_title(x: float, y: float, value: str, *, hint: str = "", right: float | None = None) -> str:
+    suffix = text(right, y, hint, 9, fill="#8292a3", anchor="end") if hint and right is not None else ""
+    return f'<rect x="{x}" y="{y - 12}" width="3" height="13" rx="1.5" fill="{CYAN}"/>{text(x + 12, y, value, 13, weight=700)}{suffix}'
+
+
+def _sample_bars(values: list[float] | tuple[float, ...], count: int = 24) -> list[float]:
+    if not values:
+        return []
+    numeric = [max(0.0, float(value or 0)) for value in values]
+    if len(numeric) <= count:
+        return numeric
+    sampled = []
+    for index in range(count):
+        start = round(index * len(numeric) / count)
+        end = max(start + 1, round((index + 1) * len(numeric) / count))
+        sampled.append(max(numeric[start:end]))
+    return sampled
+
+
+def _map_cover_card(payload: dict) -> str:
+    beatmapset, beatmap = payload["set"], payload["map"]
+    title = beatmapset.get("title_unicode") or beatmapset.get("title") or ""
+    artist = beatmapset.get("artist_unicode") or beatmapset.get("artist") or ""
+    status = STATUS_NAMES.get(str(beatmapset.get("status") or "").lower(), str(beatmapset.get("status") or ""))
+    cover = beatmapset.get("cover")
+    mods = [str(value).upper() for value in beatmap.get("mods") or [] if str(value).upper() != "NM"]
+    tags = " ".join(str(value) for value in beatmapset.get("tags") or [])
+    plays = float(beatmap.get("plays") or 0)
+    passes = float(beatmap.get("passes") or 0)
+    pass_rate = passes / max(1.0, plays) * 100
+    mods_svg = (
+        mod_strip(
+            mods,
+            {},
+            x=574 - min(len(mods), 5) * (28 * 45 / 32),
+            y=101,
+            icon_size=28,
+            max_width=210,
+            preserve_artwork_ratio=True,
+        )
+        if mods
+        else ""
+    )
+    return f"""
+<defs><clipPath id="map-cover-clip"><rect x="42" y="86" width="548" height="205" rx="12"/></clipPath><clipPath id="map-avatar-clip"><circle cx="76" cy="401" r="22"/></clipPath></defs>
+{_map_panel(26, 70, 580, 385)}
+{image(cover, 42, 86, 548, 205, clip="map-cover-clip")}<rect x="42" y="86" width="548" height="205" rx="12" fill="#020711" opacity=".34"/>
+<rect x="57" y="101" width="116" height="25" rx="6" fill="#06101bdd" stroke="#45dca888"/>{text(115, 118, "● " + status, 10, fill="#45dca8", anchor="middle", weight=700)}
+{mods_svg}{fitted_text(58, 252, title, 32, 500, weight=700)}{fitted_text(58, 278, artist, 14, 315, fill="#e2e8f0", weight=700)}
+{fitted_text(574, 278, ("来源: " + str(beatmapset.get("source"))) if beatmapset.get("source") else "原创曲目", 14, 260, fill="#e2e8f0", anchor="end", weight=700)}
+<line x1="42" y1="323" x2="590" y2="323" stroke="#ffffff18"/><g data-role="map-tags">{text(42, 342, "标签", 9, fill=CYAN, weight=700)}{text(72, 342, truncate_text(tags or "无标签", 500, 9), 9, fill="#9cabb8")}</g>
+<rect x="42" y="365" width="548" height="72" rx="10" fill="#ffffff08" stroke="#ffffff12"/>
+<circle cx="76" cy="401" r="25" fill="#0d1e2a" stroke="{CYAN}" stroke-width="2"/>{image(beatmapset.get("avatar"), 54, 379, 44, 44, clip="map-avatar-clip")}
+{text(108, 391, "谱面作者", 9, fill="#8292a3")}{fitted_text(108, 413, beatmapset.get("creator") or "—", 16, 220, weight=700)}
+{text(438, 390, "游玩次数", 8, fill="#8292a3", anchor="end")}{text(438, 411, number(plays), 14, anchor="end", weight=700)}
+{text(508, 390, "通过率", 8, fill="#8292a3", anchor="end")}{text(508, 411, number(pass_rate, 1) + "%", 14, anchor="end", weight=700)}
+{text(572, 390, "收藏", 8, fill="#8292a3", anchor="end")}{text(572, 411, "♥ " + number(beatmapset.get("favourites")), 14, fill=PINK, anchor="end", weight=700)}
+"""
+
+
+def _pp_component_items(beatmap: dict) -> list[tuple[str, float]]:
+    components = beatmap.get("pp_components") or {}
+    mode = int(beatmap.get("mode_int") or 0)
+    if mode == 0:
+        return [
+            ("瞄准", components.get("aim", 0)),
+            ("速度", components.get("speed", 0)),
+            ("判定", components.get("accuracy", 0)),
+        ]
+    if mode == 1:
+        return [("难度", components.get("difficulty", 0)), ("判定", components.get("accuracy", 0))]
+    if mode == 2:
+        return [("接果", components.get("catch", beatmap.get("ss_pp", 0)))]
+    return [("难度", components.get("difficulty", beatmap.get("ss_pp", 0)))]
+
+
+def _map_hero(payload: dict) -> str:
+    beatmap = payload["map"]
+    mode = int(beatmap.get("mode_int") or 0)
+    mode_names = ("主模式 (osu!)", "太鼓模式 (taiko)", "接水果模式 (catch)", "下落模式 (mania)")
+    stars = float(beatmap.get("stars") or 0)
+    original_stars = float(beatmap.get("original_stars") or stars)
+    delta = stars - original_stars
+    has_delta = abs(delta) >= 0.005
+    badge_color = star_color(stars)
+    if stars >= 9:
+        badge_color = "#e11d48"
+    panel_x, panel_width = (646, 332) if has_delta else (646, 0)
+    pp_x = 992 if has_delta else 646
+    pp_width = 400 if has_delta else 746
+    ss_pp_text = number(beatmap.get("ss_pp"), 1)
+    ss_pp_unit_x = pp_x + 22 + text_width(ss_pp_text, 38)
+    delta_panel = ""
+    if has_delta:
+        sign = "+" if delta > 0 else ""
+        delta_panel = f"""<g data-role="star-change-card">{_map_panel(panel_x, 205, panel_width, 115, radius=12)}{text(panel_x + 15, 228, "难度星级评定", 11, fill="#95a3b3")}{text(panel_x + panel_width - 15, 228, f"{sign}{delta / max(original_stars, 0.1) * 100:.1f}% 增幅", 11, fill=CYAN, anchor="end", weight=700)}<rect x="{panel_x + 15}" y="242" width="66" height="23" rx="6" fill="#ff2a8528" stroke="#ff4f9688"/>{text(panel_x + 48, 258, "★ " + sign + number(delta, 2), 11, fill="#ff69aa", anchor="middle", weight=700)}{text(panel_x + 91, 258, "原始星级 " + number(original_stars, 2) + "★", 10, fill="#8997a7")}<line x1="{panel_x + 15}" y1="279" x2="{panel_x + panel_width - 15}" y2="279" stroke="#ffffff12"/>{text(panel_x + 15, 304, "模组加成: " + ", ".join(beatmap.get("mods") or []), 10, fill="#b9c5cf", weight=700)}</g>"""
+    components = _pp_component_items(beatmap)
+    component_text = []
+    for index, (label, value) in enumerate(components):
+        x = pp_x + 16 + index * ((pp_width - 32) / max(1, len(components) - 1)) if len(components) > 1 else pp_x + 16
+        anchor = "start" if index == 0 else "end" if index == len(components) - 1 else "middle"
+        component_text.append(
+            text(x, 304, f"{label}: {number(value, 0)} PP", 10, fill="#dce5ec", anchor=anchor, weight=700)
+        )
+    quick = []
+    quick_values = (
+        ("速度 (BPM)", number(beatmap.get("bpm"), 1), CYAN),
+        ("谱面时长", str(beatmap.get("duration") or "—"), PINK),
+        ("最大连击", number(beatmap.get("max_combo")) + "x", "#f6b943"),
+        ("物件总数", number(beatmap.get("objects")), "#a78bfa"),
+    )
+    for index, (label, value, color) in enumerate(quick_values):
+        x = 646 + index * 188
+        quick.append(
+            f'<rect x="{x}" y="378" width="177" height="55" rx="8" fill="#ffffff08" stroke="#ffffff12"/><rect x="{x}" y="386" width="3" height="39" rx="1.5" fill="{color}"/>{text(x + 12, 397, label, 9, fill="#8292a3")}{text(x + 12, 421, value, 16, weight=700)}'
+        )
+    return f"""
+{_map_panel(624, 70, 790, 385)}<rect x="624" y="70" width="790" height="122" rx="16" fill="#0b1222bb"/>
+{text(646, 101, "当前难度详情  /  " + mode_names[mode], 10, fill=CYAN, weight=700)}{fitted_text(646, 145, beatmap.get("version") or "Difficulty", 36, 620, weight=700)}
+<rect x="1290" y="88" width="98" height="39" rx="12" fill="{badge_color}" stroke="#ffffff66"/>{text(1339, 115, "★ " + number(stars, 2), 20, fill="#101925" if stars < 6.5 else "#fff", anchor="middle", weight=700)}
+{delta_panel}{_map_panel(pp_x, 205, pp_width, 115, radius=12, stroke="#ffffff30")}{text(pp_x + 16, 228, "满分表现值 (SS 100.00%)", 11, fill="#95a3b3")}{text(pp_x + pp_width - 16, 228, "预估表现", 11, anchor="end", weight=700)}{text(pp_x + 16, 270, ss_pp_text, 38, fill="#f6b923", weight=700)}{text(ss_pp_unit_x, 270, "PP", 13, fill="#f6b923", weight=700)}<line x1="{pp_x + 16}" y1="282" x2="{pp_x + pp_width - 16}" y2="282" stroke="#ffffff12"/>{"".join(component_text)}{"".join(quick)}
+"""
+
+
+def _map_rating_and_failures(payload: dict) -> str:
+    beatmapset, beatmap = payload["set"], payload["map"]
+    rating = beatmap.get("rating")
+    votes = int(beatmap.get("rating_votes") or 0)
+    rating_values = [float(value or 0) for value in (beatmap.get("rating_distribution") or [])]
+    rating_values = rating_values[1:] if len(rating_values) > 10 else rating_values
+    rating_max = max(rating_values, default=1)
+    rating_bars = []
+    for index, value in enumerate(rating_values[-10:]):
+        height = max(2, 30 * value / rating_max)
+        rating_bars.append(
+            f'<rect x="{150 + index * 9}" y="{578 - height}" width="6" height="{height}" rx="2" fill="#f6b923"/>'
+        )
+    raw_failures = [float(value or 0) for value in (beatmap.get("fail_points") or [])]
+    failures = _sample_bars(raw_failures)
+    failure_max = max(failures, default=1)
+    peak_index = max(range(len(raw_failures)), key=raw_failures.__getitem__) if raw_failures else -1
+    peak_pct = round((peak_index + 0.5) / len(raw_failures) * 100) if raw_failures else 0
+    fail_bars = []
+    for index, value in enumerate(failures):
+        height = max(2, 27 * value / failure_max)
+        color = CYAN if value == failure_max else PINK
+        fail_bars.append(
+            f'<rect x="{250 + index * 10}" y="{576 - height}" width="7" height="{height}" rx="2" fill="{color}"/>'
+        )
+    rating_text = number(rating, 1) if rating is not None else "—"
+    return f"""
+{text(48, 535, "玩家评价", 9, fill="#8292a3")}{text(190, 535, number(votes) + " 次评分" if votes else "暂无评分", 8, fill="#8292a3", anchor="end")}{text(48, 577, rating_text, 27, fill="#f6b923", weight=700)}{text(91, 577, "/10", 8, fill="#8292a3")}{"".join(rating_bars)}
+<line x1="205" y1="520" x2="205" y2="588" stroke="#ffffff18"/>{text(224, 535, "失败位置分布", 9, fill="#8292a3")}{text(478, 535, "峰值 " + str(peak_pct) + "%" if failures else "暂无数据", 8, fill="#8292a3", anchor="end")}{"".join(fail_bars)}{text(224, 589, "开头", 7, fill="#657587")}{text(352, 589, "50%", 7, fill="#657587", anchor="middle")}{text(478, 589, "结尾", 7, fill="#657587", anchor="end")}
+<line x1="492" y1="520" x2="492" y2="588" stroke="#ffffff18"/>{text(510, 535, "流派", 8, fill="#8292a3")}{fitted_text(510, 552, beatmapset.get("genre") or "其他", 10, 95, weight=700)}{text(620, 535, "语言", 8, fill="#8292a3")}{fitted_text(620, 552, beatmapset.get("language") or "其他", 10, 88, weight=700)}{text(510, 570, "提名", 8, fill="#8292a3")}{fitted_text(510, 587, beatmapset.get("nominations") or "暂无", 10, 198, weight=700)}
+"""
+
+
+def _map_params(payload: dict) -> str:
+    stats = payload["map"].get("stats") or []
+    if not stats:
+        return ""
+    parts = []
+    step = min(58, 230 / max(1, len(stats)))
+    for index, stat in enumerate(stats):
+        y = 611 + index * step
+        before = float(stat.get("before") or 0)
+        after = float(stat.get("after") or 0)
+        changed = abs(after - before) > 0.01
+        maximum = 11.0
+        track_x, track_width = 180, 410
+        before_x = track_x + min(before, maximum) / maximum * track_width
+        after_x = track_x + min(after, maximum) / maximum * track_width
+        origin = (
+            f'<circle cx="{before_x}" cy="{y + 25}" r="4" fill="#08131f" stroke="{CYAN}" stroke-width="2"/>'
+            if changed
+            else ""
+        )
+        parts.append(
+            f'<rect x="48" y="{y}" width="685" height="49" rx="8" fill="#ffffff07" stroke="#ffffff10"/>{text(60, y + 23, stat.get("key") or "", 14, weight=700)}{text(91, y + 23, stat.get("name") or "", 9, fill="#9aa8b7")}<line x1="{track_x}" y1="{y + 25}" x2="{track_x + track_width}" y2="{y + 25}" stroke="#ffffff20" stroke-width="6"/>{origin}<rect x="{after_x - 5}" y="{y + 20}" width="10" height="10" transform="rotate(45 {after_x} {y + 25})" fill="{PINK if changed else CYAN}"/>{text(717, y + 29, (number(before, 1) + " → " if changed else "") + number(after, 1), 15, fill=PINK if changed else "#fff", anchor="end", weight=700)}'
+        )
+    return "".join(parts)
+
+
+def _map_analysis(payload: dict) -> str:
+    beatmap = payload["map"]
+    scenario = payload.get("scenario")
+    points = (scenario or {}).get("points") or beatmap.get("pp_matrix") or []
+    points = points[:5]
+    cards = []
+    max_pp = max((float(point.get("pp") or 0) for point in points), default=1)
+    card_width = (597 - max(0, len(points) - 1) * 8) / max(1, len(points))
+    for index, point in enumerate(points):
+        selected = bool(point.get("selected")) or (not scenario and index == 0)
+        x = 795 + index * (card_width + 8)
+        stroke = "#f6b923" if selected else "#ffffff20"
+        fill = "#f6b92312" if selected else "#ffffff07"
+        value_color = "#f6b923" if selected else "#fff"
+        label = (
+            text(x + card_width / 2, 522, "当前目标", 8, fill="#211603", anchor="middle", weight=700)
+            if selected
+            else ""
+        )
+        label_bg = (
+            f'<rect x="{x + card_width / 2 - 28}" y="510" width="56" height="16" rx="4" fill="#f6b923"/>'
+            if selected
+            else ""
+        )
+        bar_width = (card_width - 28) * float(point.get("pp") or 0) / max_pp
+        bar_color = stroke if selected else "#dce5ec"
+        cards.append(
+            f'<g data-role="scenario-point" data-selected="{str(selected).lower()}"><rect x="{x}" y="518" width="{card_width}" height="60" rx="10" fill="{fill}" stroke="{stroke}"/>{label_bg}{label}{text(x + card_width / 2, 540, number(point.get("accuracy"), 1) + "%", 9, fill="#92a0b0", anchor="middle", weight=700)}{text(x + card_width / 2, 562, number(point.get("pp"), 1), 15, fill=value_color, anchor="middle", weight=700)}<rect x="{x + 14}" y="569" width="{card_width - 28}" height="3" rx="1.5" fill="#ffffff18"/><rect x="{x + 14}" y="569" width="{bar_width}" height="3" rx="1.5" fill="{bar_color}"/></g>'
+        )
+    objects = [float(beatmap.get(key) or 0) for key in ("circles", "sliders", "spinners")]
+    total = max(1.0, sum(objects))
+    labels = beatmap.get("object_labels") or ("物件 1", "物件 2", "物件 3")
+    colors = (CYAN, PINK, "#f6a817")
+    cursor = 810.0
+    bars = []
+    legends = []
+    for index, (value, color) in enumerate(zip(objects, colors)):
+        width = 567 * value / total
+        bars.append(f'<rect x="{cursor}" y="650" width="{width}" height="8" fill="{color}"/>')
+        cursor += width
+        legends.append(
+            text(
+                810 + index * 188, 680, f"● {labels[index]} {number(value)} ({value / total * 100:.1f}%)", 8, fill=color
+            )
+        )
+    difficulties = sorted(payload.get("difficulties") or [], key=lambda item: float(item.get("stars") or 0))
+    if len(difficulties) > 5:
+        current_index = next(
+            (index for index, item in enumerate(difficulties) if item.get("current")), len(difficulties) - 1
+        )
+        start = max(0, min(current_index - 2, len(difficulties) - 5))
+        difficulties = difficulties[start : start + 5]
+    pills = []
+    pill_width = (567 - max(0, len(difficulties) - 1) * 8) / max(1, len(difficulties))
+    for index, item in enumerate(difficulties):
+        x = 810 + index * (pill_width + 8)
+        active = bool(item.get("current"))
+        color = star_color(float(item.get("stars") or 0))
+        pill_stroke = CYAN if active else "#ffffff18"
+        pills.append(
+            f'<rect x="{x}" y="786" width="{pill_width}" height="44" rx="8" fill="#ffffff07" stroke="{pill_stroke}"/>{text(x + pill_width / 2, 804, "★ " + number(item.get("stars"), 2), 10, fill=color if float(item.get("stars") or 0) < 6.5 else "#ffd966", anchor="middle", weight=700)}{fitted_text(x + pill_width / 2, 822, item.get("version") or "Difficulty", 8, pill_width - 12, anchor="middle", fill="#aebac5", weight=700)}'
+        )
+    scenario_hint = scenario.get("label") if scenario else "全连击 (FC) 准确率梯度"
+    return f"""<g data-role="performance-scenario">
+{_map_panel(773, 465, 641, 405)}{_section_title(795, 495, "PP 表现值情景模拟", hint=truncate_text(scenario_hint, 260, 9), right=1392)}<line x1="795" y1="507" x2="1392" y2="507" stroke="#ffffff16"/>{"".join(cards)}
+<rect x="795" y="620" width="597" height="82" rx="10" fill="#ffffff06" stroke="#ffffff10"/>{text(810, 640, "物件构成占比", 9, fill="#8e9dac")}{text(1377, 640, "节奏密度", 8, fill="#738394", anchor="end")}{"".join(bars)}{"".join(legends)}
+<rect x="795" y="754" width="597" height="92" rx="10" fill="#ffffff05" stroke="#ffffff10"/>{text(810, 776, "同谱面组难度", 9, fill="#8292a3")}{"".join(pills)}
+</g>"""
+
+
+def build_map_svg(payload: dict, *, external_background: bool = False) -> tuple[str, int]:
+    beatmapset, beatmap = payload["set"], payload["map"]
+    cover_layer = "" if external_background else image(beatmapset.get("cover"), 0, 0, MAP_WIDTH, MAP_HEIGHT)
+    status = STATUS_NAMES.get(str(beatmapset.get("status") or "").lower(), str(beatmapset.get("status") or ""))
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{MAP_WIDTH}" height="{MAP_HEIGHT}" viewBox="0 0 {MAP_WIDTH} {MAP_HEIGHT}">{cover_layer}<rect width="{MAP_WIDTH}" height="{MAP_HEIGHT}" fill="#050a12" opacity=".74"/>
+{text(26, 33, "OSU!", 11, fill="#fff", weight=700)}<rect x="83" y="17" width="126" height="25" rx="7" fill="#ffffff0d" stroke="#ffffff26"/>{text(146, 34, ("● " + ("主模式 (osu!)", "太鼓模式 (taiko)", "接水果 (catch)", "下落模式 (mania)")[int(beatmap.get("mode_int") or 0)]), 10, fill=CYAN, anchor="middle", weight=700)}{text(225, 34, "谱面详细资料", 10, fill="#8997a7")}<rect x="617" y="17" width="222" height="25" rx="7" fill="#050a12aa" stroke="#ffffff16"/>{text(728, 34, f"谱面 ID: {beatmap.get('id')}  ·  谱面组: {beatmapset.get('id')}", 10, fill="#91a1b1", anchor="middle")}{text(1390, 34, status + (("  ·  " + str(beatmapset.get("ranked_date"))) if beatmapset.get("ranked_date") else ""), 10, fill="#49d8a3", anchor="end", weight=700)}<line x1="26" y1="52" x2="1414" y2="52" stroke="#ffffff18"/>
+{_map_cover_card(payload)}{_map_hero(payload)}<g data-role="map-stats-panel">{_map_panel(26, 465, 729, 405)}{_section_title(48, 495, "谱面属性 · 模组前后对比" if abs(float(beatmap.get("stars") or 0) - float(beatmap.get("original_stars") or 0)) >= 0.005 else "谱面属性", hint="数值范围 0 → 11.0", right=733)}<line x1="48" y1="507" x2="733" y2="507" stroke="#ffffff16"/>{_map_rating_and_failures(payload)}{_map_params(payload)}</g>{_map_analysis(payload)}
+<line x1="26" y1="887" x2="1414" y2="887" stroke="#ffffff18"/>{text(26, 909, "nonebot-plugin-osubot", 9, fill="#8997a7", weight=700)}{text(1414, 909, "OSU! API V2", 8, fill="#6f8091", anchor="end")}</svg>"""
+    return svg, MAP_HEIGHT
 
 
 def _mix_color(first: str, second: str, first_ratio: float) -> str:
@@ -351,7 +623,7 @@ async def render_map_svg(payload: dict):
     svg, height = build_map_svg(payload, external_background=bool(cover))
     return await render_svg_jpeg_async(
         svg,
-        width=WIDTH,
+        width=MAP_WIDTH,
         height=height,
         quality=92,
         image_rendering="optimize_speed",

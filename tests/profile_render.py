@@ -250,7 +250,7 @@ async def test_profile_map(app: App, monkeypatch):
         "render_map_svg",
     ):
         wrap_async(name)
-    for name in ("_ruleset_map", "get_ss_pp", "with_mods"):
+    for name in ("_ruleset_map", "_performance_payload", "with_mods"):
         wrap_sync(name)
 
     original_svg_to_bytes = svg_render_mod.svg_to_bytes

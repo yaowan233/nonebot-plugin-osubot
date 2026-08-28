@@ -350,39 +350,31 @@ def test_map_svg_only_shows_star_change_card_for_actual_change_and_wraps_tags():
     unchanged_svg, _height = build_map_svg(payload)
 
     assert 'data-role="star-change-card"' not in unchanged_svg
-    assert 'data-role="map-stats-panel"><rect x="612" y="200"' in unchanged_svg
-    assert ">谱面参数</text>" in unchanged_svg
-    assert 'x1="720" y1="298.875" x2="1280" y2="298.875"' in unchanged_svg
-    assert 'x="1355" y="304.875"' in unchanged_svg
-    assert 'clipPath id="map-title-card-clip"' in unchanged_svg
-    assert 'data-role="map-title-accent"' in unchanged_svg
-    assert 'clip-path="url(#map-title-card-clip)"' in unchanged_svg
-    assert 'data-role="object-composition"' in unchanged_svg
-    assert '<rect x="720" y="616"' in unchanged_svg
-    assert 'x="646" y="625"' in unchanged_svg
-    assert 'x="1360" y="625"' in unchanged_svg
+    assert 'width="1440" height="920" viewBox="0 0 1440 920"' in unchanged_svg
+    assert 'data-role="map-stats-panel"' in unchanged_svg
+    assert ">谱面属性</text>" in unchanged_svg
+    assert "难度星级评定" not in unchanged_svg
+    assert "模组加成" not in unchanged_svg
+    assert "NoMod" not in unchanged_svg
     assert 'data-role="map-tags"' in unchanged_svg
     assert "final-tag" in unchanged_svg
+    assert ">123.0</text>" in unchanged_svg
+    assert 'fill="#f6b923"' in unchanged_svg
 
     payload["map"]["stars"] = 5.5
     payload["map"]["mods"] = ["NM", "HD", "HR"]
     changed_svg, _height = build_map_svg(payload)
 
-    assert 'data-role="star-change-card"' not in changed_svg
-    assert 'data-role="map-title-mods"' in changed_svg
-    assert "模组后星数" not in changed_svg
-    assert ">星数</text>" in changed_svg
-    assert "菱形为模组后" not in changed_svg
-    assert ">MODS</text>" not in changed_svg
-    assert "5.50★" in changed_svg
-    assert 'fill="#ff6b81" opacity="1">5.50★</text>' in changed_svg
-    assert 'x="1281.25" y="140" width="39.375" height="28"' in changed_svg
-    assert 'x="1320.625" y="140" width="39.375" height="28"' in changed_svg
-    assert 'data-role="map-stats-panel"><rect x="612" y="200"' in changed_svg
+    assert 'data-role="star-change-card"' in changed_svg
+    assert "难度星级评定" in changed_svg
+    assert "★ +0.30" in changed_svg
+    assert "模组加成: NM, HD, HR" in changed_svg
+    assert ">谱面属性 · 模组前后对比</text>" in changed_svg
 
     payload["map"]["stars"] = 5.0
     decreased_svg, _height = build_map_svg(payload)
-    assert 'fill="#63d98b" opacity="1">5.00★</text>' in decreased_svg
+    assert 'data-role="star-change-card"' in decreased_svg
+    assert "★ -0.20" in decreased_svg
 
     payload["scenario"] = {
         "label": "98% · 1 miss · 400x · 1.2x rate · lazer",
@@ -394,10 +386,11 @@ def test_map_svg_only_shows_star_change_card_for_actual_change_and_wraps_tags():
         ],
     }
     scenario_svg, scenario_height = build_map_svg(payload)
-    assert scenario_height == 1038
+    assert scenario_height == 920
     assert 'data-role="performance-scenario"' in scenario_svg
     assert 'data-role="scenario-point" data-selected="true"' in scenario_svg
-    assert "目标 234.5 PP · 5.80★" in scenario_svg
+    assert "98% · 1 miss · 400x · 1.2x rate · lazer" in scenario_svg
+    assert ">234.5</text>" in scenario_svg
 
 
 @pytest.mark.parametrize(
