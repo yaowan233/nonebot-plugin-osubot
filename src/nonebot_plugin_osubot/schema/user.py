@@ -58,7 +58,7 @@ class UserCompact(Base):
     id: int
     is_active: bool
     is_bot: bool
-    is_deleted: bool
+    is_deleted: Optional[bool] = None
     is_online: bool
     is_supporter: bool
     last_visit: Optional[str] = None

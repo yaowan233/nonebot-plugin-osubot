@@ -31,6 +31,11 @@ nonebot-plugin-osubot 提供 osu! 四种模式的玩家资料、成绩、BP 分�
 
 项目修改自 [osuv2](https://github.com/Yuri-YuzuChaN/osuv2)，并针对 NoneBot2 的命令交互、绘图和多平台使用进行了持续维护。
 
+> [!NOTE]
+> 本部署额外内置 **g0v0（咕哦服）** 服务器查询支持：查询末尾加 `&gu` 即可切换到
+> g0v0 服务器（osu!(lazer) 兼容服务器，含 RX/AP 模式），与官方 osu! API 和
+> ppysb（`&sb`）查询完全并列，互不影响。详见下方「g0v0 查询」与「⚙️ 配置」。
+
 > [!IMPORTANT]
 > 原生谱面预览无需 FFmpeg；仅在原生渲染失败并回退旧完整视频链路时依赖
 > [FFmpeg](https://ffmpeg.org/download.html)。可将 FFmpeg 加入 `PATH`，或通过
@@ -125,6 +130,9 @@ OSU_KEY=你的客户端密钥
 | `OSU_RENDER_QUEUE_SIZE` | 否 | `64` | Playwright 绘图等待队列的最大长度 |
 | `OSU_RENDER_QUEUE_TIMEOUT` | 否 | `30.0` | 绘图请求允许排队的最长秒数 |
 | `OSU_RENDER_TIMEOUT` | 否 | `180.0` | 单次 Playwright 绘图的最长执行秒数 |
+| `G0V0_API_BASE` | 否 | `https://lazer-api.g0v0.top` | g0v0（咕哦服）服务器 API 地址，自建 g0v0-server 时可改为自己的域名 |
+| `G0V0_CLIENT` | 否 | 无 | g0v0 服务器 OAuth 客户端 ID（在 g0v0 服务器 OAuth 应用管理页面注册获取） |
+| `G0V0_KEY` | 否 | 无 | g0v0 服务器 OAuth 客户端密钥；未配置或获取 token 失败时自动以匿名方式查询公开数据 |
 
 ### 完整预览配置
 
@@ -222,6 +230,21 @@ nb orm stamp 68a04ea31d05
 ### ppysb 查询
 
 使用 `/sbbind <玩家>` 绑定 ppysb 账号，然后在普通查询末尾添加 `&sb`，例如 `/info &sb`、`/bl:4 &sb`。SB 模式 `0`–`3` 对应四种常规模式，`4`–`6` 对应 Relax，`8` 对应 Autopilot。
+
+### g0v0 查询
+
+使用 `/gubind <玩家>` 绑定 g0v0（咕哦服）账号，然后在普通查询末尾添加 `&gu` 即可切换到 g0v0 服务器，例如：
+
+```text
+/gubind Chestnut         绑定 g0v0 账号
+/info &gu                查询已绑定 g0v0 玩家资料
+/bl:4 &gu                查询 RX std BP 1–30
+/rl:5 &gu                查询 RX taiko 最近游玩
+/sc <mapid>:6 &gu        查询 RX catch 谱面成绩
+/guunbind                解除 g0v0 账号绑定
+```
+
+g0v0 模式 `0`–`3` 对应 std/taiko/catch/mania，`4`/`5`/`6`/`8` 对应 RX std / RX taiko / RX catch / AP std。其他成绩查询与分析指令（`/bp`、`/bl`、`/re`、`/rl`、`/pr`、`/pl`、`/sc`、`/sl`、`/hs`、`/first`、`/bpa` 等）均支持 `&gu` 后缀；`/fix`（BP Fix）目前仅支持 osu! 官网成绩。g0v0 的 OAuth 配置见上方「⚙️ 配置」的 `G0V0_*` 项。
 
 ### AI 自然语言调用（可选）
 

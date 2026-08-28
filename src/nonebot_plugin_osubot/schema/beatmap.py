@@ -50,18 +50,41 @@ class Beatmapset(BeatmapsetCompact):
 
 
 class BeatmapCompact(Base):
-    beatmapset_id: int
-    difficulty_rating: float
+    """谱面精简对象。
+
+    官方 osu! API 的 compact 包含完整难度字段；g0v0 的 score.beatmap 是更精简的
+    子集（缺 cs/ar/od/bpm/count_* 等）。为兼容 g0v0，全部难度字段放宽为 Optional，
+    缺失值由上游 draw 层通过 /beatmaps/{id} 完整谱面兜底。
+    """
+
+    beatmapset_id: Optional[int] = None
+    difficulty_rating: Optional[float] = None
     id: int
-    mode: Literal["fruits", "mania", "osu", "taiko"]
-    status: str
-    total_length: float
-    user_id: int
-    version: str
+    mode: Optional[Literal["fruits", "mania", "osu", "taiko"]] = None
+    status: Optional[str] = None
+    total_length: Optional[float] = None
+    user_id: Optional[int] = None
+    version: Optional[str] = None
     beatmapset: Optional[Beatmapset] = None
     checksum: Optional[str] = None
     max_combo: Optional[int] = None
-    version: str
+    accuracy: Optional[float] = None
+    ar: Optional[float] = None
+    bpm: Optional[float] = None
+    convert: Optional[bool] = None
+    count_circles: Optional[int] = None
+    count_sliders: Optional[int] = None
+    count_spinners: Optional[int] = None
+    cs: Optional[float] = None
+    drain: Optional[float] = None
+    hit_length: Optional[int] = None
+    is_scoreable: Optional[bool] = None
+    last_updated: Optional[str] = None
+    mode_int: Optional[int] = None
+    passcount: Optional[int] = None
+    playcount: Optional[int] = None
+    ranked: Optional[int] = None
+    url: Optional[str] = None
 
 
 class Beatmap(BeatmapCompact):

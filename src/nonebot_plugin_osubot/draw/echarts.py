@@ -374,7 +374,7 @@ async def draw_bpa_plot(
         "rxfruits": "\ue801",
         "aposu": "\ue800",
     }
-    source_label = "ppy.sb" if source == "ppysb" else "osu! official"
+    source_label = "ppy.sb" if source == "ppysb" else "g0v0" if source == "g0v0" else "osu! official"
     if avatar_url is None and user_id:
         avatar_host = "https://a.ppy.sb" if source == "ppysb" else "https://a.ppy.sh"
         avatar_url = f"{avatar_host}/{user_id}"

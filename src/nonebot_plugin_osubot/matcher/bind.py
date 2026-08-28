@@ -10,12 +10,14 @@ from sqlalchemy import select, delete
 from ..api import get_uid_by_name
 from ..info import bind_user_info
 from ..exceptions import NetworkError
-from ..database import UserData, UserOAuthData, SbUserData
+from ..database import UserData, UserOAuthData, SbUserData, G0v0UserData
 
 bind = on_command("bind", priority=11, block=True)
 unbind = on_command("unbind", priority=11, block=True)
 sbbind = on_command("sbbind", priority=11, block=True)
 sbunbind = on_command("sbunbind", priority=11, block=True)
+gubind = on_command("gubind", priority=11, block=True)
+guunbind = on_command("guunbind", priority=11, block=True)
 lock = asyncio.Lock()
 
 
@@ -75,6 +77,38 @@ async def _(event: Event):
         user = await session.scalar(select(SbUserData).where(SbUserData.user_id == event.get_user_id()))
         if user:
             await session.execute(delete(SbUserData).where(SbUserData.user_id == event.get_user_id()))
+            await session.commit()
+            await UniMessage.text("解绑成功！").send(reply_to=True)
+        else:
+            await UniMessage.text("尚未绑定，无需解绑").send(reply_to=True)
+
+
+@gubind.handle()
+async def _(event: Event, name: Message = CommandArg()):
+    name = name.extract_plain_text().strip()
+    if not name:
+        await UniMessage.text("请在指令后输入 g0v0 用户名或 UID").finish(reply_to=True)
+    async with lock:
+        async with get_session() as session:
+            user = await session.scalar(select(G0v0UserData).where(G0v0UserData.user_id == event.get_user_id()))
+        if user:
+            await UniMessage.text(f"您已绑定{user.osu_name}，如需要解绑请输入/guunbind").finish(reply_to=True)
+        try:
+            uid = await get_uid_by_name(name, "g0v0")
+        except NetworkError:
+            await UniMessage.text(f"绑定失败，在 g0v0 服务器找不到叫 {name} 的人哦").finish(reply_to=True)
+        async with get_session() as session:
+            session.add(G0v0UserData(user_id=event.get_user_id(), osu_id=uid, osu_name=name))
+            await session.commit()
+    await UniMessage.text(f"成功绑定 g0v0（咕哦服）用户： {name}").finish(reply_to=True)
+
+
+@guunbind.handle()
+async def _(event: Event):
+    async with get_session() as session:
+        user = await session.scalar(select(G0v0UserData).where(G0v0UserData.user_id == event.get_user_id()))
+        if user:
+            await session.execute(delete(G0v0UserData).where(G0v0UserData.user_id == event.get_user_id()))
             await session.commit()
             await UniMessage.text("解绑成功！").send(reply_to=True)
         else:

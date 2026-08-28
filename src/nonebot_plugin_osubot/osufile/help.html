@@ -147,6 +147,7 @@
         <p class="hint" style="margin-top:10px">复用上一张谱面：<code>/m 782309</code> 后直接发送 <code>/sc</code></p>
         <p class="hint" style="margin-top:10px">非 std 谱面自动使用原生模式；SB RX 自动匹配分类</p>
         <p class="hint" style="margin-top:10px">SB 服：先 <code>/sbbind 玩家</code>，查询末尾加 <code>&amp;sb</code></p>
+        <p class="hint" style="margin-top:10px">g0v0 服：先 <code>/gubind 玩家</code>，查询末尾加 <code>&amp;gu</code></p>
         <p class="hint" style="margin-top:10px">支持 osu! 链接；反向范围 <code>30-1</code> 会自动纠正</p>
       </div>
     </section>
@@ -176,8 +177,8 @@
     </header>
 
     <section class="syntax">
-      <div class="card accent"><div class="eyebrow">通用查询语法</div><div class="syntax-line">/命令 <span>[玩家]</span> <span>[序号/范围]</span><span>:[模式]</span> <span>[+Mods]</span> <span>[&amp;sb]</span></div><div class="syntax-note">示例：<code>/bl peppy 5-10:o +HDHR</code>　支持 osu! 链接，反向范围会自动纠正。</div></div>
-      <div class="card"><div class="eyebrow">模式名称与简称</div><div class="mode-row"><span class="chip"><b>o / 0</b> osu!</span><span class="chip"><b>t / 1</b> taiko</span><span class="chip"><b>c / 2</b> catch</span><span class="chip"><b>m / 3</b> mania</span></div><div class="syntax-note">未填写时使用绑定账号中保存的默认模式。</div></div>
+      <div class="card accent"><div class="eyebrow">通用查询语法</div><div class="syntax-line">/命令 <span>[玩家]</span> <span>[序号/范围]</span><span>:[模式]</span> <span>[+Mods]</span> <span>[&amp;sb / &amp;gu]</span></div><div class="syntax-note">示例：<code>/bl peppy 5-10:o +HDHR</code>　支持 osu! 链接，反向范围会自动纠正。<code>&amp;sb</code> 切 ppysb、<code>&amp;gu</code> 切 g0v0 服务器。</div></div>
+      <div class="card"><div class="eyebrow">模式名称与简称</div><div class="mode-row"><span class="chip"><b>o / 0</b> osu!</span><span class="chip"><b>t / 1</b> taiko</span><span class="chip"><b>c / 2</b> catch</span><span class="chip"><b>m / 3</b> mania</span></div><div class="syntax-note">未填写时使用绑定账号中保存的默认模式；SB/g0v0 服额外支持 4=RX std、5=RX taiko、6=RX catch、8=AP std。</div></div>
     </section>
 
     <section class="group-grid">
@@ -190,6 +191,18 @@
         <div class="row"><code>/sbunbind</code><span>解除 ppysb 账号绑定</span></div>
         <div class="row"><code>模式 0 / 1 / 2 / 3</code><span>std / taiko / catch / mania</span></div>
         <div class="row"><code>模式 4 / 5 / 6 / 8</code><span>RX std / RX taiko / RX catch / AP std</span></div>
+      </div></div>
+
+      <div class="group wide"><div class="group-title">g0v0 服务器查询</div><div class="rows">
+        <div class="row"><code>/gubind &lt;玩家&gt;</code><span>绑定 g0v0（咕哦服）账号</span></div>
+        <div class="row"><code>/info &amp;gu</code><span>查询已绑定 g0v0 玩家资料</span></div>
+        <div class="row"><code>/bl:4 &amp;gu</code><span>查询 RX std BP 1–30</span></div>
+        <div class="row"><code>/rl:5 &amp;gu</code><span>查询 RX taiko 最近游玩</span></div>
+        <div class="row"><code>/sc &lt;mapid&gt;:6 &amp;gu</code><span>查询 RX catch 谱面成绩</span></div>
+        <div class="row"><code>/guunbind</code><span>解除 g0v0 账号绑定</span></div>
+        <div class="row"><code>模式 0 / 1 / 2 / 3</code><span>std / taiko / catch / mania</span></div>
+        <div class="row"><code>模式 4 / 5 / 6 / 8</code><span>RX std / RX taiko / RX catch / AP std</span></div>
+        <div class="row"><code>其他查询与分析指令</code><span>/bp /re /pr /pl /sl /hs /first /bpa 等均支持 &amp;gu（/fix 仅支持官网）</span></div>
       </div></div>
 
       <div class="group"><div class="group-title">账号与资料</div><div class="rows">
