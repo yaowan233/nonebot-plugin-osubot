@@ -158,6 +158,8 @@ async def g0v0_headers() -> dict[str, str]:
                     logger.warning(f"获取 g0v0 token 失败，将以匿名方式请求: {error}")
                     return {"x-api-version": "20220705"}
                 token = g0v0_token_cache.get("token")
+    if not token:
+        return {"x-api-version": "20220705"}
     return {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
 
 
@@ -229,41 +231,69 @@ def _normalize_statistics(raw: dict | None) -> NewStatistics:
     )
 
 
-def _build_unified_beatmap(score: "NewScore") -> UnifiedBeatmap:
-    """从 g0v0 score 响应构造统一谱面信息（score.beatmap 是精简对象，缺失难度置 None）。"""
+def _read_field(data: object | None, name: str):
+    if isinstance(data, dict):
+        return data.get(name)
+    return getattr(data, name, None)
+
+
+def _first_value(*values):
+    return next((value for value in values if value is not None), None)
+
+
+def _build_unified_beatmap(score: "NewScore", fallback_beatmap: dict | None = None) -> UnifiedBeatmap:
+    """从 g0v0 score 响应构造统一谱面信息，并用官网谱面数据补全缺失字段。"""
     beatmap = score.beatmap
     beatmapset = score.beatmapset
-    mode_int = getattr(beatmap, "mode_int", None)
-    if mode_int is None and beatmap is not None and beatmap.mode is not None:
-        mode_int = {"osu": 0, "taiko": 1, "fruits": 2, "mania": 3}.get(beatmap.mode, 0)
+    fallback_beatmap = fallback_beatmap or {}
+    fallback_beatmapset = fallback_beatmap.get("beatmapset")
+
+    def beatmap_value(name: str):
+        return _first_value(_read_field(beatmap, name), _read_field(fallback_beatmap, name))
+
+    def beatmapset_value(name: str):
+        return _first_value(_read_field(beatmapset, name), _read_field(fallback_beatmapset, name))
+
+    set_id = _first_value(
+        _read_field(beatmap, "beatmapset_id"),
+        _read_field(beatmapset, "id"),
+        _read_field(fallback_beatmap, "beatmapset_id"),
+        _read_field(fallback_beatmapset, "id"),
+    )
+    if set_id is None:
+        raise NetworkError("g0v0 返回的谱面数据缺少 beatmapset_id")
+
+    mode_int = beatmap_value("mode_int")
+    if mode_int is None:
+        mode_int = {"osu": 0, "taiko": 1, "fruits": 2, "mania": 3}.get(beatmap_value("mode"), 0)
     return UnifiedBeatmap(
         id=score.beatmap_id,
-        user_id=getattr(beatmap, "user_id", None),
-        set_id=getattr(beatmap, "beatmapset_id", None) or getattr(beatmapset, "id", None),
-        artist=getattr(beatmapset, "artist", "") or "",
-        title=getattr(beatmapset, "title", "") or "",
-        version=getattr(beatmap, "version", "") or "",
-        creator=getattr(beatmapset, "creator", "") or "",
-        total_length=int(getattr(beatmap, "total_length", 0) or 0),
-        mode=mode_int if mode_int is not None else 0,
-        bpm=getattr(beatmap, "bpm", None),
-        cs=getattr(beatmap, "cs", None),
-        ar=getattr(beatmap, "ar", None),
-        hp=getattr(beatmap, "drain", None),
-        od=getattr(beatmap, "accuracy", None),
-        stars=getattr(beatmap, "difficulty_rating", None),
-        checksum=getattr(beatmap, "checksum", None),
-        convert=getattr(beatmap, "convert", None),
-        status=getattr(beatmap, "status", None),
-        is_scoreable=getattr(beatmap, "is_scoreable", None),
-        max_combo=getattr(beatmap, "max_combo", None),
-        count_circles=getattr(beatmap, "count_circles", None),
-        count_sliders=getattr(beatmap, "count_sliders", None),
-        count_spinners=getattr(beatmap, "count_spinners", None),
+        user_id=beatmap_value("user_id"),
+        set_id=set_id,
+        artist=beatmapset_value("artist") or "",
+        title=beatmapset_value("title") or "",
+        version=beatmap_value("version") or "",
+        creator=beatmapset_value("creator") or "",
+        total_length=int(beatmap_value("total_length") or 0),
+        mode=mode_int,
+        bpm=beatmap_value("bpm"),
+        cs=beatmap_value("cs"),
+        ar=beatmap_value("ar"),
+        hp=beatmap_value("drain"),
+        od=beatmap_value("accuracy"),
+        stars=beatmap_value("difficulty_rating"),
+        checksum=beatmap_value("checksum"),
+        convert=beatmap_value("convert"),
+        status=beatmap_value("status"),
+        is_scoreable=beatmap_value("is_scoreable"),
+        max_combo=beatmap_value("max_combo"),
+        count_circles=beatmap_value("count_circles"),
+        count_sliders=beatmap_value("count_sliders"),
+        count_spinners=beatmap_value("count_spinners"),
     )
 
 
-def _g0v0_scores_to_unified(scores: list["NewScore"]) -> list[UnifiedScore]:
+def _g0v0_scores_to_unified(scores: list["NewScore"], fallback_beatmap: dict | None = None) -> list[UnifiedScore]:
     """把 g0v0 ScoreResp 列表统一成 UnifiedScore。"""
     return [
         UnifiedScore(
@@ -281,7 +311,7 @@ def _g0v0_scores_to_unified(scores: list["NewScore"]) -> list[UnifiedScore]:
             passed=i.passed,
             pp=i.pp,
             score_version=get_score_version(i.legacy_score_id),
-            beatmap=_build_unified_beatmap(i),
+            beatmap=_build_unified_beatmap(i, fallback_beatmap),
             beatmapset=i.beatmapset,
         )
         for i in scores
@@ -308,14 +338,17 @@ async def g0v0_fetch_score_batch(
     return _g0v0_scores_to_unified([NewScore(**i) for i in data])
 
 
-async def g0v0_map_scores(map_id: int, uid: Union[int, str], mode: str) -> list[UnifiedScore]:
-    """查询 g0v0 某谱面上指定玩家的全部成绩（/sc、/hs 等指令使用）。"""
+async def g0v0_map_scores(
+    map_id: int, uid: Union[int, str], mode: str, fallback_beatmap: dict | None = None
+) -> list[UnifiedScore]:
+    """查询 g0v0 某谱面上指定玩家的全部成绩。"""
     g0v0_mode = G0V0_MODE.get(mode, mode)
-    url = f"{g0v0_api}/beatmaps/{map_id}/scores/users/{uid}/all?mode={g0v0_mode}"
+    query = urlencode({"ruleset": g0v0_mode})
+    url = f"{g0v0_api}/beatmaps/{map_id}/scores/users/{uid}/all?{query}"
     data = await g0v0_make_request(url, "未找到该谱面成绩，请检查是否搞混了mapID与setID或模式")
     if not data:
         return []
-    return _g0v0_scores_to_unified([NewScore(**i) for i in data])
+    return _g0v0_scores_to_unified([NewScore(**i) for i in data], fallback_beatmap)
 
 
 async def renew_token():

@@ -209,7 +209,8 @@ def split_msg():
                 state["user"] = g0v0_user_data.osu_id
                 state["username"] = g0v0_user_data.osu_name
                 # 未显式指定模式时，使用 g0v0 绑定的独立默认模式（/mode:4 &gu 修改）
-                state["mode"] = str(g0v0_user_data.osu_mode)
+                if not state["mode_explicit"]:
+                    state["mode"] = str(g0v0_user_data.osu_mode)
             else:
                 state["error"] = "该账号尚未绑定 g0v0 服务器，请输入 /gubind 用户名 绑定账号"
 

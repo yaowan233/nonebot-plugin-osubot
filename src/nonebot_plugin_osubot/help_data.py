@@ -82,8 +82,8 @@ HELP_TOPICS = {
         "在普通查询末尾添加 &gu 即可切换到 g0v0 服务器，例如 /info &gu、/bl:4 &gu、\n"
         "/rl:5 &gu、/sc <mapid>:6 &gu。\n"
         "模式 0/1/2/3：std/taiko/catch/mania；4/5/6/8：RX std/RX taiko/RX catch/AP std。\n"
-        "其他成绩查询与分析指令（/bp、/bl、/re、/rl、/pr、/pl、/sc、/sl、/hs、/first、/bpa 等）\n"
-        "均支持 &gu 后缀；/fix（BP Fix）目前仅支持 osu! 官网成绩。"
+        "其他成绩查询与分析指令（/bp、/bl、/re、/rl、/pr、/pl、/sc、/sl、/first、/bpa 等）\n"
+        "均支持 &gu 后缀；g0v0 不支持 /hs，/fix（BP Fix）也仅支持 osu! 官网成绩。"
     ),
 }
 

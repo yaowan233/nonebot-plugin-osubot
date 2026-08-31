@@ -329,6 +329,32 @@ async def test_history_success(app: App):
                     ctx.should_finished()
 
 
+@pytest.mark.asyncio
+async def test_g0v0_history_is_rejected_without_reading_official_data(app: App):
+    from nonebot_plugin_osubot.matcher.history import history
+
+    import nonebot
+
+    utils_session = make_mock_session()
+    utils_session.scalar.side_effect = [None, make_mock_user(osu_id=408, osu_name="Chestnut")]
+    event = fake_group_message_event_v11(message=Message("/history &gu"))
+
+    with (
+        patch_session(UTILS_MODULE, utils_session),
+        patch(f"{HISTORY_MODULE}.get_session", side_effect=AssertionError("must not read official history")),
+    ):
+        async with app.test_matcher(history) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(
+                event,
+                text_msg(event, "g0v0 暂不提供 PP/排名历史数据，/hs 仅支持 osu! 官网"),
+                result={"message_id": 1},
+            )
+            ctx.should_finished()
+
+
 # ---------------------------------------------------------------------------
 # url_match
 # ---------------------------------------------------------------------------

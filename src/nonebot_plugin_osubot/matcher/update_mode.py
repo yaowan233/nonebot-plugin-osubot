@@ -45,7 +45,10 @@ async def _(event: Event, mode: Message = CommandArg()):
                 await session.commit()
                 msg = f"已将 g0v0 默认模式更改为 {GMN[NGM[parsed]]}（{parsed}）"
             else:
-                msg = "请输入正确的模式：std、taiko、catch、mania，或数字 0-3（g0v0 还支持 4=RX std 5=RX taiko 6=RX catch 8=AP std）"
+                msg = (
+                    "请输入正确的模式：std、taiko、catch、mania，或数字 0-3"
+                    "（g0v0 还支持 4=RX std 5=RX taiko 6=RX catch 8=AP std）"
+                )
         else:
             user = await session.scalar(select(UserData).where(UserData.user_id == uid))
             if not user:

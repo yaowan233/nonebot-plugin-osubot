@@ -143,7 +143,7 @@ async def get_score_data(
             grank = lookup.position or ""
         score_ls = lookup.scores
     elif source == "g0v0":
-        score_ls = await g0v0_map_scores(mapid, uid, mode)
+        score_ls = await g0v0_map_scores(mapid, uid, mode, map_json)
     else:
         score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
     if not score_ls:

@@ -19,6 +19,9 @@ history = on_command("history", aliases={"hs"}, priority=11, block=True)
 async def _info(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
+    if state["source"] != "osu":
+        source_name = "g0v0" if state["source"] == "g0v0" else "ppysb"
+        await UniMessage.text(f"{source_name} 暂不提供 PP/排名历史数据，/hs 仅支持 osu! 官网").finish(reply_to=True)
     query = select(InfoData).where(InfoData.osu_id == state["user"], InfoData.osu_mode == int(state["mode"]))
     if state["day"] > 0:
         query = query.where(InfoData.date >= datetime.date.today() - datetime.timedelta(days=state["day"]))

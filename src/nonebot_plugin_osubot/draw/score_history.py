@@ -97,7 +97,7 @@ async def draw_score_history(
         lookup = await score_query.list_beatmap_scores(uid, mode, map_json, legacy_only=not is_lazer)
         scores = lookup.scores
     elif source == "g0v0":
-        scores = await g0v0_map_scores(map_id, uid, mode)
+        scores = await g0v0_map_scores(map_id, uid, mode, map_json)
     else:
         scores = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
 

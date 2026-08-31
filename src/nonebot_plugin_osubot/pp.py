@@ -76,8 +76,8 @@ def without_relax_mods(score: UnifiedScore) -> UnifiedScore:
     """
     mods = score.mods
     copy = score.model_copy(deep=True)
-    if any((m.acronym if isinstance(m, Mod) else str(m)) in RELAX_MODS for m in mods):
-        copy.mods = [m for m in copy.mods if (m.acronym if isinstance(m, Mod) else str(m)) not in RELAX_MODS]
+    if any(_mod_has_relax(mod) for mod in mods):
+        copy.mods = [mod for mod in copy.mods if not _mod_has_relax(mod)]
     return copy
 
 

@@ -244,7 +244,7 @@ nb orm stamp 68a04ea31d05
 /guunbind                解除 g0v0 账号绑定
 ```
 
-g0v0 模式 `0`–`3` 对应 std/taiko/catch/mania，`4`/`5`/`6`/`8` 对应 RX std / RX taiko / RX catch / AP std。其他成绩查询与分析指令（`/bp`、`/bl`、`/re`、`/rl`、`/pr`、`/pl`、`/sc`、`/sl`、`/hs`、`/first`、`/bpa` 等）均支持 `&gu` 后缀；`/fix`（BP Fix）目前仅支持 osu! 官网成绩。g0v0 的 OAuth 配置见上方「⚙️ 配置」的 `G0V0_*` 项。
+g0v0 模式 `0`–`3` 对应 std/taiko/catch/mania，`4`/`5`/`6`/`8` 对应 RX std / RX taiko / RX catch / AP std。其他成绩查询与分析指令（`/bp`、`/bl`、`/re`、`/rl`、`/pr`、`/pl`、`/sc`、`/sl`、`/first`、`/bpa` 等）均支持 `&gu` 后缀；`/fix`（BP Fix）目前仅支持 osu! 官网成绩。g0v0 API 目前不提供 PP/排名历史快照，因此 `/hs` 仅支持 osu! 官网。g0v0 的 OAuth 配置见上方「⚙️ 配置」的 `G0V0_*` 项。
 
 ### AI 自然语言调用（可选）
 

@@ -117,7 +117,7 @@ def normalize_map_mode(requested_mode: int | str, native_mode: int, source: str 
     if native_mode == 0:
         # Standard beatmaps may be converted to other rulesets.
         return str(requested)
-    if source != "ppysb":
+    if source not in {"ppysb", "g0v0"}:
         return str(native_mode)
     if requested in {4, 5, 6}:
         # Preserve the RX category while selecting the map's actual ruleset.
