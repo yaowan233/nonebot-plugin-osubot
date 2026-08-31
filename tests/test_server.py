@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -199,3 +200,24 @@ async def test_ppysb_adapter_hides_remote_offset_pagination(monkeypatch):
     scores = await api._get_ppysb_user_scores(42, "osu", offset=10, limit=20)
 
     assert [score.total_score for score in scores] == list(range(10, 30))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("offset", "limit"),
+    [
+        (0, 0),
+        (0, -1),
+        (-1, 20),
+        (100, 1),
+        (120, 20),
+    ],
+)
+async def test_ppysb_adapter_skips_unreachable_score_pages(monkeypatch, offset, limit):
+    from nonebot_plugin_osubot import api
+
+    request = AsyncMock()
+    monkeypatch.setattr(api, "make_request", request)
+
+    assert await api._get_ppysb_user_scores(42, "osu", offset=offset, limit=limit) == []
+    request.assert_not_awaited()

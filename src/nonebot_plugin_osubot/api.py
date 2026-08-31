@@ -508,6 +508,9 @@ async def _get_ppysb_user_scores(
     offset: int = 0,
     limit: int = 200,
 ) -> list[UnifiedScore]:
+    if limit <= 0 or offset < 0 or offset >= 100:
+        return []
+
     request_limit = min(offset + limit, 100)
     url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={request_limit}&include_failed={int(include_failed)}"
     data = await make_request(url, {}, "未找到该玩家BP")
