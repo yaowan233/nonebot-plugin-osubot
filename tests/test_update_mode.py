@@ -158,3 +158,35 @@ async def test_update_mode_invalid(app: App):
                 result={"message_id": 1},
             )
             ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_update_mode_supports_ppysb_special_mode(app: App):
+    from nonebot_plugin_osubot.matcher.update_mode import update_mode
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.return_value = make_mock_user(osu_mode=0)
+    event = fake_group_message_event_v11(message=Message("/mode:4 &sb"))
+
+    with patch_session(MODULE, session):
+        async with app.test_matcher(update_mode) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(
+                event,
+                Message(
+                    [
+                        MessageSegment.reply(1),
+                        MessageSegment.text("已将 ppysb 默认模式更改为 RX Std（4）"),
+                    ]
+                ),
+                result={"message_id": 1},
+            )
+            ctx.should_finished()
+
+    statement = str(session.execute.call_args.args[0]).lower()
+    assert "sbuserdata" in statement
+    session.commit.assert_called_once()

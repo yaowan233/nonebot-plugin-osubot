@@ -13,11 +13,12 @@ from ..mods import get_mods_list, get_speed_change_label
 from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
 from ..schema import Beatmap
+from ..server import ServerFeature
 from ..beatmap_stats_moder import with_mods
 from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components, get_osu_calculator, without_relax_mods
 from ..schema.score import Mod, UnifiedScore, NewStatistics
-from ..score_query import map_score_to_unified, score_query
-from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores, g0v0_map_scores
+from ..score_query import map_score_to_unified
+from ..api import get_map_scores, get_server, get_user_info_data, get_user_scores, osu_api
 from ..file import map_path, ensure_osu_file, user_cache_path, team_cache_path, get_projectimg
 from .utils import (
     is_close,
@@ -114,7 +115,7 @@ async def draw_selected_score(
         map_json.get("checksum") or getattr(score.beatmap, "checksum", None),
     )
     # 判断是否开启lazer模式
-    if source == "osu":
+    if get_server(source).supports(ServerFeature.LEGACY_SCORE_RULES):
         score = cal_score_info(is_lazer, score, source)
     image = await draw_score_pic(score, info, map_json, "", source)
     return image, score
@@ -135,19 +136,19 @@ async def get_score_data(
     native_mode = int(map_json["mode_int"])
     mode = NGM[normalize_map_mode(FGM[mode], native_mode, source)]
     task = asyncio.create_task(get_user_info_data(uid, mode, source))
-    if source == "osu":
-        if mods:
-            lookup = await score_query.list_beatmap_scores(uid, mode, map_json, legacy_only=not is_lazer)
-        else:
-            lookup = await score_query.best_beatmap_score(uid, mode, map_json, legacy_only=not is_lazer)
-            grank = lookup.position or ""
-        score_ls = lookup.scores
-    elif source == "g0v0":
-        score_ls = await g0v0_map_scores(mapid, uid, mode, map_json)
-    else:
-        score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
+    lookup = await get_map_scores(
+        uid,
+        mode,
+        map_json,
+        source,
+        legacy_only=not is_lazer,
+        best_only=not mods,
+    )
+    score_ls = lookup.scores
+    if not mods:
+        grank = lookup.position or ""
     if not score_ls:
-        if source == "osu" and lookup.source == "history":
+        if lookup.origin == "history":
             raise NetworkError("该谱面没有官网排行榜，且本地历史库尚未收录该成绩")
         raise NetworkError("未查询到游玩记录")
     if mods:
@@ -174,7 +175,7 @@ async def get_score_data(
     user_path = user_cache_path / str(info.id)
     user_path.mkdir(parents=True, exist_ok=True)
     # 判断是否开启lazer模式
-    if source == "osu":
+    if get_server(source).supports(ServerFeature.LEGACY_SCORE_RULES):
         score = cal_score_info(is_lazer, score, source)
     image = await draw_score_pic(score, info, map_json, grank, source)
     if return_score:
@@ -215,7 +216,10 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     pp_info = cal_pp(score_info, str(osu.absolute()), source)
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()), source)
     # 成绩的 PP 优先使用 API 返回值（ppysb/g0v0 按服务器算法计算，含 RX/AP 等特殊模式）
-    display_pp = score_info.pp if source in {"ppysb", "g0v0"} and score_info.pp is not None else pp_info.pp
+    server = get_server(source)
+    display_pp = (
+        score_info.pp if server.supports(ServerFeature.SERVER_REPORTED_PP) and score_info.pp is not None else pp_info.pp
+    )
     # 星级优先用 API 的 difficulty_rating（RX/AP 等模式下本地算法可能算出 0），
     # 依次从 score.beatmap / 完整谱面 map_json 取官方值，本地重算仅作兜底。
     api_stars = score_info.beatmap.stars if score_info.beatmap else None
@@ -340,6 +344,7 @@ async def render_score_template(
     osu_path: str,
     source: str,
 ) -> BytesIO:
+    server = get_server(source)
     # 封面/玩家头像/team 图标互不依赖，与 pp 计算、数据组装并行下载
     cover_task = asyncio.create_task(_cover_data_uri(mapinfo.id, mapinfo.beatmapset_id))
     avatar_task = asyncio.create_task(_player_avatar_data_uri(info, source))
@@ -567,7 +572,7 @@ async def render_score_template(
         "owners": owner_data,
         "mods": mod_data,
         "score": f"{(score_info.legacy_total_score or score_info.total_score):,}",
-        "score_version": score_info.score_version if source == "osu" else None,
+        "score_version": score_info.score_version if server.supports(ServerFeature.SCORE_VERSION) else None,
         "pp": _format_pp(display_pp),
         "accuracy": f"{score_info.accuracy:.4f}" if mode == 3 else f"{score_info.accuracy:.2f}",
         "combo": combo,
@@ -690,11 +695,12 @@ def cal_legacy_rank(score_info: UnifiedScore, is_hidden: bool):
 def cal_score_info(is_lazer: bool, score_info: UnifiedScore, source: str = "osu") -> UnifiedScore:
     score_version = getattr(score_info, "score_version", None)
     is_stable_score = score_version == "stable" or (score_version is None and not is_lazer)
-    if score_info.ruleset_id == 3 and is_stable_score and source != "ppysb":
+    uses_legacy_rules = get_server(source).supports(ServerFeature.LEGACY_SCORE_RULES)
+    if score_info.ruleset_id == 3 and is_stable_score and uses_legacy_rules:
         legacy_accuracy = cal_legacy_acc(score_info.statistics)
         if legacy_accuracy is not None:
             score_info.accuracy = legacy_accuracy
-    if is_stable_score and source != "ppysb":
+    if is_stable_score and uses_legacy_rules:
         is_hidden = any(i in score_info.mods for i in (Mod(acronym="HD"), Mod(acronym="FL"), Mod(acronym="FI")))
         score_info.rank = cal_legacy_rank(score_info, is_hidden)
     return score_info

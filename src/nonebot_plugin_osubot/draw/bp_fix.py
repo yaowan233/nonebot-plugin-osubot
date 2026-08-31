@@ -6,8 +6,9 @@ from io import BytesIO
 
 from nonebot.log import logger
 
-from ..api import get_user_info_data, get_user_scores
+from ..api import get_server, get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
+from ..server import GameServer, ModeVariant, ServerFeature
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from ..performance import PerformanceScenario, calculate_performance_scenarios
 from ..schema.score import UnifiedScore
@@ -64,6 +65,8 @@ async def _calculate_fixed_candidate(
     index: int,
     score: UnifiedScore,
     semaphore: asyncio.Semaphore,
+    server: GameServer,
+    requested_lazer: bool,
 ) -> FixedCandidate | None:
     beatmap = score.beatmap
     if beatmap is None:
@@ -82,7 +85,10 @@ async def _calculate_fixed_candidate(
                             accuracy=score.accuracy,
                             misses=0,
                             combo=None,
-                            lazer=score.score_version != "stable",
+                            lazer=server.descriptor.score_uses_lazer(
+                                score.score_version,
+                                requested_lazer,
+                            ),
                         )
                     ],
                 )
@@ -187,8 +193,12 @@ async def draw_bp_fix(
     mode: str,
     source: str = "osu",
 ) -> BytesIO:
-    if source != "osu":
-        raise NetworkError("BP Fix 目前仅支持 osu! 官网成绩")
+    server = get_server(source)
+    play_mode = server.parse_mode(mode)
+    if not server.supports(ServerFeature.BP_FIX, play_mode):
+        if play_mode.variant != ModeVariant.STANDARD:
+            raise NetworkError("BP Fix 暂不支持私服 RX/AP 模式的专用 PP 算法")
+        raise NetworkError(f"{server.label} 暂不支持 BP Fix")
     info, scores = await asyncio.gather(
         get_user_info_data(uid, mode, source),
         get_user_scores(uid, mode, "best", source=source, legacy_only=not is_lazer, limit=100),
@@ -201,7 +211,7 @@ async def draw_bp_fix(
         raise NetworkError("BP 中没有符合条件的可修复掉连成绩")
     semaphore = asyncio.Semaphore(CALCULATION_CONCURRENCY)
     results = await asyncio.gather(
-        *(_calculate_fixed_candidate(index, score, semaphore) for index, score in candidate_scores)
+        *(_calculate_fixed_candidate(index, score, semaphore, server, is_lazer) for index, score in candidate_scores)
     )
     fixed = [result for result in results if result is not None]
     payload = build_bp_fix_payload(info, scores, fixed, None)

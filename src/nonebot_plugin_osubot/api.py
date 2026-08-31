@@ -26,6 +26,21 @@ from .schema import User, NewScore, RecommendData
 from .schema.score import UnifiedScore, NewStatistics, UnifiedBeatmap, get_score_version
 from .schema.ppysb import InfoResponse, ScoresResponse, V2ScoresResponse
 from .schema.user import Level, GradeCounts, UnifiedUser, UserStatistics
+from .server import (
+    PRIVATE_MODES,
+    STANDARD_MODES,
+    GameServer,
+    MapScoreQuery,
+    MapScores,
+    PlayMode,
+    RelaxEncoding,
+    ResolvedServerUser,
+    ServerCapabilities,
+    ServerDescriptor,
+    ServerFeature,
+    ServerRegistry,
+    UserScoreQuery,
+)
 
 api = "https://osu.ppy.sh/api/v2"
 cache = ExpiringDict(max_len=1, max_age_seconds=86400)
@@ -448,6 +463,133 @@ async def fetch_score_batch(
     ]
 
 
+async def _get_osu_user_scores(
+    uid: Union[int, str],
+    mode: str,
+    scope: Literal["recent", "best", "firsts"] = "best",
+    legacy_only: bool = 0,
+    include_failed: bool = True,
+    offset: int = 0,
+    limit: int = 200,
+) -> list[UnifiedScore]:
+    if limit <= 0:
+        return []
+
+    batch_size = 100
+    total_batches = (limit + batch_size - 1) // batch_size
+    all_scores = []
+    for batch_idx in range(0, total_batches, 2):
+        current_batches = range(batch_idx, min(batch_idx + 2, total_batches))
+
+        tasks = []
+        for batch_n in current_batches:
+            batch_offset = offset + batch_n * batch_size
+            actual_batch_size = min(batch_size, limit - batch_n * batch_size)
+
+            if actual_batch_size <= 0:
+                continue
+
+            task = fetch_score_batch(uid, mode, scope, actual_batch_size, batch_offset, legacy_only, include_failed)
+            tasks.append(task)
+        batch_results = await asyncio.gather(*tasks)
+
+        for batch_scores in batch_results:
+            all_scores.extend(batch_scores)
+            if len(all_scores) >= limit:
+                return all_scores[:limit]
+    return all_scores[:limit]
+
+
+async def _get_ppysb_user_scores(
+    uid: Union[int, str],
+    mode: str,
+    scope: Literal["recent", "best", "firsts"] = "best",
+    include_failed: bool = True,
+    offset: int = 0,
+    limit: int = 200,
+) -> list[UnifiedScore]:
+    if limit <= 0 or offset < 0 or offset >= 100:
+        return []
+
+    request_limit = min(offset + limit, 100)
+    url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={request_limit}&include_failed={int(include_failed)}"
+    data = await make_request(url, {}, "未找到该玩家BP")
+    data = ScoresResponse(**data)
+    filtered_scores = data.scores[offset : offset + limit]
+    return [
+        UnifiedScore(
+            mods=get_mods(i.mods),
+            ruleset_id=i.mode,
+            rank=i.grade,
+            accuracy=i.acc,
+            total_score=i.score,
+            ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
+            max_combo=i.max_combo,
+            passed=True,
+            pp=i.pp,
+            statistics=NewStatistics(
+                miss=i.nmiss,
+                perfect=i.ngeki,
+                good=i.nkatu,
+                meh=i.n50,
+                ok=i.n100,
+                great=i.n300,
+                large_tick_hit=i.n100,
+                small_tick_miss=i.nkatu,
+            ),
+            beatmap=UnifiedBeatmap(
+                id=i.beatmap.id,
+                set_id=i.beatmap.set_id,
+                artist=i.beatmap.artist,
+                title=i.beatmap.title,
+                version=i.beatmap.version,
+                creator=i.beatmap.creator,
+                total_length=i.beatmap.total_length,
+                mode=i.beatmap.mode,
+                bpm=i.beatmap.bpm,
+                cs=i.beatmap.cs,
+                ar=i.beatmap.ar,
+                hp=i.beatmap.hp,
+                od=i.beatmap.od,
+                stars=i.beatmap.diff,
+                checksum=i.beatmap.md5,
+            ),
+        )
+        for i in filtered_scores
+    ]
+
+
+async def _get_g0v0_user_scores(
+    uid: Union[int, str],
+    mode: str,
+    scope: Literal["recent", "best", "firsts"] = "best",
+    include_failed: bool = True,
+    offset: int = 0,
+    limit: int = 200,
+) -> list[UnifiedScore]:
+    if limit <= 0:
+        return []
+    batch_size = 100
+    total_batches = (limit + batch_size - 1) // batch_size
+    all_scores = []
+    for batch_idx in range(0, total_batches, 2):
+        current_batches = range(batch_idx, min(batch_idx + 2, total_batches))
+        tasks = []
+        for batch_n in current_batches:
+            batch_offset = offset + batch_n * batch_size
+            actual_batch_size = min(batch_size, limit - batch_n * batch_size)
+            if actual_batch_size <= 0:
+                continue
+            task = g0v0_fetch_score_batch(uid, mode, scope, actual_batch_size, batch_offset, include_failed)
+            tasks.append(task)
+        batch_results = await asyncio.gather(*tasks)
+        for batch_scores in batch_results:
+            all_scores.extend(batch_scores)
+            if len(all_scores) >= limit:
+                return all_scores[:limit]
+    return all_scores[:limit]
+
+
 async def get_user_scores(
     uid: Union[int, str],
     mode: str,
@@ -458,155 +600,49 @@ async def get_user_scores(
     offset: int = 0,
     limit: int = 200,
 ) -> list[UnifiedScore]:
-    if source == "osu":
-        if limit <= 0:
-            return []
-
-        # 计算需要多少次请求
-        # 计算需要多少批次
-        batch_size = 100
-        total_batches = (limit + batch_size - 1) // batch_size  # ceiling(limit/batch_size)
-        all_scores = []
-        # 分批并发请求
-        for batch_idx in range(0, total_batches, 2):
-            current_batches = range(batch_idx, min(batch_idx + 2, total_batches))
-
-            # 生成 tasks（并发执行）
-            tasks = []
-            for batch_n in current_batches:
-                batch_offset = offset + batch_n * batch_size
-                actual_batch_size = min(batch_size, limit - batch_n * batch_size)
-
-                if actual_batch_size <= 0:
-                    continue  # 已获取足够数据
-
-                task = fetch_score_batch(uid, mode, scope, actual_batch_size, batch_offset, legacy_only, include_failed)
-                tasks.append(task)
-            # 并发请求当前批次
-            batch_results = await asyncio.gather(*tasks)
-
-            for batch_scores in batch_results:
-                all_scores.extend(batch_scores)
-                if len(all_scores) >= limit:
-                    return all_scores[:limit]  # 提前终止
-        return all_scores[:limit]
-
-    elif source == "ppysb":
-        limit = min(limit, 100)
-        url = f"https://api.ppy.sb/v1/get_player_scores?scope={scope}&id={uid}&mode={FGM[mode]}&limit={limit}&include_failed={int(include_failed)}"
-        data = await make_request(url, {}, "未找到该玩家BP")
-        data = ScoresResponse(**data)
-        # 手动 offset
-        filtered_scores = data.scores[offset:]
-        return [
-            UnifiedScore(
-                mods=get_mods(i.mods),
-                ruleset_id=i.mode,
-                rank=i.grade,
-                accuracy=i.acc,
-                total_score=i.score,
-                ended_at=datetime.strptime(i.play_time, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=8),
-                max_combo=i.max_combo,
-                passed=True,
-                pp=i.pp,
-                statistics=NewStatistics(
-                    miss=i.nmiss,
-                    perfect=i.ngeki,
-                    good=i.nkatu,
-                    meh=i.n50,
-                    ok=i.n100,
-                    great=i.n300,
-                    large_tick_hit=i.n100,
-                    small_tick_miss=i.nkatu,
-                ),
-                beatmap=UnifiedBeatmap(
-                    id=i.beatmap.id,
-                    set_id=i.beatmap.set_id,
-                    artist=i.beatmap.artist,
-                    title=i.beatmap.title,
-                    version=i.beatmap.version,
-                    creator=i.beatmap.creator,
-                    total_length=i.beatmap.total_length,
-                    mode=i.beatmap.mode,
-                    bpm=i.beatmap.bpm,
-                    cs=i.beatmap.cs,
-                    ar=i.beatmap.ar,
-                    hp=i.beatmap.hp,
-                    od=i.beatmap.od,
-                    stars=i.beatmap.diff,
-                    checksum=i.beatmap.md5,
-                ),
-            )
-            for i in filtered_scores
-        ]
-
-    elif source == "g0v0":
-        if limit <= 0:
-            return []
-        batch_size = 100
-        total_batches = (limit + batch_size - 1) // batch_size  # ceiling(limit/batch_size)
-        all_scores = []
-        # 分批并发请求
-        for batch_idx in range(0, total_batches, 2):
-            current_batches = range(batch_idx, min(batch_idx + 2, total_batches))
-            tasks = []
-            for batch_n in current_batches:
-                batch_offset = offset + batch_n * batch_size
-                actual_batch_size = min(batch_size, limit - batch_n * batch_size)
-                if actual_batch_size <= 0:
-                    continue
-                task = g0v0_fetch_score_batch(uid, mode, scope, actual_batch_size, batch_offset, include_failed)
-                tasks.append(task)
-            batch_results = await asyncio.gather(*tasks)
-            for batch_scores in batch_results:
-                all_scores.extend(batch_scores)
-                if len(all_scores) >= limit:
-                    return all_scores[:limit]
-        return all_scores[:limit]
+    server = get_server(source)
+    query = UserScoreQuery(
+        user_id=uid,
+        mode=server.parse_mode(mode),
+        scope=scope,
+        legacy_only=bool(legacy_only),
+        include_failed=include_failed,
+        offset=offset,
+        limit=limit,
+    )
+    return await server.get_scores(query)
 
 
 async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu") -> UnifiedUser:
-    if source == "osu":
-        url = f"{api}/users/{uid}/{mode}"
-        data = await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID")
-        return UnifiedUser(**data)
+    server = get_server(source)
+    return await server.get_user(uid, server.parse_mode(mode))
 
-    elif source == "ppysb":
-        url = f"https://api.ppy.sb/v1/get_player_info?scope=all&id={uid}"
-        data = await make_request(url, {}, "未找到该玩家，请确认玩家ID")
-        data = InfoResponse(**data)
-        info_data = UnifiedUser(
-            avatar_url=f"https://a.ppy.sb/{data.player.info.id}",
-            country_code=data.player.info.country.upper(),
-            id=data.player.info.id,
-            username=data.player.info.name,
-            is_supporter=False,
-        )
-        if mode == "osu":
-            info_data.statistics = parse_statistics(data, "0")
-        if mode == "taiko":
-            info_data.statistics = parse_statistics(data, "1")
-        if mode == "fruits":
-            info_data.statistics = parse_statistics(data, "2")
-        if mode == "mania":
-            info_data.statistics = parse_statistics(data, "3")
-        if mode == "rxosu":
-            info_data.statistics = parse_statistics(data, "4")
-        if mode == "rxtaiko":
-            info_data.statistics = parse_statistics(data, "5")
-        if mode == "rxfruits":
-            info_data.statistics = parse_statistics(data, "6")
-        if mode == "aposu":
-            info_data.statistics = parse_statistics(data, "8")
-        return info_data
 
-    elif source == "g0v0":
-        # g0v0 的 /users/{id} 端点不带 mode 参数（只返回用户主模式统计），
-        # 需使用官方格式的 /users/{id}/{ruleset} 获取指定模式的资料。
-        g0v0_mode = G0V0_MODE.get(mode, mode)
-        url = f"{g0v0_api}/users/{uid}/{g0v0_mode}"
-        data = await g0v0_make_request(url, "未找到该玩家，请确认玩家ID")
-        return UnifiedUser(**data)
+async def _get_osu_user(uid: Union[int, str], mode: str) -> UnifiedUser:
+    url = f"{api}/users/{uid}/{mode}"
+    data = await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID")
+    return UnifiedUser(**data)
+
+
+async def _get_ppysb_user(uid: Union[int, str], mode: str) -> UnifiedUser:
+    url = f"https://api.ppy.sb/v1/get_player_info?scope=all&id={uid}"
+    data = InfoResponse(**await make_request(url, {}, "未找到该玩家，请确认玩家ID"))
+    info_data = UnifiedUser(
+        avatar_url=f"https://a.ppy.sb/{data.player.info.id}",
+        country_code=data.player.info.country.upper(),
+        id=data.player.info.id,
+        username=data.player.info.name,
+        is_supporter=False,
+    )
+    info_data.statistics = parse_statistics(data, str(FGM[mode]))
+    return info_data
+
+
+async def _get_g0v0_user(uid: Union[int, str], mode: str) -> UnifiedUser:
+    g0v0_mode = G0V0_MODE.get(mode, mode)
+    url = f"{g0v0_api}/users/{uid}/{g0v0_mode}"
+    data = await g0v0_make_request(url, "未找到该玩家，请确认玩家ID")
+    return UnifiedUser(**data)
 
 
 def parse_statistics(data: InfoResponse, mode):
@@ -741,16 +777,13 @@ async def make_request(url: str, headers: dict, error_message: str) -> dict:
 
 
 async def get_uid_by_name(name: str, source: str) -> int:
-    if source == "osu":
-        info = await get_osu_user(name)
-        return info["id"]
-    elif source == "g0v0":
-        info = await g0v0_get_osu_user(name)
-        return info["id"]
-    else:
-        url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={name}"
-        data = await make_request(url, {}, "未找到该玩家，请确认玩家ID是否正确")
-        return data["player"]["info"]["id"]
+    return await get_server(source).resolve_user(name)
+
+
+async def _get_ppysb_user_id(name: str) -> int:
+    url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={name}"
+    data = await make_request(url, {}, "未找到该玩家，请确认玩家ID是否正确")
+    return data["player"]["info"]["id"]
 
 
 async def g0v0_get_osu_user(identifier: str) -> dict:
@@ -833,13 +866,192 @@ async def get_osu_user(identifier: str) -> dict:
 
 
 async def get_ppysb_uid(name: str) -> int:
-    url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={name}"
-    data = await make_request(url, {}, "未找到该玩家，请确认玩家ID是否正确")
-    return data["player"]["info"]["id"]
+    return await _get_ppysb_user_id(name)
 
 
 async def get_user_info(url: str) -> dict:
     return await make_request(url, await get_headers(), "未找到该玩家，请确认玩家ID是否正确")
+
+
+_BASIC_SERVER_FEATURES = (
+    ServerFeature.USER_INFO,
+    ServerFeature.USER_SCORES,
+    ServerFeature.MAP_SCORES,
+)
+
+
+class OsuServer(GameServer):
+    descriptor = ServerDescriptor(
+        id="osu",
+        label="osu!",
+        aliases=frozenset({"official", "ppy"}),
+        modes=STANDARD_MODES,
+        capabilities=ServerCapabilities.all(
+            *_BASIC_SERVER_FEATURES,
+            ServerFeature.FIRST_SCORE,
+            ServerFeature.PP_HISTORY,
+            ServerFeature.BP_FIX,
+            ServerFeature.OFFICIAL_SNAPSHOTS,
+            ServerFeature.SCORE_VERSION,
+            ServerFeature.LEGACY_SCORE_RULES,
+        ),
+    )
+
+    async def resolve_user(self, identifier: str) -> int:
+        return int((await get_osu_user(identifier))["id"])
+
+    async def resolve_user_profile(self, identifier: str) -> ResolvedServerUser:
+        info = await get_osu_user(identifier)
+        default_mode = PlayMode.parse(info.get("playmode") or "osu") or PlayMode.parse("osu")
+        return ResolvedServerUser(
+            user_id=int(info["id"]),
+            username=str(info.get("username") or identifier),
+            default_mode=default_mode,
+        )
+
+    async def get_user(self, user_id: Union[int, str], mode: PlayMode) -> UnifiedUser:
+        return await _get_osu_user(user_id, mode.key)
+
+    async def get_scores(self, query: UserScoreQuery) -> list[UnifiedScore]:
+        return await _get_osu_user_scores(
+            query.user_id,
+            query.mode.key,
+            query.scope,
+            query.legacy_only,
+            query.include_failed,
+            query.offset,
+            query.limit,
+        )
+
+    async def get_map_scores(self, query: MapScoreQuery) -> MapScores:
+        from .score_query import score_query
+
+        method = score_query.best_beatmap_score if query.best_only else score_query.list_beatmap_scores
+        lookup = await method(
+            int(query.user_id),
+            query.mode.key,
+            query.beatmap,
+            legacy_only=query.legacy_only,
+        )
+        return MapScores(
+            scores=lookup.scores,
+            origin=lookup.source,
+            complete=lookup.complete,
+            position=lookup.position,
+        )
+
+
+class PpysbServer(GameServer):
+    descriptor = ServerDescriptor(
+        id="ppysb",
+        label="ppysb",
+        aliases=frozenset({"sb"}),
+        modes=PRIVATE_MODES,
+        capabilities=ServerCapabilities(
+            {
+                **dict.fromkeys(_BASIC_SERVER_FEATURES),
+                ServerFeature.SERVER_REPORTED_PP: None,
+                ServerFeature.BP_FIX: STANDARD_MODES,
+            }
+        ),
+        avatar_base_url="https://a.ppy.sb",
+        profile_url_template="https://akatsuki.gg/u/{user_id}",
+        relax_encoding=RelaxEncoding.RULESET_ID,
+        default_score_version="stable",
+    )
+
+    async def resolve_user(self, identifier: str) -> int:
+        return await _get_ppysb_user_id(identifier)
+
+    async def get_user(self, user_id: Union[int, str], mode: PlayMode) -> UnifiedUser:
+        return await _get_ppysb_user(user_id, mode.key)
+
+    async def get_scores(self, query: UserScoreQuery) -> list[UnifiedScore]:
+        return await _get_ppysb_user_scores(
+            query.user_id,
+            query.mode.key,
+            query.scope,
+            query.include_failed,
+            query.offset,
+            query.limit,
+        )
+
+    async def get_map_scores(self, query: MapScoreQuery) -> MapScores:
+        scores = await get_ppysb_map_scores(query.beatmap.get("checksum"), query.user_id, query.mode.key)
+        return MapScores(scores=scores, origin="remote", complete=True)
+
+
+class G0v0Server(GameServer):
+    descriptor = ServerDescriptor(
+        id="g0v0",
+        label="g0v0",
+        aliases=frozenset({"gu"}),
+        modes=PRIVATE_MODES,
+        capabilities=ServerCapabilities(
+            {
+                **dict.fromkeys(_BASIC_SERVER_FEATURES),
+                ServerFeature.SERVER_REPORTED_PP: None,
+                ServerFeature.LEGACY_SCORE_RULES: None,
+                ServerFeature.BP_FIX: STANDARD_MODES,
+            }
+        ),
+        avatar_base_url="https://lazer.g0v0.top/avatar",
+        profile_url_template="https://lazer.g0v0.top/users/{user_id}",
+        relax_encoding=RelaxEncoding.MOD,
+    )
+
+    async def resolve_user(self, identifier: str) -> int:
+        return int((await g0v0_get_osu_user(identifier))["id"])
+
+    async def get_user(self, user_id: Union[int, str], mode: PlayMode) -> UnifiedUser:
+        return await _get_g0v0_user(user_id, mode.key)
+
+    async def get_scores(self, query: UserScoreQuery) -> list[UnifiedScore]:
+        return await _get_g0v0_user_scores(
+            query.user_id,
+            query.mode.key,
+            query.scope,
+            query.include_failed,
+            query.offset,
+            query.limit,
+        )
+
+    async def get_map_scores(self, query: MapScoreQuery) -> MapScores:
+        scores = await g0v0_map_scores(
+            int(query.beatmap["id"]),
+            query.user_id,
+            query.mode.key,
+            query.beatmap,
+        )
+        return MapScores(scores=scores, origin="remote", complete=True)
+
+
+server_registry = ServerRegistry((OsuServer(), PpysbServer(), G0v0Server()))
+
+
+def get_server(source: str = "osu") -> GameServer:
+    return server_registry.get(source)
+
+
+async def get_map_scores(
+    uid: Union[int, str],
+    mode: str,
+    beatmap: dict,
+    source: str = "osu",
+    *,
+    legacy_only: bool = False,
+    best_only: bool = False,
+) -> MapScores:
+    server = get_server(source)
+    return await server.get_map_scores(
+        MapScoreQuery(
+            user_id=uid,
+            mode=server.parse_mode(mode),
+            beatmap=beatmap,
+            legacy_only=legacy_only,
+            best_only=best_only,
+        )
+    )
 
 
 # ===========================================================================

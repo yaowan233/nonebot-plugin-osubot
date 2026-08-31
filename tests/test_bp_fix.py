@@ -1,4 +1,5 @@
 import base64
+import asyncio
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -23,6 +24,7 @@ def _score(pp=100.0, *, misses=1, combo=900, map_combo=1000, objects=1000, rank=
         pp=pp,
         rank=rank,
         ruleset_id=0,
+        score_version=None,
         accuracy=98.0,
         max_combo=combo,
         mods=[],
@@ -71,6 +73,44 @@ def test_bp_fix_payload_reorders_scores_and_preserves_bonus_pp():
     assert payload["entries"][0]["old_rank"] == 2
     assert payload["entries"][0]["new_rank"] == 1
     assert payload["entries"][0]["gain"] == 30
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("source", "expected_lazer"), [("ppysb", False), ("g0v0", True)])
+async def test_bp_fix_uses_server_score_version_fallback(monkeypatch, source: str, expected_lazer: bool):
+    from nonebot_plugin_osubot.api import get_server
+    from nonebot_plugin_osubot.draw import bp_fix as bp_fix_module
+
+    captured = None
+
+    def fake_calculate(_path, _mode, _mods, scenarios):
+        nonlocal captured
+        captured = scenarios[0].lazer
+        return [SimpleNamespace(pp=120.0, max_combo=1000, stars=5.0)]
+
+    monkeypatch.setattr(bp_fix_module, "ensure_osu_file", AsyncMock(return_value="map.osu"))
+    monkeypatch.setattr(bp_fix_module, "calculate_performance_scenarios", fake_calculate)
+
+    result = await bp_fix_module._calculate_fixed_candidate(
+        0,
+        _score(),
+        asyncio.Semaphore(1),
+        get_server(source),
+        True,
+    )
+
+    assert result is not None
+    assert captured is expected_lazer
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["ppysb", "g0v0"])
+async def test_bp_fix_rejects_private_relax_modes_before_fetching(source: str):
+    from nonebot_plugin_osubot.draw.bp_fix import draw_bp_fix
+    from nonebot_plugin_osubot.exceptions import NetworkError
+
+    with pytest.raises(NetworkError, match="RX/AP"):
+        await draw_bp_fix(42, True, "rxosu", source)
 
 
 def test_bp_fix_svg_contains_summary_and_entries():

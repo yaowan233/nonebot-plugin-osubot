@@ -1,26 +1,11 @@
 import re
 
+from ..server import ModeVariant, PlayMode
 
-GM = {
-    0: "osu",
-    1: "taiko",
-    2: "fruits",
-    3: "mania",
-    4: "osu",
-    5: "taiko",
-    6: "fruits",
-    8: "osu",
-}
-NGM = {
-    "0": "osu",
-    "1": "taiko",
-    "2": "fruits",
-    "3": "mania",
-    "4": "rxosu",
-    "5": "rxtaiko",
-    "6": "rxfruits",
-    "8": "aposu",
-}
+_LEGACY_MODE_IDS = (0, 1, 2, 3, 4, 5, 6, 8)
+GM = {mode_id: PlayMode.parse(mode_id).ruleset.name.lower() for mode_id in _LEGACY_MODE_IDS}
+GM[2] = GM[6] = "fruits"
+NGM = {str(mode_id): PlayMode.parse(mode_id).key for mode_id in _LEGACY_MODE_IDS}
 GMN = {
     "osu": "Std",
     "taiko": "Taiko",
@@ -31,59 +16,14 @@ GMN = {
     "rxfruits": "RX Ctb",
     "aposu": "AP Std",
 }
-FGM = {
-    "osu": 0,
-    "taiko": 1,
-    "fruits": 2,
-    "mania": 3,
-    "rxosu": 4,
-    "rxtaiko": 5,
-    "rxfruits": 6,
-    "aposu": 8,
-}
-
-MODE_ALIASES = {
-    "0": "0",
-    "osu": "0",
-    "osu!": "0",
-    "o": "0",
-    "std": "0",
-    "standard": "0",
-    "1": "1",
-    "taiko": "1",
-    "t": "1",
-    "tk": "1",
-    "2": "2",
-    "catch": "2",
-    "c": "2",
-    "ctb": "2",
-    "fruits": "2",
-    "3": "3",
-    "mania": "3",
-    "m": "3",
-    "4": "4",
-    "rx": "4",
-    "rxstd": "4",
-    "rxosu": "4",
-    "5": "5",
-    "rxtaiko": "5",
-    "rxtk": "5",
-    "6": "6",
-    "rxcatch": "6",
-    "rxctb": "6",
-    "rxfruits": "6",
-    "8": "8",
-    "ap": "8",
-    "apstd": "8",
-    "aposu": "8",
-}
+FGM = {mode_name: int(mode_id) for mode_id, mode_name in NGM.items()}
 
 
 def parse_mode(value: int | str, allow_special: bool = False) -> str | None:
-    mode = MODE_ALIASES.get(str(value).strip().lower())
-    if mode is None or not allow_special and mode not in {"0", "1", "2", "3"}:
+    mode = PlayMode.parse(value)
+    if mode is None or not allow_special and mode.variant != ModeVariant.STANDARD:
         return None
-    return mode
+    return mode.legacy_key
 
 
 BEATMAPSET_URL_PATTERN = re.compile(r"(?:https?://)?osu\.ppy\.sh/beatmapsets/(\d+)(?:#[^/\s]+/(\d+))?")
@@ -113,17 +53,11 @@ def extract_user_id(value: str) -> str | None:
 
 def normalize_map_mode(requested_mode: int | str, native_mode: int, source: str = "osu") -> str:
     """Return a score mode compatible with the beatmap's native ruleset."""
-    requested = int(requested_mode)
-    if native_mode == 0:
-        # Standard beatmaps may be converted to other rulesets.
-        return str(requested)
-    if source not in {"ppysb", "g0v0"}:
-        return str(native_mode)
-    if requested in {4, 5, 6}:
-        # Preserve the RX category while selecting the map's actual ruleset.
-        return str({1: 5, 2: 6}.get(native_mode, native_mode))
-    # AP only exists for standard; mania has no RX/AP category either.
-    return str(native_mode)
+    del source  # Compatibility parameter; server mode support is validated at the GameServer seam.
+    requested = PlayMode.parse(requested_mode)
+    if requested is None:
+        raise ValueError(f"不支持的模式: {requested_mode}")
+    return requested.for_native_ruleset(native_mode).legacy_key
 
 
 def mods2list(args: str) -> list:

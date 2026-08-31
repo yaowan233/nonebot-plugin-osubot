@@ -229,7 +229,7 @@ nb orm stamp 68a04ea31d05
 
 ### ppysb 查询
 
-使用 `/sbbind <玩家>` 绑定 ppysb 账号，然后在普通查询末尾添加 `&sb`，例如 `/info &sb`、`/bl:4 &sb`。SB 模式 `0`–`3` 对应四种常规模式，`4`–`6` 对应 Relax，`8` 对应 Autopilot。
+使用 `/sbbind <玩家>` 绑定 ppysb 账号，然后在普通查询末尾添加 `&sb`，例如 `/info &sb`、`/bl:4 &sb`。使用 `/mode:4 &sb` 可以设置独立的 ppysb 默认模式。SB 模式 `0`–`3` 对应四种常规模式，`4`–`6` 对应 Relax，`8` 对应 Autopilot。`/fix &sb` 支持常规模式 `0`–`3`；RX/AP 使用私服专用 PP 算法，暂不支持理论 FC。
 
 ### g0v0 查询
 
@@ -244,7 +244,7 @@ nb orm stamp 68a04ea31d05
 /guunbind                解除 g0v0 账号绑定
 ```
 
-g0v0 模式 `0`–`3` 对应 std/taiko/catch/mania，`4`/`5`/`6`/`8` 对应 RX std / RX taiko / RX catch / AP std。其他成绩查询与分析指令（`/bp`、`/bl`、`/re`、`/rl`、`/pr`、`/pl`、`/sc`、`/sl`、`/first`、`/bpa` 等）均支持 `&gu` 后缀；`/fix`（BP Fix）目前仅支持 osu! 官网成绩。g0v0 API 目前不提供 PP/排名历史快照，因此 `/hs` 仅支持 osu! 官网。g0v0 的 OAuth 配置见上方「⚙️ 配置」的 `G0V0_*` 项。
+g0v0 模式 `0`–`3` 对应 std/taiko/catch/mania，`4`/`5`/`6`/`8` 对应 RX std / RX taiko / RX catch / AP std。其他成绩查询与分析指令（`/bp`、`/bl`、`/re`、`/rl`、`/pr`、`/pl`、`/sc`、`/sl`、`/first`、`/bpa` 等）均支持 `&gu` 后缀；`/fix &gu` 支持常规模式 `0`–`3`，RX/AP 因使用私服专用 PP 算法暂不支持。g0v0 API 目前不提供 PP/排名历史快照，因此 `/hs` 仅支持 osu! 官网。g0v0 的 OAuth 配置见上方「⚙️ 配置」的 `G0V0_*` 项。
 
 ### AI 自然语言调用（可选）
 

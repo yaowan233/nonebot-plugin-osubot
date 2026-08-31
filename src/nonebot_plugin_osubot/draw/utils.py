@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, UnidentifiedImageEr
 
 from ..schema.user import UnifiedUser
 from ..schema import SeasonalBackgrounds
-from ..api import safe_async_get, get_seasonal_bg
+from ..api import get_seasonal_bg, get_server, safe_async_get
 from .static import ColorArr
 from ..file import map_path, download_osu, get_projectimg, user_cache_path, team_cache_path
 
@@ -211,20 +211,18 @@ def calc_songlen(length: int) -> str:
 async def open_user_icon(info: UnifiedUser, source) -> Image:
     path = user_cache_path / str(info.id)
     path.mkdir(parents=True, exist_ok=True)
-    for file_path in path.glob("icon*.*"):
+    icon_name = f"icon_{get_server(source).id}"
+    for file_path in path.glob(f"{icon_name}.*"):
         # 检查文件是否为图片格式
         if file_path.suffix.lower() in [".jpg", ".png", ".jpeg", ".gif", ".bmp"]:
             img = Image.open(file_path)
             break
     else:
         user_icon = await get_projectimg(info.avatar_url)
-        if source == "ppysb":
-            with open(path / "sb_icon.png", "wb") as f:
-                f.write(user_icon.getvalue())
-        else:
-            with open(path / f"icon.{info.avatar_url.split('.')[-1]}", "wb") as f:
-                f.write(user_icon.getvalue())
-        img = Image.open(user_icon)
+        cache_file = path / f"{icon_name}.png"
+        with Image.open(user_icon) as downloaded:
+            downloaded.convert("RGBA").save(cache_file, "PNG")
+        img = Image.open(cache_file)
     return img
 
 

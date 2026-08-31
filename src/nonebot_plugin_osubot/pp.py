@@ -8,6 +8,7 @@ from osu_tools import OsuCalculator, CalculationResult
 from nonebot.log import logger
 
 from .exceptions import NetworkError
+from .server import RelaxEncoding
 from .schema.score import Mod, UnifiedScore
 
 
@@ -50,18 +51,23 @@ def _mod_has_relax(mod: Mod | str) -> bool:
 
 
 def is_ppysb_relax_score(score: UnifiedScore, source: str) -> bool:
-    if source == "ppysb":
+    from .api import get_server
+
+    encoding = get_server(source).descriptor.relax_encoding
+    if encoding == RelaxEncoding.RULESET_ID:
         return score.ruleset_id in PPYSB_RELAX_RULESETS
-    if source == "g0v0":
-        # g0v0 的 RX/AP 成绩 ruleset_id 仍是 0-3，relax 通过 mods 里的 RX/RX2/AP 表达。
+    if encoding == RelaxEncoding.MOD:
         return any(_mod_has_relax(m) for m in score.mods)
     return False
 
 
 def normalize_mods_for_pp(mods: list[Mod] | list[str], source: str, ruleset_id: int):
-    if (source == "ppysb" and ruleset_id in PPYSB_RELAX_RULESETS) or (
-        source == "g0v0" and any(_mod_has_relax(m) for m in mods)
-    ):
+    from .api import get_server
+
+    encoding = get_server(source).descriptor.relax_encoding
+    is_relax = encoding == RelaxEncoding.RULESET_ID and ruleset_id in PPYSB_RELAX_RULESETS
+    is_relax = is_relax or encoding == RelaxEncoding.MOD and any(_mod_has_relax(m) for m in mods)
+    if is_relax:
         return [mod for mod in mods if not _mod_has_relax(mod)]
     return mods
 
