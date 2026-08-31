@@ -1029,7 +1029,8 @@ async def test_bpa_success(app: App):
     mock_score.beatmap.user_id = 99999
     mock_score.beatmap.creator = "mapper_name"
 
-    def fake_cal(lazer_mode, score):
+    def fake_cal(lazer_mode, score, source):
+        assert source == "osu"
         score.pp = 300.0
         score.rank = "A"
         return score

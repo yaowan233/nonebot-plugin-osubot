@@ -169,6 +169,28 @@ async def test_g0v0_explicit_mode_overrides_bound_default(app: App):
 
 
 @pytest.mark.asyncio
+async def test_ppysb_uses_bound_default_mode(app: App):
+    from nonebot_plugin_osubot.matcher.info import info
+
+    import nonebot
+
+    session = make_mock_session()
+    session.scalar.side_effect = [None, make_mock_user(osu_id=42, osu_name="Akatsuki", osu_mode=5)]
+    event = fake_group_message_event_v11(message=Message("/info &sb"))
+
+    with patch_session(UTILS_MODULE, session):
+        with patch(f"{INFO_MODULE}.draw_info", new=AsyncMock(return_value=FAKE_IMG)) as mock_draw:
+            async with app.test_matcher(info) as ctx:
+                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                ctx.receive_event(bot, event)
+                ctx.should_call_send(event, _img_msg(event), result={"message_id": 1})
+                ctx.should_finished()
+
+    mock_draw.assert_awaited_once_with(42, "rxtaiko", 0, "ppysb")
+
+
+@pytest.mark.asyncio
 async def test_g0v0_info_does_not_read_official_snapshots(tmp_path):
     from nonebot_plugin_osubot.draw import info as draw_info_module
     from nonebot_plugin_osubot.schema.user import GradeCounts, Level, UnifiedUser, UserStatistics

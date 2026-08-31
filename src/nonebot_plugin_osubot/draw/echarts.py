@@ -7,7 +7,7 @@ from typing import Any
 
 import jinja2
 
-from ..api import get_users
+from ..api import get_server, get_users
 from ..file import ensure_osu_file
 from ..pp import cal_pp
 from .browser import persistent_page, wait_for_page_assets
@@ -274,13 +274,13 @@ async def build_bpa_data(score_ls: list, source: str) -> dict:
         beatmap = getattr(i, "beatmap", None)
         if not beatmap:
             continue
-        key = getattr(beatmap, "creator", None) if source == "ppysb" else getattr(beatmap, "user_id", None)
-        mapper_pp[key] += _num(i.pp) * 0.95**num
+        key = getattr(beatmap, "user_id", None) or getattr(beatmap, "creator", None)
+        if key is not None:
+            mapper_pp[key] += _num(i.pp) * 0.95**num
     mapper_items = sorted(mapper_pp.items(), key=lambda x: x[1], reverse=True)[:9]
-    if source == "ppysb":
-        mapper_pp_data = [{"name": str(m), "value": round(pp, 2)} for m, pp in mapper_items]
-    elif mapper_items:
-        users = await get_users([m for m, _ in mapper_items])
+    if mapper_items:
+        mapper_ids = [mapper for mapper, _pp in mapper_items if isinstance(mapper, int)]
+        users = await get_users(mapper_ids) if mapper_ids else []
         user_dic = {u.id: u.username for u in users}
         mapper_pp_data = [{"name": user_dic.get(m, str(m)), "value": round(pp, 2)} for m, pp in mapper_items]
     else:
@@ -374,10 +374,10 @@ async def draw_bpa_plot(
         "rxfruits": "\ue801",
         "aposu": "\ue800",
     }
-    source_label = "ppy.sb" if source == "ppysb" else "g0v0" if source == "g0v0" else "osu! official"
+    server = get_server(source)
+    source_label = server.label
     if avatar_url is None and user_id:
-        avatar_host = "https://a.ppy.sb" if source == "ppysb" else "https://a.ppy.sh"
-        avatar_url = f"{avatar_host}/{user_id}"
+        avatar_url = f"{server.descriptor.avatar_base_url}/{user_id}"
     return await _render_chart_template(
         template_name,
         {

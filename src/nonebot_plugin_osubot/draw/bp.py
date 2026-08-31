@@ -7,12 +7,13 @@ from typing import Optional, Union
 
 from nonebot.log import logger
 
-from ..api import get_user_info_data, get_user_scores
+from ..api import get_server, get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from ..mods import get_mods_list, get_speed_change_labels
 from ..pp import cal_pp, cal_stars
 from ..schema.score import UnifiedScore
+from ..server import ServerFeature
 from .bp_svg import render_bp_svg
 from .score import _player_avatar_data_uri, _team_icon_data, cal_score_info
 from .svg_render import thumbnail_data_uri
@@ -246,7 +247,11 @@ async def draw_pfm(
             "mods": mods,
             "speed_changes": speed_changes,
             "date": score.ended_at.strftime("%Y.%m.%d"),
-            "score_version": getattr(score, "score_version", None) if source == "osu" else None,
+            "score_version": (
+                getattr(score, "score_version", None)
+                if get_server(source).supports(ServerFeature.SCORE_VERSION)
+                else None
+            ),
         }
 
     plays = await asyncio.gather(

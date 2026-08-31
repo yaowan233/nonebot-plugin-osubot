@@ -5,12 +5,12 @@ from nonebot_plugin_alconna import At, UniMsg
 from nonebot.params import T_State, CommandArg
 from nonebot.internal.adapter import Event, Message
 from nonebot_plugin_orm import get_session
-from sqlalchemy import select
 
-from ..utils import extract_beatmap_id, extract_beatmapset_id, mods2list, parse_mode
-from ..api import get_uid_by_name, osu_api
+from ..utils import extract_beatmap_id, extract_beatmapset_id, mods2list
+from ..api import get_server, get_uid_by_name, osu_api
+from ..bindings import find_binding, get_binding_spec
+from ..server import ModeVariant
 from ..exceptions import NetworkError
-from ..database import UserData, SbUserData, G0v0UserData
 
 FILTER_PATTERN = (
     r"title\s*(!=|~=|=|~)\s*(.*?)(?=\s*(?:[:：]\s*|\+|\#|\d+\s*-\s*\d+|\w+\s*(?:!=|>=|<=|~=|=|>|<|~)|$))|"
@@ -107,8 +107,8 @@ def parse_bp_filter_text(arg: str) -> tuple[list[tuple[str, str, str]], str]:
 def split_msg():
     async def dependency(event: Event, state: T_State, msg: UniMsg, arg: Message = CommandArg()):
         qq = _resolve_query_platform_user_id(event, msg)
-        async with get_session() as session:
-            user_data = await session.scalar(select(UserData).where(UserData.user_id == qq))
+        user_data = await find_binding("osu", qq, session_factory=get_session)
+        bindings = {"osu": user_data}
         state["user"] = user_data.osu_id if user_data else 0
         state["mode"] = str(user_data.osu_mode) if user_data else "0"
         state["username"] = user_data.osu_name if user_data else ""
@@ -154,8 +154,10 @@ def split_msg():
                 low, high = (int(value.strip()) for value in match[3].split("-"))
                 state["range"] = f"{min(low, high)}-{max(low, high)}"
             if match[4]:
-                source = {"sb": "ppysb", "ppysb": "ppysb", "gu": "g0v0", "g0v0": "g0v0"}
-                state["source"] = source.get(match[4], "osu")
+                try:
+                    state["source"] = get_server(match[4]).id
+                except ValueError:
+                    state["source"] = "osu"
             if match[6]:
                 state["query"].append(("title", match[5], match[6].strip().strip("\"'")))
             if match[7]:
@@ -174,44 +176,32 @@ def split_msg():
                 user = await get_uid_by_name(arg.strip(), state["source"])
                 state["user"] = user
             except NetworkError:
-                state["error"] = f"在 {state['source']} 服务器没有找到用户: {arg.strip()}"
-        if state["source"] in {"ppysb", "g0v0"}:
-            normalized_mode = parse_mode(state["mode"], allow_special=True)
-            if normalized_mode is None:
+                state["error"] = f"在 {get_server(state['source']).label} 服务器没有找到用户: {arg.strip()}"
+        server = get_server(state["source"])
+        if not arg.strip():
+            if server.id not in bindings:
+                bindings[server.id] = await find_binding(server.id, qq, session_factory=get_session)
+            binding = bindings[server.id]
+            binding_spec = get_binding_spec(server.id)
+            if binding:
+                state["user"] = binding.osu_id
+                state["username"] = binding.osu_name
+                if not state["mode_explicit"]:
+                    state["mode"] = binding_spec.mode_of(binding)
+            else:
+                state["error"] = binding_spec.missing_message
+        try:
+            state["mode"] = server.parse_mode(state["mode"]).legacy_key
+        except ValueError:
+            supports_special_modes = any(mode.variant != ModeVariant.STANDARD for mode in server.descriptor.modes)
+            if supports_special_modes:
                 state["error"] = (
                     "模式应为0-8(没有7)！\n0: std\n1: taiko\n2: ctb\n3: mania\n"
                     "4: RX std\n5: RX taiko\n6: RX ctb\n8: AP std"
                 )
             else:
-                state["mode"] = normalized_mode
-        else:
-            normalized_mode = parse_mode(state["mode"])
-            if normalized_mode is None:
                 state["error"] = "模式应为 std、taiko、catch、mania，或数字 0-3"
-            else:
-                state["mode"] = normalized_mode
         if isinstance(state["day"], str) and (not state["day"].isdigit() or int(state["day"]) < 0):
             state["error"] = "查询的日期应是一个正数"
-        if state["user"] == 0 and state["source"] == "osu":
-            state["error"] = "该账号尚未绑定，请输入 /bind 用户名 绑定账号"
-        if state["source"] == "ppysb" and not arg.strip():
-            async with get_session() as session:
-                sb_user_data = await session.scalar(select(SbUserData).where(SbUserData.user_id == qq))
-            if sb_user_data:
-                state["user"] = sb_user_data.osu_id
-                state["username"] = sb_user_data.osu_name
-            else:
-                state["error"] = "该账号尚未绑定 sb 服务器，请输入 /sbbind 用户名 绑定账号"
-        if state["source"] == "g0v0" and not arg.strip():
-            async with get_session() as session:
-                g0v0_user_data = await session.scalar(select(G0v0UserData).where(G0v0UserData.user_id == qq))
-            if g0v0_user_data:
-                state["user"] = g0v0_user_data.osu_id
-                state["username"] = g0v0_user_data.osu_name
-                # 未显式指定模式时，使用 g0v0 绑定的独立默认模式（/mode:4 &gu 修改）
-                if not state["mode_explicit"]:
-                    state["mode"] = str(g0v0_user_data.osu_mode)
-            else:
-                state["error"] = "该账号尚未绑定 g0v0 服务器，请输入 /gubind 用户名 绑定账号"
 
     return Depends(dependency)

@@ -19,22 +19,23 @@ from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext,
 from nonebot_plugin_ai_groupmate.reply_guard import is_request_active
 
 from .api import (
-    get_uid_by_name,
-    get_osu_user,
+    get_server,
     get_recommend,
     get_user_scores,
     osu_api,
     safe_async_get,
     search_beatmapsets,
 )
+from .bindings import find_binding, get_binding_spec
 from .draw import draw_info, draw_score, get_score_data, draw_map_info, draw_bmap_info
 from .info import get_bg
-from .utils import FGM, NGM, mods2list, normalize_map_mode
+from .utils import NGM, mods2list, normalize_map_mode
 from .mods import get_mods_list
 from .file import download_osu
 from .mania import generate_preview_pic
-from .database import InfoData, UserData, SbUserData
+from .database import InfoData
 from .exceptions import NetworkError
+from .server import ModeVariant, ServerFeature
 from .schema.score import Mod, NewStatistics, UnifiedBeatmap, UnifiedScore
 from .schema.user import UnifiedUser
 from .schema.alphaosu import RecommendData, RecommendItem
@@ -97,10 +98,7 @@ class ResolvedOsuUser:
 
 
 def _normalize_source(source: str) -> str:
-    source = (source or "osu").strip().lower()
-    if source in {"sb", "ppysb"}:
-        return "ppysb"
-    return "osu"
+    return get_server(source or "osu").id
 
 
 def _clean_optional_text(value: str | None) -> str | None:
@@ -222,12 +220,13 @@ def _normalize_mode(mode: str | int | None, source: str) -> str | None:
     mode_text = str(mode).strip()
     if not mode_text or mode_text.lower() in {"none", "null", "nil", "undefined"}:
         return None
-    allowed = {"0", "1", "2", "3"}
-    if source == "ppysb":
-        allowed = {"0", "1", "2", "3", "4", "5", "6", "8"}
-    if mode_text not in allowed:
-        raise ValueError("mode 必须为 0=std, 1=taiko, 2=ctb/fruits, 3=mania；ppysb 还支持 4/5/6/8")
-    return mode_text
+    server = get_server(source)
+    try:
+        return server.parse_mode(mode_text).legacy_key
+    except ValueError as error:
+        supports_special_modes = any(mode.variant != ModeVariant.STANDARD for mode in server.descriptor.modes)
+        suffix = "；该私服还支持 4/5/6/8" if supports_special_modes else ""
+        raise ValueError(f"mode 必须为 0=std, 1=taiko, 2=ctb/fruits, 3=mania{suffix}") from error
 
 
 def _normalize_range(range_text: str | None, default: str = "1-200") -> tuple[int, int]:
@@ -261,63 +260,44 @@ async def _resolve_osu_user(
     source: str,
     target_user_id: str | int | None = None,
 ) -> ResolvedOsuUser:
+    server = get_server(source)
+    binding_spec = get_binding_spec(server.id)
     explicit_target = _explicit_target_user_id(ctx, target_user_id)
     if explicit_target:
         # @ 群友或显式平台 ID 是确定目标，优先级高于模型可能误填的群昵称
         # username。目标未绑定时也不能悄悄回退成查询发言者本人。
-        model = SbUserData if source == "ppysb" else UserData
-        async with get_session() as session:
-            user = await session.scalar(select(model).where(model.user_id == explicit_target))
+        user = await find_binding(server.id, explicit_target, session_factory=get_session)
         if not user:
-            bind_command = "/sbbind" if source == "ppysb" else "/bind"
-            raise ValueError(f"被查询的群友尚未绑定 osu 账号，请让对方先使用 {bind_command} 用户名")
+            raise ValueError(
+                f"被查询的群友尚未绑定 {server.label} 账号，请让对方先使用 {binding_spec.bind_command} 用户名"
+            )
         return ResolvedOsuUser(
             user.osu_id,
             user.osu_name,
-            default_mode=str(getattr(user, "osu_mode", "0")),
+            default_mode=binding_spec.mode_of(user),
         )
 
     name = _clean_optional_text(username)
     if name:
-        if source == "osu":
-            info = await get_osu_user(name)
-            playmode = str(info.get("playmode") or "osu")
-            return ResolvedOsuUser(
-                int(info["id"]),
-                str(info.get("username") or name),
-                default_mode=str(FGM.get(playmode, 0)),
-            )
-        return ResolvedOsuUser(await get_uid_by_name(name, source), name)
+        resolved = await server.resolve_user_profile(name)
+        return ResolvedOsuUser(
+            resolved.user_id,
+            resolved.username,
+            default_mode=resolved.default_mode.legacy_key,
+        )
 
     bind_user_ids = _tool_user_id_candidates(ctx, target_user_id)
     if not bind_user_ids:
         raise ValueError("当前没有可用的用户 ID，请指定 osu 用户名")
 
-    if source == "ppysb":
-        async with get_session() as session:
-            user = None
-            for bind_user_id in bind_user_ids:
-                user = await session.scalar(select(SbUserData).where(SbUserData.user_id == bind_user_id))
-                if user:
-                    break
-        if not user:
-            raise ValueError("当前用户尚未绑定 osu 账号，请先使用 /sbbind 用户名")
-        return ResolvedOsuUser(user.osu_id, user.osu_name)
-
-    async with get_session() as session:
-        user = None
-        for bind_user_id in bind_user_ids:
-            user = await session.scalar(select(UserData).where(UserData.user_id == bind_user_id))
-            if user:
-                break
-
+    user = await find_binding(server.id, bind_user_ids, session_factory=get_session)
     if not user:
-        raise ValueError("当前用户尚未绑定 osu 账号，请先使用 /bind 用户名")
+        raise ValueError(f"当前用户尚未绑定 {server.label} 账号，请先使用 {binding_spec.bind_command} 用户名")
 
     return ResolvedOsuUser(
         user.osu_id,
         user.osu_name,
-        default_mode=str(user.osu_mode),
+        default_mode=binding_spec.mode_of(user),
     )
 
 
@@ -689,7 +669,7 @@ async def _query_bp_scores(
     summaries: list[dict[str, Any]] = []
     for bp_index in indices:
         score = scores[filtered_indices[bp_index - 1]]
-        if source == "osu":
+        if get_server(source).supports(ServerFeature.LEGACY_SCORE_RULES):
             score = cal_score_info(is_lazer, score, source)
         summaries.append(_score_to_bp_summary(score, bp_index))
     return summaries
@@ -914,7 +894,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             source=source,
             legacy_only=not is_lazer,
         )
-        if source == "osu":
+        if get_server(source).supports(ServerFeature.LEGACY_SCORE_RULES):
             scores = [cal_score_info(is_lazer, score, source) for score in scores]
         bp_list_cache[cache_key] = scores
         return scores
@@ -951,7 +931,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         """
         查询并发送 osu 玩家信息图。
         username 不填时使用当前用户或被 @ 群友绑定的 osu 账号。
-        mode: 0=std, 1=taiko, 2=ctb/fruits, 3=mania。source: osu 或 ppysb。
+        mode: 0=std, 1=taiko, 2=ctb/fruits, 3=mania。source: osu、ppysb/sb 或 g0v0/gu。
         """
         try:
             source = _normalize_source(source)
@@ -1597,7 +1577,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         """查询并发送玩家 pp/rank 历史曲线图。day 为查询最近多少天，0 表示全部。"""
         try:
             source = _normalize_source(source)
-            if source != "osu":
+            if not get_server(source).supports(ServerFeature.PP_HISTORY):
                 return "history 暂仅支持 osu 官方服务器"
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
             mode = _resolve_mode(mode, user, source)
@@ -1663,8 +1643,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             if not score_ls:
                 return f"没有找到 {user.name} 的 bp 成绩"
 
+            server = get_server(source)
             for score in score_ls:
-                if not is_lazer or source == "ppysb":
+                if not is_lazer or not server.supports(ServerFeature.SCORE_VERSION):
                     score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
                 for mod in score.mods:
                     if not score.beatmap:
@@ -1674,7 +1655,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     if mod.acronym == "HT":
                         setattr(score.beatmap, "total_length", score.beatmap.total_length / 0.75)
 
-            score_ls = [cal_score_info(is_lazer, score) for score in score_ls]
+            if server.supports(ServerFeature.LEGACY_SCORE_RULES):
+                score_ls = [cal_score_info(is_lazer, score, source) for score in score_ls]
             data = await build_bpa_data(score_ls, source)
             image = await draw_bpa_plot(
                 f"{user.name} {NGM[mode]} 模式",
@@ -1753,7 +1735,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         try:
             source = _normalize_source(source)
             user = await _resolve_osu_user(ctx, username, source, target_user_id)
-            url = f"https://osu.ppy.sh/u/{user.user_id}" if source == "osu" else f"https://akatsuki.gg/u/{user.user_id}"
+            url = get_server(source).descriptor.profile_url(user.user_id)
             await UniMessage.text(url).send(target=ctx.send_target)
             return f"已发送 {user.name} 的主页链接: {url}"
         except Exception as e:

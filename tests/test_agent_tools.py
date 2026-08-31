@@ -31,12 +31,13 @@ def test_self_reference_placeholders_fall_back_to_bound_context():
 @pytest.mark.asyncio
 async def test_explicit_osu_username_uses_players_preferred_mode(monkeypatch):
     from nonebot_plugin_osubot import agent_tools
+    from nonebot_plugin_osubot.server import PlayMode, ResolvedServerUser
 
     async def fake_user(name: str):
         assert name == "miyuki"
-        return {"id": 42, "username": "miyuki", "playmode": "fruits"}
+        return ResolvedServerUser(42, "miyuki", PlayMode.parse("fruits"))
 
-    monkeypatch.setattr(agent_tools, "get_osu_user", fake_user)
+    monkeypatch.setattr(agent_tools.get_server("osu"), "resolve_user_profile", fake_user)
     user = await agent_tools._resolve_osu_user(SimpleNamespace(), "miyuki", "osu")
 
     assert user.user_id == 42
@@ -147,7 +148,7 @@ async def test_agent_mention_binding_wins_over_model_supplied_group_nickname(mon
     )
     context = SimpleNamespace(event=event, bot_id="1", user_id="12345678")
     monkeypatch.setattr(agent_tools, "get_session", fake_get_session)
-    monkeypatch.setattr(agent_tools, "get_osu_user", forbidden_username_lookup)
+    monkeypatch.setattr(agent_tools.get_server("osu"), "resolve_user_profile", forbidden_username_lookup)
 
     user = await agent_tools._resolve_osu_user(
         context,

@@ -3,6 +3,8 @@ from nonebot.typing import T_State
 from nonebot.internal.adapter import Event
 from nonebot_plugin_alconna import UniMessage
 
+from ..api import get_server
+from ..server import ServerFeature
 from ..utils import NGM
 from .utils import split_msg
 from ..exceptions import NetworkError
@@ -121,7 +123,8 @@ async def _tbp(state: T_State):
 async def _first(state: T_State):
     if "error" in state:
         await UniMessage.text(state["error"]).finish(reply_to=True)
-    if state["source"] != "osu":
+    server = get_server(state["source"])
+    if not server.supports(ServerFeature.FIRST_SCORE, server.parse_mode(state["mode"])):
         await UniMessage.text("第一名成绩仅支持 osu! 官网查询").finish(reply_to=True)
     if not state["range"]:
         if state["target"]:

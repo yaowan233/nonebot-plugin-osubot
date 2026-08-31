@@ -4,8 +4,9 @@ from nonebot_plugin_alconna import UniMessage
 
 from ..utils import NGM
 from .utils import split_msg
-from ..api import get_user_scores
+from ..api import get_server, get_user_scores
 from ..exceptions import NetworkError
+from ..server import ServerFeature
 from ..draw.score import cal_score_info
 from ..draw.echarts import build_bpa_data, draw_bpa_plot
 
@@ -25,15 +26,17 @@ async def _(state: T_State):
         await UniMessage.text(f"在查找用户：{state['username']} {NGM[state['mode']]}模式时 {str(e)}").finish(
             reply_to=True
         )
+    server = get_server(state["source"])
     for score in score_ls:
-        if not state["is_lazer"] or state["source"] == "ppysb":
+        if not state["is_lazer"] or not server.supports(ServerFeature.SCORE_VERSION):
             score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
         for mod in score.mods:
             if mod.acronym == "DT" or mod.acronym == "NC":
                 score.beatmap.total_length /= 1.5
             if mod.acronym == "HT":
                 score.beatmap.total_length /= 0.75
-    score_ls = [cal_score_info(state["is_lazer"], score) for score in score_ls]
+    if server.supports(ServerFeature.LEGACY_SCORE_RULES):
+        score_ls = [cal_score_info(state["is_lazer"], score, state["source"]) for score in score_ls]
     data = await build_bpa_data(score_ls, state["source"])
     name = f"{state['username']} {NGM[state['mode']]} 模式"
     byt = await draw_bpa_plot(

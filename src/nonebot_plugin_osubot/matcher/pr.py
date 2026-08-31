@@ -32,7 +32,7 @@ async def _draw_recent_list(state: T_State, include_fails: bool, project: str):
             not state["is_lazer"],
             include_fails,
             low - 1,
-            high if state["source"] == "ppysb" else high - low + 1,
+            high - low + 1,
         )
         if not scores:
             raise NetworkError("未查询到游玩记录")

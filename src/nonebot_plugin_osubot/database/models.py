@@ -55,6 +55,8 @@ class SbUserData(Model):
     user_id: Mapped[str] = mapped_column(Text, index=True)
     osu_id: Mapped[int] = mapped_column(Integer)
     osu_name: Mapped[str] = mapped_column(Text)
+    # ppysb 独立默认模式（0-8），与官网和 g0v0 绑定互不影响。
+    osu_mode: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class G0v0UserData(Model):

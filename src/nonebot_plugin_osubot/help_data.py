@@ -34,7 +34,7 @@ HELP_TOPICS = {
         "/sc [mapid]：指定谱面成绩；查询过谱面后可省略 mapid\n"
         "/sl [mapid] [范围]：该谱面各 Mod 组合的最佳成绩列表\n"
         "/nb [#天数]：最近新增 BP；/bpa：BP 分析；/hs [#天数]：PP/排名历史\n"
-        "/fix [玩家]:[模式]：计算 BP 中小掉连成绩理论 FC 后的排名与总 PP\n"
+        "/fix [玩家]:[模式]：计算 BP 中小掉连成绩理论 FC 后的排名与总 PP；私服支持常规模式 0-3\n"
         "可附加玩家、模式和 Mods，例如 /bp peppy 5:o +HDHR。\n"
         "BP 列表支持组合筛选：pp、acc、星数、长度、bpm、谱师、标题、难度名、miss、rank、客户端等。\n"
         '示例：/bl pp>=300 acc>=98 星数=5..7；/bl 标题~"Freedom Dive" mods!=HD。\n'
@@ -73,8 +73,10 @@ HELP_TOPICS = {
     "sb": (
         "ppysb 服务器查询\n"
         "/sbbind <玩家>：绑定 ppysb；/sbunbind：解除绑定\n"
+        "/mode:[模式] &sb：查看或修改 ppysb 独立默认模式\n"
         "在普通查询末尾添加 &sb，例如 /info &sb、/bl:4 &sb、/rl:5 &sb、/sc <mapid>:6 &sb。\n"
-        "模式 0/1/2/3：std/taiko/catch/mania；4/5/6：RX std/taiko/catch；8：AP std。"
+        "模式 0/1/2/3：std/taiko/catch/mania；4/5/6：RX std/taiko/catch；8：AP std。\n"
+        "/fix &sb 支持常规模式 0-3；RX/AP 使用私服专用 PP 算法，暂不支持理论 FC。"
     ),
     "g0v0": (
         "g0v0（咕哦服）服务器查询\n"
@@ -83,7 +85,7 @@ HELP_TOPICS = {
         "/rl:5 &gu、/sc <mapid>:6 &gu。\n"
         "模式 0/1/2/3：std/taiko/catch/mania；4/5/6/8：RX std/RX taiko/RX catch/AP std。\n"
         "其他成绩查询与分析指令（/bp、/bl、/re、/rl、/pr、/pl、/sc、/sl、/first、/bpa 等）\n"
-        "均支持 &gu 后缀；g0v0 不支持 /hs，/fix（BP Fix）也仅支持 osu! 官网成绩。"
+        "均支持 &gu 后缀；g0v0 不支持 /hs。/fix &gu 支持常规模式 0-3，暂不支持 RX/AP。"
     ),
 }
 

@@ -20,7 +20,8 @@ from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
 from ..schema.user import UnifiedUser
-from ..api import get_user_info_data, get_user_scores
+from ..api import get_server, get_user_info_data, get_user_scores
+from ..server import ServerFeature
 
 
 _STAR_RATING_MODS = frozenset({"DT", "NC", "HT", "HR", "EZ", "DC", "DA"})
@@ -97,7 +98,7 @@ async def draw_info(
     resources_task = asyncio.create_task(prepare_resources())
     # 对比
     user = None
-    if source == "osu":
+    if get_server(source).supports(ServerFeature.OFFICIAL_SNAPSHOTS):
         try:
             async with get_session() as session:
                 user = await session.scalar(
