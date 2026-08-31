@@ -276,10 +276,11 @@ def test_non_standard_map_forces_native_mode(native: int, requested: int, expect
     ("native", "requested", "expected"),
     [(1, 4, "5"), (1, 6, "5"), (2, 4, "6"), (2, 5, "6"), (3, 4, "3"), (1, 8, "1")],
 )
-def test_ppysb_special_modes_follow_native_ruleset(native: int, requested: int, expected: str):
+@pytest.mark.parametrize("source", ["ppysb", "g0v0"])
+def test_private_server_special_modes_follow_native_ruleset(native: int, requested: int, expected: str, source: str):
     from nonebot_plugin_osubot.utils import normalize_map_mode
 
-    assert normalize_map_mode(requested, native_mode=native, source="ppysb") == expected
+    assert normalize_map_mode(requested, native_mode=native, source=source) == expected
 
 
 @pytest.mark.parametrize(

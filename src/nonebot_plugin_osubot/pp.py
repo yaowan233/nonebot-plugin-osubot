@@ -12,7 +12,7 @@ from .schema.score import Mod, UnifiedScore
 
 
 PPYSB_RELAX_RULESETS = {4, 5, 6}
-RELAX_MODS = {"RX", "RX2"}
+RELAX_MODS = {"RX", "RX2", "AP"}
 
 # osu-tools supports retaining decoded beatmaps and difficulty attributes, but
 # constructing a fresh calculator for every derived value disabled that cache.
@@ -45,14 +45,40 @@ def get_osu_calculator() -> OsuCalculator:
     return _calculator
 
 
+def _mod_has_relax(mod: Mod | str) -> bool:
+    return (mod.acronym if isinstance(mod, Mod) else str(mod)) in RELAX_MODS
+
+
 def is_ppysb_relax_score(score: UnifiedScore, source: str) -> bool:
-    return source == "ppysb" and score.ruleset_id in PPYSB_RELAX_RULESETS
+    if source == "ppysb":
+        return score.ruleset_id in PPYSB_RELAX_RULESETS
+    if source == "g0v0":
+        # g0v0 的 RX/AP 成绩 ruleset_id 仍是 0-3，relax 通过 mods 里的 RX/RX2/AP 表达。
+        return any(_mod_has_relax(m) for m in score.mods)
+    return False
 
 
 def normalize_mods_for_pp(mods: list[Mod] | list[str], source: str, ruleset_id: int):
-    if source == "ppysb" and ruleset_id in PPYSB_RELAX_RULESETS:
-        return [mod for mod in mods if (mod if isinstance(mod, str) else mod.acronym) not in RELAX_MODS]
+    if (source == "ppysb" and ruleset_id in PPYSB_RELAX_RULESETS) or (
+        source == "g0v0" and any(_mod_has_relax(m) for m in mods)
+    ):
+        return [mod for mod in mods if not _mod_has_relax(mod)]
     return mods
+
+
+def without_relax_mods(score: UnifiedScore) -> UnifiedScore:
+    """返回移除了 RX/AP 系 mod 的成绩深拷贝，用于推演非 relax 的 pp 值。
+
+    g0v0/ppysb 的 RX/AP 成绩 mods 含 RX/RX2/AP，本地 rosu-pp 不支持这些 mod；
+    推演（96%/98% ACC、IF FC、SS PP）时移除后按普通规则计算，得到该谱面
+    不带 relax 的 pp 值（如 HDHRRX 成绩显示 HDHR 的推演）。
+    始终返回副本，避免推演函数改写原成绩的 statistics。
+    """
+    mods = score.mods
+    copy = score.model_copy(deep=True)
+    if any(_mod_has_relax(mod) for mod in mods):
+        copy.mods = [mod for mod in copy.mods if not _mod_has_relax(mod)]
+    return copy
 
 
 def normalize_score_for_pp(score: UnifiedScore, source: str = "osu") -> UnifiedScore:

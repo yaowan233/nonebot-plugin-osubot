@@ -14,10 +14,10 @@ from ..exceptions import NetworkError
 from ..schema.user import UnifiedUser
 from ..schema import Beatmap
 from ..beatmap_stats_moder import with_mods
-from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components, get_osu_calculator
+from ..pp import cal_pp, get_if_pp_ss_pp, get_pp_components, get_osu_calculator, without_relax_mods
 from ..schema.score import Mod, UnifiedScore, NewStatistics
 from ..score_query import map_score_to_unified, score_query
-from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores
+from ..api import osu_api, get_user_scores, get_user_info_data, get_ppysb_map_scores, g0v0_map_scores
 from ..file import map_path, ensure_osu_file, user_cache_path, team_cache_path, get_projectimg
 from .utils import (
     is_close,
@@ -142,6 +142,8 @@ async def get_score_data(
             lookup = await score_query.best_beatmap_score(uid, mode, map_json, legacy_only=not is_lazer)
             grank = lookup.position or ""
         score_ls = lookup.scores
+    elif source == "g0v0":
+        score_ls = await g0v0_map_scores(mapid, uid, mode, map_json)
     else:
         score_ls = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
     if not score_ls:
@@ -212,8 +214,13 @@ async def draw_score_pic(score_info: UnifiedScore, info: UnifiedUser, map_json, 
     osu = path / f"{mapinfo.id}.osu"
     pp_info = cal_pp(score_info, str(osu.absolute()), source)
     if_pp, ss_pp = get_if_pp_ss_pp(score_info, str(osu.absolute()), source)
-    display_stars = pp_info.stars
-    display_pp = score_info.pp if source == "ppysb" and score_info.pp is not None else pp_info.pp
+    # 成绩的 PP 优先使用 API 返回值（ppysb/g0v0 按服务器算法计算，含 RX/AP 等特殊模式）
+    display_pp = score_info.pp if source in {"ppysb", "g0v0"} and score_info.pp is not None else pp_info.pp
+    # 星级优先用 API 的 difficulty_rating（RX/AP 等模式下本地算法可能算出 0），
+    # 依次从 score.beatmap / 完整谱面 map_json 取官方值，本地重算仅作兜底。
+    api_stars = score_info.beatmap.stars if score_info.beatmap else None
+    map_stars = getattr(mapinfo, "difficulty_rating", None) or getattr(original_mapinfo, "difficulty_rating", None)
+    display_stars = api_stars or map_stars or pp_info.stars
     return await render_score_template(
         score_info,
         info,
@@ -342,6 +349,9 @@ async def render_score_template(
     mode_names = ["标准模式", "太鼓模式", "接水果模式", "键盘模式"]
     mode_codes = ["STD", "TAIKO", "CTB", "MANIA"]
     stats = score_info.statistics
+    # 推演一律基于移除了 RX/AP mod 的成绩副本（非 relax 的 pp 值），
+    # 且不污染 score_info.statistics 的判定数显示。
+    pp_score = without_relax_mods(score_info)
 
     if mode == 0:
         judgements = [
@@ -413,13 +423,13 @@ async def render_score_template(
             accuracy_pp[target_accuracy] = calculator.calculate(
                 osu_path,
                 mode,
-                score_info.mods,
+                pp_score.mods,
                 target_accuracy,
             ).pp
     except Exception:
         accuracy_pp = dict.fromkeys(target_accuracies, "nan")
     try:
-        mode_pp = get_pp_components(score_info, osu_path, source)
+        mode_pp = get_pp_components(pp_score, osu_path, source)
     except Exception:
         mode_pp = {}
 

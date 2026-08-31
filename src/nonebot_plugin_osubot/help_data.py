@@ -76,6 +76,15 @@ HELP_TOPICS = {
         "在普通查询末尾添加 &sb，例如 /info &sb、/bl:4 &sb、/rl:5 &sb、/sc <mapid>:6 &sb。\n"
         "模式 0/1/2/3：std/taiko/catch/mania；4/5/6：RX std/taiko/catch；8：AP std。"
     ),
+    "g0v0": (
+        "g0v0（咕哦服）服务器查询\n"
+        "/gubind <玩家>：绑定 g0v0 账号；/guunbind：解除绑定\n"
+        "在普通查询末尾添加 &gu 即可切换到 g0v0 服务器，例如 /info &gu、/bl:4 &gu、\n"
+        "/rl:5 &gu、/sc <mapid>:6 &gu。\n"
+        "模式 0/1/2/3：std/taiko/catch/mania；4/5/6/8：RX std/RX taiko/RX catch/AP std。\n"
+        "其他成绩查询与分析指令（/bp、/bl、/re、/rl、/pr、/pl、/sc、/sl、/first、/bpa 等）\n"
+        "均支持 &gu 后缀；g0v0 不支持 /hs，/fix（BP Fix）也仅支持 osu! 官网成绩。"
+    ),
 }
 
 TOPIC_ALIASES = {
@@ -151,9 +160,14 @@ TOPIC_ALIASES = {
     "sb服": "sb",
     "sbbind": "sb",
     "sbunbind": "sb",
+    "g0v0": "g0v0",
+    "gu": "g0v0",
+    "咕哦服": "g0v0",
+    "gubind": "g0v0",
+    "guunbind": "g0v0",
 }
 
-TOPIC_LABELS = "概览、绑定、模式、成绩、谱面、资料、多人、SB服、全部"
+TOPIC_LABELS = "概览、绑定、模式、成绩、谱面、资料、多人、SB服、g0v0、全部"
 
 
 def get_command_help(topic: str | None = "overview") -> str:

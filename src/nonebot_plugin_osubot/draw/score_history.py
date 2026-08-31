@@ -8,7 +8,7 @@ from ..schema import Beatmap, NewScore
 from ..exceptions import NetworkError
 from ..mods import get_mods_list, get_speed_change_labels
 from ..schema.score import NewStatistics, UnifiedScore, get_score_version
-from ..api import osu_api, get_user_info_data, get_ppysb_map_scores
+from ..api import osu_api, get_user_info_data, get_ppysb_map_scores, g0v0_map_scores
 from ..score_query import score_query
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from .score import _player_avatar_data_uri, cal_score_info
@@ -96,6 +96,8 @@ async def draw_score_history(
     if source == "osu":
         lookup = await score_query.list_beatmap_scores(uid, mode, map_json, legacy_only=not is_lazer)
         scores = lookup.scores
+    elif source == "g0v0":
+        scores = await g0v0_map_scores(map_id, uid, mode, map_json)
     else:
         scores = await get_ppysb_map_scores(map_json["checksum"], uid, mode)
 
@@ -170,7 +172,7 @@ async def draw_score_history(
     avatar_data = await _player_avatar_data_uri(info, source)
     map_star_color, map_star_text = _star_style(beatmap.difficulty_rating)
     data = {
-        "source": "ppysb" if source == "ppysb" else "osu!",
+        "source": "ppysb" if source == "ppysb" else "g0v0" if source == "g0v0" else "osu!",
         "score_version": "Stable" if not is_lazer else "Lazer + Stable",
         "mode": mode,
         "generated_at": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),

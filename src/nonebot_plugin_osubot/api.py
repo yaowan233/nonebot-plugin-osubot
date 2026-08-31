@@ -4,7 +4,7 @@ import time
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote, urlencode
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Union, Literal, Optional
 
 from nonebot.log import logger
@@ -49,6 +49,30 @@ osu_api_scheduler = OsuApiScheduler(
     max_retries=plugin_config.osu_api_max_retries,
 )
 
+# ===========================================================================
+# g0v0（咕哦服）服务器：兼容 osu! API v2 的第三方服务器，&gu 后缀查询使用。
+# 与官方 osu! API 完全隔离：独立缓存/锁/token，公开数据端点支持匿名访问。
+# ===========================================================================
+g0v0_api = f"{plugin_config.g0v0_api_base.rstrip('/')}/api/v2"
+g0v0_token_cache = ExpiringDict(max_len=1, max_age_seconds=86400)
+_g0v0_token_lock = asyncio.Lock()
+# g0v0 的 client_credentials 白名单 scope 不含 public，token 基本只能匿名查询；
+# 标记避免每次请求都重复尝试获取 token。
+_g0v0_token_failed = False
+
+# 用户查询模式（SB 风格 0-8）→ g0v0 GameMode 字符串。
+# 4/5/6/8 与 ppysb 习惯一致：RX std / RX taiko / RX catch / AP std。
+G0V0_MODE = {
+    "osu": "osu",
+    "taiko": "taiko",
+    "fruits": "fruits",
+    "mania": "mania",
+    "rxosu": "osurx",
+    "aposu": "osuap",
+    "rxtaiko": "taikorx",
+    "rxfruits": "fruitsrx",
+}
+
 
 @auto_retry
 async def _direct_async_get(url, headers: Optional[dict] = None, params: Optional[dict] = None) -> Response:
@@ -92,6 +116,239 @@ async def safe_async_post(url, headers=None, data=None, json=None) -> Response |
 async def close_osu_api_network() -> None:
     await osu_api_scheduler.close()
     await network_manager.close()
+
+
+# ===========================================================================
+# g0v0：token / 请求头 / 匿名降级 / 数据解析
+# ===========================================================================
+
+
+async def g0v0_renew_token():
+    url = f"{g0v0_api.rsplit('/api/v2', 1)[0]}/oauth/token"
+    if not plugin_config.g0v0_key or not plugin_config.g0v0_client:
+        raise Exception("请设置 g0v0 OAuth Client ID/Secret（G0V0_CLIENT / G0V0_KEY）")
+    # g0v0 的 /oauth/token 用 Form 字段接收参数（不是 JSON body）。
+    req = await safe_async_post(
+        url,
+        data={
+            "client_id": str(plugin_config.g0v0_client),
+            "client_secret": plugin_config.g0v0_key,
+            "grant_type": "client_credentials",
+            "scope": "public",
+        },
+    )
+    if not req or req.status_code != 200:
+        status = req.status_code if req else "无响应"
+        raise NetworkError(f"更新 g0v0 token 失败：{status}")
+    g0v0_token_cache.update({"token": req.json()["access_token"]})
+
+
+async def g0v0_headers() -> dict[str, str]:
+    """返回 g0v0 API 请求头；token 获取失败时降级为匿名请求。"""
+    global _g0v0_token_failed
+    token = g0v0_token_cache.get("token")
+    if not token and not _g0v0_token_failed:
+        async with _g0v0_token_lock:
+            token = g0v0_token_cache.get("token")
+            if not token:
+                try:
+                    await g0v0_renew_token()
+                except Exception as error:
+                    _g0v0_token_failed = True
+                    logger.warning(f"获取 g0v0 token 失败，将以匿名方式请求: {error}")
+                    return {"x-api-version": "20220705"}
+                token = g0v0_token_cache.get("token")
+    if not token:
+        return {"x-api-version": "20220705"}
+    return {"Authorization": f"Bearer {token}", "x-api-version": "20220705"}
+
+
+async def g0v0_make_request(url: str, error_message: str, headers: dict | None = None) -> dict:
+    """g0v0 请求：带 token 失败时（scope 不足等）降级为匿名重试一次。"""
+    req = await safe_async_get(url, headers=headers or await g0v0_headers())
+    if not req:
+        raise NetworkError("多次 api 请求失败，请稍后再试")
+    if req.status_code == 404:
+        raise NetworkError(error_message)
+    if req.status_code == 200:
+        return req.json()
+    if headers is None:
+        anon_req = await safe_async_get(url, headers={"x-api-version": "20220705"})
+        if anon_req and anon_req.status_code == 200:
+            return anon_req.json()
+        if anon_req and anon_req.status_code == 404:
+            raise NetworkError(error_message)
+    raise NetworkError(f"出现了未意料的响应码 {req.status_code}")
+
+
+def parse_iso_time(value: str | None) -> datetime:
+    """解析 ISO 时间戳（g0v0 返回带时区偏移或 Z），统一转为 UTC+8 的 naive datetime。"""
+    if not value:
+        return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=8)
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError:
+        dt = datetime.strptime(text[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone(timedelta(hours=8))).replace(tzinfo=None)
+
+
+def _normalize_statistics(raw: dict | None) -> NewStatistics:
+    """把 g0v0 score 的 statistics 统一成 NewStatistics。
+
+    g0v0 返回的 statistics 键可能用 lazer 新格式（great/ok/meh/miss/perfect/good），
+    也可能用 legacy 格式（count_300/count_100/count_50/count_miss/...），
+    这里同时兼容两种命名。
+    """
+    if not raw:
+        return NewStatistics()
+    values: dict[str, int] = {}
+    for key, value in (raw or {}).items():
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            values[str(key)] = int(value)
+
+    def pick(*names: str) -> Optional[int]:
+        for name in names:
+            if name in values:
+                return values[name]
+        return None
+
+    return NewStatistics(
+        great=pick("great", "count_300", "n300"),
+        ok=pick("ok", "count_100", "n100"),
+        meh=pick("meh", "count_50", "n50"),
+        miss=pick("miss", "count_miss", "nmiss"),
+        perfect=pick("perfect", "count_geki", "ngeki"),
+        good=pick("good", "count_katu", "nkatu"),
+        large_tick_hit=pick("large_tick_hit"),
+        small_tick_hit=pick("small_tick_hit"),
+        small_tick_miss=pick("small_tick_miss", "count_small_tick_miss"),
+        slider_tail_hit=pick("slider_tail_hit"),
+    )
+
+
+def _read_field(data: object | None, name: str):
+    if isinstance(data, dict):
+        return data.get(name)
+    return getattr(data, name, None)
+
+
+def _first_value(*values):
+    return next((value for value in values if value is not None), None)
+
+
+def _build_unified_beatmap(score: "NewScore", fallback_beatmap: dict | None = None) -> UnifiedBeatmap:
+    """从 g0v0 score 响应构造统一谱面信息，并用官网谱面数据补全缺失字段。"""
+    beatmap = score.beatmap
+    beatmapset = score.beatmapset
+    fallback_beatmap = fallback_beatmap or {}
+    fallback_beatmapset = fallback_beatmap.get("beatmapset")
+
+    def beatmap_value(name: str):
+        return _first_value(_read_field(beatmap, name), _read_field(fallback_beatmap, name))
+
+    def beatmapset_value(name: str):
+        return _first_value(_read_field(beatmapset, name), _read_field(fallback_beatmapset, name))
+
+    set_id = _first_value(
+        _read_field(beatmap, "beatmapset_id"),
+        _read_field(beatmapset, "id"),
+        _read_field(fallback_beatmap, "beatmapset_id"),
+        _read_field(fallback_beatmapset, "id"),
+    )
+    if set_id is None:
+        raise NetworkError("g0v0 返回的谱面数据缺少 beatmapset_id")
+
+    mode_int = beatmap_value("mode_int")
+    if mode_int is None:
+        mode_int = {"osu": 0, "taiko": 1, "fruits": 2, "mania": 3}.get(beatmap_value("mode"), 0)
+    return UnifiedBeatmap(
+        id=score.beatmap_id,
+        user_id=beatmap_value("user_id"),
+        set_id=set_id,
+        artist=beatmapset_value("artist") or "",
+        title=beatmapset_value("title") or "",
+        version=beatmap_value("version") or "",
+        creator=beatmapset_value("creator") or "",
+        total_length=int(beatmap_value("total_length") or 0),
+        mode=mode_int,
+        bpm=beatmap_value("bpm"),
+        cs=beatmap_value("cs"),
+        ar=beatmap_value("ar"),
+        hp=beatmap_value("drain"),
+        od=beatmap_value("accuracy"),
+        stars=beatmap_value("difficulty_rating"),
+        checksum=beatmap_value("checksum"),
+        convert=beatmap_value("convert"),
+        status=beatmap_value("status"),
+        is_scoreable=beatmap_value("is_scoreable"),
+        max_combo=beatmap_value("max_combo"),
+        count_circles=beatmap_value("count_circles"),
+        count_sliders=beatmap_value("count_sliders"),
+        count_spinners=beatmap_value("count_spinners"),
+    )
+
+
+def _g0v0_scores_to_unified(scores: list["NewScore"], fallback_beatmap: dict | None = None) -> list[UnifiedScore]:
+    """把 g0v0 ScoreResp 列表统一成 UnifiedScore。"""
+    return [
+        UnifiedScore(
+            score_id=i.id,
+            user_id=i.user_id,
+            mods=i.mods,
+            ruleset_id=i.ruleset_id,
+            rank=i.rank,
+            accuracy=i.accuracy * 100,
+            total_score=i.total_score,
+            ended_at=parse_iso_time(i.ended_at),
+            max_combo=i.max_combo,
+            statistics=_normalize_statistics(i.statistics or i.maximum_statistics),
+            legacy_total_score=i.legacy_total_score,
+            passed=i.passed,
+            pp=i.pp,
+            score_version=get_score_version(i.legacy_score_id),
+            beatmap=_build_unified_beatmap(i, fallback_beatmap),
+            beatmapset=i.beatmapset,
+        )
+        for i in scores
+    ]
+
+
+async def g0v0_fetch_score_batch(
+    uid: Union[int, str],
+    mode: str,
+    scope: str,
+    batch_size: int,
+    offset: int,
+    include_failed: bool,
+) -> list[UnifiedScore]:
+    """并发获取 g0v0 单次批次成绩数据。"""
+    g0v0_mode = G0V0_MODE.get(mode, mode)
+    url = (
+        f"{g0v0_api}/users/{uid}/scores/{scope}?mode={g0v0_mode}&limit={batch_size}"
+        f"&offset={offset}&include_fails={int(include_failed)}"
+    )
+    data = await g0v0_make_request(url, "未找到该玩家BP")
+    if not data:
+        return []
+    return _g0v0_scores_to_unified([NewScore(**i) for i in data])
+
+
+async def g0v0_map_scores(
+    map_id: int, uid: Union[int, str], mode: str, fallback_beatmap: dict | None = None
+) -> list[UnifiedScore]:
+    """查询 g0v0 某谱面上指定玩家的全部成绩。"""
+    g0v0_mode = G0V0_MODE.get(mode, mode)
+    query = urlencode({"ruleset": g0v0_mode})
+    url = f"{g0v0_api}/beatmaps/{map_id}/scores/users/{uid}/all?{query}"
+    data = await g0v0_make_request(url, "未找到该谱面成绩，请检查是否搞混了mapID与setID或模式")
+    if not data:
+        return []
+    return _g0v0_scores_to_unified([NewScore(**i) for i in data], fallback_beatmap)
 
 
 async def renew_token():
@@ -283,6 +540,30 @@ async def get_user_scores(
             for i in filtered_scores
         ]
 
+    elif source == "g0v0":
+        if limit <= 0:
+            return []
+        batch_size = 100
+        total_batches = (limit + batch_size - 1) // batch_size  # ceiling(limit/batch_size)
+        all_scores = []
+        # 分批并发请求
+        for batch_idx in range(0, total_batches, 2):
+            current_batches = range(batch_idx, min(batch_idx + 2, total_batches))
+            tasks = []
+            for batch_n in current_batches:
+                batch_offset = offset + batch_n * batch_size
+                actual_batch_size = min(batch_size, limit - batch_n * batch_size)
+                if actual_batch_size <= 0:
+                    continue
+                task = g0v0_fetch_score_batch(uid, mode, scope, actual_batch_size, batch_offset, include_failed)
+                tasks.append(task)
+            batch_results = await asyncio.gather(*tasks)
+            for batch_scores in batch_results:
+                all_scores.extend(batch_scores)
+                if len(all_scores) >= limit:
+                    return all_scores[:limit]
+        return all_scores[:limit]
+
 
 async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu") -> UnifiedUser:
     if source == "osu":
@@ -318,6 +599,14 @@ async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu
         if mode == "aposu":
             info_data.statistics = parse_statistics(data, "8")
         return info_data
+
+    elif source == "g0v0":
+        # g0v0 的 /users/{id} 端点不带 mode 参数（只返回用户主模式统计），
+        # 需使用官方格式的 /users/{id}/{ruleset} 获取指定模式的资料。
+        g0v0_mode = G0V0_MODE.get(mode, mode)
+        url = f"{g0v0_api}/users/{uid}/{g0v0_mode}"
+        data = await g0v0_make_request(url, "未找到该玩家，请确认玩家ID")
+        return UnifiedUser(**data)
 
 
 def parse_statistics(data: InfoResponse, mode):
@@ -455,10 +744,62 @@ async def get_uid_by_name(name: str, source: str) -> int:
     if source == "osu":
         info = await get_osu_user(name)
         return info["id"]
+    elif source == "g0v0":
+        info = await g0v0_get_osu_user(name)
+        return info["id"]
     else:
         url = f"https://api.ppy.sb/v1/get_player_info?scope=all&name={name}"
         data = await make_request(url, {}, "未找到该玩家，请确认玩家ID是否正确")
         return data["player"]["info"]["id"]
+
+
+async def g0v0_get_osu_user(identifier: str) -> dict:
+    """解析 g0v0 用户名 / UID / 主页链接。
+
+    g0v0 的 /users/{user} 忽略 key 参数，非数字一律按用户名大小写敏感匹配
+    （utf8mb4_bin）。为兼容玩家输入大小写差异，依次尝试常见变体；
+    纯数字输入在用户名查不到时回退按 UID 查询。
+    """
+    identifier = identifier.strip()
+    profile_id = extract_user_id(identifier)
+    if profile_id:
+        return await g0v0_make_request(f"{g0v0_api}/users/{profile_id}", "未找到该玩家，请确认玩家ID是否正确")
+
+    key: str | None = None
+    value = identifier
+    if ":" in identifier:
+        prefix, explicit_value = identifier.split(":", 1)
+        if prefix.lower() in {"id", "uid"}:
+            key, value = "id", explicit_value.strip()
+        elif prefix.lower() in {"name", "user"}:
+            key, value = "username", explicit_value.strip()
+
+    if not value:
+        raise NetworkError("用户名或 UID 不能为空")
+    if key == "id":
+        return await g0v0_make_request(f"{g0v0_api}/users/{quote(value)}", "未找到该玩家，请确认玩家ID是否正确")
+
+    candidates = [value]
+    lowered = value.lower()
+    if lowered not in candidates:
+        candidates.append(lowered)
+    title = (value[0].upper() + value[1:].lower()) if value else value
+    if title not in candidates:
+        candidates.append(title)
+    upper = value.upper()
+    if upper not in candidates:
+        candidates.append(upper)
+
+    for candidate in candidates:
+        try:
+            return await g0v0_make_request(f"{g0v0_api}/users/{quote(candidate)}", "未找到该玩家，请确认玩家ID是否正确")
+        except NetworkError:
+            continue
+
+    if value.isdigit():
+        return await g0v0_make_request(f"{g0v0_api}/users/{value}", "未找到该玩家，请确认玩家ID是否正确")
+
+    raise NetworkError("未找到该玩家，请确认玩家ID是否正确")
 
 
 async def get_osu_user(identifier: str) -> dict:

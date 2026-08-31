@@ -28,3 +28,7 @@ def test_all_help_contains_important_short_commands():
 
 def test_unknown_help_topic_returns_available_topics():
     assert "可用主题" in get_command_help("not-a-topic")
+
+
+def test_g0v0_help_marks_history_as_official_only():
+    assert "不支持 /hs" in HELP_TOPICS["g0v0"]

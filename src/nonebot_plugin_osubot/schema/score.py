@@ -5,7 +5,7 @@ from pydantic.fields import Field
 
 from .basemodel import Base
 from .user import UserCompact
-from .beatmap import Beatmap, Beatmapset
+from .beatmap import Beatmap, Beatmapset, BeatmapCompact, BeatmapsetCompact
 
 
 class Statistics(Base):
@@ -72,9 +72,9 @@ class NewScore(Base):
     is_perfect_combo: bool
     legacy_perfect: bool
     legacy_score_id: Optional[int] = None
-    legacy_total_score: int
+    legacy_total_score: Optional[int] = None
     max_combo: int
-    maximum_statistics: Optional[Statistics] = None
+    maximum_statistics: Optional[dict] = None
     mods: list[Mod]
     passed: bool
     playlist_item_id: Optional[int] = None
@@ -85,12 +85,14 @@ class NewScore(Base):
     room_id: Optional[int] = None
     ruleset_id: int
     started_at: Optional[str] = None
-    statistics: Optional[NewStatistics] = None
+    statistics: Optional[dict] = None
     total_score: int
     type: str
     user_id: int
-    beatmap: Optional[Beatmap] = None
-    beatmapset: Optional[Beatmapset] = None
+    # g0v0 的 score.beatmap 是精简 Compact，官方 API 也返回 Compact；
+    # 完整难度字段由 draw 层通过 /beatmaps/{id} 单独获取。
+    beatmap: Optional[BeatmapCompact] = None
+    beatmapset: Optional[BeatmapsetCompact] = None
     # current_user_attributes: Optional[int]
     position: Optional[int] = None
     rank_country: Optional[int] = None
@@ -107,12 +109,12 @@ class UnifiedBeatmap(Base):
     creator: str
     total_length: int
     mode: int
-    bpm: float
-    cs: float
-    od: float
-    ar: float
-    hp: float
-    stars: float
+    bpm: Optional[float] = None
+    cs: Optional[float] = None
+    od: Optional[float] = None
+    ar: Optional[float] = None
+    hp: Optional[float] = None
+    stars: Optional[float] = None
     checksum: Optional[str] = None
     user_id: Optional[int] = None
     convert: Optional[bool] = False
@@ -137,7 +139,8 @@ class UnifiedScore(Base):
     beatmap: Optional[UnifiedBeatmap] = None
     passed: bool
     pp: Optional[float] = None
-    beatmapset: Optional[Beatmapset] = None
+    # g0v0 的 score.beatmapset 是精简对象，统一用 Compact 类型承载。
+    beatmapset: Optional[BeatmapsetCompact] = None
     score_version: Optional[Literal["stable", "lazer"]] = None
     score_id: Optional[int] = None
     user_id: Optional[int] = None

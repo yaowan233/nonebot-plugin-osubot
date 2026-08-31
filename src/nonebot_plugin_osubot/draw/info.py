@@ -96,34 +96,42 @@ async def draw_info(
 
     resources_task = asyncio.create_task(prepare_resources())
     # 对比
-    try:
-        async with get_session() as session:
-            user = await session.scalar(
-                select(InfoData)
-                .where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode])
-                .order_by(InfoData.date.desc())
-            )
-            if user:
-                today_date = date.today()
-                # 补全今天记录的 c_rank（批量更新接口不返回 country_rank）
-                today_record = await session.scalar(
-                    select(InfoData).where(
-                        InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode], InfoData.date == today_date
-                    )
-                )
-                if today_record and today_record.c_rank is None and statistics.country_rank is not None:
-                    today_record.c_rank = statistics.country_rank
-                    await session.commit()
-                query_date = today_date - timedelta(days=day)
+    user = None
+    if source == "osu":
+        try:
+            async with get_session() as session:
                 user = await session.scalar(
                     select(InfoData)
-                    .where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode], InfoData.date >= query_date)
-                    .order_by(InfoData.date)
+                    .where(InfoData.osu_id == info.id, InfoData.osu_mode == FGM[mode])
+                    .order_by(InfoData.date.desc())
                 )
-    except BaseException:
-        resources_task.cancel()
-        await asyncio.gather(resources_task, return_exceptions=True)
-        raise
+                if user:
+                    today_date = date.today()
+                    # 补全今天记录的 c_rank（批量更新接口不返回 country_rank）
+                    today_record = await session.scalar(
+                        select(InfoData).where(
+                            InfoData.osu_id == info.id,
+                            InfoData.osu_mode == FGM[mode],
+                            InfoData.date == today_date,
+                        )
+                    )
+                    if today_record and today_record.c_rank is None and statistics.country_rank is not None:
+                        today_record.c_rank = statistics.country_rank
+                        await session.commit()
+                    query_date = today_date - timedelta(days=day)
+                    user = await session.scalar(
+                        select(InfoData)
+                        .where(
+                            InfoData.osu_id == info.id,
+                            InfoData.osu_mode == FGM[mode],
+                            InfoData.date >= query_date,
+                        )
+                        .order_by(InfoData.date)
+                    )
+        except BaseException:
+            resources_task.cancel()
+            await asyncio.gather(resources_task, return_exceptions=True)
+            raise
     avatar_data, team_data = await resources_task
     if user:
         n_crank = user.c_rank

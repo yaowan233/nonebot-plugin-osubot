@@ -8,6 +8,10 @@ class Config(BaseModel):
     osu_client: Optional[int] = None
     osu_key: Optional[str] = None
     osu_proxy: Optional[Union[str, dict]] = None
+    # g0v0（咕哦服）服务器配置：与官方 osu! API 并列的第二个数据源（&gu 后缀）。
+    g0v0_api_base: str = "https://lazer-api.g0v0.top"
+    g0v0_client: Optional[int] = None
+    g0v0_key: Optional[str] = None
     osutrack_enabled: bool = True
     osutrack_default_days: int = 365
     osu_recommend_api: str = "https://mayumi.xyz"
