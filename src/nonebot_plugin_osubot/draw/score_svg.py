@@ -13,7 +13,7 @@ from functools import lru_cache
 from PIL import Image, ImageColor, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 from .svg_components import mod_strip
-from .svg_render import FONT_FAMILY, escape_text, fit_text, font_for_text, render_svg_png
+from .svg_render import FONT_FAMILY, escape_text, fit_text, font_for_text, render_svg_png, truncate_text
 
 
 WIDTH = 1440
@@ -333,7 +333,8 @@ def _render_map_strip(data: dict) -> str:
     reserved = star_width + 12 + (estimated_mod_width + 12 if mod_items else 0)
     title_max = max(190, min(440, 1030 - info_x - reserved))
     title_size = fit_text(title, title_max, 46, 24)
-    title_width = min(title_max, _text_width(title, title_size))
+    title = truncate_text(title, title_max, title_size)
+    title_width = _text_width(title, title_size)
     star_x = round(info_x + title_width + 12)
     mods_x = star_x + star_width + 12
     mods_svg = mod_strip(
@@ -349,8 +350,10 @@ def _render_map_strip(data: dict) -> str:
 
     accent, _accent_dark = _mode_style(data)
     artist_size = fit_text(artist, 285, 17, 12)
-    artist_width = min(285, _text_width(artist, artist_size))
+    artist = truncate_text(artist, 285, artist_size)
+    artist_width = _text_width(artist, artist_size)
     version_width = max(76, min(280, round(_text_width(version, 14) + 22)))
+    version = truncate_text(version, version_width - 22, 14)
     version_x = round(info_x + artist_width + 28)
     map_id_x = version_x + version_width + 28
     quick_items = [
@@ -445,6 +448,7 @@ def _render_identity(data: dict) -> str:
         if data.get("country_rank"):
             ranks.append(f"{data.get('country', '')} #{data['country_rank']}")
         player_meta = " · ".join(ranks) or f"UID {data.get('user_id', '')}"
+    player_meta = truncate_text(player_meta, 244, 13)
     stat_bits = []
     if data.get("global_rank"):
         stat_bits.append(f"全球排名: #{data['global_rank']}")

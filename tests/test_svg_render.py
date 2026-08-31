@@ -1,5 +1,6 @@
 import statistics
 import time
+import xml.etree.ElementTree as ElementTree
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 
@@ -12,6 +13,48 @@ def test_fit_text_shrinks_long_labels():
 
     assert fit_text("short", 500, 54, 30) == 54
     assert fit_text("A very long beatmap title that cannot fit the slot", 300, 54, 30) < 54
+
+
+def test_score_svg_long_metadata_stays_inside_its_slots():
+    from nonebot_plugin_osubot.draw.score_svg import _render_identity, _render_map_strip
+    from nonebot_plugin_osubot.draw.svg_render import text_width
+
+    title = "Denial // Rebirth " * 8
+    artist = "Crystal Lake and an Extremely Long Featured Artist Name"
+    version = "Emptiness Within Finally Yielding to a Fierce New Vision"
+    team_name = "Furry Gaming International Championship Division"
+    map_data = {"title": title, "artist": artist, "version": version, "stars": "14.76"}
+    map_root = ElementTree.fromstring(
+        f"<svg>{_render_map_strip(map_data)}</svg>"
+    )
+    map_texts = list(map_root.iter("text"))
+    title_node = next(node for node in map_texts if node.attrib["y"] == "151")
+    artist_node = next(node for node in map_texts if node.attrib["x"] == "368" and node.attrib["y"] == "186")
+    version_node = next(node for node in map_texts if node.attrib["y"] == "183")
+    star_rect = next(node for node in map_root.iter("rect") if node.attrib.get("y") == "122")
+    version_rect = next(node for node in map_root.iter("rect") if node.attrib.get("y") == "164")
+
+    rendered_title = title_node.text or ""
+    rendered_version = version_node.text or ""
+    assert rendered_title.endswith("…")
+    assert text_width(rendered_title, int(title_node.attrib["font-size"])) <= (
+        float(star_rect.attrib["x"]) - float(title_node.attrib["x"]) - 12
+    )
+    rendered_artist = artist_node.text or ""
+    assert rendered_artist.endswith("…")
+    assert text_width(rendered_artist, int(artist_node.attrib["font-size"])) <= 285
+    assert rendered_version.endswith("…")
+    assert text_width(rendered_version, int(version_node.attrib["font-size"])) <= (
+        float(version_rect.attrib["width"]) - 22
+    )
+
+    identity_root = ElementTree.fromstring(
+        f"<svg>{_render_identity({'username': 'KayotoRahn', 'team': {'short_name': 'FUR', 'name': team_name}})}</svg>"
+    )
+    team_node = next(node for node in identity_root.iter("text") if node.attrib.get("y") == "708")
+    rendered_team = team_node.text or ""
+    assert rendered_team.endswith("…")
+    assert text_width(rendered_team, int(team_node.attrib["font-size"])) <= 244
 
 
 def test_render_svg_jpeg_uses_requested_size():
