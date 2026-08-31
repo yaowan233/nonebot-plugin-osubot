@@ -24,9 +24,7 @@ def test_score_svg_long_metadata_stays_inside_its_slots():
     version = "Emptiness Within Finally Yielding to a Fierce New Vision"
     team_name = "Furry Gaming International Championship Division"
     map_data = {"title": title, "artist": artist, "version": version, "stars": "14.76"}
-    map_root = ElementTree.fromstring(
-        f"<svg>{_render_map_strip(map_data)}</svg>"
-    )
+    map_root = ElementTree.fromstring(f"<svg>{_render_map_strip(map_data)}</svg>")
     map_texts = list(map_root.iter("text"))
     title_node = next(node for node in map_texts if node.attrib["y"] == "151")
     artist_node = next(node for node in map_texts if node.attrib["x"] == "368" and node.attrib["y"] == "186")
