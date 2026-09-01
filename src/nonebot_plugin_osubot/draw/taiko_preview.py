@@ -260,7 +260,7 @@ def _draw_preview_note(draw: ImageDraw.ImageDraw, x: int, y: int, kind: int) -> 
         draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=PREVIEW_MUTED)
 
 
-def map_to_image(map_data) -> BytesIO:
+def map_to_image(map_data, *, show_metadata: bool = True) -> BytesIO:
     timing_sections = []
     separating_times = [point[0] for point in map_data.timing_points]
     separating_times.append(10**10)
@@ -294,7 +294,8 @@ def map_to_image(map_data) -> BytesIO:
     row_distance = 58
     section_gap = 16
     image_width = LEFT_MARGIN * 2 + BEAT_WIDTH * 4 * max_meter
-    image_height = 28 + sum(layout[-1] * row_distance + section_gap for layout in layouts) + 38
+    footer_height = 38 if show_metadata else 0
+    image_height = 28 + sum(layout[-1] * row_distance + section_gap for layout in layouts) + footer_height
     image = Image.new("RGB", (image_width, image_height), PREVIEW_BACKGROUND)
     draw = ImageDraw.Draw(image)
 
@@ -359,8 +360,9 @@ def map_to_image(map_data) -> BytesIO:
 
         section_y += row_count * row_distance + section_gap
 
-    footer = f"{map_data.artist} — {map_data.title} [{map_data.diff}] · OSUBOT FULL MAP"
-    draw.text((LEFT_MARGIN, image.height - 25), footer, font=Torus_Regular_15, fill="#445560")
+    if show_metadata:
+        footer = f"{map_data.artist} — {map_data.title} [{map_data.diff}] · OSUBOT FULL MAP"
+        draw.text((LEFT_MARGIN, image.height - 25), footer, font=Torus_Regular_15, fill="#445560")
     result = BytesIO()
     image.save(result, "PNG")
     return result

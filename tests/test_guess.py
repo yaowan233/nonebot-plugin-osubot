@@ -308,6 +308,34 @@ async def test_guess_pic_all_songs_guessed(app: App):
 # ---------------------------------------------------------------------------
 
 
+def test_taiko_preview_can_hide_beatmap_metadata():
+    """关闭元数据时，太鼓预览不得把曲名绘制到图片中。"""
+    from nonebot_plugin_osubot.draw.taiko_preview import MapData, map_to_image
+
+    beatmap = MapData(
+        title="Secret Song",
+        artist="Secret Artist",
+        creator="mapper",
+        diff="Oni",
+        hp=5,
+        od=5,
+        timing_points=[(0, 500, 4)],
+        hit_objects=[(0, 1)],
+    )
+    draw = MagicMock()
+
+    with patch("nonebot_plugin_osubot.draw.taiko_preview.ImageDraw.Draw", return_value=draw):
+        map_to_image(beatmap, show_metadata=False)
+        hidden_text = [call.args[1] for call in draw.text.call_args_list]
+        draw.reset_mock()
+        map_to_image(beatmap)
+
+    visible_text = [call.args[1] for call in draw.text.call_args_list]
+    assert not any("Secret Song" in text for text in hidden_text)
+    assert not any("Secret Artist" in text for text in hidden_text)
+    assert any("Secret Song" in text for text in visible_text)
+
+
 @pytest.mark.asyncio
 async def test_guess_chart_mode_0_supported(app: App):
     """osu 模式（mode=0）支持谱面猜歌并发送预览图。"""
@@ -331,6 +359,38 @@ async def test_guess_chart_mode_0_supported(app: App):
                             ctx.should_call_send(event, ANY, result={"message_id": 1})
                             ctx.receive_event(bot, event)
                             ctx.should_finished()
+
+
+@pytest.mark.asyncio
+async def test_guess_chart_taiko_hides_beatmap_metadata(app: App):
+    """太鼓谱面猜歌的题面不能在图片页脚泄露曲名等谱面信息。"""
+    try:
+        from nonebot_plugin_osubot.matcher.guess import guess_chart
+    except ImportError:
+        pytest.skip("nonebot_plugin_osubot not available")
+    import nonebot
+
+    event = fake_group_message_event_v11(message=Message("/谱面猜歌"))
+    score = make_mock_score(title="Secret Song")
+    osu_file = MagicMock()
+    beatmap = MagicMock()
+
+    with patch(f"{MODULE}.chart_games", {}):
+        with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=1)):
+            with patch_session(MODULE, make_binded_id_session(["12345678"])):
+                with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))):
+                    with patch(f"{MODULE}.chart_set_timeout"):
+                        with patch(f"{MODULE}.download_osu", new=AsyncMock(return_value=osu_file)):
+                            with patch(f"{MODULE}.parse_map", return_value=beatmap):
+                                with patch(f"{MODULE}.map_to_image", return_value=b"img") as render:
+                                    async with app.test_matcher(guess_chart) as ctx:
+                                        adapter = nonebot.get_adapter(OnebotV11Adapter)
+                                        bot = ctx.create_bot(base=Bot, adapter=adapter)
+                                        ctx.should_call_send(event, ANY, result={"message_id": 1})
+                                        ctx.receive_event(bot, event)
+                                        ctx.should_finished()
+
+        render.assert_called_once_with(beatmap, show_metadata=False)
 
 
 @pytest.mark.asyncio

@@ -482,7 +482,7 @@ async def _(
     elif mode == "1":
         osu = await download_osu(selected_score.beatmapset.id, selected_score.beatmap.id)
         beatmap = parse_map(osu)
-        pic = map_to_image(beatmap)
+        pic = map_to_image(beatmap, show_metadata=False)
     elif mode == "0":
         pic = await draw_osu_preview(selected_score.beatmap.id, selected_score.beatmapset.id)
     else:
