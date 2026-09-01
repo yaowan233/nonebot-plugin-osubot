@@ -41,6 +41,7 @@ from .schema.user import UnifiedUser
 from .schema.alphaosu import RecommendData, RecommendItem
 from .draw.score import cal_score_info, draw_selected_score
 from .draw.bp import draw_pfm, select_bp_scores
+from .draw.utils import filter_scores_with_regex
 from .draw.rating import draw_rating
 from .draw.recommend import draw_recommend
 from .draw.echarts import build_bpa_data, draw_bpa_plot, draw_history_plot
@@ -1080,12 +1081,14 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         mods: str = "",
+        filters: BpFiltersArg = "",
         source: str = "osu",
         is_lazer: bool | None = None,
     ) -> str:
         """
         按范围分页读取玩家 BP 的结构化数据，每次最多 20 条，不发送图片。
-        用于分析整体 BP 构成/实力/吃分分布；先从 1-20 开始，返回 has_more=true 时按 next_start 继续读取。
+        用于分析整体或按条件筛选后的 BP 构成/实力/吃分分布；filters 语法与 /bl 相同。
+        先从 1-20 开始，返回 has_more=true 时按 next_start 继续读取。
         range_text 类似 1-20，宽度不能超过 20。
         """
         try:
@@ -1096,11 +1099,23 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             mode = _resolve_mode(mode, user, source)
             is_lazer = _resolve_is_lazer(is_lazer)
             mod_list = mods2list(mods) if mods else []
+            search_conditions, invalid_filter = parse_bp_filter_text(filters)
+            if invalid_filter:
+                return _bp_tool_result("failed", f"无法识别 BP 筛选条件: {invalid_filter}")
             low, high = _normalize_range(range_text, default="1-20")
             if high - low + 1 > 20:
                 return _bp_tool_result("failed", "get_osu_bp_range 每次最多读取 20 条，请使用类似 1-20 的范围。")
             scores = await fetch_bp_list(user, mode, mod_list, source, is_lazer)
             filtered_indices = get_mods_list(scores, mod_list)
+            if search_conditions:
+                matching_scores = filter_scores_with_regex(
+                    [scores[score_index] for score_index in filtered_indices],
+                    search_conditions,
+                )
+                matching_ids = {id(score) for score in matching_scores}
+                filtered_indices = [
+                    score_index for score_index in filtered_indices if id(scores[score_index]) in matching_ids
+                ]
             if not filtered_indices:
                 return _bp_tool_result("failed", "未查询到指定的 BP 成绩")
             total = len(filtered_indices)
@@ -1119,6 +1134,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 "message": f"已读取 {user.name} 的 BP {low}-{shown_high} 数据，未发送图片。",
                 "player": user.name,
                 "mode": NGM[mode],
+                "filters": filters or None,
                 "range": [low, shown_high],
                 "total": total,
                 "has_more": high < total,
@@ -1143,6 +1159,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         source: str = "osu",
         is_lazer: bool | None = None,
         include_image_for_analysis: bool = False,
+        send_image: bool = True,
     ) -> str | list[ContentBlock]:
         """
         查询并发送 osu 玩家 BP 列表图。
@@ -1151,6 +1168,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         常用 filters：300pp+、98a+、5-7*、7d、24h、fc、nofc、-DT、=HDHR。
         完整字段支持 pp/acc/stars/miss/combo/bpm/length/mapper/title/version/rank/client/date/days/speed/mods 等；
         可简写为 p/a/s/m/c/b/len/mp/t/v/r/cl/sp/mod，文本有空格时使用引号。
+        send_image=false 时只生成、不把图片发到聊天；仅当 include_image_for_analysis=true 时才向 Agent 返回图片。
         """
         try:
             source = _normalize_source(source)
@@ -1183,11 +1201,16 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     NGM[mode],
                     source,
                 )
-                await _send_image(ctx, data)
+                if send_image:
+                    await _send_image(ctx, data)
                 text = json.dumps(
                     {
-                        "status": "sent",
-                        "message": f"筛选后只有一条成绩，已发送 {user.name} 的单张成绩图，并返回结构化成绩。",
+                        "status": "sent" if send_image else "ok",
+                        "message": (
+                            f"筛选后只有一条成绩，已发送 {user.name} 的单张成绩图，并返回结构化成绩。"
+                            if send_image
+                            else f"筛选后只有一条成绩，已生成 {user.name} 的单张成绩图但未发送，并返回结构化成绩。"
+                        ),
                         "player": user.name,
                         "mode": NGM[mode],
                         "scores": [_score_to_bp_summary(score)],
@@ -1206,17 +1229,24 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 high,
                 filters,
             )
-            if delivery_key in delivered_bp_keys:
+            if send_image and delivery_key in delivered_bp_keys:
                 return f"{user.name} 的 bp{low}-{high} 已在本轮发送过，不再重复发送。"
             data = await draw_pfm("bp", user.user_id, scores, selected, NGM[mode], source, low, high, 0)
-            delivery_status = await deliver_bp_once(delivery_key, data)
-            if delivery_status == "expired":
-                return "请求已过期，已取消发送。"
-            if delivery_status == "already_sent":
-                return f"{user.name} 的 bp{low}-{high} 已在本轮发送过，不再重复发送。"
+            if send_image:
+                delivery_status = await deliver_bp_once(delivery_key, data)
+                if delivery_status == "expired":
+                    return "请求已过期，已取消发送。"
+                if delivery_status == "already_sent":
+                    return f"{user.name} 的 bp{low}-{high} 已在本轮发送过，不再重复发送。"
+            action = "已发送" if send_image else "已生成但未发送"
+            analysis_hint = (
+                "图片已作为多模态结果返回。"
+                if include_image_for_analysis
+                else "如需分析筛选结果，请使用 get_osu_bp_range 并传入相同 filters 获取结构化数据。"
+            )
             return _image_tool_result(
-                f"已发送 {user.name} 的 bp{low}-{high}"
-                f"{'（筛选：' + filters + '）' if filters else ''}。图片中包含 bp 列表，可用于分析成绩分布和整体表现。",
+                f"{action} {user.name} 的 bp{low}-{high}"
+                f"{'（筛选：' + filters + '）' if filters else ''}。{analysis_hint}",
                 data,
                 include_image_for_analysis,
             )
@@ -1942,13 +1972,15 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- 比较多个 BP、分析多个指定 BP 的差异时，调用 get_osu_bp_data；它只返回结构化数据且不会发图。"
             "不要用它处理普通的单个 BP 看图请求。每次最多传 10 个 BP 序号，超过会因结果过长被截断丢失中间数据；"
             "需要更多时分成多次调用。",
-            "- 用户要求评价/分析一段 BP 范围或整体 BP（如“评价一下我的 bp1-200”）时，按两段式执行："
-            "① 先调用 send_osu_bp_list 发送 BP 列表图，range_text 填用户给的范围（未给则 1-200）；"
-            "② 再调用 get_osu_bp_range 分段读取结构化数据，从 1-20 开始，has_more=true 时按 next_start 续读；"
+            "- 用户要求评价/分析一段 BP 范围、筛选结果或整体 BP（如“评价一下我的 bp1-200”）时："
+            "① 用户同时要求看图时，调用 send_osu_bp_list 并设 send_image=true；只要求分析或明确不要发图时跳过发图；"
+            "② 调用 get_osu_bp_range 分段读取结构化数据；有筛选条件时把同一表达式传给 filters，"
+            "从 1-20 开始，has_more=true 时按 next_start 续读；"
             "评价整体/全量 BP 时可一直读到 has_more=false，覆盖越全评价越准确，不要只读前一两段就下结论；"
             "③ 最后基于读到的数据给出评价，不要依赖图片内容。",
             "- get_osu_bp_range: 按范围分页读取 BP 数据（每次最多 20 条、不发图），"
-            "用于分析整体 BP 构成/实力/吃分分布。范围宽度必须 ≤20，不要传 1-200 这样的宽范围。"
+            "支持与 send_osu_bp_list 相同的 filters，用于纯结构化分析整体或筛选后的 BP。"
+            "范围宽度必须 ≤20，不要传 1-200 这样的宽范围。"
             "它与 send_osu_bp_list 不同：后者用于发图展示。",
             "- 分析/评价类请求（锐评发挥、评价实力、分析成绩细节）直接用工具返回的 JSON 结构化数据"
             "（info/scores 字段），不要依赖图片内容，也不要传 include_image_for_analysis。"
@@ -1961,7 +1993,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- get_osu_bp_data: 仅用于读取多个指定 BP 的数据以进行比较或复杂分析，不发送图片。",
             "- send_osu_bp_list: 用户想实际查询 bp 列表、bl/bplist/pfm、一段 bp 范围或筛选 BP 时使用。"
             "无筛选默认 1-30；有 filters 且用户没指定范围时省略 range_text，让工具自动搜索 1-200。"
-            "筛选后只有一条时工具会自动发送单张成绩图并返回结构化成绩，多条时才发送列表图。",
+            "send_image 控制是否向聊天发送图片：用户想看图时为 true，只分析/不要发图时为 false。"
+            "不要依赖图片或模型的多模态能力进行成绩分析，应改用 get_osu_bp_range.filters 获取结构化数据；"
+            "筛选后只有一条时自动发送单张成绩图并返回结构化成绩，多条时发送列表图。",
             "- send_osu_firsts: 用户想查 firsts、榜一、第一名成绩、全球排行榜第一记录时使用；"
             "它只查询 osu! 官网。不要把 BP1/最好成绩误当成榜一，BP1 应使用 send_osu_bp。"
             "无筛选默认 1-30；有 filters 且用户没指定范围时省略 range_text，让工具自动搜索 1-200。",

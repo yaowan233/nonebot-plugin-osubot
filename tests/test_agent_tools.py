@@ -62,6 +62,11 @@ def test_osu_tool_instructions_do_not_ask_model_for_current_user_id():
     assert schema["properties"]["purpose"]["enum"] == ["view", "analyze"]
     assert "include_image_for_analysis" not in schema["properties"]
     assert any(tool.name == "get_osu_bp_data" for tool in bundle.tools)
+    bp_list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
+    bp_list_schema = bp_list_tool.args_schema.model_json_schema()
+    assert bp_list_schema["properties"]["send_image"]["default"] is True
+    bp_range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+    assert "filters" in bp_range_tool.args_schema.model_json_schema()["properties"]
     firsts_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_firsts")
     assert "source" not in firsts_tool.args_schema.model_json_schema()["properties"]
     assert any(tool.name == "search_osu_beatmaps" for tool in bundle.tools)
@@ -562,6 +567,39 @@ async def test_send_osu_bp_list_keeps_list_for_multiple_results(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_osu_bp_list_filter_can_skip_chat_image(monkeypatch):
+    """Bot 可生成条件筛选图，但按用户意图不把图片发到聊天中。"""
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = [SimpleNamespace(), SimpleNamespace()]
+
+    async def fake_resolve(*args, **kwargs):
+        return agent_tools.ResolvedOsuUser(42, "player", "0")
+
+    async def fake_select(*args, **kwargs):
+        return scores, scores
+
+    async def fake_list(*args, **kwargs):
+        return BytesIO(b"filtered-score-list")
+
+    async def fake_send(*args, **kwargs):
+        raise AssertionError("send_image=false 时不应向聊天发送图片")
+
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
+    monkeypatch.setattr(agent_tools, "select_bp_scores", fake_select)
+    monkeypatch.setattr(agent_tools, "draw_pfm", fake_list)
+    monkeypatch.setattr(agent_tools, "_send_image", fake_send)
+    context = SimpleNamespace(user_id="12345678", request_id=None, session_id="group-1", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
+    list_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_bp_list")
+
+    result = await list_tool.ainvoke({"filters": "300pp+", "send_image": False})
+
+    assert isinstance(result, str)
+    assert "已生成但未发送" in result
+
+
+@pytest.mark.asyncio
 async def test_send_osu_firsts_uses_official_firsts_and_deduplicates(monkeypatch):
     from nonebot_plugin_osubot import agent_tools
 
@@ -1046,6 +1084,28 @@ async def test_get_osu_bp_range_mods_filter(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_get_osu_bp_range_filters_for_text_only_analysis(monkeypatch):
+    """纯文本模型可分页读取条件筛选后的结构化成绩，且不会发送图片。"""
+    from nonebot_plugin_osubot import agent_tools
+
+    scores = _make_bp_scores(50)
+    _install_range_mocks(monkeypatch, scores)
+    context = _range_context()
+    bundle = agent_tools.build_osu_agent_tools(context)
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+
+    result = json.loads(await range_tool.ainvoke({"range_text": "1-20", "filters": "310pp+"}))
+
+    assert result["status"] == "ok", result
+    assert result["total"] == 40
+    assert result["has_more"] is True
+    assert result["next_start"] == 21
+    assert len(result["scores"]) == 20
+    assert result["scores"][0]["title"] == "song-10"
+    assert result["scores"][0]["pp"] == 310.0
+
+
+@pytest.mark.asyncio
 async def test_send_osu_bp_list_dedups_repeat_list_image(monkeypatch):
     from nonebot_plugin_osubot import agent_tools
 
@@ -1151,14 +1211,16 @@ async def test_instructions_contain_bp_analysis_recipe():
 
     assert "get_osu_bp_range" in tool_names
     assert "send_osu_firsts" in tool_names
-    assert "两段式" in instructions
-    assert "send_osu_bp_list 发送 BP 列表图" in instructions
+    assert "只要求分析或明确不要发图时跳过发图" in instructions
+    assert "调用 send_osu_bp_list 并设 send_image=true" in instructions
     assert "next_start 续读" in instructions
     assert "读到 has_more=false" in instructions
     assert "范围宽度必须 ≤20" in instructions
     assert "最多传 10 个 BP 序号" in instructions
     assert "不要把 BP1/最好成绩误当成榜一" in instructions
     assert "‘最近一天/最近24小时’=`24h`" in instructions
+    assert "不要依赖图片或模型的多模态能力" in instructions
+    assert "get_osu_bp_range.filters 获取结构化数据" in instructions
 
 
 def _history_points(count: int = 25):
@@ -1408,7 +1470,7 @@ async def test_send_osu_bp_analysis_returns_structured_data(monkeypatch):
 
     monkeypatch.setattr(agent_tools, "_resolve_osu_user", fake_resolve)
     monkeypatch.setattr(agent_tools, "get_user_scores", fake_scores)
-    monkeypatch.setattr(agent_tools, "cal_score_info", lambda is_lazer, score: score)
+    monkeypatch.setattr(agent_tools, "cal_score_info", lambda is_lazer, score, source: score)
     monkeypatch.setattr(agent_tools, "build_bpa_data", fake_bpa)
     monkeypatch.setattr(agent_tools, "draw_bpa_plot", fake_draw)
     monkeypatch.setattr(agent_tools, "_send_image", fake_send)
