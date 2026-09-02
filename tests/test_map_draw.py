@@ -1,3 +1,4 @@
+import re
 from types import SimpleNamespace
 
 
@@ -65,7 +66,7 @@ def test_taiko_conversion_uses_converted_object_counts():
 
 
 def test_map_rating_distribution_with_only_zeroes_does_not_divide_by_zero():
-    """没有任何评分的谱面仍应正常生成评分区域。"""
+    """没有任何评分的谱面不应生成越界的占位评分柱。"""
     from nonebot_plugin_osubot.draw.map_svg import _map_rating_and_failures
 
     payload = {
@@ -81,10 +82,11 @@ def test_map_rating_distribution_with_only_zeroes_does_not_divide_by_zero():
     svg = _map_rating_and_failures(payload)
 
     assert "暂无评分" in svg
+    assert 'width="6" height="2" rx="2" fill="#f6b923"' not in svg
 
 
 def test_map_failure_distribution_with_only_zeroes_does_not_divide_by_zero():
-    """失败位置分布全为零时仍应正常生成失败区域。"""
+    """失败位置分布全为零时应按无数据渲染。"""
     from nonebot_plugin_osubot.draw.map_svg import _map_rating_and_failures
 
     payload = {
@@ -100,3 +102,58 @@ def test_map_failure_distribution_with_only_zeroes_does_not_divide_by_zero():
     svg = _map_rating_and_failures(payload)
 
     assert "失败位置分布" in svg
+    assert "暂无数据" in svg
+    assert 'width="7" height="2" rx="2"' not in svg
+
+
+def test_map_rating_bars_stay_inside_rating_column():
+    """评分柱不应越过评分区右侧的分隔线。"""
+    from nonebot_plugin_osubot.draw.map_svg import _map_rating_and_failures
+
+    payload = {
+        "set": {},
+        "map": {
+            "rating": 7.5,
+            "rating_votes": 55,
+            "rating_distribution": list(range(11)),
+            "fail_points": [],
+        },
+    }
+
+    svg = _map_rating_and_failures(payload)
+    rating_bar_x = [
+        int(value)
+        for value in re.findall(
+            r'<rect x="(\d+)" y="[^"]+" width="6" height="[^"]+" rx="2" fill="#f6b923"/>',
+            svg,
+        )
+    ]
+
+    assert len(rating_bar_x) == 10
+    assert max(x + 6 for x in rating_bar_x) < 205
+
+
+def test_map_param_name_does_not_overlap_long_key():
+    """长参数名 KEYS 与中文说明之间应保留足够间距。"""
+    from nonebot_plugin_osubot.draw.map_svg import _map_params
+
+    svg = _map_params(
+        {
+            "map": {
+                "stats": [
+                    {
+                        "key": "KEYS",
+                        "name": "键位数",
+                        "before": 4.0,
+                        "after": 4.0,
+                    }
+                ]
+            }
+        }
+    )
+    key = re.search(r'<text x="([^"]+)"[^>]*>KEYS</text>', svg)
+    name = re.search(r'<text x="([^"]+)"[^>]*>键位数</text>', svg)
+
+    assert key is not None
+    assert name is not None
+    assert float(name.group(1)) - float(key.group(1)) >= 40

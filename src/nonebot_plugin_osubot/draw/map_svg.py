@@ -346,23 +346,24 @@ def _map_rating_and_failures(payload: dict) -> str:
     rating_values = [float(value or 0) for value in (beatmap.get("rating_distribution") or [])]
     rating_values = rating_values[1:] if len(rating_values) > 10 else rating_values
     rating_max = max(rating_values, default=0)
-    if rating_max <= 0:
-        rating_max = 1
     rating_bars = []
     for index, value in enumerate(rating_values[-10:]):
+        if value <= 0:
+            continue
         height = max(2, 30 * value / rating_max)
         rating_bars.append(
-            f'<rect x="{150 + index * 9}" y="{578 - height}" width="6" height="{height}" rx="2" fill="#f6b923"/>'
+            f'<rect x="{110 + index * 9}" y="{578 - height}" width="6" height="{height}" rx="2" fill="#f6b923"/>'
         )
     raw_failures = [float(value or 0) for value in (beatmap.get("fail_points") or [])]
     failures = _sample_bars(raw_failures)
     failure_max = max(failures, default=0)
-    if failure_max <= 0:
-        failure_max = 1
+    has_failure_data = failure_max > 0
     peak_index = max(range(len(raw_failures)), key=raw_failures.__getitem__) if raw_failures else -1
     peak_pct = round((peak_index + 0.5) / len(raw_failures) * 100) if raw_failures else 0
     fail_bars = []
     for index, value in enumerate(failures):
+        if value <= 0:
+            continue
         height = max(2, 27 * value / failure_max)
         color = CYAN if value == failure_max else PINK
         fail_bars.append(
@@ -371,7 +372,7 @@ def _map_rating_and_failures(payload: dict) -> str:
     rating_text = number(rating, 1) if rating is not None else "—"
     return f"""
 {text(48, 535, "玩家评价", 9, fill="#8292a3")}{text(190, 535, number(votes) + " 次评分" if votes else "暂无评分", 8, fill="#8292a3", anchor="end")}{text(48, 577, rating_text, 27, fill="#f6b923", weight=700)}{text(91, 577, "/10", 8, fill="#8292a3")}{"".join(rating_bars)}
-<line x1="205" y1="520" x2="205" y2="588" stroke="#ffffff18"/>{text(224, 535, "失败位置分布", 9, fill="#8292a3")}{text(478, 535, "峰值 " + str(peak_pct) + "%" if failures else "暂无数据", 8, fill="#8292a3", anchor="end")}{"".join(fail_bars)}{text(224, 589, "开头", 7, fill="#657587")}{text(352, 589, "50%", 7, fill="#657587", anchor="middle")}{text(478, 589, "结尾", 7, fill="#657587", anchor="end")}
+<line x1="205" y1="520" x2="205" y2="588" stroke="#ffffff18"/>{text(224, 535, "失败位置分布", 9, fill="#8292a3")}{text(478, 535, "峰值 " + str(peak_pct) + "%" if has_failure_data else "暂无数据", 8, fill="#8292a3", anchor="end")}{"".join(fail_bars)}{text(224, 589, "开头", 7, fill="#657587")}{text(352, 589, "50%", 7, fill="#657587", anchor="middle")}{text(478, 589, "结尾", 7, fill="#657587", anchor="end")}
 <line x1="492" y1="520" x2="492" y2="588" stroke="#ffffff18"/>{text(510, 535, "流派", 8, fill="#8292a3")}{fitted_text(510, 552, beatmapset.get("genre") or "其他", 10, 95, weight=700)}{text(620, 535, "语言", 8, fill="#8292a3")}{fitted_text(620, 552, beatmapset.get("language") or "其他", 10, 88, weight=700)}{text(510, 570, "提名", 8, fill="#8292a3")}{fitted_text(510, 587, beatmapset.get("nominations") or "暂无", 10, 198, weight=700)}
 """
 
@@ -389,6 +390,10 @@ def _map_params(payload: dict) -> str:
         changed = abs(after - before) > 0.01
         maximum = 11.0
         track_x, track_width = 180, 410
+        key = str(stat.get("key") or "")
+        name = str(stat.get("name") or "")
+        name_x = max(91, 60 + text_width(key, 14) + 8)
+        name_x = min(name_x, track_x - text_width(name, 9) - 8)
         before_x = track_x + min(before, maximum) / maximum * track_width
         after_x = track_x + min(after, maximum) / maximum * track_width
         origin = (
@@ -397,7 +402,7 @@ def _map_params(payload: dict) -> str:
             else ""
         )
         parts.append(
-            f'<rect x="48" y="{y}" width="685" height="49" rx="8" fill="#ffffff07" stroke="#ffffff10"/>{text(60, y + 23, stat.get("key") or "", 14, weight=700)}{text(91, y + 23, stat.get("name") or "", 9, fill="#9aa8b7")}<line x1="{track_x}" y1="{y + 25}" x2="{track_x + track_width}" y2="{y + 25}" stroke="#ffffff20" stroke-width="6"/>{origin}<rect x="{after_x - 5}" y="{y + 20}" width="10" height="10" transform="rotate(45 {after_x} {y + 25})" fill="{PINK if changed else CYAN}"/>{text(717, y + 29, (number(before, 1) + " → " if changed else "") + number(after, 1), 15, fill=PINK if changed else "#fff", anchor="end", weight=700)}'
+            f'<rect x="48" y="{y}" width="685" height="49" rx="8" fill="#ffffff07" stroke="#ffffff10"/>{text(60, y + 23, key, 14, weight=700)}{text(name_x, y + 23, name, 9, fill="#9aa8b7")}<line x1="{track_x}" y1="{y + 25}" x2="{track_x + track_width}" y2="{y + 25}" stroke="#ffffff20" stroke-width="6"/>{origin}<rect x="{after_x - 5}" y="{y + 20}" width="10" height="10" transform="rotate(45 {after_x} {y + 25})" fill="{PINK if changed else CYAN}"/>{text(717, y + 29, (number(before, 1) + " → " if changed else "") + number(after, 1), 15, fill=PINK if changed else "#fff", anchor="end", weight=700)}'
         )
     return "".join(parts)
 
