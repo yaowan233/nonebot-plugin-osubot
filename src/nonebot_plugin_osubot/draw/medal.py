@@ -1,14 +1,14 @@
-"""成就列表渲染（Jinja2 + Playwright，网格布局，风格与 friend 一致）。
+"""成就列表渲染（原生 SVG + resvg，网格布局，风格与 friend 一致）。
 
 用于 /ma（已获得成就）与 /ar（成就推荐）的图片输出。
 """
 
-from pathlib import Path
+import asyncio
 
-import jinja2
 from typing_extensions import TypedDict
 
-from .browser import persistent_page
+from .medal_svg import render_achievement_svg
+from .native_assets import image_source_data_uri
 
 
 class AchievementRenderRow(TypedDict):
@@ -30,7 +30,7 @@ class AchievementRenderData(TypedDict):
 
 
 async def draw_achievements(data: AchievementRenderData) -> bytes:
-    """渲染成就网格图片。
+    """本地化头像与图标后渲染成就网格图片。
 
     Parameters
     ----------
@@ -38,19 +38,18 @@ async def draw_achievements(data: AchievementRenderData) -> bytes:
         包含 me_name / me_avatar / title / subtitle / total /
         achievements: list[dict]，每项含 name / icon / grouping / achieved_at(可选)
     """
-    template_path = Path(__file__).parent / "medal_templates"
-    template = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
-    ).get_template("index.html")
-    async with persistent_page(
-        "medal", (template_path / "index.html").as_uri(), {"width": 1280, "height": 900}
-    ) as page:
-        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
-        )
-        element = await page.query_selector(".card")
-        assert element
-        return await element.screenshot(type="png")
+    achievements = list(data.get("achievements") or [])
+    avatar_data, icon_data = await asyncio.gather(
+        image_source_data_uri(data.get("me_avatar"), max_size=(156, 156)),
+        asyncio.gather(
+            *(image_source_data_uri(row.get("icon"), max_size=(144, 144)) for row in achievements)
+        ),
+    )
+    prepared = {
+        **data,
+        "me_avatar_data": avatar_data,
+        "achievements": [
+            {**row, "icon_data": prepared_icon} for row, prepared_icon in zip(achievements, icon_data)
+        ],
+    }
+    return await render_achievement_svg(prepared)

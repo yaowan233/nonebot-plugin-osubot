@@ -1,18 +1,17 @@
 import re
+import asyncio
 from pathlib import Path
 from datetime import datetime
 from statistics import mode
 
-import jinja2
-
 from ..api import api_info
 from ..match_room import convert_room_to_match, is_room_response
 from ..schema.match import Match
-from .browser import persistent_page
 from .image_utils import compress_jpeg
+from .match_svg import render_match_svg
+from .native_assets import image_source_data_uri
 
 
-TEMPLATE_PATH = Path(__file__).parent / "match_templates"
 MOD_PATH = Path(__file__).parent.parent / "osufile" / "mods"
 
 # ============ 分页配置（可按需调整） ============
@@ -206,25 +205,55 @@ def prepare_match_data(
     }
 
 
-async def draw_match_card(data: dict) -> bytes:
-    """使用 Jinja2 + Playwright 渲染单页比赛卡片并截图"""
-    template = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(str(TEMPLATE_PATH)), enable_async=True
-    ).get_template("index.html")
-    async with persistent_page(
-        "match_history",
-        (TEMPLATE_PATH / "index.html").as_uri(),
-        {"width": 1280, "height": 900},
-    ) as page:
-        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
-        await page.evaluate(
-            "Promise.race([Promise.all([document.fonts.ready,"
-            "...Array.from(document.images,x=>x.decode().catch(()=>{}))]),"
-            "new Promise(resolve=>setTimeout(resolve,8000))])"
+async def _prepare_match_assets(data: dict) -> dict:
+    games = list(data.get("games") or [])
+    cover_sources = list(dict.fromkeys(str(game.get("cover") or "") for game in games if game.get("cover")))
+    avatar_sources = list(
+        {
+            (int(player.get("user_id") or 0), str(player.get("avatar") or ""))
+            for game in games
+            for player in game.get("players") or []
+            if player.get("avatar")
+        }
+    )
+    cover_data, avatar_data = await asyncio.gather(
+        asyncio.gather(
+            *(
+                image_source_data_uri(source, max_size=(304, 224), image_format="JPEG")
+                for source in cover_sources
+            )
+        ),
+        asyncio.gather(
+            *(image_source_data_uri(source, max_size=(96, 96)) for _user_id, source in avatar_sources)
+        ),
+    )
+    covers = dict(zip(cover_sources, cover_data))
+    avatars = dict(zip(avatar_sources, avatar_data))
+
+    def player_row(player: dict) -> dict:
+        key = (int(player.get("user_id") or 0), str(player.get("avatar") or ""))
+        return {**player, "avatar_data": avatars.get(key)}
+
+    prepared_games = []
+    for game in games:
+        players = [player_row(player) for player in game.get("players") or []]
+        red_players = [player_row(player) for player in game.get("red_players") or []]
+        blue_players = [player_row(player) for player in game.get("blue_players") or []]
+        prepared_games.append(
+            {
+                **game,
+                "cover_data": covers.get(str(game.get("cover") or "")),
+                "players": players,
+                "red_players": red_players,
+                "blue_players": blue_players,
+            }
         )
-        element = await page.query_selector(".card")
-        assert element
-        return await element.screenshot(type="png")
+    return {**data, "games": prepared_games}
+
+
+async def draw_match_card(data: dict) -> bytes:
+    """使用原生 SVG + resvg 渲染单页比赛卡片。"""
+    return await render_match_svg(await _prepare_match_assets(data))
 
 
 async def draw_match_history(

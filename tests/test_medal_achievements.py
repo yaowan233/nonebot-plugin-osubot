@@ -1,12 +1,13 @@
 import importlib
 import json
 import time
-from contextlib import asynccontextmanager
+from io import BytesIO
 from html import escape
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from PIL import Image
 
 
 @pytest.fixture
@@ -211,34 +212,9 @@ def test_strip_medal_html_handles_multiple_tables_scripts_and_entities(medal_mod
 
 
 @pytest.mark.asyncio
-async def test_achievement_grid_renders(after_nonebot_init, monkeypatch):
+async def test_achievement_grid_renders(after_nonebot_init):
     from nonebot_plugin_osubot.draw import medal as medal_draw
 
-    captured = {}
-
-    class FakeElement:
-        async def screenshot(self, **kwargs):
-            captured["screenshot"] = kwargs
-            return b"png"
-
-    class FakePage:
-        async def set_content(self, content, **kwargs):
-            captured["content"] = content
-            captured["set_content"] = kwargs
-
-        async def evaluate(self, script):
-            captured["script"] = script
-
-        async def query_selector(self, selector):
-            captured["selector"] = selector
-            return FakeElement()
-
-    @asynccontextmanager
-    async def fake_persistent_page(key, url, viewport):
-        captured["page"] = (key, url, viewport)
-        yield FakePage()
-
-    monkeypatch.setattr(medal_draw, "persistent_page", fake_persistent_page)
     pixel = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
     image = await medal_draw.draw_achievements(
         {
@@ -260,11 +236,6 @@ async def test_achievement_grid_renders(after_nonebot_init, monkeypatch):
         }
     )
 
-    assert image == b"png"
-    assert captured["page"][0] == "medal"
-    assert captured["page"][2] == {"width": 1280, "height": 900}
-    assert captured["set_content"] == {"wait_until": "domcontentloaded"}
-    assert captured["selector"] == ".card"
-    assert captured["screenshot"] == {"type": "png"}
-    assert "已获得成就" in captured["content"]
-    assert "500 Combo" in captured["content"]
+    assert not hasattr(medal_draw, "persistent_page")
+    with Image.open(BytesIO(image)) as rendered:
+        assert rendered.size == (1280, 900)

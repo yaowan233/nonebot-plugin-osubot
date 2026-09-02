@@ -656,9 +656,44 @@ async def test_match_history_synthetic(app: App, is_team: bool):
     }
     pic = await draw_match_card(data)
     suffix = "team" if is_team else "h2h"
-    path = OUT / f"match_history_{suffix}.png"
+    path = OUT / f"match_history_{suffix}.jpg"
     path.write_bytes(pic)
     print(f"  [match history {suffix}] -> {path.name}")
+
+
+@pytest.mark.asyncio
+async def test_achievement_grid_synthetic(app: App):
+    """成就列表原生 SVG：15 个条目、图标与动态网格。"""
+    from nonebot_plugin_osubot.draw.medal import draw_achievements
+
+    players = _rating_players()
+    icon_sources = [player["avatar"] for player in players]
+    rows = [
+        {
+            "name": ["500 Combo", "Rising Star", "Challenge Accepted", "Perseverance", "Non-stop Dancer"][
+                index % 5
+            ],
+            "icon": icon_sources[index % len(icon_sources)],
+            "grouping": ["Skill & Dedication", "Hush-Hush", "Beatmap Packs"][index % 3],
+            "achieved_at": f"2026-08-{index + 1:02d}",
+        }
+        for index in range(15)
+    ]
+    pic = await draw_achievements(
+        {
+            "me_name": "UID 114514",
+            "me_avatar": icon_sources[0],
+            "title": "已获得成就",
+            "subtitle": "共 15 个成就 · OSU",
+            "total": 15,
+            "start": 1,
+            "end": 15,
+            "achievements": rows,
+        }
+    )
+    path = OUT / "achievements.jpg"
+    path.write_bytes(pic)
+    print(f"  [achievements] -> {path.name}")
 
 
 @pytest.mark.asyncio
