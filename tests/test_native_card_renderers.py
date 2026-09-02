@@ -534,3 +534,78 @@ async def test_friend_svg_raster_smoke():
     with Image.open(BytesIO(result)) as image:
         assert image.width == 1280
         assert image.height == 124 + 22 + 2 * 160 + 14 + 26 + 44
+
+
+def _recommend_item(index: int, *, mod: str = "NM", stars: float = 5.21) -> dict:
+    return {
+        "title": f"Recommended Map {index}",
+        "map_id": 100000 + index,
+        "stars": stars,
+        "mod_str": mod,
+        "pred_pp": 300.0 + index,
+        "pred_acc": 98.5,
+        "cover": _image_uri(),
+    }
+
+
+def _recommend_payload() -> dict:
+    return {
+        "username": "player",
+        "player_id": 12345678,
+        "mode": "osu",
+        "avatar": _image_uri(),
+        "total_count": 12,
+        "section_titles": ["综合推荐", "基础推荐", "稳健推荐", "进阶推荐"],
+        "overall": {"title": "综合推荐", "items": [_recommend_item(i, mod="DT" if i == 1 else "NM") for i in range(6)]},
+        "side": [
+            {"key": "easy", "title": "基础推荐", "items": [_recommend_item(10 + i, stars=3.9) for i in range(2)]},
+            {"key": "medium", "title": "稳健推荐", "items": [_recommend_item(20 + i, stars=4.6) for i in range(2)]},
+            {"key": "hard", "title": "进阶推荐", "items": [_recommend_item(30 + i, stars=6.8) for i in range(2)]},
+        ],
+        "flat": None,
+    }
+
+
+def test_recommend_svg_sections_layout():
+    from nonebot_plugin_osubot.draw.recommend_svg import build_recommend_svg
+
+    svg, height = build_recommend_svg(_recommend_payload())
+
+    assert height == 108 + 20 + 566 + 18 + 35
+    assert svg.count('data-role="recommend-card"') == 12
+    assert "综合推荐" in svg
+    assert "基础推荐" in svg
+    assert "稳健推荐" in svg
+    assert "进阶推荐" in svg
+    assert "player #12345678" in svg
+    assert "OSUBOT RECOMMEND" in svg
+    assert "★ 5.21" in svg
+    assert ">DT</text>" in svg
+    assert ">NM</text>" not in svg  # NM 不再占用标签位
+
+
+def test_recommend_svg_flat_mode_splits_two_columns():
+    from nonebot_plugin_osubot.draw.recommend_svg import build_recommend_svg
+
+    payload = _recommend_payload()
+    flat = [_recommend_item(i) for i in range(8)]
+    payload.update({"overall": None, "side": [], "flat": flat, "total_count": 8, "section_titles": ["推荐列表"]})
+
+    svg, height = build_recommend_svg(payload)
+
+    assert height == 108 + 20 + (4 * 72 + 3 * 9) + 18 + 35
+    assert svg.count('data-role="recommend-card"') == 8
+    assert "综合推荐" not in svg
+    assert ">#5</text>" in svg  # 右列排名延续全局序号
+
+
+@pytest.mark.asyncio
+@pytest.mark.no_cover
+async def test_recommend_svg_raster_smoke():
+    from nonebot_plugin_osubot.draw.recommend_svg import render_recommend_svg
+
+    result = await render_recommend_svg(_recommend_payload())
+
+    with Image.open(BytesIO(result)) as image:
+        assert image.width == 1080
+        assert image.height == 108 + 20 + 566 + 18 + 35
