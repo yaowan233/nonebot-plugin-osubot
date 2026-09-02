@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from datetime import date
 from typing import Protocol
@@ -8,11 +9,34 @@ from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from ..database.models import InfoData, UserData
-from ..schema.user import User, UserStatistics
+from ..schema.user import UnifiedUser, User, UserStatistics
+
+
+_SNAPSHOT_VALUE_FIELDS = (
+    "c_rank",
+    "g_rank",
+    "pp",
+    "acc",
+    "pc",
+    "count",
+    "ranked_score",
+    "total_score",
+    "max_combo",
+    "count_xh",
+    "count_x",
+    "count_sh",
+    "count_s",
+    "count_a",
+    "replays",
+    "play_time",
+    "badge_count",
+)
 
 
 class InfoSnapshotStore(Protocol):
     async def save(self, users: Sequence[User]) -> int: ...
+
+    async def save_mode(self, user: UnifiedUser, osu_mode: int) -> int: ...
 
 
 def _make_info_data(
@@ -61,7 +85,54 @@ def _make_info_data(
 
 
 class SqlInfoSnapshotStore:
-    """Persist one daily snapshot per user and ruleset in one transaction."""
+    """Insert or refresh daily snapshots in one transaction."""
+
+    def __init__(self) -> None:
+        self._save_lock = asyncio.Lock()
+
+    @staticmethod
+    def _update_row(target: InfoData, source: InfoData) -> None:
+        for field in _SNAPSHOT_VALUE_FIELDS:
+            setattr(target, field, getattr(source, field))
+
+    async def _save_rows(self, rows: Sequence[InfoData], usernames: dict[int, str]) -> int:
+        if not rows:
+            return 0
+
+        snapshot_date = date.today()
+        user_ids = list({row.osu_id for row in rows})
+        modes = list({row.osu_mode for row in rows})
+        async with self._save_lock, get_session() as session:
+            existing_rows = (
+                await session.scalars(
+                    select(InfoData).where(
+                        InfoData.osu_id.in_(user_ids),
+                        InfoData.osu_mode.in_(modes),
+                        InfoData.date == snapshot_date,
+                    )
+                )
+            ).all()
+            existing_by_pair: dict[tuple[int, int], list[InfoData]] = {}
+            for existing in existing_rows:
+                existing_by_pair.setdefault((existing.osu_id, existing.osu_mode), []).append(existing)
+
+            for row in rows:
+                matching_rows = existing_by_pair.get((row.osu_id, row.osu_mode))
+                if matching_rows:
+                    for existing in matching_rows:
+                        self._update_row(existing, row)
+                else:
+                    session.add(row)
+                    existing_by_pair[(row.osu_id, row.osu_mode)] = [row]
+
+            bound_users = (await session.scalars(select(UserData).where(UserData.osu_id.in_(user_ids)))).all()
+            for bound_user in bound_users:
+                username = usernames.get(bound_user.osu_id)
+                if username is not None and bound_user.osu_name != username:
+                    bound_user.osu_name = username
+
+            await session.commit()
+        return len(user_ids)
 
     async def save(self, users: Sequence[User]) -> int:
         available_users = [user for user in users if user.statistics_rulesets]
@@ -69,51 +140,36 @@ class SqlInfoSnapshotStore:
             return 0
 
         snapshot_date = date.today()
-        user_ids = [user.id for user in available_users]
-        usernames = {user.id: user.username for user in users}
-
-        async with get_session() as session:
-            existing_pairs = set(
-                (
-                    await session.execute(
-                        select(InfoData.osu_id, InfoData.osu_mode).where(
-                            InfoData.osu_id.in_(user_ids),
-                            InfoData.date == snapshot_date,
-                        )
-                    )
-                ).all()
+        rows: list[InfoData] = []
+        for user in available_users:
+            rulesets = user.statistics_rulesets
+            if rulesets is None:
+                continue
+            badge_count = len(user.badges) if user.badges else 0
+            mode_stats = (
+                (rulesets.osu, 0),
+                (rulesets.taiko, 1),
+                (rulesets.fruits, 2),
+                (rulesets.mania, 3),
             )
+            rows.extend(
+                _make_info_data(user.id, stats, mode, snapshot_date, badge_count) for stats, mode in mode_stats
+            )
+        return await self._save_rows(rows, {user.id: user.username for user in available_users})
 
-            rows: list[InfoData] = []
-            updated_users: set[int] = set()
-            for user in available_users:
-                rulesets = user.statistics_rulesets
-                if rulesets is None:
-                    continue
-                badge_count = len(user.badges) if user.badges else 0
-                mode_stats = (
-                    (rulesets.osu, 0),
-                    (rulesets.taiko, 1),
-                    (rulesets.fruits, 2),
-                    (rulesets.mania, 3),
-                )
-                for stats, mode in mode_stats:
-                    if (user.id, mode) in existing_pairs:
-                        continue
-                    rows.append(_make_info_data(user.id, stats, mode, snapshot_date, badge_count))
-                    updated_users.add(user.id)
-
-            if rows:
-                session.add_all(rows)
-
-            bound_users = (await session.scalars(select(UserData).where(UserData.osu_id.in_(list(usernames))))).all()
-            for bound_user in bound_users:
-                username = usernames.get(bound_user.osu_id)
-                if username is not None and bound_user.osu_name != username:
-                    bound_user.osu_name = username
-
-            await session.commit()
-        return len(updated_users)
+    async def save_mode(self, user: UnifiedUser, osu_mode: int) -> int:
+        if user.statistics is None:
+            return 0
+        if osu_mode not in range(4):
+            raise ValueError(f"不支持保存模式 {osu_mode} 的官方快照")
+        row = _make_info_data(
+            user.id,
+            user.statistics,
+            osu_mode,
+            date.today(),
+            len(user.badges) if user.badges else 0,
+        )
+        return await self._save_rows([row], {user.id: user.username})
 
 
 info_snapshot_store: InfoSnapshotStore = SqlInfoSnapshotStore()

@@ -613,9 +613,35 @@ async def get_user_scores(
     return await server.get_scores(query)
 
 
-async def get_user_info_data(uid: Union[int, str], mode: str, source: str = "osu") -> UnifiedUser:
+async def save_user_info_snapshot(user: UnifiedUser, mode: str, source: str = "osu") -> bool:
+    """Refresh today's official snapshot with user data already returned by the API."""
+
     server = get_server(source)
-    return await server.get_user(uid, server.parse_mode(mode))
+    parsed_mode = server.parse_mode(mode)
+    if not server.supports(ServerFeature.OFFICIAL_SNAPSHOTS, parsed_mode):
+        return False
+    try:
+        from .info.snapshot import info_snapshot_store
+
+        return bool(await info_snapshot_store.save_mode(user, int(parsed_mode.ruleset)))
+    except Exception as error:
+        logger.opt(exception=error).warning(f"更新玩家 {user.id} 的当日成绩快照失败")
+        return False
+
+
+async def get_user_info_data(
+    uid: Union[int, str],
+    mode: str,
+    source: str = "osu",
+    *,
+    update_snapshot: bool = True,
+) -> UnifiedUser:
+    server = get_server(source)
+    parsed_mode = server.parse_mode(mode)
+    user = await server.get_user(uid, parsed_mode)
+    if update_snapshot:
+        await save_user_info_snapshot(user, mode, source)
+    return user
 
 
 async def _get_osu_user(uid: Union[int, str], mode: str) -> UnifiedUser:

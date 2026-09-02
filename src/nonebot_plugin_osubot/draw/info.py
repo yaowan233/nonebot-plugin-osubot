@@ -20,7 +20,7 @@ from ..exceptions import NetworkError
 from ..database.models import InfoData
 from ..schema.draw_info import DrawUser, Badge, DrawBestPlay
 from ..schema.user import UnifiedUser
-from ..api import get_server, get_user_info_data, get_user_scores
+from ..api import get_server, get_user_info_data, get_user_scores, save_user_info_snapshot
 from ..server import ServerFeature
 
 
@@ -43,7 +43,7 @@ async def draw_info(
     if isinstance(uid, int) or str(uid).isdigit():
         score_task = asyncio.create_task(get_user_scores(uid, mode, "best", source=source, limit=10))
     try:
-        info = await get_user_info_data(uid, mode, source)
+        info = await get_user_info_data(uid, mode, source, update_snapshot=False)
     except BaseException:
         if score_task and not score_task.done():
             score_task.cancel()
@@ -304,6 +304,7 @@ async def draw_info(
             thumbnail_data_uri(cover_path, max_width=196, max_height=104) if cover_path.exists() else None
         )
     image = (await render_info_svg(draw_data)).getvalue()
+    await save_user_info_snapshot(info, mode, source)
     if return_info:
         return image, info
     return image

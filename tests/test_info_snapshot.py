@@ -24,6 +24,30 @@ def _statistics(pp: float = 1234.5):
 
 
 @pytest.mark.asyncio
+async def test_user_info_query_refreshes_official_mode_snapshot(after_nonebot_init, monkeypatch):
+    from nonebot_plugin_osubot import api
+    from nonebot_plugin_osubot.info.snapshot import info_snapshot_store
+    from nonebot_plugin_osubot.server import PlayMode, ServerFeature
+
+    mode = PlayMode.parse("mania")
+    user = SimpleNamespace(id=42)
+    server = SimpleNamespace(
+        parse_mode=lambda value: mode,
+        supports=lambda feature, parsed_mode: feature is ServerFeature.OFFICIAL_SNAPSHOTS and parsed_mode == mode,
+        get_user=AsyncMock(return_value=user),
+    )
+    monkeypatch.setattr(api, "get_server", lambda source: server)
+
+    with patch.object(info_snapshot_store, "save_mode", new=AsyncMock(return_value=1)) as save_mode:
+        assert await api.get_user_info_data(42, "mania") is user
+        save_mode.assert_awaited_once_with(user, 3)
+        save_mode.reset_mock()
+
+        assert await api.get_user_info_data(42, "mania", update_snapshot=False) is user
+        save_mode.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_info_snapshot_store_batches_daily_rows_and_name_updates(after_nonebot_init):
     from nonebot_plugin_orm import get_session
 
@@ -52,7 +76,20 @@ async def test_info_snapshot_store_batches_daily_rows_and_name_updates(after_non
     try:
         store = SqlInfoSnapshotStore()
         assert await store.save([user]) == 1
-        assert await store.save([user]) == 0
+        user.statistics_rulesets.osu = _statistics(2345.6)
+        assert await store.save([user]) == 1
+        assert (
+            await store.save_mode(
+                SimpleNamespace(
+                    id=osu_id,
+                    username="mode-name",
+                    badges=[],
+                    statistics=_statistics(3456.7),
+                ),
+                3,
+            )
+            == 1
+        )
 
         async with get_session() as session:
             snapshots = (
@@ -61,9 +98,10 @@ async def test_info_snapshot_store_batches_daily_rows_and_name_updates(after_non
             bindings = (await session.scalars(select(UserData).where(UserData.osu_id == osu_id))).all()
 
         assert [snapshot.osu_mode for snapshot in snapshots] == [0, 1, 2, 3]
-        assert snapshots[0].pp == pytest.approx(1234.5)
+        assert snapshots[0].pp == pytest.approx(2345.6)
         assert snapshots[1].pp == 0
-        assert {binding.osu_name for binding in bindings} == {"new-name"}
+        assert snapshots[3].pp == pytest.approx(3456.7)
+        assert {binding.osu_name for binding in bindings} == {"mode-name"}
     finally:
         async with get_session() as session:
             await session.execute(delete(InfoData).where(InfoData.osu_id == osu_id))

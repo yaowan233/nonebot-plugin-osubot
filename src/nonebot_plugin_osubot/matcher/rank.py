@@ -1,12 +1,14 @@
 import datetime
 
 from nonebot import on_command
+from nonebot.log import logger
 from nonebot.params import T_State
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import get_session
 from nonebot_plugin_uninfo import QryItrface, Uninfo
 from sqlalchemy import and_, func, select
 
+from ..api import get_user_info_data, save_user_info_snapshot
 from ..database.models import InfoData, UserData
 from ..draw.rank import draw_group_rank
 from ..utils import NGM
@@ -42,10 +44,26 @@ async def _(
 
     async with get_session() as db_session:
         user_data = (await db_session.scalars(select(UserData).where(UserData.user_id.in_(member_ids)))).all()
-        bound_osu_ids = list({user.osu_id for user in user_data})
-        if not bound_osu_ids:
-            await UniMessage.text("本群还没有已绑定 osu! 账号的成员").finish(reply_to=True)
+    bound_osu_ids = list({user.osu_id for user in user_data})
+    if not bound_osu_ids:
+        await UniMessage.text("本群还没有已绑定 osu! 账号的成员").finish(reply_to=True)
 
+    requester = next((user for user in user_data if user.user_id == session.user.id), None)
+    if requester:
+        try:
+            requester_info = await get_user_info_data(
+                requester.osu_id,
+                NGM[str(mode)],
+                update_snapshot=False,
+            )
+            refreshed = await save_user_info_snapshot(requester_info, NGM[str(mode)])
+        except Exception as error:
+            logger.opt(exception=error).warning(f"群内排名刷新发起者 {requester.osu_id} 的成绩失败")
+            refreshed = False
+        if not refreshed:
+            await UniMessage.text("刷新你的 osu! 数据失败，暂时无法保证 PP 准确，请稍后重试").finish(reply_to=True)
+
+    async with get_session() as db_session:
         current_infos = (
             await db_session.scalars(
                 select(InfoData)
@@ -84,7 +102,6 @@ async def _(
     for user in user_data:
         user_by_osu.setdefault(user.osu_id, user)
     previous_by_osu = {info.osu_id: info for info in previous_infos}
-    requester = next((user for user in user_data if user.user_id == session.user.id), None)
 
     players = []
     seen = set()
