@@ -218,14 +218,9 @@ async def _prepare_match_assets(data: dict) -> dict:
     )
     cover_data, avatar_data = await asyncio.gather(
         asyncio.gather(
-            *(
-                image_source_data_uri(source, max_size=(304, 224), image_format="JPEG")
-                for source in cover_sources
-            )
+            *(image_source_data_uri(source, max_size=(304, 224), image_format="JPEG") for source in cover_sources)
         ),
-        asyncio.gather(
-            *(image_source_data_uri(source, max_size=(96, 96)) for _user_id, source in avatar_sources)
-        ),
+        asyncio.gather(*(image_source_data_uri(source, max_size=(96, 96)) for _user_id, source in avatar_sources)),
     )
     covers = dict(zip(cover_sources, cover_data))
     avatars = dict(zip(avatar_sources, avatar_data))

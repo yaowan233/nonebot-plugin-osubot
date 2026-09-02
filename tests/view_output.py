@@ -670,9 +670,7 @@ async def test_achievement_grid_synthetic(app: App):
     icon_sources = [player["avatar"] for player in players]
     rows = [
         {
-            "name": ["500 Combo", "Rising Star", "Challenge Accepted", "Perseverance", "Non-stop Dancer"][
-                index % 5
-            ],
+            "name": ["500 Combo", "Rising Star", "Challenge Accepted", "Perseverance", "Non-stop Dancer"][index % 5],
             "icon": icon_sources[index % len(icon_sources)],
             "grouping": ["Skill & Dedication", "Hush-Hush", "Beatmap Packs"][index % 3],
             "achieved_at": f"2026-08-{index + 1:02d}",

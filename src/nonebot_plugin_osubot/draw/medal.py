@@ -41,15 +41,11 @@ async def draw_achievements(data: AchievementRenderData) -> bytes:
     achievements = list(data.get("achievements") or [])
     avatar_data, icon_data = await asyncio.gather(
         image_source_data_uri(data.get("me_avatar"), max_size=(156, 156)),
-        asyncio.gather(
-            *(image_source_data_uri(row.get("icon"), max_size=(144, 144)) for row in achievements)
-        ),
+        asyncio.gather(*(image_source_data_uri(row.get("icon"), max_size=(144, 144)) for row in achievements)),
     )
     prepared = {
         **data,
         "me_avatar_data": avatar_data,
-        "achievements": [
-            {**row, "icon_data": prepared_icon} for row, prepared_icon in zip(achievements, icon_data)
-        ],
+        "achievements": [{**row, "icon_data": prepared_icon} for row, prepared_icon in zip(achievements, icon_data)],
     }
     return await render_achievement_svg(prepared)

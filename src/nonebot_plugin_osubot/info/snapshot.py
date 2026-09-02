@@ -152,9 +152,7 @@ class SqlInfoSnapshotStore:
                 (rulesets.fruits, 2),
                 (rulesets.mania, 3),
             )
-            rows.extend(
-                _make_info_data(user.id, stats, mode, snapshot_date, badge_count) for stats, mode in mode_stats
-            )
+            rows.extend(_make_info_data(user.id, stats, mode, snapshot_date, badge_count) for stats, mode in mode_stats)
         return await self._save_rows(rows, {user.id: user.username for user in available_users})
 
     async def save_mode(self, user: UnifiedUser, osu_mode: int) -> int:
