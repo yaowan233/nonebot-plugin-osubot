@@ -62,3 +62,41 @@ def test_taiko_conversion_uses_converted_object_counts():
     assert result.count_circles == 296
     assert result.count_sliders == 4
     assert result.count_spinners == 0
+
+
+def test_map_rating_distribution_with_only_zeroes_does_not_divide_by_zero():
+    """没有任何评分的谱面仍应正常生成评分区域。"""
+    from nonebot_plugin_osubot.draw.map_svg import _map_rating_and_failures
+
+    payload = {
+        "set": {},
+        "map": {
+            "rating": None,
+            "rating_votes": 0,
+            "rating_distribution": [0] * 11,
+            "fail_points": [],
+        },
+    }
+
+    svg = _map_rating_and_failures(payload)
+
+    assert "暂无评分" in svg
+
+
+def test_map_failure_distribution_with_only_zeroes_does_not_divide_by_zero():
+    """失败位置分布全为零时仍应正常生成失败区域。"""
+    from nonebot_plugin_osubot.draw.map_svg import _map_rating_and_failures
+
+    payload = {
+        "set": {},
+        "map": {
+            "rating": None,
+            "rating_votes": 0,
+            "rating_distribution": [],
+            "fail_points": [0] * 100,
+        },
+    }
+
+    svg = _map_rating_and_failures(payload)
+
+    assert "失败位置分布" in svg

@@ -345,7 +345,9 @@ def _map_rating_and_failures(payload: dict) -> str:
     votes = int(beatmap.get("rating_votes") or 0)
     rating_values = [float(value or 0) for value in (beatmap.get("rating_distribution") or [])]
     rating_values = rating_values[1:] if len(rating_values) > 10 else rating_values
-    rating_max = max(rating_values, default=1)
+    rating_max = max(rating_values, default=0)
+    if rating_max <= 0:
+        rating_max = 1
     rating_bars = []
     for index, value in enumerate(rating_values[-10:]):
         height = max(2, 30 * value / rating_max)
@@ -354,7 +356,9 @@ def _map_rating_and_failures(payload: dict) -> str:
         )
     raw_failures = [float(value or 0) for value in (beatmap.get("fail_points") or [])]
     failures = _sample_bars(raw_failures)
-    failure_max = max(failures, default=1)
+    failure_max = max(failures, default=0)
+    if failure_max <= 0:
+        failure_max = 1
     peak_index = max(range(len(raw_failures)), key=raw_failures.__getitem__) if raw_failures else -1
     peak_pct = round((peak_index + 0.5) / len(raw_failures) * 100) if raw_failures else 0
     fail_bars = []
