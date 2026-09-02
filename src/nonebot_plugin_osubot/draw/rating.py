@@ -1,11 +1,12 @@
 import re
+import asyncio
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
 from statistics import mode, median
+from urllib.parse import unquote, urlparse
 
-import jinja2
 from nonebot.log import logger
 from PIL import Image, ImageDraw
 
@@ -13,7 +14,8 @@ from ..api import api_info
 from ..schema.user import UserCompact
 from ..schema.match import Game, Match
 from .utils import crop_bg, draw_fillet, open_user_icon, draw_rounded_rectangle
-from .browser import persistent_page, wait_for_page_assets
+from .score import _image_data_uri, _owner_avatar_data
+from .rating_svg import render_rating_svg
 from .static import (
     Torus_SemiBold_20,
     Torus_SemiBold_25,
@@ -194,20 +196,60 @@ async def draw_rating_legacy(match_id: str, algorithm: str = "osuplus") -> bytes
     return byt.getvalue()
 
 
+async def _rating_avatar_data_uri(player: dict) -> str | None:
+    source = str(player.get("avatar_data") or player.get("avatar") or "")
+    if source.startswith("data:"):
+        return source
+    try:
+        if source.startswith("file:"):
+            parsed = urlparse(source)
+            raw_path = unquote(parsed.path)
+            if re.match(r"^/[A-Za-z]:/", raw_path):
+                raw_path = raw_path[1:]
+            local_path = Path(raw_path)
+            if local_path.is_file():
+                return await asyncio.to_thread(_local_rating_avatar_data_uri, local_path)
+        elif source and Path(source).is_file():
+            return await asyncio.to_thread(_local_rating_avatar_data_uri, Path(source))
+    except (OSError, ValueError):
+        pass
+    try:
+        return await _owner_avatar_data(int(player["user_id"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _local_rating_avatar_data_uri(path: Path) -> str:
+    with Image.open(path) as avatar:
+        return _image_data_uri(avatar, max_size=(128, 128))
+
+
+def _rating_player_key(player: dict) -> tuple[object, object]:
+    return player.get("user_id"), player.get("name")
+
+
+async def _prepare_rating_data(data: dict) -> dict:
+    players = list(data.get("players") or [])
+    avatars = await asyncio.gather(*(_rating_avatar_data_uri(player) for player in players))
+    prepared_players = [{**player, "avatar_data": avatar} for player, avatar in zip(players, avatars)]
+    player_by_key = {_rating_player_key(player): player for player in prepared_players}
+
+    def prepared(player: dict) -> dict:
+        return player_by_key.get(_rating_player_key(player), {**player, "avatar_data": None})
+
+    return {
+        **data,
+        "players": prepared_players,
+        "mvp": prepared(data.get("mvp") or {}),
+        "red_players": [prepared(player) for player in data.get("red_players") or []],
+        "blue_players": [prepared(player) for player in data.get("blue_players") or []],
+    }
+
+
 async def draw_rating_card(data: dict) -> bytes:
-    """Render a rating card from prepared match statistics."""
-    template_path = Path(__file__).parent / "rating_templates"
-    template = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(str(template_path)), enable_async=True
-    ).get_template("index.html")
-    async with persistent_page(
-        "rating", (template_path / "index.html").as_uri(), {"width": 1280, "height": 900}
-    ) as page:
-        await page.set_content(await template.render_async(**data), wait_until="domcontentloaded")
-        await wait_for_page_assets(page)
-        element = await page.query_selector(".card")
-        assert element
-        return await element.screenshot(type="png")
+    """Render a rating card through the native SVG/resvg pipeline."""
+    prepared = await _prepare_rating_data(data)
+    return (await render_rating_svg(prepared)).getvalue()
 
 
 async def draw_rating(
