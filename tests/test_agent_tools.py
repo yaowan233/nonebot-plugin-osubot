@@ -1698,6 +1698,44 @@ async def test_send_osu_match_rating_returns_structured_data(monkeypatch):
     assert sent == [b"rating-image"]
 
 
+@pytest.mark.asyncio
+async def test_draw_preview_uses_unified_renderer_for_catch(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    calls = []
+
+    async def fake_osu_api(project: str, **kwargs):
+        assert project == "map"
+        assert kwargs == {"map_id": 123}
+        return {"beatmapset_id": 456, "mode_int": 2}
+
+    async def fake_render_preview(bid, sid, mode, **kwargs):
+        calls.append((bid, sid, mode, kwargs))
+        return b"native-catch-preview"
+
+    monkeypatch.setattr(agent_tools, "osu_api", fake_osu_api)
+    monkeypatch.setattr(agent_tools, "render_preview", fake_render_preview, raising=False)
+    assert not hasattr(agent_tools, "draw_cath_preview")
+
+    image, extra_text = await agent_tools._draw_preview("123", "2", "", False)
+
+    assert image == b"native-catch-preview"
+    assert extra_text is None
+    assert calls == [
+        (
+            123,
+            456,
+            2,
+            {
+                "fmt": "png",
+                "mods": [],
+                "source_mode": 2,
+                "full_image": False,
+            },
+        )
+    ]
+
+
 def test_match_player_summary_includes_top1_rate_for_head_to_head():
     from nonebot_plugin_osubot.agent_tools import _match_player_summary
 

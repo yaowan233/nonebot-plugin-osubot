@@ -45,9 +45,8 @@ from .draw.utils import filter_scores_with_regex
 from .draw.rating import draw_rating
 from .draw.recommend import draw_recommend
 from .draw.echarts import build_bpa_data, draw_bpa_plot, draw_history_plot
-from .draw.osu_preview import draw_osu_preview, draw_full_osu_preview
+from .draw.osu_preview import draw_osu_preview, draw_full_osu_preview, render_preview
 from .draw.match_history import draw_match_history
-from .draw.catch_preview import draw_cath_preview
 from .draw.taiko_preview import map_to_image, parse_map
 from .help_data import get_command_help
 from .history_data import merge_osutrack_history
@@ -862,7 +861,18 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
         osu = await download_osu(beatmapset_id, int(map_id))
         return await generate_preview_pic(osu, full), None
     if mode == "2":
-        return await draw_cath_preview(int(map_id), beatmapset_id, mod_list), None
+        return (
+            await render_preview(
+                int(map_id),
+                beatmapset_id,
+                2,
+                fmt="png",
+                mods=mod_list,
+                source_mode=int(data["mode_int"]),
+                full_image=full,
+            ),
+            None,
+        )
     if mode == "1":
         osu = await download_osu(beatmapset_id, int(map_id))
         return map_to_image(parse_map(osu)), None
