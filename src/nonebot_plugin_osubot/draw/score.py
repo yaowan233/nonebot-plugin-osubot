@@ -54,8 +54,7 @@ def _mania_ln_ratio(osu_path: str, mods: list[Mod], fallback: Beatmap) -> str | 
     except Exception:
         holds = int(fallback.count_sliders or 0)
         total = sum(
-            int(value or 0)
-            for value in (fallback.count_circles, fallback.count_sliders, fallback.count_spinners)
+            int(value or 0) for value in (fallback.count_circles, fallback.count_sliders, fallback.count_spinners)
         )
     if total <= 0:
         return None
