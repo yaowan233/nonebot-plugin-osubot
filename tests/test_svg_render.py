@@ -188,6 +188,30 @@ def test_mania_score_judgements_show_yellow_rainbow_ratio():
     assert 'data-role="mania-ratio"' not in _render_judgements({"ratio": None})
 
 
+def test_mania_score_map_strip_shows_ln_ratio_only_for_mania():
+    from nonebot_plugin_osubot.draw.score_svg import _render_map_strip
+
+    data = {
+        "mode_code": "MANIA",
+        "title": "Map",
+        "artist": "Artist",
+        "version": "4K",
+        "stars": "4.63",
+        "bpm": "132",
+        "objects": "2,119",
+        "length": "4:06",
+        "map_id": 5856294,
+        "dimensions": [{"name": "KEYS", "current": "4"}],
+        "ln_ratio": "37.5%",
+    }
+
+    mania_svg = _render_map_strip(data)
+
+    assert ">LN占比: </text>" in mania_svg
+    assert ">37.5%</text>" in mania_svg
+    assert "LN占比" not in _render_map_strip({**data, "mode_code": "STD"})
+
+
 def test_score_atmosphere_has_no_visible_column_seams():
     """Cached background ambience must remain continuous across the canvas."""
     from nonebot_plugin_osubot.draw.score_svg import HEIGHT, WIDTH, _atmosphere_rgba

@@ -157,3 +157,29 @@ def test_map_param_name_does_not_overlap_long_key():
     assert key is not None
     assert name is not None
     assert float(name.group(1)) - float(key.group(1)) >= 40
+
+
+def test_mania_map_hero_shows_ln_ratio_as_fifth_metric():
+    from nonebot_plugin_osubot.draw.map_svg import _map_hero
+
+    beatmap = {
+        "mode_int": 3,
+        "version": "4K",
+        "stars": 4.63,
+        "original_stars": 4.63,
+        "ss_pp": 238.8,
+        "bpm": 132,
+        "duration": "4:06",
+        "max_combo": 2132,
+        "objects": 200,
+        "sliders": 75,
+    }
+
+    mania_svg = _map_hero({"map": beatmap})
+    std_svg = _map_hero({"map": {**beatmap, "mode_int": 0}})
+
+    assert ">LN占比</text>" in mania_svg
+    assert ">37.5%</text>" in mania_svg
+    assert mania_svg.count('data-role="map-quick-metric"') == 5
+    assert "LN占比" not in std_svg
+    assert std_svg.count('data-role="map-quick-metric"') == 4

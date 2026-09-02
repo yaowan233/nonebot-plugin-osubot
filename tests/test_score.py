@@ -133,6 +133,25 @@ def test_map_score_conversion_keeps_pp_and_beatmap_metadata():
     assert converted.beatmap.creator == "mapper"
 
 
+def test_mania_ln_ratio_uses_ruleset_hold_count(monkeypatch):
+    from rosu_pp_py import GameMode
+
+    from nonebot_plugin_osubot.draw import score as score_module
+
+    class FakeBeatmap:
+        mode = GameMode.Mania
+        n_holds = 75
+        n_objects = 200
+
+        def __init__(self, *, path: str):
+            assert path == "map.osu"
+
+    monkeypatch.setattr(score_module, "RosuBeatmap", FakeBeatmap)
+    fallback = SimpleNamespace(count_circles=80, count_sliders=20, count_spinners=0)
+
+    assert score_module._mania_ln_ratio("map.osu", [], fallback) == "37.5%"
+
+
 def test_cal_stars_uses_mod_settings_without_recalculating_pp(after_nonebot_init, tmp_path):
     from nonebot_plugin_osubot.pp import cal_stars
     from nonebot_plugin_osubot.schema.score import Mod, NewStatistics, UnifiedScore

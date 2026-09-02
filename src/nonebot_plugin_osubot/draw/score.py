@@ -6,6 +6,7 @@ from typing import Optional
 from functools import lru_cache
 
 from PIL import Image
+from rosu_pp_py import Beatmap as RosuBeatmap, GameMode
 
 from ..info import get_bg
 from ..utils import FGM, NGM, normalize_map_mode
@@ -33,6 +34,33 @@ from .score_svg import render_score_svg
 def _map_score_to_unified(score, map_json: dict) -> UnifiedScore:
     """Compatibility wrapper for callers that used the old drawing helper."""
     return map_score_to_unified(score, map_json)
+
+
+def _mania_ln_ratio(osu_path: str, mods: list[Mod], fallback: Beatmap) -> str | None:
+    """Return the hold-note share for the actual mania ruleset map."""
+    try:
+        beatmap = RosuBeatmap(path=osu_path)
+        if beatmap.mode != GameMode.Mania:
+            rosu_mods = [
+                {
+                    "acronym": mod.acronym,
+                    **({"settings": mod.settings} if mod.settings else {}),
+                }
+                for mod in mods
+            ]
+            beatmap.convert(GameMode.Mania, rosu_mods)
+        holds = int(beatmap.n_holds)
+        total = int(beatmap.n_objects)
+    except Exception:
+        holds = int(fallback.count_sliders or 0)
+        total = sum(
+            int(value or 0)
+            for value in (fallback.count_circles, fallback.count_sliders, fallback.count_spinners)
+        )
+    if total <= 0:
+        return None
+    holds = max(0, min(holds, total))
+    return f"{holds / total * 100:.1f}%"
 
 
 async def draw_score(
@@ -357,6 +385,7 @@ async def render_score_template(
     # 推演一律基于移除了 RX/AP mod 的成绩副本（非 relax 的 pp 值），
     # 且不污染 score_info.statistics 的判定数显示。
     pp_score = without_relax_mods(score_info)
+    ln_ratio = _mania_ln_ratio(osu_path, pp_score.mods, mapinfo) if mode == 3 else None
 
     if mode == 0:
         judgements = [
@@ -586,6 +615,7 @@ async def render_score_template(
         "miss_rate": f"{miss_count / judgement_total * 100:.2f}%" if judgement_total else "0.00%",
         "combo_completion": f"{combo_completion:.1f}%",
         "ratio": ratio,
+        "ln_ratio": ln_ratio,
         "judge_cols": judge_cols,
         "judgements": [
             {"label": label, "value": int(value or 0), "display": _format_stat(value)} for label, value in judgements

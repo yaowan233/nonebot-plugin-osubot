@@ -320,16 +320,23 @@ def _map_hero(payload: dict) -> str:
             text(x, 304, f"{label}: {number(value, 0)} PP", 10, fill="#dce5ec", anchor=anchor, weight=700)
         )
     quick = []
-    quick_values = (
+    quick_values = [
         ("速度 (BPM)", number(beatmap.get("bpm"), 1), CYAN),
         ("谱面时长", str(beatmap.get("duration") or "—"), PINK),
         ("最大连击", number(beatmap.get("max_combo")) + "x", "#f6b943"),
         ("物件总数", number(beatmap.get("objects")), "#a78bfa"),
-    )
+    ]
+    if mode == 3:
+        total_objects = float(beatmap.get("objects") or 0)
+        holds = float(beatmap.get("sliders") or 0)
+        ln_ratio = holds / total_objects * 100 if total_objects > 0 else 0
+        quick_values.insert(3, ("LN占比", f"{ln_ratio:.1f}%", PINK))
+    quick_gap = 11
+    quick_width = (741 - quick_gap * (len(quick_values) - 1)) / len(quick_values)
     for index, (label, value, color) in enumerate(quick_values):
-        x = 646 + index * 188
+        x = 646 + index * (quick_width + quick_gap)
         quick.append(
-            f'<rect x="{x}" y="378" width="177" height="55" rx="8" fill="#ffffff08" stroke="#ffffff12"/><rect x="{x}" y="386" width="3" height="39" rx="1.5" fill="{color}"/>{text(x + 12, 397, label, 9, fill="#8292a3")}{text(x + 12, 421, value, 16, weight=700)}'
+            f'<g data-role="map-quick-metric"><rect x="{x}" y="378" width="{quick_width}" height="55" rx="8" fill="#ffffff08" stroke="#ffffff12"/><rect x="{x}" y="386" width="3" height="39" rx="1.5" fill="{color}"/>{text(x + 12, 397, label, 9, fill="#8292a3")}{text(x + 12, 421, value, 16, weight=700)}</g>'
         )
     return f"""
 {_map_panel(624, 70, 790, 385)}<rect x="624" y="70" width="790" height="122" rx="16" fill="#0b1222bb"/>

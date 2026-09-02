@@ -366,6 +366,8 @@ def _render_map_strip(data: dict) -> str:
             None,
         )
         quick_items.append(("键位", f"{keys}K" if keys else str(data.get("length", "--"))))
+        if data.get("ln_ratio") is not None:
+            quick_items.append(("LN占比", str(data["ln_ratio"])))
     else:
         quick_items.append(("时长", str(data.get("length", "--"))))
 
