@@ -473,3 +473,64 @@ def test_info_only_recalculates_stars_for_difficulty_mods():
     assert _has_star_rating_mod(SimpleNamespace(mods=[SimpleNamespace(acronym="DA")]))
     assert not _has_star_rating_mod(SimpleNamespace(mods=[SimpleNamespace(acronym="HD")]))
     assert not _has_star_rating_mod(SimpleNamespace(mods=[SimpleNamespace(acronym="CL")]))
+
+
+def _friend_payload(count: int) -> dict:
+    friends = [
+        {
+            "avatar": _image_uri(),
+            "name": f"player-{index}",
+            "uid": 1000 + index,
+            "country": "CN",
+            "online": index % 2 == 0,
+            "mutual": index % 3 == 0,
+            "supporter": index % 5 == 0,
+        }
+        for index in range(count)
+    ]
+    return {
+        "me_name": "player",
+        "me_uid": 42,
+        "me_avatar": _image_uri(),
+        "sort_label": "默认",
+        "total": 87,
+        "mutual_count": 5,
+        "online_count": 8,
+        "start": 1,
+        "end": count,
+        "friends": friends,
+    }
+
+
+def test_friend_svg_dynamic_height_and_badges():
+    from nonebot_plugin_osubot.draw.friend_svg import build_friend_svg
+
+    svg, height = build_friend_svg(_friend_payload(15))
+
+    assert height == 124 + 22 + 3 * 160 + 2 * 14 + 26 + 44
+    assert svg.count('data-role="friend-card"') == 15
+    assert svg.count(">互关</text>") == 5
+    assert svg.count("#ed438e") == 3  # supporter 爱心胶囊（index 0/5/10）
+    assert "CN uid 1000" in svg
+    assert ">player 的好友</text>" in svg
+    assert "共 87 位好友" in svg
+    assert "互关 5" in svg
+    assert "在线 8" in svg
+    assert "排序：默认" in svg
+    assert "1-15" in svg
+
+    small_svg, small_height = build_friend_svg(_friend_payload(6))
+    assert small_height == 124 + 22 + 2 * 160 + 14 + 26 + 44
+    assert small_svg.count('data-role="friend-card"') == 6
+
+
+@pytest.mark.asyncio
+@pytest.mark.no_cover
+async def test_friend_svg_raster_smoke():
+    from nonebot_plugin_osubot.draw.friend_svg import render_friend_svg
+
+    result = await render_friend_svg(_friend_payload(10))
+
+    with Image.open(BytesIO(result)) as image:
+        assert image.width == 1280
+        assert image.height == 124 + 22 + 2 * 160 + 14 + 26 + 44

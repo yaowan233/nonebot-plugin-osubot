@@ -146,9 +146,12 @@ async def _friend(event: Event, arg: Message = CommandArg()):
         img = await draw_friend_list(
             {
                 "me_name": oauth.osu_name,
+                "me_uid": oauth.osu_id,
                 "me_avatar": f"https://a.ppy.sh/{oauth.osu_id}",
                 "sort_label": _sort_label(sort),
                 "total": total,
+                "mutual_count": sum(1 for f in filtered if f.mutual),
+                "online_count": sum(1 for f in filtered if f.target and f.target.is_online),
                 "start": start,
                 "end": start + len(selected) - 1,
                 "friends": [
