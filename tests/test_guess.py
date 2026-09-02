@@ -394,6 +394,44 @@ async def test_guess_chart_taiko_hides_beatmap_metadata(app: App):
 
 
 @pytest.mark.asyncio
+async def test_guess_chart_catch_uses_unified_native_renderer(app: App):
+    """CTB 谱面猜歌应走统一原生预览入口，不再直接调用 HTML 渲染器。"""
+    try:
+        from nonebot_plugin_osubot.matcher.guess import guess_chart
+    except ImportError:
+        pytest.skip("nonebot_plugin_osubot not available")
+    import nonebot
+
+    event = fake_group_message_event_v11(message=Message("/谱面猜歌"))
+    score = make_mock_score()
+    score.beatmap.mode = 2
+    score.mods = [MagicMock(acronym="HR")]
+
+    with patch(f"{MODULE}.chart_games", {}):
+        with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=2)):
+            with patch_session(MODULE, make_binded_id_session(["12345678"])):
+                with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))):
+                    with patch(f"{MODULE}.chart_set_timeout"):
+                        with patch(f"{MODULE}.render_preview", new=AsyncMock(return_value=b"img")) as render:
+                            async with app.test_matcher(guess_chart) as ctx:
+                                adapter = nonebot.get_adapter(OnebotV11Adapter)
+                                bot = ctx.create_bot(base=Bot, adapter=adapter)
+                                ctx.should_call_send(event, ANY, result={"message_id": 1})
+                                ctx.receive_event(bot, event)
+                                ctx.should_finished()
+
+        render.assert_awaited_once_with(
+            score.beatmap.id,
+            score.beatmapset.id,
+            2,
+            fmt="png",
+            mods=["HR"],
+            source_mode=2,
+            full_image=False,
+        )
+
+
+@pytest.mark.asyncio
 async def test_guess_chart_no_binded_users(app: App):
     """mode=3（mania），无人绑定时，回复提示并 finish。"""
     try:

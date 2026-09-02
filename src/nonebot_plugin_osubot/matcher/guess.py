@@ -29,8 +29,7 @@ from ..database.models import UserData
 from ..mania import generate_preview_pic
 from ..api import safe_async_get, get_user_scores
 from ..file import map_path, download_osu
-from ..draw.osu_preview import draw_osu_preview
-from ..draw.catch_preview import draw_cath_preview
+from ..draw.osu_preview import draw_osu_preview, render_preview
 
 
 class GameType:
@@ -487,7 +486,15 @@ async def _(
         pic = await draw_osu_preview(selected_score.beatmap.id, selected_score.beatmapset.id)
     else:
         mods = [i.acronym for i in selected_score.mods]
-        pic = await draw_cath_preview(selected_score.beatmap.id, selected_score.beatmapset.id, mods)
+        pic = await render_preview(
+            selected_score.beatmap.id,
+            selected_score.beatmapset.id,
+            2,
+            fmt="png",
+            mods=mods,
+            source_mode=int(selected_score.beatmap.mode),
+            full_image=False,
+        )
     await (
         UniMessage.text(f"开始谱面猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 {selected_user} 的bp")
         + UniMessage.image(raw=pic)
