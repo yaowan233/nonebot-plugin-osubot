@@ -93,6 +93,18 @@ async def test_rank_svg_raster_smoke():
 
 
 @pytest.mark.asyncio
+async def test_rank_svg_raster_ignores_xml_invalid_player_characters():
+    from nonebot_plugin_osubot.draw.rank_svg import render_rank_svg
+
+    payload = _rank_payload(3, 2)
+    payload["visible"][0]["osu_name"] = "player\x0bname"
+
+    result = await render_rank_svg(payload)
+
+    assert isinstance(result, BytesIO)
+
+
+@pytest.mark.asyncio
 async def test_draw_group_rank_delegates_to_native_renderer(monkeypatch):
     from nonebot_plugin_osubot.draw import rank
 

@@ -4,6 +4,7 @@ import asyncio
 import base64
 import html
 import mimetypes
+import re
 import threading
 import xml.etree.ElementTree as ElementTree
 from io import BytesIO
@@ -21,10 +22,15 @@ FONT_FAMILY = "Source Han Sans SC"
 _thumbnail_locks: dict[Path, threading.Lock] = {}
 _thumbnail_locks_guard = threading.Lock()
 _NATIVE_RENDER_FONT_SIZES = (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 25, 28, 31, 34, 35, 43)
+_XML_INVALID_CHARACTERS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def _xml_safe_text(value: object) -> str:
+    return _XML_INVALID_CHARACTERS.sub("", str(value))
 
 
 def escape_text(value: object) -> str:
-    return html.escape(str(value), quote=True)
+    return html.escape(_xml_safe_text(value), quote=True)
 
 
 @lru_cache(maxsize=128)
@@ -33,6 +39,7 @@ def _font(path: Path, size: int) -> ImageFont.FreeTypeFont:
 
 
 def font_for_text(value: object, size: int, font_kind: str | None = None) -> ImageFont.FreeTypeFont:
+    value = _xml_safe_text(value)
     if font_kind == "extra":
         path = EXTRA_FONT_PATH
     else:
@@ -42,7 +49,7 @@ def font_for_text(value: object, size: int, font_kind: str | None = None) -> Ima
 
 def fit_text(value: object, max_width: int, start_size: int, min_size: int) -> int:
     """Return the largest font size that fits a fixed SVG text slot."""
-    text = str(value)
+    text = _xml_safe_text(value)
     font = font_for_text(text, start_size)
     width = font.getlength(text)
     if width <= max_width:
@@ -56,12 +63,13 @@ def fit_text(value: object, max_width: int, start_size: int, min_size: int) -> i
 
 
 def text_width(value: object, size: int) -> float:
-    return font_for_text(value, size).getlength(str(value))
+    text = _xml_safe_text(value)
+    return font_for_text(text, size).getlength(text)
 
 
 def truncate_text(value: object, max_width: float, size: int) -> str:
     """Truncate a single line using the exact font metrics used by the renderer."""
-    text = str(value)
+    text = _xml_safe_text(value)
     if text_width(text, size) <= max_width:
         return text
     suffix = "…"
