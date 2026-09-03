@@ -1,62 +1,16 @@
 import asyncio
 import datetime
 from collections import defaultdict
-from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-import jinja2
-
 from ..api import get_server, get_users
 from ..file import ensure_osu_file
 from ..pp import cal_pp
-from .browser import persistent_page, wait_for_page_assets
+from .bpa_svg import render_bpa_svg
 from .history_svg import render_history_svg
-from .map_render import file_data_uri
 from .native_assets import image_source_data_uri
-
-template_dir = Path(__file__).parent / "templates"
-template_path = str(template_dir)
-template_asset_dir = Path(__file__).parent / "template_assets"
-
-
-async def _render_chart_template(
-    template_name: str,
-    variables: dict[str, Any],
-    *,
-    width: int,
-    height: int,
-) -> bytes:
-    """渲染 ECharts 模板，不依赖 htmlrender 固定的 networkidle 等待。"""
-    template = jinja2.Environment(  # noqa: S701
-        loader=jinja2.FileSystemLoader(template_path),
-        enable_async=True,
-        autoescape=jinja2.select_autoescape(),
-    ).get_template(template_name)
-    html = await template.render_async(**variables)
-    async with persistent_page(
-        f"echarts:{template_name}",
-        None,
-        {"width": width, "height": height},
-    ) as page:
-        await page.set_content(html, wait_until="domcontentloaded")
-        await wait_for_page_assets(page)
-        await page.wait_for_function(
-            "() => document.querySelectorAll('canvas').length > 0",
-            timeout=10_000,
-        )
-        return await page.screenshot(full_page=True, type="png")
-
-
-@lru_cache(maxsize=1)
-def _template_assets() -> dict[str, str]:
-    return {
-        "echarts_url": file_data_uri(template_dir / "echarts.min.js", "application/javascript"),
-        "torus_regular_url": file_data_uri(template_asset_dir / "torus-regular.woff", "font/woff"),
-        "torus_semibold_url": file_data_uri(template_asset_dir / "torus-semibold.woff", "font/woff"),
-        "extra_font_url": file_data_uri(template_asset_dir / "extra.woff", "font/woff"),
-    }
 
 
 rank_color = {
@@ -403,7 +357,6 @@ async def draw_bpa_plot(
     source: str = "osu",
     avatar_url: str | None = None,
 ) -> bytes:
-    template_name = "bpa_chart.html"
     display_name = username or str(name).split(" ", 1)[0] or "osu! 玩家"
     mode_labels = {
         "osu": "标准模式",
@@ -429,17 +382,19 @@ async def draw_bpa_plot(
     source_label = server.label
     if avatar_url is None and user_id:
         avatar_url = f"{server.descriptor.avatar_base_url}/{user_id}"
-    return await _render_chart_template(
-        template_name,
+    avatar_data = await image_source_data_uri(
+        avatar_url,
+        max_size=(176, 176),
+        image_format="JPEG",
+    )
+    rendered = await render_bpa_svg(
         {
-            **_template_assets(),
             "name": name,
             "username": display_name,
-            "initial": display_name[:1].upper(),
             "mode_label": mode_labels.get(mode or "", mode or "osu! 模式"),
             "mode_icon": mode_icons.get(mode or "", "\ue800"),
             "user_id": str(user_id or ""),
-            "avatar_url": avatar_url or "",
+            "avatar_data": avatar_data,
             "source_label": source_label,
             "pp_ls": pp_ls,
             "length_ls": length_ls,
@@ -450,8 +405,6 @@ async def draw_bpa_plot(
             "acc_ls": acc_ls or [],
             "bpm_ls": bpm_ls or [],
             "stats": stats,
-            "length": len(pp_ls),
-        },
-        width=1620,
-        height=900,
+        }
     )
+    return rendered.getvalue()

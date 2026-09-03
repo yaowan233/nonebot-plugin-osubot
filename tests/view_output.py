@@ -470,7 +470,7 @@ async def test_bpa_synthetic_render(app: App):
         source="ppysb",
         **data,
     )
-    path = OUT / "bpa_synthetic.png"
+    path = OUT / "bpa_synthetic.jpg"
     path.write_bytes(pic)
     print(f"\n  [bpa synthetic] -> {path.name}  stats={data['stats']}")
 
@@ -479,21 +479,27 @@ async def test_bpa_synthetic_render(app: App):
 async def test_bpa_real_ctb(app: App):
     """bpa 真实数据渲染：3162675 fruits(ctb) 模式，并导出 JSON 快照"""
     import json
-    from nonebot_plugin_osubot.api import get_user_scores
+    from nonebot_plugin_osubot.api import get_server, get_user_info_data, get_user_scores
     from nonebot_plugin_osubot.draw.score import cal_score_info
     from nonebot_plugin_osubot.draw.echarts import build_bpa_data
+    from nonebot_plugin_osubot.server import ServerFeature
 
     uid = 3162675
     mode = "fruits"
 
     t0 = time.perf_counter()
-    score_ls = await get_user_scores(uid, mode, "best", "osu", legacy_only=True)
+    score_ls, user = await asyncio.gather(
+        get_user_scores(uid, mode, "best", "osu", legacy_only=False),
+        get_user_info_data(uid, mode, "osu"),
+    )
     print(f"\n  [bpa real ctb] 拿到 {len(score_ls)} 条 bp")
     if not score_ls:
         pytest.skip("没有拿到 bp 数据")
 
+    server = get_server("osu")
     for score in score_ls:
-        score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
+        if not server.supports(ServerFeature.SCORE_VERSION):
+            score.mods = [mod for mod in score.mods if mod.acronym != "CL"]
         for mod in score.mods:
             if not score.beatmap:
                 continue
@@ -502,7 +508,7 @@ async def test_bpa_real_ctb(app: App):
             if mod.acronym == "HT":
                 score.beatmap.total_length = score.beatmap.total_length / 0.75
 
-    score_ls = [cal_score_info(False, score) for score in score_ls]
+    score_ls = [cal_score_info(True, score) for score in score_ls]
     data = await build_bpa_data(score_ls, "osu")
 
     json_path = OUT / "bpa_real_ctb.json"
@@ -513,14 +519,14 @@ async def test_bpa_real_ctb(app: App):
 
     pic = await draw_bpa_plot(
         "3162675 fruits 模式",
-        username="3162675",
+        username=user.username,
         mode="fruits",
         user_id=uid,
         source="osu",
         **data,
     )
     elapsed = time.perf_counter() - t0
-    path = OUT / "bpa_real_ctb.png"
+    path = OUT / "bpa_real_ctb.jpg"
     path.write_bytes(pic)
     print(f"  [bpa real ctb] {elapsed:.2f}s -> {path.name}  stats={data['stats']}")
 

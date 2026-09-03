@@ -88,13 +88,10 @@ def test_build_history_data_keeps_normal_rank_history():
 
 
 @pytest.mark.asyncio
-async def test_draw_history_plot_uses_native_renderer(monkeypatch):
+async def test_draw_history_plot_uses_native_renderer():
     from nonebot_plugin_osubot.draw import echarts
 
-    async def fail_if_browser_is_used(*_args, **_kwargs):
-        raise AssertionError("history rendering must not use the browser template path")
-
-    monkeypatch.setattr(echarts, "_render_chart_template", fail_if_browser_is_used)
+    assert not hasattr(echarts, "_render_chart_template")
     result = await echarts.draw_history_plot(
         [1000, 1100, 1200],
         ["2026-01-01", "2026-01-02", "2026-01-03"],
