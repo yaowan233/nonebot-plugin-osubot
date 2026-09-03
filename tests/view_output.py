@@ -367,6 +367,53 @@ async def test_recommend_stress(app: App):
 
 
 @pytest.mark.asyncio
+async def test_history_synthetic_render(app: App):
+    """历史趋势原生 SVG：保留完整 PP，并隐藏注册初期的排名暴涨。"""
+    from nonebot_plugin_osubot.draw.echarts import draw_history_plot
+
+    dates = [(date(2024, 1, 1) + timedelta(days=index * 30)).isoformat() for index in range(24)]
+    pp_values = [900 + index * 245 + (index % 4) * 35 for index in range(24)]
+    rank_values = [
+        3_200_000,
+        1_450_000,
+        610_000,
+        285_000,
+        176_000,
+        143_000,
+        132_000,
+        124_000,
+        119_000,
+        116_000,
+        113_000,
+        110_000,
+        108_000,
+        106_500,
+        105_000,
+        103_800,
+        102_400,
+        101_200,
+        99_800,
+        98_600,
+        97_500,
+        96_400,
+        95_200,
+        94_100,
+    ]
+    pic = await draw_history_plot(
+        pp_values,
+        dates,
+        rank_values,
+        "NewPlayer osu pp/rank history",
+        username="NewPlayer",
+        mode="osu",
+        source_label="合成测试数据",
+    )
+    path = OUT / "history_native_rank_window.jpg"
+    path.write_bytes(pic.getvalue())
+    print(f"\n  [history native] -> {path.name}")
+
+
+@pytest.mark.asyncio
 async def test_bpa_synthetic_render(app: App):
     """bpa 合成数据渲染（不联网），用于查看图表样式"""
     from types import SimpleNamespace

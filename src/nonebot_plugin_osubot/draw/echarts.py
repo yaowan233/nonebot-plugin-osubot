@@ -2,6 +2,7 @@ import asyncio
 import datetime
 from collections import defaultdict
 from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,9 @@ from ..api import get_server, get_users
 from ..file import ensure_osu_file
 from ..pp import cal_pp
 from .browser import persistent_page, wait_for_page_assets
+from .history_svg import render_history_svg
 from .map_render import file_data_uri
+from .native_assets import image_source_data_uri
 
 template_dir = Path(__file__).parent / "templates"
 template_path = str(template_dir)
@@ -73,6 +76,48 @@ rank_order = ["XH", "X", "SH", "S", "A", "B", "C", "D"]
 STAR_MODS = {"DT", "NC", "HT", "HR", "EZ", "DC", "DA"}
 
 
+def _rank_window_start(dates: list[str], ranks: list[int]) -> int:
+    """Hide an overwhelming registration surge while keeping a useful recent window."""
+    count = len(ranks)
+    if count <= 6:
+        return 0
+
+    recent_start = 0
+    try:
+        parsed_dates = [datetime.date.fromisoformat(value) for value in dates]
+        cutoff = parsed_dates[-1] - datetime.timedelta(days=90)
+        candidate = next((index for index, value in enumerate(parsed_dates) if value >= cutoff), count)
+        if count - candidate >= 6:
+            recent_start = candidate
+    except ValueError:
+        pass
+    if recent_start == 0:
+        recent_count = max(6, (count * 35 + 99) // 100)
+        recent_start = max(0, count - recent_count)
+
+    recent_ranks = ranks[recent_start:]
+    recent_min = min(recent_ranks)
+    recent_max = max(recent_ranks)
+    recent_span = recent_max - recent_min
+    # A rank range several times larger than the recent movement makes the
+    # meaningful tail visually flat. The proportional allowance also keeps
+    # ordinary long-term histories intact when ranks naturally move slowly.
+    allowance = max(recent_span * 5, recent_max * 0.25, 100)
+    visible_ceiling = recent_max + allowance
+    if max(ranks) <= visible_ceiling:
+        return 0
+
+    suffix_max = [0] * count
+    running_max = 0
+    for index in range(count - 1, -1, -1):
+        running_max = max(running_max, ranks[index])
+        suffix_max[index] = running_max
+    return next(
+        (index for index, value in enumerate(suffix_max) if value <= visible_ceiling),
+        recent_start,
+    )
+
+
 def build_history_data(
     pp_ls,
     date_ls,
@@ -107,7 +152,9 @@ def build_history_data(
         recent_index = next((index for index, date in enumerate(parsed_dates) if date >= cutoff), 0)
 
     start_rank = rank_values[0]
-    rank_gain = start_rank - rank_values[-1]
+    rank_start_index = _rank_window_start(dates, rank_values)
+    visible_start_rank = rank_values[rank_start_index]
+    rank_gain = visible_start_rank - rank_values[-1]
     mode_labels = {
         "osu": "标准模式",
         "taiko": "太鼓模式",
@@ -130,13 +177,18 @@ def build_history_data(
         "dates": dates,
         "pp_values": pp_values,
         "rank_values": rank_values,
+        "rank_display_values": [None] * rank_start_index + rank_values[rank_start_index:],
+        "rank_start_index": rank_start_index,
+        "rank_window_limited": rank_start_index > 0,
+        "rank_window_start": dates[rank_start_index],
         "start_pp": pp_values[0],
         "current_pp": pp_values[-1],
         "pp_gain": pp_values[-1] - pp_values[0],
         "recent_pp_gain": pp_values[-1] - pp_values[recent_index],
         "current_rank": rank_values[-1],
         "rank_gain": rank_gain,
-        "rank_gain_rate": rank_gain / start_rank * 100 if start_rank else 0,
+        "rank_gain_rate": rank_gain / visible_start_rank * 100 if visible_start_rank else 0,
+        "rank_total_gain": start_rank - rank_values[-1],
         "source_label": source_label,
     }
 
@@ -151,8 +203,7 @@ async def draw_history_plot(
     mode: str | None = None,
     user_id: int | str | None = None,
     source_label: str = "本地记录",
-) -> bytes:
-    template_name = "pp_rank_line_chart.html"
+) -> BytesIO:
     payload = build_history_data(
         pp_ls,
         date_ls,
@@ -163,12 +214,12 @@ async def draw_history_plot(
         user_id=user_id,
         source_label=source_label,
     )
-    return await _render_chart_template(
-        template_name,
-        {**_template_assets(), "payload": payload},
-        width=1280,
-        height=760,
+    payload["avatar_data"] = await image_source_data_uri(
+        payload.get("avatar"),
+        max_size=(176, 176),
+        image_format="JPEG",
     )
+    return await render_history_svg(payload)
 
 
 def _num(value: Any, default: float = 0.0) -> float:
