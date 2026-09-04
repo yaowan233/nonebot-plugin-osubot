@@ -1578,7 +1578,7 @@ requires-dist = [
     { name = "nonebot-plugin-uninfo", specifier = ">=0.11.1" },
     { name = "nonebot-plugin-waiter", specifier = ">=0.6.1" },
     { name = "nonebot2", specifier = ">=2.3.0" },
-    { name = "osu-beatmap-preview-py", specifier = ">=0.1.3,<0.2.0" },
+    { name = "osu-beatmap-preview-py", specifier = ">=0.1.4,<0.2.0" },
     { name = "osu-tools-py", specifier = ">=0.1.4" },
     { name = "pillow", specifier = ">=9.2.0" },
     { name = "pydantic", specifier = ">=1.10.0,!=2.5.0,!=2.5.1,<3.0.0" },
@@ -1786,15 +1786,15 @@ wheels = [
 
 [[package]]
 name = "osu-beatmap-preview-py"
-version = "0.1.3"
+version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/54/95/0e57b0958b351c829a5fbb4e08c668eb09752c437f8792735c49075dec55/osu_beatmap_preview_py-0.1.3.tar.gz", hash = "sha256:e6664b8f46983dcef8b8df2f3be1003d2d6065e4cf9b78979ae246e0014b81d3", size = 30939, upload-time = "2026-09-04T02:45:20.308Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/7e/04a2ee6a2fd0f8e31beb7002fb41f38f8fcee1094e4a6366b502fcce2b44/osu_beatmap_preview_py-0.1.4.tar.gz", hash = "sha256:a71523f81874f1ed92f9d85703476f67dc4c0eb1c6355f9f18154e6259a53140", size = 30934, upload-time = "2026-09-04T07:32:49.144Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/f7/db007473547a9fa540da37e6c5f758d788af7b3a8520d1aa33d051fa2add/osu_beatmap_preview_py-0.1.3-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:6238ebe8c33b09d4c6e5ac95e1a08fe0d2c2afb6758274b87e82422e5dfe3f50", size = 3237153, upload-time = "2026-09-04T02:45:11.113Z" },
-    { url = "https://files.pythonhosted.org/packages/c3/3c/f104a8db39f4dd948539b2bc2739ebf4320b7bb07dbbb956ed1cdd495f38/osu_beatmap_preview_py-0.1.3-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:334c121c952d6a192bcff3a03b4cd547db1b69205620699185500a3c1be8da8d", size = 3086402, upload-time = "2026-09-04T02:45:13.116Z" },
-    { url = "https://files.pythonhosted.org/packages/69/62/dba702f99bd8d6d6ca1d8e8358599620abefa83673fc205ff9d1bd4bc249/osu_beatmap_preview_py-0.1.3-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:61dc873fc3ffe591833eb76ce7557d33dd70481600bc892070efd7508e004743", size = 3348660, upload-time = "2026-09-04T02:45:15.035Z" },
-    { url = "https://files.pythonhosted.org/packages/55/78/afd255fe6c52d1f65ea1efd2af93fcc67f2209779db184da7f719642a75e/osu_beatmap_preview_py-0.1.3-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:fa23ce29b9079e1e9a0be7f07dfd8780343dd82e13fc2b8e050e564ef3c93dbd", size = 3470636, upload-time = "2026-09-04T02:45:16.841Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/36/5a04044586c4f0971f833759ea7e21f4156c1a1ed246afd0f60c3963d61d/osu_beatmap_preview_py-0.1.3-cp310-abi3-win_amd64.whl", hash = "sha256:337238421bf61150fd53cc24226d8810ba520988e9a73da1e1ee060567d53877", size = 3332232, upload-time = "2026-09-04T02:45:18.732Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/cc/cd87d702a2bc28b1141fa40c3cf1bc0851f51d79ff2b6bf5aef164497455/osu_beatmap_preview_py-0.1.4-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:18a249ade69bdcf197d0d907d496300852f4a857ca56717be4ba628915e4ea43", size = 3238550, upload-time = "2026-09-04T07:32:39.889Z" },
+    { url = "https://files.pythonhosted.org/packages/02/a6/03b1848a8c282b36fbac874bafe2fc8910ce8b3666085a801177f271cd11/osu_beatmap_preview_py-0.1.4-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:e9a6578bdb185ed4b4939673271adbe1fdc5e3e7da7b641223c7264325b0b42d", size = 3088903, upload-time = "2026-09-04T07:32:41.97Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/dc/6b14e0c9112919b19b75b715109686917da07c06e8177954fa054ceba05d/osu_beatmap_preview_py-0.1.4-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:97709368495086417bc6d1419afae9883896d55515d5127b9c07424d736ae049", size = 3352731, upload-time = "2026-09-04T07:32:43.822Z" },
+    { url = "https://files.pythonhosted.org/packages/92/61/335926d5ce8cadce2a123d08cb65564d1e731f70010bf9e8a901b56c232e/osu_beatmap_preview_py-0.1.4-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:f35341dc5e6278d28d40c7e84952f451df7dac5180eda977499332cab6e18f88", size = 3474362, upload-time = "2026-09-04T07:32:45.669Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/df/d07fc0e2de59b9a085ec2f0c7115698dc471a24db8769dc5df18725bbb7d/osu_beatmap_preview_py-0.1.4-cp310-abi3-win_amd64.whl", hash = "sha256:e31d46e0ec9a1b76d41f3b8c0067b7cf50d452a28de394e170b765eaae6077dd", size = 3336949, upload-time = "2026-09-04T07:32:47.673Z" },
 ]
 
 [[package]]
