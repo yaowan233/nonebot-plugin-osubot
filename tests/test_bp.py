@@ -308,7 +308,7 @@ async def test_pfm_parses_convenient_filter_syntax(app: App):
 
     session = make_mock_session()
     session.scalar.return_value = make_mock_user()
-    event = fake_group_message_event_v11(message=Message('/bl 星数=5..7 标题~"Freedom Dive" mods!=HD'))
+    event = fake_group_message_event_v11(message=Message('/bl 星数=5..7 标题~"Freedom Dive" mods!=HD tag~"anime|game"'))
 
     from nonebot_plugin_osubot.matcher.bp import pfm
 
@@ -325,6 +325,7 @@ async def test_pfm_parses_convenient_filter_syntax(app: App):
         ("星数", "=", "5..7"),
         ("标题", "~", "Freedom Dive"),
         ("mods", "!=", "HD"),
+        ("tag", "~", "anime|game"),
     ]
     assert draw.call_args.args[5:7] == (1, 200)
 

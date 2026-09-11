@@ -107,6 +107,7 @@ class UnifiedBeatmap(Base):
     title: str
     version: str
     creator: str
+    tags: Optional[str] = None
     total_length: int
     mode: int
     bpm: Optional[float] = None

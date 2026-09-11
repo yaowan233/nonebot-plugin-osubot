@@ -47,6 +47,30 @@ def test_numeric_aliases_ranges_and_zero_values():
     assert matches_condition_with_regex(score, "mapid", "=", "123")
 
 
+def test_tag_filters_match_tokens_regex_and_missing_tags():
+    from nonebot_plugin_osubot.draw.utils import matches_condition_with_regex
+    from nonebot_plugin_osubot.matcher.utils import parse_bp_filter_text
+
+    score = make_score()
+    score.beatmap.tags = "Anime Genshin Impact japanese"
+    assert matches_condition_with_regex(score, "tag", "=", "ANIME")
+    assert not matches_condition_with_regex(score, "tag", "=", "ani")
+    assert matches_condition_with_regex(score, "tags", "~", "genshin impact|原神")
+    assert matches_condition_with_regex(score, "标签", "!=", "english")
+    assert not matches_condition_with_regex(score, "标签", "!=", "anime")
+    assert not matches_condition_with_regex(make_score(), "tag", "!=", "anime")
+    score.beatmap.tags = ""
+    assert matches_condition_with_regex(score, "tag", "!=", "anime")
+    conditions, remaining = parse_bp_filter_text('tag=anime tags~"genshin impact" 标签!=english pp>300')
+    assert remaining == ""
+    assert conditions == [
+        ("tag", "=", "anime"),
+        ("tags", "~", "genshin impact"),
+        ("标签", "!=", "english"),
+        ("pp", ">", "300"),
+    ]
+
+
 def test_text_keyword_client_date_and_fc_filters():
     from nonebot_plugin_osubot.draw.utils import matches_condition_with_regex
 

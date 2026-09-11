@@ -40,8 +40,7 @@ from .schema.score import Mod, NewStatistics, UnifiedBeatmap, UnifiedScore
 from .schema.user import UnifiedUser
 from .schema.alphaosu import RecommendData, RecommendItem
 from .draw.score import cal_score_info, draw_selected_score
-from .draw.bp import draw_pfm, select_bp_scores
-from .draw.utils import filter_scores_with_regex
+from .draw.bp import draw_pfm, filter_bp_scores, select_bp_scores
 from .draw.rating import draw_rating
 from .draw.recommend import draw_recommend
 from .draw.echarts import build_bpa_data, draw_bpa_plot, draw_history_plot
@@ -70,6 +69,7 @@ BpFiltersArg = Annotated[
     (
         "BP 列表筛选表达式，多个条件用空格连接（AND）。例如 `300pp+ 98a+ 5-7* fc -DT`，或 "
         '`p>=300 a>=98 s=5..7 m=0 mp~kanon t~"Freedom Dive" cl=l`。'
+        '标签支持 tag/tags/标签：tag=anime 匹配完整标签，tag~"anime|game" 搜索，tag!=anime 排除。'
     ),
 ]
 _SELF_REFERENCE_VALUES = {
@@ -1118,7 +1118,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             scores = await fetch_bp_list(user, mode, mod_list, source, is_lazer)
             filtered_indices = get_mods_list(scores, mod_list)
             if search_conditions:
-                matching_scores = filter_scores_with_regex(
+                matching_scores = await filter_bp_scores(
                     [scores[score_index] for score_index in filtered_indices],
                     search_conditions,
                 )
@@ -1176,7 +1176,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         range_text 是 BP 范围，例如 1-20；不筛选时默认 1-30，筛选时默认搜索 1-200。
         mods 是必须包含的 Mods，例如 HDHR；filters 使用 /bl 相同的筛选语法，多个条件为 AND。
         常用 filters：300pp+、98a+、5-7*、7d、24h、fc、nofc、-DT、=HDHR。
-        完整字段支持 pp/acc/stars/miss/combo/bpm/length/mapper/title/version/rank/client/date/days/speed/mods 等；
+        完整字段支持 pp/acc/stars/miss/combo/bpm/length/mapper/title/version/tag/rank/client/date/days/speed/mods 等；
         可简写为 p/a/s/m/c/b/len/mp/t/v/r/cl/sp/mod，文本有空格时使用引号。
         send_image=false 时只生成、不把图片发到聊天；仅当 include_image_for_analysis=true 时才向 Agent 返回图片。
         """
@@ -2018,6 +2018,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "‘非FC’=`nofc`，‘不要DT’=`-DT`，‘仅HDHR’=`=HDHR`。",
             "- Mods 参数语义：mods='HDHR' 表示成绩至少包含 HD 和 HR；精确 Mods 或排除 Mods 应写 filters："
             "mods=HDHR / =HDHR、mods!=DT / -DT。标题、谱师等文本搜索使用 t~关键词、mp~谱师；含空格时加引号。",
+            "- 按谱面标签查询或分析 BP 时，将条件写入 filters：包含 anime 标签用 tag=anime，"
+            '标签文本搜索用 tag~"genshin impact"，排除标签用 tag!=anime；支持 tags、标签别名。',
             "- send_osu_recent_or_pr: 用户想实际查询 recent/re 或 pr/最近通过的单条成绩时使用。"
             "工具会返回该成绩的结构化数据，可据此评价发挥，无需依赖图片。",
             "- search_osu_beatmaps: 用户只给出歌名、别名、艺术家、谱师或难度名而没有 beatmap ID/链接时，"

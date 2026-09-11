@@ -322,6 +322,8 @@ map_dict = {
     "mapper": "creator",
     "mp": "creator",
     "谱师": "creator",
+    "tag": "tags",
+    "标签": "tags",
     "length": "total_length",
     "len": "total_length",
     "l": "total_length",
@@ -412,6 +414,17 @@ def matches_condition_with_regex(score, key, operator, value):
     beatmap = getattr(score, "beatmap", None)
     beatmapset = getattr(score, "beatmapset", None)
     statistics = getattr(score, "statistics", None)
+
+    if key == "tags":
+        tags = getattr(beatmap, "tags", None)
+        if tags is None:
+            tags = getattr(beatmapset, "tags", None)
+        if tags is None:
+            return False
+        if operator in {"=", "!="}:
+            matched = value.casefold() in tags.casefold().split()
+            return matched if operator == "=" else not matched
+        return _compare_text(tags, operator, value)
 
     if key == "keyword":
         text = " ".join(

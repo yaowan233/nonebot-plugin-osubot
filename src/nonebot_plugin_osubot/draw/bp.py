@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 from nonebot.log import logger
 
-from ..api import get_server, get_user_info_data, get_user_scores
+from ..api import get_beatmapsets_info, get_server, get_user_info_data, get_user_scores
 from ..exceptions import NetworkError
 from ..file import ensure_osu_file, get_pfm_img, map_path
 from ..mods import get_mods_list, get_speed_change_labels
@@ -17,7 +17,7 @@ from ..server import ServerFeature
 from .bp_svg import render_bp_svg
 from .score import _player_avatar_data_uri, _team_icon_data, cal_score_info
 from .svg_render import thumbnail_data_uri
-from .utils import filter_scores_with_regex
+from .utils import filter_scores_with_regex, map_dict
 
 
 _STAR_RATING_MODS = frozenset({"DT", "NC", "HT", "HR", "EZ", "DC", "DA"})
@@ -163,10 +163,47 @@ async def select_bp_scores(
             score.mods = [mod for mod in score.mods if mod.acronym != "DT"]
         selected[index] = cal_score_info(is_lazer, score, source)
     if search_condition:
-        selected = filter_scores_with_regex(selected, search_condition)
+        selected = await filter_bp_scores(selected, search_condition)
     if not selected:
         raise NetworkError("未查询到游玩记录")
     return scores, selected
+
+
+async def filter_bp_scores(scores: list[UnifiedScore], conditions: list) -> list[UnifiedScore]:
+    """Apply BP filters, loading missing tag metadata only when needed."""
+    tag_conditions = [item for item in conditions if map_dict.get(item[0].lower(), item[0].lower()) == "tags"]
+    other_conditions = [item for item in conditions if item not in tag_conditions]
+    selected = filter_scores_with_regex(scores, other_conditions)
+    if tag_conditions:
+        await _ensure_score_tags(selected)
+        selected = filter_scores_with_regex(selected, tag_conditions)
+    return selected
+
+
+async def _ensure_score_tags(scores: list[UnifiedScore]) -> None:
+    """Fetch missing tags once per set, using the shared beatmapset cache."""
+    missing: dict[int, list] = {}
+    for score in scores:
+        beatmap = score.beatmap
+        if beatmap is None or getattr(beatmap, "tags", None) is not None:
+            continue
+        tags = getattr(getattr(score, "beatmapset", None), "tags", None)
+        if tags is not None:
+            beatmap.tags = tags
+        else:
+            missing.setdefault(beatmap.set_id, []).append(beatmap)
+    semaphore = asyncio.Semaphore(5)
+
+    async def fill(set_id: int, beatmaps: list) -> None:
+        async with semaphore:
+            beatmapset = await get_beatmapsets_info(set_id)
+        for beatmap in beatmaps:
+            beatmap.tags = beatmapset.tags
+
+    results = await asyncio.gather(*(fill(sid, maps) for sid, maps in missing.items()), return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
 
 
 async def draw_pfm(

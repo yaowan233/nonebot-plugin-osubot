@@ -12,6 +12,42 @@ def _score() -> SimpleNamespace:
 
 
 @pytest.mark.asyncio
+async def test_tag_search_fetches_missing_sets_once_after_other_filters():
+    import nonebot_plugin_osubot.draw.bp as bp
+
+    scores = [_score() for _ in range(5)]
+    for index, score in enumerate(scores):
+        score.pp = 100 if index == 4 else 300
+        score.beatmap = SimpleNamespace(set_id=2 if index == 4 else 1, tags=None)
+        score.beatmapset = None
+    scores[2].beatmap.tags = "english"
+    scores[3].beatmapset = SimpleNamespace(tags="anime")
+    fetch = AsyncMock(return_value=SimpleNamespace(tags="japanese anime"))
+    with (
+        patch.object(bp, "get_user_scores", new=AsyncMock(return_value=scores)),
+        patch.object(bp, "get_beatmapsets_info", new=fetch),
+        patch.object(bp, "cal_score_info", side_effect=lambda _lazer, score, _source: score),
+    ):
+        _, selected = await bp.select_bp_scores(
+            "bp", 1, True, "osu", [], 1, 200, 0, [("tag", "=", "anime"), ("pp", ">=", "300")], "osu"
+        )
+    assert selected == [scores[0], scores[1], scores[3]]
+    fetch.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_tag_fetch_failure_is_reported():
+    import nonebot_plugin_osubot.draw.bp as bp
+    from nonebot_plugin_osubot.exceptions import NetworkError
+
+    score = _score()
+    score.beatmap = SimpleNamespace(set_id=1, tags=None)
+    with patch.object(bp, "get_beatmapsets_info", new=AsyncMock(side_effect=NetworkError("标签获取失败"))):
+        with pytest.raises(NetworkError, match="标签获取失败"):
+            await bp._ensure_score_tags([score])
+
+
+@pytest.mark.asyncio
 async def test_plain_bp_range_only_requests_needed_api_rows():
     import nonebot_plugin_osubot.draw.bp as bp
 

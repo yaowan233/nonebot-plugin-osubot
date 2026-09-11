@@ -36,7 +36,8 @@ HELP_TOPICS = {
         "/nb [#天数]：最近新增 BP；/bpa：BP 分析；/hs [#天数]：PP/排名历史\n"
         "/fix [玩家]:[模式]：计算 BP 中小掉连成绩理论 FC 后的排名与总 PP；私服支持常规模式 0-3\n"
         "可附加玩家、模式和 Mods，例如 /bp peppy 5:o +HDHR。\n"
-        "BP 列表支持组合筛选：pp、acc、星数、长度、bpm、谱师、标题、难度名、miss、rank、客户端等。\n"
+        "BP 列表支持组合筛选：pp、acc、星数、长度、bpm、谱师、标题、难度名、标签、miss、rank、客户端等。\n"
+        '标签筛选：/bl tag=anime（完整标签）；/bl tags~"原神|genshin"（正则搜索）；/bl 标签!=anime（排除）。\n'
         '示例：/bl pp>=300 acc>=98 星数=5..7；/bl 标题~"Freedom Dive" mods!=HD。\n'
         "比较符支持 >、>=、<、<=、=、!=；文本用 ~ 搜索、~= 模糊匹配，带空格时加引号。\n"
         "常用简写：p=pp、a=acc、s=星数、m=miss、c=combo、b=bpm、len=长度、mp=谱师、t=标题、v=难度名。\n"

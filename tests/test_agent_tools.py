@@ -1106,6 +1106,34 @@ async def test_get_osu_bp_range_filters_for_text_only_analysis(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_get_osu_bp_range_fetches_tags_for_analysis(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+    import nonebot_plugin_osubot.draw.bp as bp
+
+    scores = _make_bp_scores(3)
+    for score in scores:
+        score.beatmap.tags = None
+    scores[2].beatmap.tags = "english"
+    fetched = []
+
+    async def fetch_tags(set_id):
+        fetched.append(set_id)
+        return SimpleNamespace(tags="japanese anime")
+
+    _install_range_mocks(monkeypatch, scores)
+    monkeypatch.setattr(bp, "get_beatmapsets_info", fetch_tags)
+    bundle = agent_tools.build_osu_agent_tools(_range_context())
+    range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
+    result = json.loads(await range_tool.ainvoke({"filters": "tag=anime"}))
+
+    assert result["status"] == "ok", result
+    assert result["total"] == 2
+    assert [item["title"] for item in result["scores"]] == ["song-0", "song-1"]
+    assert set(fetched) == {scores[0].beatmap.set_id, scores[1].beatmap.set_id}
+    assert "tag=anime" in range_tool.args_schema.model_json_schema()["properties"]["filters"]["description"]
+
+
+@pytest.mark.asyncio
 async def test_send_osu_bp_list_dedups_repeat_list_image(monkeypatch):
     from nonebot_plugin_osubot import agent_tools
 
