@@ -10,7 +10,9 @@ from collections.abc import Sequence
 from nonebot import get_plugin_config
 from osu_beatmap_preview import PreviewError, generate_preview_async
 
+from ..api import osu_api
 from ..config import Config
+from ..exceptions import NetworkError
 
 PreviewFormat = Literal["png", "gif", "mp4"]
 ConvertMode = Literal["taiko", "ctb", "mania"]
@@ -45,6 +47,15 @@ def mods_to_renderer(mods: Sequence[str] | None) -> str | None:
     return "+".join(cleaned) or None
 
 
+async def preview_cache_enabled(beatmap_id: int | str) -> bool:
+    """Only ranked maps are stable enough to reuse rendered previews."""
+    try:
+        data = await osu_api("map", map_id=int(beatmap_id))
+    except NetworkError:
+        return False
+    return data.get("status") == "ranked"
+
+
 async def render_with_core(
     beatmap_id: int | str,
     fmt: PreviewFormat,
@@ -56,6 +67,7 @@ async def render_with_core(
     fps: int | None = None,
 ) -> Path:
     """Render a preview in-process and return its validated output path."""
+    no_cache = not await preview_cache_enabled(beatmap_id)
     try:
         async with _render_semaphore:
             result = await generate_preview_async(
@@ -65,6 +77,7 @@ async def render_with_core(
                 mods=mods_to_renderer(mods),
                 times=time_range,
                 fps=fps,
+                no_cache=no_cache,
             )
         output = result.get("preview-img")
         if not isinstance(output, str) or not output:
