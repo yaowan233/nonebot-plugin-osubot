@@ -7,6 +7,8 @@ from pathlib import Path
 
 from osu_tools import OsuCalculator
 
+from .beatmap_validation import validate_beatmap
+
 
 @dataclass(frozen=True)
 class MapAttributes:
@@ -31,6 +33,14 @@ class CachedOsuCalculator(OsuCalculator):
         super().__init__(prepared_cache_size=128, max_workers=1)
 
     def calculate_many(self, requests):
+        requests = list(requests)
+        checked = set()
+        for request in requests:
+            path = self._get_request_value(request, "file_path", None)
+            mode = int(self._get_request_value(request, "mode", 0))
+            if path and (str(path), mode) not in checked:
+                validate_beatmap(path, mode)
+                checked.add((str(path), mode))
         with self._calculation_lock:
             results = super().calculate_many(requests)
             for result in results:
@@ -92,6 +102,7 @@ class CachedOsuCalculator(OsuCalculator):
         return result
 
     def map_attributes(self, path, mode, mods=()):
+        validate_beatmap(path, mode)
         with self._calculation_lock:
             ruleset = self.rulesets[mode]
             beatmap, working, _ = self._load_working_beatmap(str(Path(path).resolve()), ruleset)
@@ -116,6 +127,7 @@ class CachedOsuCalculator(OsuCalculator):
             )
 
     def stars(self, path, mode, mods):
+        validate_beatmap(path, mode)
         with self._calculation_lock:
             ruleset = self.rulesets[mode]
             _, working, _ = self._load_working_beatmap(str(Path(path).resolve()), ruleset)
