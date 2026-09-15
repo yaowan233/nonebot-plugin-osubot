@@ -17,7 +17,7 @@ from nonebot.log import logger
 from nonebot import get_plugin_config
 
 from ..config import Config
-from ..file import map_path
+from ..file import map_path, download_osu
 from .browser import persistent_page
 from .utils import load_osu_file_and_setup_template
 from .core_preview import (
@@ -25,6 +25,7 @@ from .core_preview import (
     CorePreviewError,
     read_core_output,
     render_with_core,
+    preview_cache_enabled,
     validate_core_output_readable,
 )
 
@@ -274,6 +275,9 @@ async def _legacy_draw_full_osu_preview(
     progress_callback: Callable[[float], Awaitable[None]] | None = None,
     target_mode: int | None = None,
 ) -> Path:
+    cache_enabled = await preview_cache_enabled(beatmap_id)
+    if not cache_enabled:
+        await download_osu(beatmapset_id, beatmap_id)
     osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
     osu_file = _convert_preview_mode(osu_file, target_mode)
     taiko_skin_assets = {}
@@ -305,12 +309,12 @@ async def _legacy_draw_full_osu_preview(
             f"mode{mode}-{_skin_cache_key(taiko_skin_assets)}-{width}x{height}-{frame_interval}ms.mp4"
         )
     ).resolve()
-    if cache_path.is_file() and cache_path.stat().st_size:
+    if cache_enabled and cache_path.is_file() and cache_path.stat().st_size:
         return cache_path
 
     lock = _full_preview_locks.setdefault(cache_path, asyncio.Lock())
     async with lock:
-        if cache_path.is_file() and cache_path.stat().st_size:
+        if cache_enabled and cache_path.is_file() and cache_path.stat().st_size:
             return cache_path
 
         with tempfile.TemporaryDirectory(prefix=f"osubot-preview-{beatmap_id}-", dir=cache_dir) as temp_name:
@@ -396,6 +400,9 @@ async def _legacy_draw_osu_preview(
     if full:
         return await _legacy_draw_full_osu_preview(beatmap_id, beatmapset_id, target_mode=target_mode)
 
+    cache_enabled = await preview_cache_enabled(beatmap_id)
+    if not cache_enabled:
+        await download_osu(beatmapset_id, beatmap_id)
     osu_file, template = await load_osu_file_and_setup_template(template_path, beatmap_id, beatmapset_id)
     osu_file = _convert_preview_mode(osu_file, target_mode)
     taiko_skin_assets = {}

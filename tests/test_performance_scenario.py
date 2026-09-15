@@ -35,35 +35,20 @@ def test_parse_performance_scenario_rejects_invalid_values(conditions, message):
         parse_performance_scenario(conditions)
 
 
-def test_calculate_performance_scenarios_shares_difficulty():
+def test_calculate_performance_scenarios_uses_osu_tools_batch():
     from nonebot_plugin_osubot import performance
 
-    beatmap = SimpleNamespace(mode=performance.GAME_MODES[0], n_objects=1000, is_suspicious=lambda: False)
-    difficulty = SimpleNamespace(stars=5.5, max_combo=1200)
-    calculated = []
+    requests = []
 
-    class FakeDifficulty:
-        def __init__(self, **kwargs):
-            assert kwargs == {"mods": ["HD"], "clock_rate": 1.1}
+    def calculate_many(batch):
+        requests.extend(batch)
+        return [SimpleNamespace(pp=r["acc"] * 2, stars=5.5, max_combo=1200) for r in batch]
 
-        def calculate(self, value):
-            assert value is beatmap
-            return difficulty
-
-    class FakePerformance:
-        def __init__(self, **kwargs):
-            calculated.append(kwargs)
-            self.kwargs = kwargs
-
-        def calculate(self, value):
-            assert value is difficulty
-            return SimpleNamespace(pp=self.kwargs["accuracy"] * 2)
-
-    with (
-        patch.object(performance, "Beatmap", return_value=beatmap),
-        patch.object(performance, "Difficulty", FakeDifficulty),
-        patch.object(performance, "Performance", FakePerformance),
-    ):
+    calculator = SimpleNamespace(
+        map_attributes=lambda *args: SimpleNamespace(n_objects=1000),
+        calculate_many=calculate_many,
+    )
+    with patch.object(performance, "get_osu_calculator", return_value=calculator):
         points = performance.calculate_performance_scenarios(
             "map.osu",
             0,
@@ -73,7 +58,8 @@ def test_calculate_performance_scenarios_shares_difficulty():
                 performance.PerformanceScenario(accuracy=100, misses=1, combo=800, clock_rate=1.1),
             ],
         )
-
-    assert [point.pp for point in points] == [196, 200]
-    assert all(point.stars == 5.5 and point.max_combo == 1200 for point in points)
-    assert [item["accuracy"] for item in calculated] == [98, 100]
+    assert [p.pp for p in points] == [196, 200]
+    assert all(p.stars == 5.5 and p.max_combo == 1200 for p in points)
+    assert [r["acc"] for r in requests] == [98, 100]
+    assert all(r["combo"] == 800 and r["misses"] == 1 for r in requests)
+    assert requests[0]["mods"] == ["HD", {"acronym": "DT", "settings": {"speed_change": 1.1}}]

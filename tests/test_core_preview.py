@@ -4,6 +4,13 @@ from unittest.mock import AsyncMock
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def mock_preview_map_status(monkeypatch: pytest.MonkeyPatch):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    monkeypatch.setattr(core_preview, "osu_api", AsyncMock(return_value={"status": "ranked"}))
+
+
 async def test_core_adapter_converts_only_standard_maps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     from nonebot_plugin_osubot.draw import core_preview
 
@@ -96,3 +103,31 @@ async def test_full_video_estimate_is_sent_once_when_native_falls_back(monkeypat
     assert result == video
     # 原生渲染立即失败，延迟预估任务被取消；仅旧链路的 120s 预估被发送一次
     estimate.assert_awaited_once_with(120.0)
+
+
+@pytest.mark.parametrize("status", ["ranked", "approved", "qualified", "loved", "pending", "wip", "graveyard", None])
+@pytest.mark.parametrize("fmt", ["png", "gif", "mp4"])
+async def test_preview_cache_only_reuses_ranked_maps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, status, fmt):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    output = tmp_path / f"preview.{fmt}"
+    output.write_bytes(b"preview")
+    renderer = AsyncMock(return_value={"preview-img": str(output)})
+    monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
+    monkeypatch.setattr(core_preview, "osu_api", AsyncMock(return_value={"status": status}))
+
+    assert await core_preview.render_with_core(123, fmt) == output
+    assert renderer.call_args.kwargs["no_cache"] is (status != "ranked")
+
+
+async def test_preview_disables_cache_when_status_lookup_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    output = tmp_path / "preview.png"
+    output.write_bytes(b"preview")
+    renderer = AsyncMock(return_value={"preview-img": str(output)})
+    monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
+    monkeypatch.setattr(core_preview, "osu_api", AsyncMock(side_effect=core_preview.NetworkError("offline")))
+
+    assert await core_preview.render_with_core(123, "png") == output
+    assert renderer.call_args.kwargs["no_cache"] is True

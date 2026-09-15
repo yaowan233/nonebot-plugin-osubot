@@ -6,7 +6,6 @@ from typing import Optional
 from functools import lru_cache
 
 from PIL import Image
-from rosu_pp_py import Beatmap as RosuBeatmap, GameMode
 
 from ..info import get_bg
 from ..utils import FGM, NGM, normalize_map_mode
@@ -39,16 +38,7 @@ def _map_score_to_unified(score, map_json: dict) -> UnifiedScore:
 def _mania_ln_ratio(osu_path: str, mods: list[Mod], fallback: Beatmap) -> str | None:
     """Return the hold-note share for the actual mania ruleset map."""
     try:
-        beatmap = RosuBeatmap(path=osu_path)
-        if beatmap.mode != GameMode.Mania:
-            rosu_mods = [
-                {
-                    "acronym": mod.acronym,
-                    **({"settings": mod.settings} if mod.settings else {}),
-                }
-                for mod in mods
-            ]
-            beatmap.convert(GameMode.Mania, rosu_mods)
+        beatmap = get_osu_calculator().map_attributes(osu_path, 3, mods)
         holds = int(beatmap.n_holds)
         total = int(beatmap.n_objects)
     except Exception:
