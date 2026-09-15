@@ -5,6 +5,7 @@ from nonebot_plugin_alconna import UniMessage
 
 from .map_context import remember_map_and_set, remember_set
 from ..api import osu_api
+from ..beatmap_validation import SuspiciousBeatmapError
 from ..draw import draw_bmap_info, draw_map_info
 
 url_match = on_regex(r"https?://osu\.ppy\.sh/(?:(?:beatmapsets/(\d+)(?:#[^/\s]+/(\d+))?)|(?:(?:b|beatmaps)/(\d+)))")
@@ -27,6 +28,8 @@ async def _url(event: Event, bid: tuple = RegexGroup()):
         else:
             image = await draw_bmap_info(set_id)
             remember_set(event, set_id)
+    except SuspiciousBeatmapError as error:
+        await UniMessage.text(str(error)).finish(reply_to=True)
     except Exception:
         return
     url_total = f"镜像站1：{url}{set_id}\n镜像站2：{url_1}{set_id}\n小夜镜像站：{url_2}{set_id}"

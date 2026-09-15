@@ -102,4 +102,4 @@ def is_suspicious(path: str | Path, mode: int | None = None) -> bool:
 def validate_beatmap(path: str | Path, mode: int | None = None) -> None:
     reason = suspicion_reason(path, mode)
     if reason is not None:
-        raise SuspiciousBeatmapError(f"谱面数据异常，已跳过计算（{reason}）")
+        raise SuspiciousBeatmapError(f"检测到可疑谱面，已停止计算（{reason}）")

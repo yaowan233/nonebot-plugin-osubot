@@ -6,6 +6,7 @@ from nonebot_plugin_alconna import UniMessage
 from .utils import split_msg
 from .map_context import get_last_map_id, get_last_set_id, remember_map, remember_set
 from ..exceptions import NetworkError
+from ..beatmap_validation import SuspiciousBeatmapError
 from ..draw import draw_map_info, draw_bmap_info
 from ..performance import PerformanceScenarioError, parse_performance_scenario
 
@@ -30,7 +31,7 @@ async def _map(event: Event, state: T_State):
             m = await draw_map_info(map_id, mods, scenario=scenario)
         else:
             m = await draw_map_info(map_id, mods)
-    except (NetworkError, PerformanceScenarioError) as e:
+    except (NetworkError, PerformanceScenarioError, SuspiciousBeatmapError) as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(f"在查找地图mapid:{map_id}{mods}时 {str(e)}").finish(reply_to=True)
     remember_map(event, map_id)
