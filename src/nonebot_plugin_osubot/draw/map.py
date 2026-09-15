@@ -2,7 +2,8 @@ import asyncio
 from io import BytesIO
 from pathlib import Path
 
-from rosu_pp_py import Beatmap as RosuBeatmap, GameMode, Performance
+from ..calculator import MapAttributes
+from ..pp import get_osu_calculator
 
 from ..api import get_beatmapsets_info, osu_api
 from ..beatmap_stats_moder import with_mods
@@ -27,7 +28,6 @@ from .map_svg import render_map_svg
 
 TEMPLATE_PATH = Path(__file__).parent / "map_templates"
 MOD_PATH = Path(__file__).parent.parent / "osufile" / "mods"
-GAME_MODES = (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania)
 OBJECT_LABELS = {
     0: ("圆圈", "滑条", "转盘"),
     1: ("音符", "滚奏", "转盘"),
@@ -85,15 +85,11 @@ def _mode_stats(original: Beatmap, current: Beatmap) -> list[dict[str, str | flo
     ]
 
 
-def _ruleset_map(path: Path, mode: int, mods: list[str]) -> RosuBeatmap:
-    beatmap = RosuBeatmap(path=str(path.absolute()))
-    target = GAME_MODES[mode]
-    if beatmap.mode != target:
-        beatmap.convert(target, mods)
-    return beatmap
+def _ruleset_map(path: Path, mode: int, mods: list[str]) -> MapAttributes:
+    return get_osu_calculator().map_attributes(path, mode, mods)
 
 
-def _apply_ruleset_metadata(mapinfo: Beatmap, ruleset_map: RosuBeatmap, mode: int, mods: list[str]) -> Beatmap:
+def _apply_ruleset_metadata(mapinfo: Beatmap, ruleset_map: MapAttributes, mode: int, mods: list[str]) -> Beatmap:
     mapinfo.mode_int = mode
     mapinfo.mode = GM[mode]
     mapinfo.cs = ruleset_map.cs
@@ -133,35 +129,30 @@ def _scenario_payload(report: PerformanceReport) -> dict:
     }
 
 
-def _performance_payload(
-    original_map: RosuBeatmap,
-    current_map: RosuBeatmap,
-    mods: list[str],
-) -> tuple[dict, dict]:
-    points = []
-    ss_attributes = None
-    for accuracy in (100.0, 99.0, 98.0, 95.0, 90.0):
-        attributes = Performance(mods=mods, accuracy=accuracy).calculate(current_map)
-        if ss_attributes is None:
-            ss_attributes = attributes
-        points.append({"accuracy": accuracy, "pp": attributes.pp, "selected": accuracy == 100.0})
-    assert ss_attributes is not None
-    original_attributes = Performance(accuracy=100.0).calculate(original_map)
-    components = {
-        "aim": ss_attributes.pp_aim or 0.0,
-        "speed": ss_attributes.pp_speed or 0.0,
-        "accuracy": ss_attributes.pp_accuracy or 0.0,
-        "difficulty": ss_attributes.pp_difficulty or 0.0,
-        "catch": ss_attributes.pp if ss_attributes.difficulty.mode == GameMode.Catch else 0.0,
+def _performance_payload(path: Path, mode: int, mods: list[str]) -> tuple[dict, dict]:
+    calculator = get_osu_calculator()
+    accuracies = (100.0, 99.0, 98.0, 95.0, 90.0)
+    results = calculator.calculate_many(
+        [{"file_path": str(path), "mode": mode, "mods": mods, "acc": accuracy} for accuracy in accuracies]
+    )
+    ss = results[0]
+    original_stars = ss.stars if not mods else calculator.stars(path, mode, [])
+    return {
+        "stars": ss.stars,
+        "original_stars": original_stars,
+        "ss_pp": ss.pp,
+        "max_combo": ss.max_combo,
+        "pp_matrix": [
+            {"accuracy": accuracy, "pp": result.pp, "selected": accuracy == 100.0}
+            for accuracy, result in zip(accuracies, results)
+        ],
+    }, {
+        "aim": ss.pp_aim,
+        "speed": ss.pp_speed,
+        "accuracy": ss.pp_acc,
+        "difficulty": ss.pp_difficulty,
+        "catch": ss.pp if mode == 2 else 0.0,
     }
-    summary = {
-        "stars": ss_attributes.difficulty.stars,
-        "original_stars": original_attributes.difficulty.stars,
-        "ss_pp": ss_attributes.pp,
-        "max_combo": ss_attributes.difficulty.max_combo,
-        "pp_matrix": points,
-    }
-    return summary, components
 
 
 def _named_metadata(raw_set: dict, key: str, fallback: dict[int, str]) -> str:
@@ -229,8 +220,8 @@ async def draw_map_info(
     except Exception:
         full_beatmapset = None
 
-    original_ruleset = _ruleset_map(osu_file, mode, [])
-    current_ruleset = _ruleset_map(osu_file, mode, mod_names)
+    original_ruleset = await asyncio.to_thread(_ruleset_map, osu_file, mode, [])
+    current_ruleset = await asyncio.to_thread(_ruleset_map, osu_file, mode, mod_names)
     original = _apply_ruleset_metadata(api_map.model_copy(deep=True), original_ruleset, mode, [])
     current = _apply_ruleset_metadata(
         api_map.model_copy(deep=True),
@@ -240,7 +231,7 @@ async def draw_map_info(
     )
     current = with_mods(current, None, [Mod(acronym=name) for name in mod_names])
 
-    performance, pp_components = _performance_payload(original_ruleset, current_ruleset, mod_names)
+    performance, pp_components = await asyncio.to_thread(_performance_payload, osu_file, mode, mod_names)
     raw_set = raw_map.get("beatmapset") or {}
     rating, rating_votes, rating_distribution = _rating_payload(raw_set)
     failtimes = raw_map.get("failtimes") or {}

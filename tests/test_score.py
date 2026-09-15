@@ -134,19 +134,10 @@ def test_map_score_conversion_keeps_pp_and_beatmap_metadata():
 
 
 def test_mania_ln_ratio_uses_ruleset_hold_count(monkeypatch):
-    from rosu_pp_py import GameMode
-
     from nonebot_plugin_osubot.draw import score as score_module
 
-    class FakeBeatmap:
-        mode = GameMode.Mania
-        n_holds = 75
-        n_objects = 200
-
-        def __init__(self, *, path: str):
-            assert path == "map.osu"
-
-    monkeypatch.setattr(score_module, "RosuBeatmap", FakeBeatmap)
+    calculator = SimpleNamespace(map_attributes=lambda path, mode, mods: SimpleNamespace(n_holds=75, n_objects=200))
+    monkeypatch.setattr(score_module, "get_osu_calculator", lambda: calculator)
     fallback = SimpleNamespace(count_circles=80, count_sliders=20, count_spinners=0)
 
     assert score_module._mania_ln_ratio("map.osu", [], fallback) == "37.5%"
@@ -156,11 +147,9 @@ def test_cal_stars_uses_mod_settings_without_recalculating_pp(after_nonebot_init
     from nonebot_plugin_osubot.pp import cal_stars
     from nonebot_plugin_osubot.schema.score import Mod, NewStatistics, UnifiedScore
 
-    source = next((Path("data/osu/map")).glob("*/*.osu"), None)
-    if source is None:
-        pytest.skip("本地没有可用于 rosu-pp 的谱面缓存")
+    source = Path(__file__).parent / "fixtures" / "calculator-mania.osu"
     beatmap = tmp_path / "map.osu"
-    beatmap.write_bytes(source.read_bytes())
+    beatmap.write_text(source.read_text(encoding="utf-8").replace("Mode: 3", "Mode: 0"), encoding="utf-8")
     base = {
         "ruleset_id": 0,
         "rank": "S",

@@ -4,12 +4,12 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from rosu_pp_py import Beatmap, Difficulty, GameMode, Performance
+from .pp import get_osu_calculator
 
 from .schema.score import Mod
 
 
-GAME_MODES = (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania)
+GAME_MODES = (0, 1, 2, 3)
 SCENARIO_ACCURACIES = (92.0, 94.0, 96.0, 98.0, 99.0, 100.0)
 
 
@@ -153,44 +153,44 @@ def calculate_performance_scenarios(
         raise PerformanceScenarioError("同一批 PP 情景必须使用相同 rate")
 
     serialized_mods = _serialize_mods(mods)
-    beatmap = Beatmap(path=str(Path(path).absolute()))
-    target_mode = GAME_MODES[mode]
-    if beatmap.mode != target_mode:
-        beatmap.convert(target_mode, serialized_mods)
-    if beatmap.is_suspicious():
-        raise PerformanceScenarioError("这似乎不是一个正常谱面")
-
-    difficulty_options: dict = {"mods": serialized_mods}
     if first.clock_rate is not None:
-        difficulty_options["clock_rate"] = first.clock_rate
-    difficulty = Difficulty(**difficulty_options).calculate(beatmap)
-    max_combo = int(difficulty.max_combo)
-    object_count = int(beatmap.n_objects)
-    points: list[PerformancePoint] = []
-    for scenario in scenarios:
-        if scenario.misses > object_count:
-            raise PerformanceScenarioError(f"miss 不能超过物件数 {object_count}")
-        if scenario.combo is not None and scenario.combo > max_combo:
-            raise PerformanceScenarioError(f"combo 不能超过最大连击 {max_combo}")
-        performance_options = {
-            "mods": serialized_mods,
-            "lazer": scenario.lazer,
-            "accuracy": scenario.accuracy,
-            "misses": scenario.misses,
-        }
-        if scenario.clock_rate is not None:
-            performance_options["clock_rate"] = scenario.clock_rate
-        if scenario.combo is not None:
-            performance_options["combo"] = scenario.combo
-        attributes = Performance(**performance_options).calculate(difficulty)
-        points.append(
-            PerformancePoint(
-                accuracy=scenario.accuracy,
-                pp=float(attributes.pp),
-                stars=float(difficulty.stars),
-                max_combo=max_combo,
+        serialized_mods = [
+            mod
+            for mod in serialized_mods
+            if (mod if isinstance(mod, str) else mod["acronym"]) not in {"DT", "NC", "HT", "DC"}
+        ]
+        if first.clock_rate != 1.0:
+            serialized_mods.append(
+                {"acronym": "DT" if first.clock_rate > 1 else "HT", "settings": {"speed_change": first.clock_rate}}
             )
+    calculator = get_osu_calculator()
+    metadata = calculator.map_attributes(path, mode, serialized_mods)
+    requests = []
+    for scenario in scenarios:
+        if scenario.misses > metadata.n_objects:
+            raise PerformanceScenarioError(f"miss 不能超过物件数 {metadata.n_objects}")
+        scenario_mods = list(serialized_mods)
+        if not scenario.lazer and not any(
+            (mod if isinstance(mod, str) else mod["acronym"]) == "CL" for mod in scenario_mods
+        ):
+            scenario_mods.append("CL")
+        requests.append(
+            {
+                "file_path": str(Path(path).absolute()),
+                "mode": mode,
+                "mods": scenario_mods,
+                "acc": scenario.accuracy,
+                "misses": scenario.misses,
+                "combo": scenario.combo,
+            }
         )
+    results = calculator.calculate_many(requests)
+    points = []
+    for scenario, result in zip(scenarios, results):
+        if scenario.combo is not None and scenario.combo > result.max_combo:
+            raise PerformanceScenarioError(f"combo 不能超过最大连击 {result.max_combo}")
+        points.append(PerformancePoint(scenario.accuracy, result.pp, result.stars, result.max_combo))
+
     return tuple(points)
 
 

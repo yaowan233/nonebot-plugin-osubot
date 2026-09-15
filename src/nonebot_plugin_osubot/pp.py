@@ -1,13 +1,13 @@
 import json
 import threading
 from functools import lru_cache
+from itertools import islice
 from pathlib import Path
 
-from rosu_pp_py import Beatmap, Difficulty, GameMode, Performance, Strains
-from osu_tools import OsuCalculator, CalculationResult
+from osu_tools import CalculationResult
+from .calculator import CachedOsuCalculator
 from nonebot.log import logger
 
-from .exceptions import NetworkError
 from .server import RelaxEncoding
 from .schema.score import Mod, UnifiedScore
 
@@ -21,28 +21,16 @@ RELAX_MODS = {"RX", "RX2", "AP"}
 # FC, SS and target accuracies), so keep one process-local calculator.
 
 
-class _CachedOsuCalculator(OsuCalculator):
-    """Serialize access to shared pythonnet objects while retaining their cache."""
-
-    def __init__(self) -> None:
-        self._calculation_lock = threading.RLock()
-        super().__init__(prepared_cache_size=128)
-
-    def calculate(self, *args, **kwargs) -> CalculationResult:
-        with self._calculation_lock:
-            return super().calculate(*args, **kwargs)
-
-
-_calculator: _CachedOsuCalculator | None = None
+_calculator: CachedOsuCalculator | None = None
 _calculator_init_lock = threading.Lock()
 
 
-def get_osu_calculator() -> OsuCalculator:
+def get_osu_calculator() -> CachedOsuCalculator:
     global _calculator
     if _calculator is None:
         with _calculator_init_lock:
             if _calculator is None:
-                _calculator = _CachedOsuCalculator()
+                _calculator = CachedOsuCalculator()
     return _calculator
 
 
@@ -75,7 +63,7 @@ def normalize_mods_for_pp(mods: list[Mod] | list[str], source: str, ruleset_id: 
 def without_relax_mods(score: UnifiedScore) -> UnifiedScore:
     """返回移除了 RX/AP 系 mod 的成绩深拷贝，用于推演非 relax 的 pp 值。
 
-    g0v0/ppysb 的 RX/AP 成绩 mods 含 RX/RX2/AP，本地 rosu-pp 不支持这些 mod；
+    g0v0/ppysb 的 RX/AP 成绩 mods 含 RX/RX2/AP，本地计算器按普通规则处理这些 mod；
     推演（96%/98% ACC、IF FC、SS PP）时移除后按普通规则计算，得到该谱面
     不带 relax 的 pp 值（如 HDHRRX 成绩显示 HDHR 的推演）。
     始终返回副本，避免推演函数改写原成绩的 statistics。
@@ -96,9 +84,6 @@ def normalize_score_for_pp(score: UnifiedScore, source: str = "osu") -> UnifiedS
 
 
 def cal_pp(score: UnifiedScore, path: str, source: str = "osu") -> CalculationResult:
-    beatmap = Beatmap(path=path)
-    if beatmap.is_suspicious():
-        raise NetworkError("这似乎不是一个正常谱面 OAO")
     score = normalize_score_for_pp(score, source)
     c = get_osu_calculator()
     res = c.calculate(
@@ -123,15 +108,11 @@ def _cal_stars_cached(
 ) -> float:
     del modified_ns, file_size  # They are part of the cache key for revision invalidation.
     mods = json.loads(mods_json)
-    beatmap = Beatmap(path=path)
-    target_mode = (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania)[mode]
-    if beatmap.mode != target_mode:
-        beatmap.convert(target_mode, mods)
-    return float(Difficulty(mods=mods).calculate(beatmap).stars)
+    return get_osu_calculator().stars(path, mode, mods)
 
 
 def cal_stars(score: UnifiedScore, path: str, source: str = "osu") -> float:
-    """Calculate only the modded star rating with the native rosu-pp binding.
+    """Calculate only the modded star rating with the osu-tools difficulty calculator.
 
     Score-list renderers already receive the official PP value from the API.
     Using osu-tools there would calculate performance again and serialize all
@@ -159,63 +140,20 @@ def cal_stars(score: UnifiedScore, path: str, source: str = "osu") -> float:
 
 
 def get_pp_components(score: UnifiedScore, path: str, source: str = "osu") -> dict[str, float]:
-    """Return the mode-specific pp portions exposed by rosu-pp.
-
-    osu!catch has a single performance value rather than additive pp portions;
-    it is returned as ``catch`` so the renderer can describe it accurately.
-    """
-    score = normalize_score_for_pp(score, source)
-    mode = score.ruleset_id % 4
-    mods = [{"acronym": mod.acronym, **({"settings": mod.settings} if mod.settings else {})} for mod in score.mods]
-    beatmap = Beatmap(path=path)
-    target_mode = (GameMode.Osu, GameMode.Taiko, GameMode.Catch, GameMode.Mania)[mode]
-    if beatmap.mode != target_mode:
-        beatmap.convert(target_mode, mods)
-
-    stats = score.statistics
-    kwargs = {
-        "mods": mods,
-        "accuracy": score.accuracy,
-        "misses": stats.miss or 0,
-    }
-    if mode != 3:
-        kwargs["combo"] = score.max_combo
-    if mode == 0:
-        kwargs.update(n300=stats.great or 0, n100=stats.ok or 0, n50=stats.meh or 0)
-    elif mode == 1:
-        kwargs.update(n300=stats.great or 0, n100=stats.ok or 0)
-    elif mode == 2:
-        kwargs.update(
-            n300=stats.great or 0,
-            n100=stats.large_tick_hit or 0,
-            n_katu=stats.small_tick_miss or 0,
-        )
-    else:
-        kwargs.update(
-            n_geki=stats.perfect or 0,
-            n300=stats.great or 0,
-            n_katu=stats.good or 0,
-            n100=stats.ok or 0,
-            n50=stats.meh or 0,
-        )
-
-    attributes = Performance(**kwargs).calculate(beatmap)
+    result = cal_pp(score, path, source)
     return {
-        "aim": attributes.pp_aim or 0.0,
-        "speed": attributes.pp_speed or 0.0,
-        "accuracy": attributes.pp_accuracy or 0.0,
-        "flashlight": attributes.pp_flashlight or 0.0,
-        "difficulty": attributes.pp_difficulty or 0.0,
-        "catch": attributes.pp,
+        "aim": result.pp_aim,
+        "speed": result.pp_speed,
+        "accuracy": result.pp_acc,
+        "flashlight": result.pp_flashlight,
+        "difficulty": result.pp_difficulty,
+        "catch": result.pp if score.ruleset_id % 4 == 2 else 0.0,
     }
 
 
 def get_if_pp_ss_pp(score: UnifiedScore, path: str, source: str = "osu") -> tuple:
-    beatmap = Beatmap(path=path)
-    if beatmap.is_suspicious():
-        return "nan", "nan"
     c = get_osu_calculator()
-    total = beatmap.n_objects
+    total = c.map_attributes(path, score.ruleset_id % 4, score.mods).n_objects
     score = normalize_score_for_pp(score, source)
     if not is_ppysb_relax_score(score, source):
         score = score.model_copy(deep=True)
@@ -263,36 +201,25 @@ def get_if_pp_ss_pp(score: UnifiedScore, path: str, source: str = "osu") -> tupl
 
 
 def get_ss_pp(path: str, ruleset_id: int, mods: list[str], source: str = "osu") -> CalculationResult:
-    beatmap = Beatmap(path=path)
-    if beatmap.is_suspicious():
-        raise NetworkError("这似乎不是一个正常谱面 OAO")
     c = get_osu_calculator()
     mods = normalize_mods_for_pp(mods, source, ruleset_id)
     res = c.calculate(path, ruleset_id % 4, acc=100, mods=mods)
     return res
 
 
-def get_strains(path: str, mods: int) -> Strains:
-    beatmap = Beatmap(path=path)
-    c = Performance(accuracy=100, mods=mods)
-    strains = c.difficulty().strains(beatmap)
-    return strains
-
-
 async def warm_up_pp_calculator():
-    """后台预热 pp 计算器：osu_tools/rosu_pp 首次调用有近 2s 初始化开销，提前到启动时完成。"""
+    """后台预热 pp 计算器：osu_tools 首次调用有近 2s 初始化开销，提前到启动时完成。"""
     import asyncio
 
     from .file import map_path
 
     try:
-        osu_files = sorted(map_path.glob("*/*.osu"))
+        osu_files = await asyncio.to_thread(lambda: list(islice(map_path.glob("*/*.osu"), 1)))
         if not osu_files:
             return
         path = str(osu_files[0].absolute())
 
         def _warm():
-            Beatmap(path=path)
             get_osu_calculator().calculate(path, 0, [], 100)
 
         await asyncio.to_thread(_warm)
