@@ -9,6 +9,7 @@ from ..draw import draw_score
 from ..draw.bp import draw_pfm
 from ..api import get_user_scores
 from ..exceptions import NetworkError
+from ..beatmap_validation import SuspiciousBeatmapError
 from ..draw.score import cal_score_info
 from .map_context import remember_map
 
@@ -36,14 +37,14 @@ async def _draw_recent_list(state: T_State, include_fails: bool, project: str):
         )
         if not scores:
             raise NetworkError("未查询到游玩记录")
-    except NetworkError as e:
+        for score in scores:
+            cal_score_info(state["is_lazer"], score, state["source"])
+        return await draw_pfm(project, state["user"], scores, scores, mode, source=state["source"])
+    except (NetworkError, SuspiciousBeatmapError) as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {mode}模式{mods} 最近{state['range']}成绩时 {str(e)}"
         ).finish(reply_to=True)
-    for score in scores:
-        cal_score_info(state["is_lazer"], score, state["source"])
-    return await draw_pfm(project, state["user"], scores, scores, mode, source=state["source"])
 
 
 @recent_list.handle(parameterless=[split_msg()])
@@ -88,7 +89,7 @@ async def _recent(event: Event, state: T_State):
             state["day"],
             return_context=True,
         )
-    except NetworkError as e:
+    except (NetworkError, SuspiciousBeatmapError) as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} 最近第{state['day']}个成绩时 {str(e)}"
@@ -119,7 +120,7 @@ async def _pr(event: Event, state: T_State):
             state["day"],
             return_context=True,
         )
-    except NetworkError as e:
+    except (NetworkError, SuspiciousBeatmapError) as e:
         mods = f" mod:{state['mods']}" if state["mods"] else ""
         await UniMessage.text(
             f"在查找用户：{state['username']} {NGM[state['mode']]}模式{mods} 最近第{state['day']}个成绩时 {str(e)}"
