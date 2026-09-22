@@ -45,15 +45,23 @@ def prediction_display(item, mode):
             "weighted_gain": goal.get("weighted_gain"),
             "evidence_line": line,
         }
-    if mode == "osu" and item.get("performance_prediction_source") == "osu-joint-model":
+    if mode in {"osu", "fruits"}:
         miss = item.get("expected_miss")
+        if miss is None:
+            miss = item.get("pred_miss")
         combo = item.get("pred_combo")
-        parts = ["模型预测"]
+        source = "模型预测" if item.get("performance_prediction_source") == "osu-joint-model" else "预测"
+        parts = [source]
         if miss is not None:
             parts.append(f"{miss:.1f} Miss")
         if combo is not None:
             parts.append(f"{int(combo)}x")
+        if miss is None and combo is None:
+            parts.append("无练习目标")
         line = " · ".join(parts)
+    else:
+        prefix = f"{item['key_count']}K · " if mode == "mania" and item.get("key_count") else ""
+        line = prefix + "预测 ACC · 无练习目标"
     return {
         "pred_pp": item.get("pred_pp", 0),
         "pred_acc": item.get("pred_acc", 0),

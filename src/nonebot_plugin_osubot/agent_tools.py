@@ -19,6 +19,7 @@ from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext,
 from nonebot_plugin_ai_groupmate.reply_guard import is_request_active
 
 from .api import (
+    _recommend_target,
     get_server,
     get_recommend,
     get_user_scores,
@@ -49,7 +50,7 @@ from .draw.match_history import draw_match_history
 from .draw.taiko_preview import map_to_image, parse_map
 from .help_data import get_command_help
 from .recommendation_filters import RecommendationFilters
-from .agent_recommend_delivery import RecommendationDelivery
+from .agent_recommend_delivery import RecommendationDelivery, shared_recommendation_delivery
 from .history_data import merge_osutrack_history
 from .matcher.utils import parse_bp_filter_text
 
@@ -891,7 +892,9 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
 
 @register_agent_tool
 def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
-    recommendation_delivery = RecommendationDelivery()
+    recommendation_delivery = (
+        shared_recommendation_delivery if getattr(ctx, "session_id", None) else RecommendationDelivery()
+    )
     bp_delivery_lock = asyncio.Lock()
     delivered_bp_keys: set[tuple[Any, ...]] = set()
     bp_artifact_cache: dict[tuple[Any, ...], tuple[bytes | BytesIO, dict[str, Any]]] = {}
@@ -1760,7 +1763,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     {
                         "status": "empty",
                         "applied_filters": recommend_data.applied_filters,
-                        "message": "未找到符合条件的谱面。请询问用户是否放宽筛选，不要自动放宽。",
+                        "message": "这次没有找到符合条件的谱面，任务已结束。要不要调整筛选条件再试？",
+                        "next_action": "ask_user",
                     },
                     ensure_ascii=False,
                 )
@@ -1793,7 +1797,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         filters: RecommendationFilters | None = None,
         include_image_for_analysis: bool = False,
     ) -> str | list[ContentBlock]:
-        """查询并发送推荐谱面图；慢请求返回 pending，完成后自动发图，不要重复调用。
+        """仅在用户本轮明确要求推荐或修改筛选时查询并发送推荐图；讨论已有推荐、反馈或催促不调用。
+
+        慢请求返回 pending 后自动发图，不要重复调用。相同请求发送后 120 秒内跨聊天轮次复用，不再次发图。
 
         普通/综合推荐用 mixed，吃分用 farm，高难用 peak，练习/风格用 style，均衡用 balanced。
         filters 支持星数、BPM、秒数时长、Mods 组合、Mania 4K-10K、多模式特征范围和结果数量。
@@ -1804,14 +1810,25 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         """
         if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
             return json.dumps({"status": "expired", "message": "请求已过期，未提交推荐任务。"}, ensure_ascii=False)
+        normalized_filters = filters.model_dump(mode="json", exclude_none=True) if filters else {}
+        for name in ("mods", "key_counts"):
+            if name in normalized_filters:
+                normalized_filters[name] = sorted(set(normalized_filters[name]))
+        normalized_target = _recommend_target(target)
+        try:
+            normalized_mode = _normalize_mode(mode, "osu")
+        except ValueError as error:
+            return f"推荐筛选条件不合法，请修正条件：{error}"
         key = json.dumps(
             [
-                username,
-                target_user_id,
-                mode,
-                target,
-                filters.model_dump(mode="json") if filters else None,
-                include_image_for_analysis,
+                getattr(ctx, "bot_id", None),
+                getattr(ctx, "session_id", None),
+                ctx.user_id,
+                username.strip().casefold() if username else None,
+                None if target_user_id == ctx.user_id else target_user_id,
+                normalized_mode,
+                "balanced" if normalized_target == "mixed" else normalized_target,
+                normalized_filters,
             ],
             sort_keys=True,
             ensure_ascii=False,
@@ -2107,6 +2124,10 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。"
             "工具会返回结构化分析数据（加权/总 pp、平均 acc/星数/bpm、rank 分布、mod/mapper 贡献）。",
             "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
+            "仅本轮明确要求推荐或修改筛选时调用；讨论已有推荐、反馈、感谢或催促时不要再次调用。"
+            "7K 指 Mania 7 键，应传 mode=mania 和 filters.key_counts=[7]，不要当作 7 星。"
+            "用户确认‘是 mania 里面的’时若此前已按 Mania 提交，不要再提交。"
+            "未拿到结果时只能说已提交，不能说已挑好几张；空结果或失败表示任务结束，不要仍说正在准备。"
             "返回 pending 表示后台已受理，会自动发送图片；此时仅告知正在准备并结束，不要重复调用或编造推荐。"
             "工具会返回结构化推荐数据（标题/stars/预测 pp 与 acc/mods），可直接向用户描述推荐理由。"
             "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"

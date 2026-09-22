@@ -10,12 +10,19 @@ _ACTIVE_TASKS: set[asyncio.Task] = set()
 QUICK_WAIT_SECONDS = 1.0
 DELIVERY_TIMEOUT_SECONDS = 900.0
 MAX_ACTIVE_TASKS = 8
+COMPLETED_REUSE_SECONDS = 120.0
+MAX_RETAINED_TASKS = 64
 
 
 class RecommendationDelivery:
     def __init__(self):
         self.tasks: dict[str, asyncio.Task] = {}
         self.deferred: set[str] = set()
+
+    def forget(self, key, task):
+        if self.tasks.get(key) is task:
+            self.tasks.pop(key, None)
+            self.deferred.discard(key)
 
     async def submit(
         self,
@@ -27,6 +34,8 @@ class RecommendationDelivery:
         created = task is None
         if task is None:
             if len(_ACTIVE_TASKS) >= MAX_ACTIVE_TASKS:
+                return json.dumps({"status": "busy", "message": "推荐任务较多，请稍后再试。"}, ensure_ascii=False)
+            if len(self.tasks) >= MAX_RETAINED_TASKS:
                 return json.dumps({"status": "busy", "message": "推荐任务较多，请稍后再试。"}, ensure_ascii=False)
 
             async def run():
@@ -52,6 +61,24 @@ class RecommendationDelivery:
             self.tasks[key] = task
             _ACTIVE_TASKS.add(task)
             task.add_done_callback(_ACTIVE_TASKS.discard)
+
+            def completed(done):
+                if done.cancelled():
+                    self.forget(key, done)
+                    return
+                result = done.result()
+                if isinstance(result, list):
+                    result = next((item.get("text") for item in result if item.get("type") == "text"), "")
+                try:
+                    succeeded = json.loads(result).get("status") == "sent"
+                except (ValueError, TypeError, AttributeError):
+                    succeeded = result == "sent"
+                if not succeeded:
+                    self.forget(key, done)
+                    return
+                asyncio.get_running_loop().call_later(COMPLETED_REUSE_SECONDS, self.forget, key, done)
+
+            task.add_done_callback(completed)
         try:
             done, _ = await asyncio.wait([task], timeout=QUICK_WAIT_SECONDS)
         except asyncio.CancelledError:
@@ -76,3 +103,6 @@ class RecommendationDelivery:
             },
             ensure_ascii=False,
         )
+
+
+shared_recommendation_delivery = RecommendationDelivery()

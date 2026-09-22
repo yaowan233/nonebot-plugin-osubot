@@ -49,7 +49,48 @@ async def test_deferred_failure_notifies_and_releases_capacity(monkeypatch, fail
     await asyncio.sleep(0)
     assert notices[0]["status"] == "failed"
     assert "private" not in notices[0]["message"]
-    assert delivery.tasks["job"] not in module._ACTIVE_TASKS
+    assert "job" not in delivery.tasks
+
+
+@pytest.mark.asyncio
+async def test_completed_delivery_expires_and_failure_can_retry(monkeypatch):
+    from nonebot_plugin_osubot import agent_recommend_delivery as module
+
+    callbacks = []
+    loop = asyncio.get_running_loop()
+    original_call_later = loop.call_later
+
+    def capture_expiry(delay, callback, *args, **kwargs):
+        if callback.__name__ == "forget":
+            callbacks.append((callback, args))
+            return None
+        return original_call_later(delay, callback, *args, **kwargs)
+
+    monkeypatch.setattr(loop, "call_later", capture_expiry)
+    delivery = module.RecommendationDelivery()
+    calls = []
+
+    async def operation():
+        calls.append(1)
+        return "sent"
+
+    async def notify(result):
+        pass
+
+    await delivery.submit("job", operation, notify)
+    await delivery.submit("job", operation, notify)
+    assert len(calls) == 1
+    callback, arguments = callbacks.pop()
+    callback(*arguments)
+    await delivery.submit("job", operation, notify)
+    assert len(calls) == 2
+
+    async def failure():
+        return '{"status":"failed"}'
+
+    await delivery.submit("failure", failure, notify)
+    await delivery.submit("failure", operation, notify)
+    assert len(calls) == 3
 
 
 @pytest.mark.asyncio

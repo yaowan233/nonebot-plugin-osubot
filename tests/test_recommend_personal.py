@@ -49,6 +49,41 @@ def test_std_prediction_and_zero_gain():
     assert prediction_display({}, "osu")["weighted_gain"] is None
 
 
+@pytest.mark.parametrize("mode", ["osu", "fruits", "mania", "taiko"])
+def test_prediction_without_practice_target_has_explanation(mode):
+    from nonebot_plugin_osubot.recommendation import prediction_display
+
+    result = prediction_display({"pred_pp": 123, "pred_acc": 97.5, "key_count": 7}, mode)
+    assert result["evidence_line"]
+    assert "预测" in result["evidence_line"]
+    assert "无练习目标" in result["evidence_line"]
+    assert result["pred_pp"] == 123
+    assert result["pred_acc"] == 97.5
+    assert result["weighted_gain"] is None
+    if mode == "mania":
+        assert "7K" in result["evidence_line"]
+
+
+def test_catch_prediction_is_not_an_fc_promise():
+    from nonebot_plugin_osubot.recommendation import prediction_display
+
+    result = prediction_display({"expected_miss": 0, "pred_combo": 1000}, "fruits")
+    assert "0.0 Miss" in result["evidence_line"]
+    assert "1000x" in result["evidence_line"]
+    assert "预测" in result["evidence_line"]
+    assert "FC" not in result["evidence_line"]
+
+
+def test_unknown_gain_is_not_drawn_as_zero():
+    from nonebot_plugin_osubot.draw.recommend_svg import build_recommend_svg
+    from test_native_card_renderers import _recommend_payload
+
+    payload = _recommend_payload()
+    svg, _ = build_recommend_svg(payload)
+    assert "收益未知" in svg
+    assert "+0.00 pp" not in svg
+
+
 @pytest.mark.asyncio
 async def test_timeout_is_not_retried_and_auth_is_sent(app):
     from nonebot_plugin_osubot import api

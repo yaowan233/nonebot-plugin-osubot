@@ -54,7 +54,8 @@ async def test_slow_recommendation_returns_before_tool_deadline_and_delivers_onc
     monkeypatch.setattr(agent_tools, "_send_image", send)
     monkeypatch.setattr(agent_tools, "_send_text", send)
     monkeypatch.setattr(agent_tools, "_recommend_to_summary", lambda data: {})
-    bundle = agent_tools.build_osu_agent_tools(SimpleNamespace(user_id="1", send_target=None))
+    context = SimpleNamespace(session_id=f"slow-{slow_stage}", user_id="1", send_target=None)
+    bundle = agent_tools.build_osu_agent_tools(context)
     tool = next(item for item in bundle.tools if item.name == "send_osu_recommend")
     try:
         response = await asyncio.wait_for(tool.ainvoke({"mode": "mania"}), timeout=2)
@@ -66,13 +67,45 @@ async def test_slow_recommendation_returns_before_tool_deadline_and_delivers_onc
         assert parsed["reason_code"] == "recommendation_queued"
         assert parsed["data"]["image_sent"] is False
         assert not delivered.is_set()
-        repeated = await tool.ainvoke({"mode": "mania"})
+        next_bundle = agent_tools.build_osu_agent_tools(context)
+        next_tool = next(item for item in next_bundle.tools if item.name == "send_osu_recommend")
+        repeated = await next_tool.ainvoke({"mode": "mania"})
         assert json.loads(repeated)["status"] == "pending"
         assert len(calls) == (0 if slow_stage == "lookup" else 1)
         release.set()
         await asyncio.wait_for(delivered.wait(), timeout=1)
     finally:
         release.set()
+
+
+@pytest.mark.asyncio
+async def test_repeated_recommendation_across_chat_turns_sends_once(monkeypatch):
+    from nonebot_plugin_osubot import agent_tools
+
+    monkeypatch.setattr(
+        agent_tools, "_resolve_osu_user", AsyncMock(return_value=agent_tools.ResolvedOsuUser(42, "player"))
+    )
+    monkeypatch.setattr(
+        agent_tools, "get_recommend", AsyncMock(return_value=SimpleNamespace(recommendations=[object()]))
+    )
+    monkeypatch.setattr(agent_tools, "draw_recommend", AsyncMock(return_value=BytesIO(b"image")))
+    send = AsyncMock()
+    monkeypatch.setattr(agent_tools, "_send_image", send)
+    monkeypatch.setattr(agent_tools, "_recommend_to_summary", lambda data: {})
+
+    async def invoke(session, user, **arguments):
+        context = SimpleNamespace(session_id=session, user_id=user, bot_id="bot", send_target=None)
+        bundle = agent_tools.build_osu_agent_tools(context)
+        tool = next(item for item in bundle.tools if item.name == "send_osu_recommend")
+        return await tool.ainvoke(arguments)
+
+    await invoke("dedup-chat", "1", mode="mania", target="mixed")
+    await invoke("dedup-chat", "1", mode="3", target="balanced", include_image_for_analysis=True)
+    assert send.await_count == 1
+    await invoke("dedup-chat", "1", mode="mania", filters={"key_counts": [7]})
+    await invoke("other-chat", "1", mode="mania")
+    await invoke("dedup-chat", "2", mode="mania")
+    assert send.await_count == 4
 
 
 @pytest.mark.asyncio
