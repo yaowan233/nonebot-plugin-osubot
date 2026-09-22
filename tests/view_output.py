@@ -8,6 +8,7 @@
 """
 
 import asyncio
+import os
 import random
 import time
 import pytest
@@ -300,6 +301,49 @@ async def test_info_with_changes(app: App):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["osu", "taiko", "fruits", "mania"])
+async def test_recommend_synthetic(app: App, monkeypatch, mode):
+    import importlib
+    from io import BytesIO
+    from unittest.mock import AsyncMock
+
+    from PIL import Image
+    from nonebot_plugin_osubot.schema.alphaosu import RecommendData
+
+    drawing = importlib.import_module("nonebot_plugin_osubot.draw.recommend")
+    monkeypatch.setattr(drawing, "_cover_data_uri", AsyncMock(return_value=None))
+    monkeypatch.setattr(drawing, "_player_avatar", AsyncMock(return_value=""))
+    evidence = {"osu": "1.2 Miss · 1234x", "taiko": "ACC 目标", "fruits": "FC 目标", "mania": "7K · ACC 目标"}
+    data = RecommendData(
+        player_id=1,
+        mode=mode,
+        target="balanced",
+        recommendations=[
+            {
+                "map_id": 1000 + index,
+                "mod": 0,
+                "mod_str": "NM",
+                "stars": 4 + index * 0.1,
+                "pred_pp": 200 + index,
+                "pred_acc": 98.5,
+                "final_score": 20 - index,
+                "title": f"Recommendation sample {index + 1}",
+                "weighted_gain": 20 - index,
+                "evidence_line": evidence[mode],
+            }
+            for index in range(20)
+        ],
+    )
+    picture = await drawing.draw_recommend(data, "Sample player", "")
+    with Image.open(BytesIO(picture)) as image:
+        assert image.width == 1080
+        assert image.height == 108 + 20 + (10 * 96 + 9 * 9) + 18 + 35
+        image.verify()
+    (OUT / f"recommend_{mode}_synthetic.jpg").write_bytes(picture)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.getenv("OSUBOT_TEST_LIVE_RECOMMEND") != "1", reason="live recommender not explicitly enabled")
 async def test_recommend_real(app: App):
     """推荐 真实图片输出 (taiko)"""
     from nonebot_plugin_osubot.api import get_recommend
@@ -320,6 +364,7 @@ async def test_recommend_real(app: App):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.getenv("OSUBOT_TEST_LIVE_RECOMMEND") != "1", reason="live recommender not explicitly enabled")
 async def test_recommend_stress(app: App):
     """压力测试：5 个用户多模式并发获取推荐"""
     from nonebot_plugin_osubot.api import get_recommend
