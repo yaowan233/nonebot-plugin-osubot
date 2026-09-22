@@ -1414,6 +1414,8 @@ async def test_send_osu_recommend_returns_structured_data(monkeypatch):
         return agent_tools.ResolvedOsuUser(42, "player")
 
     async def fake_recommend(*args, **kwargs):
+        assert kwargs["filters"].max_length == 180
+        assert kwargs["filters"].mods == ["NM"]
         return recommend_data
 
     async def fake_draw(*args, **kwargs):
@@ -1431,7 +1433,9 @@ async def test_send_osu_recommend_returns_structured_data(monkeypatch):
     bundle = agent_tools.build_osu_agent_tools(context)
     recommend_tool = next(tool for tool in bundle.tools if tool.name == "send_osu_recommend")
 
-    raw = await recommend_tool.ainvoke({"target": "mixed"})
+    schema = recommend_tool.args_schema.model_json_schema()
+    assert "filters" in schema["properties"]
+    raw = await recommend_tool.ainvoke({"target": "mixed", "filters": {"max_length": 180, "mods": ["NM"]}})
     result = json.loads(raw)
 
     assert isinstance(raw, str)

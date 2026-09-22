@@ -48,6 +48,8 @@ from .draw.osu_preview import draw_osu_preview, draw_full_osu_preview, render_pr
 from .draw.match_history import draw_match_history
 from .draw.taiko_preview import map_to_image, parse_map
 from .help_data import get_command_help
+from .recommendation_filters import RecommendationFilters
+from .agent_recommend_delivery import RecommendationDelivery
 from .history_data import merge_osutrack_history
 from .matcher.utils import parse_bp_filter_text
 
@@ -421,6 +423,12 @@ def _recommend_item_summary(item: RecommendItem) -> dict[str, Any]:
         "mod": item.mod_str,
         "pred_pp": round(item.pred_pp, 2),
         "pred_acc": round(item.pred_acc, 2),
+        "weighted_gain": item.weighted_gain,
+        "prediction_basis": item.evidence_line,
+        "bpm": item.bpm,
+        "duration_seconds": item.duration_seconds,
+        "key_count": item.key_count,
+        "feature_values": item.feature_values,
         "map_id": item.map_id,
         "url": item.url,
     }
@@ -430,6 +438,7 @@ def _recommend_to_summary(data: RecommendData) -> dict[str, Any]:
     return {
         "mode": data.mode,
         "target": data.target,
+        "applied_filters": data.applied_filters,
         "recommendations": [_recommend_item_summary(item) for item in (data.recommendations or [])][:10],
         "sections": [
             {
@@ -882,6 +891,7 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
 
 @register_agent_tool
 def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
+    recommendation_delivery = RecommendationDelivery()
     bp_delivery_lock = asyncio.Lock()
     delivered_bp_keys: set[tuple[Any, ...]] = set()
     bp_artifact_cache: dict[tuple[Any, ...], tuple[bytes | BytesIO, dict[str, Any]]] = {}
@@ -1723,30 +1733,32 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         except Exception as e:
             return f"发送 bp 分析失败: {e}"
 
-    @tool("send_osu_recommend")
-    async def send_osu_recommend(
+    async def deliver_osu_recommend(
         username: UsernameArg = None,
         target_user_id: TargetUserIdArg = None,
         mode: str | None = None,
         target: str | None = "mixed",
+        filters: RecommendationFilters | None = None,
         include_image_for_analysis: bool = False,
     ) -> str | list[ContentBlock]:
         """
         查询并发送推荐谱面图。
         target 取值规则：普通推荐/综合/好玩且能打用 mixed；吃分/pp/能上分用 farm；难一点/更难/高难/冲分/peak 用 peak；
         练习/风格/值得练/practice/style 用 style；均衡/balanced 用 balanced。
+        filters 支持星数、BPM、秒数时长、完整 Mods 组合、Mania 4K-10K、多模式特征范围和结果数量。
+        例如 4K/7K、5-6 星、三分钟以内、LN 20%-50%：
+        filters={key_counts:[4,7],min_stars:5,max_stars:6,max_length:180,feature_ranges:{ln_ratio:{min:0.2,max:0.5}}}。
+        只填用户明确的条件；比例用 0..1；不要猜测不明确的数值阈值，不支持的条件应说明而非忽略。
         target_user_id 是 QQ/群用户 ID，不是 osu id；查询当前发言人时不要填写 target_user_id。
         """
         try:
             user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
             mode = _resolve_mode(mode, user, "osu")
-            api_task = asyncio.create_task(get_recommend(user.user_id, mode, target))
-            done, _ = await asyncio.wait([api_task], timeout=5)
-            if not done:
-                await UniMessage.text("正在获取推荐谱面，请稍候...").send(target=ctx.send_target)
-            recommend_data = await api_task
+            recommend_data = await get_recommend(user.user_id, mode, target, filters=filters)
             if not recommend_data.recommendations:
-                return "暂时没有找到可推荐的谱面，已加入更新队列，请明天再来查看推荐吧"
+                return json.dumps({"status": "empty", "applied_filters": recommend_data.applied_filters,
+                                   "message": "未找到符合条件的谱面。请询问用户是否放宽筛选，不要自动放宽。"},
+                                  ensure_ascii=False)
             image = await draw_recommend(recommend_data, user.name, f"https://a.ppy.sh/{user.user_id}")
             await _send_image(ctx, image)
             text = json.dumps(
@@ -1760,10 +1772,54 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                 ensure_ascii=False,
             )
             return _image_tool_result(text, image, include_image_for_analysis)
+        except ValueError as e:
+            return f"推荐筛选条件不合法，请修正条件：{e}"
         except NetworkError as e:
             return f"查询推荐谱面失败: {e}"
         except Exception as e:
             return f"发送推荐谱面失败: {e}"
+
+    @tool("send_osu_recommend")
+    async def send_osu_recommend(
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
+        mode: str | None = None,
+        target: str | None = "mixed",
+        filters: RecommendationFilters | None = None,
+        include_image_for_analysis: bool = False,
+    ) -> str | list[ContentBlock]:
+        """查询并发送推荐谱面图；慢请求返回 pending，完成后自动发图，不要重复调用。
+
+        普通/综合推荐用 mixed，吃分用 farm，高难用 peak，练习/风格用 style，均衡用 balanced。
+        filters 支持星数、BPM、秒数时长、Mods 组合、Mania 4K-10K、多模式特征范围和结果数量。
+        例如 filters={key_counts:[4,7],max_length:180,feature_ranges:{ln_ratio:{min:0.2,max:0.5}}}。
+        只填用户明确的条件，比例用 0..1；不支持的条件应说明而非忽略。
+        查询当前发言人不要填写 target_user_id；它是 QQ/群用户 ID，不是 osu ID。
+        pending 表示已受理而非已发送，此时只告知正在准备，不要分析尚未返回的推荐。
+        """
+        if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
+            return json.dumps({"status": "expired", "message": "请求已过期，未提交推荐任务。"}, ensure_ascii=False)
+        key = json.dumps(
+            [username, target_user_id, mode, target, filters.model_dump(mode="json") if filters else None,
+             include_image_for_analysis], sort_keys=True, ensure_ascii=False,
+        )
+
+        async def notify(result):
+            if not isinstance(result, str):
+                return
+            try:
+                payload = json.loads(result)
+            except (ValueError, TypeError):
+                await _send_text(ctx, result)
+                return
+            if payload.get("status") != "sent":
+                await _send_text(ctx, payload.get("message", "推荐任务未能完成，请稍后重试。"))
+
+        return await recommendation_delivery.submit(
+            key,
+            lambda: deliver_osu_recommend(username, target_user_id, mode, target, filters, include_image_for_analysis),
+            notify,
+        )
 
     @tool("send_osu_profile_url")
     async def send_osu_profile_url(
@@ -2038,10 +2094,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_bp_analysis: 用户想查 bp 分析、bpa、bp 构成、mod/mapper/长度贡献时使用。"
             "工具会返回结构化分析数据（加权/总 pp、平均 acc/星数/bpm、rank 分布、mod/mapper 贡献）。",
             "- send_osu_recommend: 用户想要推荐谱面、推荐铺面、recommend 时使用；"
+            "返回 pending 表示后台已受理，会自动发送图片；此时仅告知正在准备并结束，不要重复调用或编造推荐。"
             "工具会返回结构化推荐数据（标题/stars/预测 pp 与 acc/mods），可直接向用户描述推荐理由。"
             "普通推荐/综合/好玩且能打传 target='mixed'，想吃分/上分传 target='farm'，"
             "想难一点/更难/冲分/高难传 target='peak'，想练习/风格推荐传 target='style'，"
-            "想均衡传 target='balanced'。",
+            "想均衡传 target='balanced'。filters 可指定星数、BPM、时长（秒）、Mods、Mania 键数、转谱、重刷、"
+            "数量及模式特征范围。比例用 0..1；只填明确条件，不猜数值；空结果先询问再放宽。"
+            "返回 applied_filters 和各图 feature_values 可核对条件；不要把练习目标说成单次必达成绩。",
             "- send_osu_profile_url: 用户想要 osu 主页链接、个人主页、mu 时使用。",
             "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。"
             "工具会返回结构化对局数据（双方队伍、胜场、每局比分与 MVP），可直接用于分析对局。",

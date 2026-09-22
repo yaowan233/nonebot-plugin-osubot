@@ -1,5 +1,7 @@
 from typing import Optional
 
+from pydantic import Field
+
 from .basemodel import Base
 
 
@@ -16,6 +18,12 @@ class RecommendItem(Base):
     url: Optional[str] = None
     evidence_count: Optional[int] = None
     target: Optional[str] = None
+    weighted_gain: Optional[float] = None
+    evidence_line: str = ""
+    bpm: Optional[float] = None
+    duration_seconds: Optional[float] = None
+    key_count: Optional[int] = None
+    feature_values: dict[str, float] = Field(default_factory=dict)
 
 
 class RecommendSection(Base):
@@ -31,3 +39,4 @@ class RecommendData(Base):
     recommendations: Optional[list[RecommendItem]] = None
     sections: Optional[list[RecommendSection]] = None
     detail: Optional[str] = None
+    applied_filters: dict = Field(default_factory=dict)

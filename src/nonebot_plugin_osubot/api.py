@@ -10,7 +10,7 @@ from typing import Union, Literal, Optional
 from nonebot.log import logger
 from expiringdict import ExpiringDict
 from nonebot import get_plugin_config
-from httpx import HTTPError, Response
+from httpx import HTTPError, Response, TimeoutException
 from typing_extensions import TypedDict
 
 from .network.manager import network_manager
@@ -1562,21 +1562,31 @@ async def _get_recommend_beatmapset_ids(items: list[dict]) -> dict[int, int]:
 
 async def _request_recommend(url: str, params: dict) -> Response:
     client = await network_manager.get_client()
+    headers = {}
+    if plugin_config.osu_recommend_api_token:
+        headers["Authorization"] = "Bearer " + plugin_config.osu_recommend_api_token
     max_attempts = 3
 
     for attempt in range(1, max_attempts + 1):
         try:
-            response = await client.get(
+            response = await client.post(
                 url,
-                params=params,
+                json=params,
+                headers=headers,
                 timeout=plugin_config.osu_recommend_timeout,
             )
+        except TimeoutException as e:
+            raise NetworkError("推荐服务等待超时，请稍后再试") from e
         except HTTPError as e:
             if attempt == max_attempts:
                 detail = str(e) or e.__class__.__name__
                 raise NetworkError(f"推荐服务请求失败: {detail}") from e
             logger.warning(f"recommend request failed ({attempt}/{max_attempts}): {e}")
         else:
+            if response.status_code == 202:
+                return await _poll_recommend_job(client, url, headers, response.json())
+            if response.status_code == 504:
+                raise NetworkError("推荐准备超时，请稍后再试")
             if response.status_code < 500:
                 return response
             if attempt == max_attempts:
@@ -1590,18 +1600,60 @@ async def _request_recommend(url: str, params: dict) -> Response:
     raise NetworkError("推荐服务繁忙，请稍后再试")
 
 
-async def get_recommend(uid, mode, target: str | None = "mixed"):
+async def _poll_recommend_job(client, url, headers, job):
+    deadline = time.monotonic() + 630
+    failures = 0
+    while time.monotonic() < deadline:
+        if job.get("status") == "ready":
+            return Response(200, json=job["result"])
+        if job.get("status") == "failed":
+            raise NetworkError(job.get("error") or "推荐后台准备失败")
+        if job.get("status") not in {"queued", "running"} or not job.get("job_id"):
+            raise NetworkError("推荐服务返回了无效的任务状态")
+        await asyncio.sleep(2)
+        try:
+            response = await client.get(f"{url}/{job['job_id']}", headers=headers, timeout=15)
+            response.raise_for_status()
+        except HTTPError as error:
+            failures += 1
+            if failures >= 3:
+                raise NetworkError("查询推荐进度失败；后台任务仍可能在准备，稍后重试即可") from error
+            continue
+        failures = 0
+        job = response.json()
+    raise NetworkError("推荐后台准备耗时过长，请稍后重试")
+
+
+async def get_recommend(uid, mode, target: str | None = "mixed", *, filters=None):
+    import hashlib
+    from .recommendation import personal_request
+    from .recommendation_response_cache import response_cache
+
     mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
-    mode_str = mode_map.get(str(mode), "osu")
+    mode_str = str(mode) if str(mode) in mode_map.values() else mode_map.get(str(mode), "osu")
+    request = personal_request(uid, mode_str, _recommend_target(target), plugin_config.osu_recommend_candidate_limit,
+                               plugin_config.osu_recommend_result_limit, filters)
+    identity = {"url": plugin_config.osu_recommend_api.rstrip("/"), "token": plugin_config.osu_recommend_api_token,
+                "request": request}
+    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    return await response_cache.get(
+        key, lambda: _get_recommend_uncached(uid, mode, target, filters=filters),
+        plugin_config.osu_recommend_cache_ttl,
+    )
+
+
+async def _get_recommend_uncached(uid, mode, target: str | None = "mixed", *, filters=None):
+    from .recommendation import personal_request, prediction_display
+
+    mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
+    mode_str = str(mode) if str(mode) in mode_map.values() else mode_map.get(str(mode), "osu")
     target_str = _recommend_target(target)
     base_url = plugin_config.osu_recommend_api.rstrip("/")
+    request = personal_request(uid, mode_str, target_str, plugin_config.osu_recommend_candidate_limit,
+                               plugin_config.osu_recommend_result_limit, filters)
     res = await _request_recommend(
-        f"{base_url}/recommend/{mode_str}/{uid}",
-        params={
-            "target": target_str,
-            "candidate_limit": plugin_config.osu_recommend_candidate_limit,
-            "result_limit": plugin_config.osu_recommend_result_limit,
-        },
+        f"{base_url}/recommend/personal/jobs",
+        params=request,
     )
     if res.status_code >= 400:
         raise NetworkError(f"推荐服务返回 {res.status_code}: {res.text[:120]}")
@@ -1619,7 +1671,8 @@ async def get_recommend(uid, mode, target: str | None = "mixed"):
         display_title = f"{artist} - {title} [{version}]" if artist else f"{title} [{version}]"
         return {
             "map_id": map_id,
-            "mod": item.get("mod_int", 0),
+            "mod": item.get("mod_int", {"NM": 0, "HD": 8, "HR": 16, "DT": 64, "HT": 256,
+                                       "HDDT": 72, "HDHR": 24}.get(item.get("mods"), 0)),
             "mod_str": item.get("mods") or "NM",
             "stars": item.get("stars", 0.0),
             "pred_pp": item.get("pred_pp", 0.0),
@@ -1630,6 +1683,11 @@ async def get_recommend(uid, mode, target: str | None = "mixed"):
             "url": item.get("url"),
             "evidence_count": item.get("evidence_count"),
             "target": item.get("target"),
+            "bpm": item.get("bpm"),
+            "duration_seconds": item.get("duration_seconds"),
+            "key_count": item.get("key_count"),
+            "feature_values": item.get("feature_values") or {},
+            **prediction_display(item, mode_str),
         }
 
     recommendations = [convert_item(item) for item in items]
@@ -1647,4 +1705,5 @@ async def get_recommend(uid, mode, target: str | None = "mixed"):
         target=data.get("target", target_str),
         recommendations=recommendations,
         sections=sections,
+        applied_filters=data.get("applied_request") or request,
     )

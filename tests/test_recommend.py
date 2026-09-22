@@ -17,6 +17,13 @@ RECOMMEND_MODULE = "nonebot_plugin_osubot.matcher.recommend"
 FAKE_RECOMMEND_IMG = b"FAKE_RECOMMEND_IMAGE"
 
 
+@pytest.fixture(autouse=True)
+def clear_recommendation_cache(app):
+    from nonebot_plugin_osubot.recommendation_response_cache import response_cache
+
+    response_cache.values.clear()
+
+
 def text_msg(event, text: str) -> Message:
     return Message([MessageSegment.reply(event.message_id), MessageSegment.text(text)])
 
@@ -82,7 +89,7 @@ async def test_recommend_api_retries_transient_server_error(app: App):
     from nonebot_plugin_osubot.api import get_recommend
 
     client = AsyncMock()
-    client.get.side_effect = [recommend_response(503), recommend_response()]
+    client.post.side_effect = [recommend_response(503), recommend_response()]
 
     with (
         patch("nonebot_plugin_osubot.api.network_manager.get_client", new=AsyncMock(return_value=client)),
@@ -91,7 +98,12 @@ async def test_recommend_api_retries_transient_server_error(app: App):
         data = await get_recommend(3162675, 1)
 
     assert len(data.recommendations or []) == 1
-    assert client.get.await_count == 2
+    assert client.post.await_count == 2
+    request = client.post.call_args
+    assert request.args[0].endswith("/recommend/personal/jobs")
+    assert request.kwargs["json"]["mode"] == "taiko"
+    assert request.kwargs["json"]["target"] == "balanced"
+    assert request.kwargs["json"]["include_converts"] is True
     sleep.assert_awaited_once_with(1.0)
 
 
@@ -101,7 +113,7 @@ async def test_recommend_api_stops_after_repeated_server_errors(app: App):
     from nonebot_plugin_osubot.exceptions import NetworkError
 
     client = AsyncMock()
-    client.get.side_effect = [recommend_response(500), recommend_response(502), recommend_response(503)]
+    client.post.side_effect = [recommend_response(500), recommend_response(502), recommend_response(503)]
 
     with (
         patch("nonebot_plugin_osubot.api.network_manager.get_client", new=AsyncMock(return_value=client)),
@@ -110,7 +122,7 @@ async def test_recommend_api_stops_after_repeated_server_errors(app: App):
     ):
         await get_recommend(3162675, 1)
 
-    assert client.get.await_count == 3
+    assert client.post.await_count == 3
     assert sleep.await_count == 2
 
 
@@ -174,7 +186,7 @@ async def test_recommend_empty_list(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧"),
+                    text_msg(event, "暂时没有找到符合条件的推荐谱面，可以换一种推荐目标后再试。"),
                     result={"message_id": 1},
                 )
 
@@ -203,7 +215,7 @@ async def test_recommend_detail_response(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧"),
+                    text_msg(event, "暂时没有找到符合条件的推荐谱面，可以换一种推荐目标后再试。"),
                     result={"message_id": 1},
                 )
 

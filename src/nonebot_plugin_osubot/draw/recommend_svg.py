@@ -20,7 +20,7 @@ COLUMN_GAP = 20
 COLUMN_WIDTH = (WIDTH - SECTION_MARGIN_X * 2 - COLUMN_GAP) / 2
 SECTION_HEAD_HEIGHT = 25
 SECTION_GAP = 16
-CARD_HEIGHT = 72
+CARD_HEIGHT = 96
 CARD_GAP = 9
 COVER_WIDTH = 96
 FOOTER_MARGIN = 18
@@ -158,6 +158,11 @@ def _card(item: dict, rank: int, x: float, y: float, key: str) -> str:
     parts.append(
         text(right, y + 49, f"{float(item.get('pred_acc') or 0):.2f}%", 11, fill=ACC, anchor="end", weight=700)
     )
+    gain = item.get("weighted_gain")
+    if gain is not None:
+        parts.append(text(right, y + 77, f"{float(gain):+.2f} pp", 14, fill=CYAN, anchor="end", weight=700))
+    parts.append(fitted_text(info_x, y + 78, item.get("evidence_line", ""), 10,
+                             COLUMN_WIDTH - COVER_WIDTH - 12 - 96, fill=MUTED))
     return f'<g data-role="recommend-card">{"".join(parts)}</g>'
 
 

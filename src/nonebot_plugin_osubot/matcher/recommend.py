@@ -77,7 +77,7 @@ async def _(state: T_State):
         await UniMessage.text(f"在查找用户：{state['username']} {NGM[mode]}模式时 {str(e)}").send(reply_to=True)
         return
     if not recommend_data.recommendations:
-        await UniMessage.text("暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧").send(reply_to=True)
+        await UniMessage.text("暂时没有找到符合条件的推荐谱面，可以换一种推荐目标后再试。").send(reply_to=True)
         return
     username = state.get("username", str(user))
     avatar_url = f"https://a.ppy.sh/{user}"

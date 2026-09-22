@@ -16,8 +16,11 @@ class Config(BaseModel):
     osutrack_default_days: int = 365
     osu_recommend_api: str = "https://mayumi.xyz"
     osu_recommend_timeout: float = 240.0
-    osu_recommend_candidate_limit: int = 1000
-    osu_recommend_result_limit: int = 10
+    osu_recommend_api_token: str = ""
+    osu_recommend_candidate_limit: int = 500
+    osu_recommend_result_limit: int = 20
+    osu_recommend_cache_ttl: float = Field(default=120, ge=0, le=3600)
+    osu_recommend_asset_timeout: float = Field(default=6, gt=0, le=30)
     osu_preview_taiko_skin_path: Optional[Path] = None
     osu_preview_ffmpeg_path: Optional[Path] = None
     osu_preview_full_scale: float = 0.75

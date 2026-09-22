@@ -9,6 +9,8 @@ import re
 
 from ..file import get_pfm_img, map_path
 from ..schema.alphaosu import RecommendData
+from nonebot import get_plugin_config
+from ..config import Config
 from .friend import _load_avatar_data_uri, _placeholder_avatar_data_uri
 from .map_render import remote_image_data_uri
 from .recommend_svg import render_recommend_svg
@@ -22,6 +24,7 @@ SECTION_TITLES = {
 }
 
 SIDE_SECTION_ORDER = {"easy": 0, "medium": 1, "hard": 2}
+plugin_config = get_plugin_config(Config)
 
 _AVATAR_UID = re.compile(r"a\.ppy\.sh/(\d+)")
 # 封面显示尺寸 96x72，按 2x 准备缩略图
@@ -74,9 +77,15 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
 
     # ── 资源准备：封面按谱面组去重并发下载，头像并发 ──
     set_ids = sorted({item.get("beatmapset_id") or 0 for item in all_items})
+    async def bounded_asset(awaitable, fallback):
+        try:
+            return await asyncio.wait_for(awaitable, timeout=plugin_config.osu_recommend_asset_timeout)
+        except Exception:
+            return fallback
+
     cover_results, avatar = await asyncio.gather(
-        asyncio.gather(*(_cover_data_uri(set_id) for set_id in set_ids)),
-        _player_avatar(avatar_url),
+        asyncio.gather(*(bounded_asset(_cover_data_uri(set_id), None) for set_id in set_ids)),
+        bounded_asset(_player_avatar(avatar_url), _placeholder_avatar_data_uri()),
     )
     covers = dict(zip(set_ids, cover_results))
 
@@ -88,6 +97,8 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
             "mod_str": item.get("mod_str", "NM"),
             "pred_pp": item.get("pred_pp", 0),
             "pred_acc": item.get("pred_acc", 0),
+            "weighted_gain": item.get("weighted_gain"),
+            "evidence_line": item.get("evidence_line", ""),
             "cover": covers.get(item.get("beatmapset_id") or 0),
         }
 
@@ -110,7 +121,8 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
             "side": [],
             "flat": [card_item(item) for item in flat_items],
             "total_count": len(flat_items),
-            "section_titles": ["推荐列表"],
+            "section_titles": [{"mixed": "综合推荐", "balanced": "综合推荐", "farm": "吃分推荐",
+                                "peak": "进阶推荐", "style": "风格推荐"}.get(data.target, "推荐列表")],
         }
 
     payload.update(
