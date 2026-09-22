@@ -1631,13 +1631,23 @@ async def get_recommend(uid, mode, target: str | None = "mixed", *, filters=None
 
     mode_map = {"0": "osu", "1": "taiko", "2": "fruits", "3": "mania"}
     mode_str = str(mode) if str(mode) in mode_map.values() else mode_map.get(str(mode), "osu")
-    request = personal_request(uid, mode_str, _recommend_target(target), plugin_config.osu_recommend_candidate_limit,
-                               plugin_config.osu_recommend_result_limit, filters)
-    identity = {"url": plugin_config.osu_recommend_api.rstrip("/"), "token": plugin_config.osu_recommend_api_token,
-                "request": request}
+    request = personal_request(
+        uid,
+        mode_str,
+        _recommend_target(target),
+        plugin_config.osu_recommend_candidate_limit,
+        plugin_config.osu_recommend_result_limit,
+        filters,
+    )
+    identity = {
+        "url": plugin_config.osu_recommend_api.rstrip("/"),
+        "token": plugin_config.osu_recommend_api_token,
+        "request": request,
+    }
     key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
     return await response_cache.get(
-        key, lambda: _get_recommend_uncached(uid, mode, target, filters=filters),
+        key,
+        lambda: _get_recommend_uncached(uid, mode, target, filters=filters),
         plugin_config.osu_recommend_cache_ttl,
     )
 
@@ -1649,8 +1659,14 @@ async def _get_recommend_uncached(uid, mode, target: str | None = "mixed", *, fi
     mode_str = str(mode) if str(mode) in mode_map.values() else mode_map.get(str(mode), "osu")
     target_str = _recommend_target(target)
     base_url = plugin_config.osu_recommend_api.rstrip("/")
-    request = personal_request(uid, mode_str, target_str, plugin_config.osu_recommend_candidate_limit,
-                               plugin_config.osu_recommend_result_limit, filters)
+    request = personal_request(
+        uid,
+        mode_str,
+        target_str,
+        plugin_config.osu_recommend_candidate_limit,
+        plugin_config.osu_recommend_result_limit,
+        filters,
+    )
     res = await _request_recommend(
         f"{base_url}/recommend/personal/jobs",
         params=request,
@@ -1671,8 +1687,10 @@ async def _get_recommend_uncached(uid, mode, target: str | None = "mixed", *, fi
         display_title = f"{artist} - {title} [{version}]" if artist else f"{title} [{version}]"
         return {
             "map_id": map_id,
-            "mod": item.get("mod_int", {"NM": 0, "HD": 8, "HR": 16, "DT": 64, "HT": 256,
-                                       "HDDT": 72, "HDHR": 24}.get(item.get("mods"), 0)),
+            "mod": item.get(
+                "mod_int",
+                {"NM": 0, "HD": 8, "HR": 16, "DT": 64, "HT": 256, "HDDT": 72, "HDHR": 24}.get(item.get("mods"), 0),
+            ),
             "mod_str": item.get("mods") or "NM",
             "stars": item.get("stars", 0.0),
             "pred_pp": item.get("pred_pp", 0.0),

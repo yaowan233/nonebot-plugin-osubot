@@ -866,7 +866,7 @@ async def test_recommend_taiko_mode(app: App):
                 ctx.receive_event(bot, event)
                 ctx.should_call_send(
                     event,
-                    text_msg(event, "暂时没有找到可推荐的谱面，已加入更新队列\n请明天再来查看推荐吧"),
+                    text_msg(event, "暂时没有找到符合条件的推荐谱面，可以换一种推荐目标后再试。"),
                     result={"message_id": 1},
                 )
 

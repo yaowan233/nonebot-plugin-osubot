@@ -77,6 +77,7 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
 
     # ── 资源准备：封面按谱面组去重并发下载，头像并发 ──
     set_ids = sorted({item.get("beatmapset_id") or 0 for item in all_items})
+
     async def bounded_asset(awaitable, fallback):
         try:
             return await asyncio.wait_for(awaitable, timeout=plugin_config.osu_recommend_asset_timeout)
@@ -121,8 +122,15 @@ async def draw_recommend(data: RecommendData, username: str, avatar_url: str) ->
             "side": [],
             "flat": [card_item(item) for item in flat_items],
             "total_count": len(flat_items),
-            "section_titles": [{"mixed": "综合推荐", "balanced": "综合推荐", "farm": "吃分推荐",
-                                "peak": "进阶推荐", "style": "风格推荐"}.get(data.target, "推荐列表")],
+            "section_titles": [
+                {
+                    "mixed": "综合推荐",
+                    "balanced": "综合推荐",
+                    "farm": "吃分推荐",
+                    "peak": "进阶推荐",
+                    "style": "风格推荐",
+                }.get(data.target, "推荐列表")
+            ],
         }
 
     payload.update(

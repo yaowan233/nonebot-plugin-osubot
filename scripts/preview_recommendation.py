@@ -22,9 +22,13 @@ async def main():
     mode = raw.get("mode") or raw["applied_request"]["mode"]
     items = [
         {
-            "map_id": item["beatmap_id"], "mod": item.get("mod_int", 0), "mod_str": item["mods"],
-            "stars": item["stars"], "final_score": item["ranking_score"],
-            "title": f"{item['title']} [{item['version']}]", "beatmapset_id": item["beatmapset_id"],
+            "map_id": item["beatmap_id"],
+            "mod": item.get("mod_int", 0),
+            "mod_str": item["mods"],
+            "stars": item["stars"],
+            "final_score": item["ranking_score"],
+            "title": f"{item['title']} [{item['version']}]",
+            "beatmapset_id": item["beatmapset_id"],
             **prediction_display(item, mode),
         }
         for item in raw["items"][:10]

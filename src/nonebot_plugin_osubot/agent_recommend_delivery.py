@@ -71,8 +71,7 @@ class RecommendationDelivery:
                 "next_action": "finish",
                 "image_sent": False,
                 "message": (
-                    "推荐任务提交成功，图片尚未发送；完成后会自动发送。"
-                    "请告知用户正在准备，不要重复调用或编造推荐结果。"
+                    "推荐任务提交成功，图片尚未发送；完成后会自动发送。请告知用户正在准备，不要重复调用或编造推荐结果。"
                 ),
             },
             ensure_ascii=False,

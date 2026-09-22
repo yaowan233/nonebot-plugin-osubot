@@ -32,9 +32,17 @@ def test_goal_pp_and_gain_are_not_model_prediction(mode):
 def test_std_prediction_and_zero_gain():
     from nonebot_plugin_osubot.recommendation import prediction_display
 
-    result = prediction_display({"pred_pp": 300, "pred_acc": 98, "predicted_weighted_snapshot_gain": 0,
-                                 "performance_prediction_source": "osu-joint-model", "expected_miss": 1.2,
-                                 "pred_combo": 1234}, "osu")
+    result = prediction_display(
+        {
+            "pred_pp": 300,
+            "pred_acc": 98,
+            "predicted_weighted_snapshot_gain": 0,
+            "performance_prediction_source": "osu-joint-model",
+            "expected_miss": 1.2,
+            "pred_combo": 1234,
+        },
+        "osu",
+    )
     assert result["weighted_gain"] == 0
     assert "1.2 Miss" in result["evidence_line"]
     assert "1234x" in result["evidence_line"]
@@ -64,11 +72,24 @@ async def test_new_fields_reach_image_renderer(app):
     from nonebot_plugin_osubot.schema.alphaosu import RecommendData
 
     drawing = importlib.import_module("nonebot_plugin_osubot.draw.recommend")
-    data = RecommendData(mode="mania", target="mixed", recommendations=[{
-        "map_id": 1, "mod": 0, "mod_str": "NM", "stars": 5, "pred_pp": 300,
-        "pred_acc": 98, "final_score": 12, "title": "Test", "weighted_gain": 12.34,
-        "evidence_line": "7K · ACC 目标",
-    }])
+    data = RecommendData(
+        mode="mania",
+        target="mixed",
+        recommendations=[
+            {
+                "map_id": 1,
+                "mod": 0,
+                "mod_str": "NM",
+                "stars": 5,
+                "pred_pp": 300,
+                "pred_acc": 98,
+                "final_score": 12,
+                "title": "Test",
+                "weighted_gain": 12.34,
+                "evidence_line": "7K · ACC 目标",
+            }
+        ],
+    )
     with (
         patch.object(drawing, "_cover_data_uri", AsyncMock(return_value=None)),
         patch.object(drawing, "_player_avatar", AsyncMock(return_value="")),

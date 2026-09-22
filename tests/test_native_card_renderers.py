@@ -571,7 +571,7 @@ def test_recommend_svg_sections_layout():
 
     svg, height = build_recommend_svg(_recommend_payload())
 
-    assert height == 108 + 20 + 566 + 18 + 35
+    assert height == 108 + 20 + (3 * (25 + 2 * 96 + 9) + 2 * 16) + 18 + 35
     assert svg.count('data-role="recommend-card"') == 12
     assert "综合推荐" in svg
     assert "基础推荐" in svg
@@ -593,7 +593,7 @@ def test_recommend_svg_flat_mode_splits_two_columns():
 
     svg, height = build_recommend_svg(payload)
 
-    assert height == 108 + 20 + (4 * 72 + 3 * 9) + 18 + 35
+    assert height == 108 + 20 + (4 * 96 + 3 * 9) + 18 + 35
     assert svg.count('data-role="recommend-card"') == 8
     assert "综合推荐" not in svg
     assert ">#5</text>" in svg  # 右列排名延续全局序号
@@ -608,4 +608,4 @@ async def test_recommend_svg_raster_smoke():
 
     with Image.open(BytesIO(result)) as image:
         assert image.width == 1080
-        assert image.height == 108 + 20 + 566 + 18 + 35
+        assert image.height == 108 + 20 + (3 * (25 + 2 * 96 + 9) + 2 * 16) + 18 + 35

@@ -4,14 +4,34 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 FEATURE_LIMITS = {
-    "osu": {"slider_ratio": 1, "jump_p90": 1000, "angle_change_ratio": 1,
-            "object_density_avg": 1000, "object_density_peak_1000": 10000},
-    "taiko": {"rim_ratio": 1, "big_ratio": 1, "color_change_ratio": 1,
-              "object_density_avg": 1000, "object_density_peak_1000": 10000},
-    "fruits": {"direction_change_ratio": 1, "edge_ratio": 1, "x_jump_p90": 512,
-               "object_density_avg": 1000, "object_density_peak_1000": 10000},
-    "mania": {"ln_ratio": 1, "chord_ratio": 1, "ln_overlap_ratio": 1,
-              "note_density_avg": 1000, "note_density_peak_1000": 10000},
+    "osu": {
+        "slider_ratio": 1,
+        "jump_p90": 1000,
+        "angle_change_ratio": 1,
+        "object_density_avg": 1000,
+        "object_density_peak_1000": 10000,
+    },
+    "taiko": {
+        "rim_ratio": 1,
+        "big_ratio": 1,
+        "color_change_ratio": 1,
+        "object_density_avg": 1000,
+        "object_density_peak_1000": 10000,
+    },
+    "fruits": {
+        "direction_change_ratio": 1,
+        "edge_ratio": 1,
+        "x_jump_p90": 512,
+        "object_density_avg": 1000,
+        "object_density_peak_1000": 10000,
+    },
+    "mania": {
+        "ln_ratio": 1,
+        "chord_ratio": 1,
+        "ln_overlap_ratio": 1,
+        "note_density_avg": 1000,
+        "note_density_peak_1000": 10000,
+    },
 }
 
 
@@ -38,19 +58,23 @@ class RecommendationFilters(BaseModel):
     min_length: float | None = Field(default=None, ge=0, le=3600, description="最短时长，秒，应用 Mods 后")
     max_length: float | None = Field(default=None, ge=1, le=3600, description="最长时长，秒，应用 Mods 后")
     mods: list[Literal["NM", "HD", "HR", "DT", "HT", "HDDT", "HDHR", "DTHR", "HDHRDT"]] | None = Field(
-        default=None, min_length=1, max_length=9, description="允许的完整 Mod 组合；只要无 Mod 填 NM")
+        default=None, min_length=1, max_length=9, description="允许的完整 Mod 组合；只要无 Mod 填 NM"
+    )
     key_counts: list[Annotated[int, Field(strict=True, ge=4, le=10)]] | None = Field(
-        default=None, min_length=1, max_length=7, description="仅 Mania：多选 4K 到 10K，不填则不限")
+        default=None, min_length=1, max_length=7, description="仅 Mania：多选 4K 到 10K，不填则不限"
+    )
     include_converts: bool | None = Field(default=None, description="是否包含转谱；CTB 和太鼓默认包含，其他默认排除")
     exclude_recorded_plays: bool | None = Field(default=None, description="默认排除已记录成绩；允许重刷时设 false")
     result_limit: int | None = Field(default=None, strict=True, ge=1, le=50, description="返回谱面数，1 到 50")
     feature_ranges: dict[str, RecommendationFeatureRange] | None = Field(
-        default=None, description="模式特征范围 {特征名: {min,max}}；ratio 均用 0..1，例如 30% 填 0.3。"
+        default=None,
+        description="模式特征范围 {特征名: {min,max}}；ratio 均用 0..1，例如 30% 填 0.3。"
         "mania: ln_ratio/chord_ratio/ln_overlap_ratio/note_density_avg/note_density_peak_1000；"
         "osu: slider_ratio/jump_p90/angle_change_ratio/object_density_avg/object_density_peak_1000；"
         "fruits: direction_change_ratio/edge_ratio/x_jump_p90/object_density_avg/object_density_peak_1000；"
         "taiko: rim_ratio/big_ratio/color_change_ratio/object_density_avg/object_density_peak_1000。"
-        "density 为每秒物件数；jump 为坐标距离，不是星数。")
+        "density 为每秒物件数；jump 为坐标距离，不是星数。",
+    )
 
     def for_mode(self, mode):
         values = self.model_dump(exclude_none=True)

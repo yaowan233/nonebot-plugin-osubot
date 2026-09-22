@@ -1756,9 +1756,14 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             mode = _resolve_mode(mode, user, "osu")
             recommend_data = await get_recommend(user.user_id, mode, target, filters=filters)
             if not recommend_data.recommendations:
-                return json.dumps({"status": "empty", "applied_filters": recommend_data.applied_filters,
-                                   "message": "未找到符合条件的谱面。请询问用户是否放宽筛选，不要自动放宽。"},
-                                  ensure_ascii=False)
+                return json.dumps(
+                    {
+                        "status": "empty",
+                        "applied_filters": recommend_data.applied_filters,
+                        "message": "未找到符合条件的谱面。请询问用户是否放宽筛选，不要自动放宽。",
+                    },
+                    ensure_ascii=False,
+                )
             image = await draw_recommend(recommend_data, user.name, f"https://a.ppy.sh/{user.user_id}")
             await _send_image(ctx, image)
             text = json.dumps(
@@ -1800,8 +1805,16 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
             return json.dumps({"status": "expired", "message": "请求已过期，未提交推荐任务。"}, ensure_ascii=False)
         key = json.dumps(
-            [username, target_user_id, mode, target, filters.model_dump(mode="json") if filters else None,
-             include_image_for_analysis], sort_keys=True, ensure_ascii=False,
+            [
+                username,
+                target_user_id,
+                mode,
+                target,
+                filters.model_dump(mode="json") if filters else None,
+                include_image_for_analysis,
+            ],
+            sort_keys=True,
+            ensure_ascii=False,
         )
 
         async def notify(result):

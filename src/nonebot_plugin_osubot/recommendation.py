@@ -2,11 +2,17 @@ def personal_request(uid, mode, target, candidate_limit, result_limit, filters=N
     from .recommendation_filters import RecommendationFilters
 
     body = {
-        "player_id": int(uid), "mode": mode, "target": "balanced" if target == "mixed" else target,
-        "candidate_limit": candidate_limit, "result_limit": result_limit,
-        "min_stars": 0, "max_stars": 20, "max_length": 3600,
+        "player_id": int(uid),
+        "mode": mode,
+        "target": "balanced" if target == "mixed" else target,
+        "candidate_limit": candidate_limit,
+        "result_limit": result_limit,
+        "min_stars": 0,
+        "max_stars": 20,
+        "max_length": 3600,
         "mods": ["NM", "DT", "HT", "HD", "HR", "HDDT", "HDHR"],
-        "exclude_recorded_plays": True, "include_converts": mode in {"taiko", "fruits"},
+        "exclude_recorded_plays": True,
+        "include_converts": mode in {"taiko", "fruits"},
     }
     if filters is not None:
         parsed = RecommendationFilters.model_validate(filters)
@@ -33,8 +39,12 @@ def prediction_display(item, mode):
         references = (evidence or {}).get("references", [])
         if references:
             line += f" · {len(references)}人实绩"
-        return {"pred_pp": goal["pp"], "pred_acc": goal["accuracy"],
-                "weighted_gain": goal.get("weighted_gain"), "evidence_line": line}
+        return {
+            "pred_pp": goal["pp"],
+            "pred_acc": goal["accuracy"],
+            "weighted_gain": goal.get("weighted_gain"),
+            "evidence_line": line,
+        }
     if mode == "osu" and item.get("performance_prediction_source") == "osu-joint-model":
         miss = item.get("expected_miss")
         combo = item.get("pred_combo")
@@ -44,5 +54,9 @@ def prediction_display(item, mode):
         if combo is not None:
             parts.append(f"{int(combo)}x")
         line = " · ".join(parts)
-    return {"pred_pp": item.get("pred_pp", 0), "pred_acc": item.get("pred_acc", 0),
-            "weighted_gain": item.get("predicted_weighted_snapshot_gain"), "evidence_line": line}
+    return {
+        "pred_pp": item.get("pred_pp", 0),
+        "pred_acc": item.get("pred_acc", 0),
+        "weighted_gain": item.get("predicted_weighted_snapshot_gain"),
+        "evidence_line": line,
+    }

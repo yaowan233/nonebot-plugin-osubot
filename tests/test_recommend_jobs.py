@@ -12,8 +12,11 @@ async def test_background_job_polls_without_resubmitting(app):
     client.post.return_value = Response(202, json={"job_id": "abc", "status": "queued"})
     client.get.side_effect = [
         Response(200, json={"job_id": "abc", "status": "running"}, request=Request("GET", "http://test/abc")),
-        Response(200, json={"job_id": "abc", "status": "ready", "result": {"items": []}},
-                 request=Request("GET", "http://test/abc")),
+        Response(
+            200,
+            json={"job_id": "abc", "status": "ready", "result": {"items": []}},
+            request=Request("GET", "http://test/abc"),
+        ),
     ]
     with (
         patch.object(api.network_manager, "get_client", AsyncMock(return_value=client)),

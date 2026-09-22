@@ -10,10 +10,24 @@ from httpx import Response
 async def test_repeated_identical_recommendations_do_not_recompute(app):
     from nonebot_plugin_osubot import api
 
-    response = Response(200, json={"items": [{
-        "beatmap_id": 1, "beatmapset_id": 2, "mods": "NM", "title": "Test", "version": "Test",
-        "pred_pp": 200, "pred_acc": 98, "ranking_score": 1, "stars": 5,
-    }]})
+    response = Response(
+        200,
+        json={
+            "items": [
+                {
+                    "beatmap_id": 1,
+                    "beatmapset_id": 2,
+                    "mods": "NM",
+                    "title": "Test",
+                    "version": "Test",
+                    "pred_pp": 200,
+                    "pred_acc": 98,
+                    "ranking_score": 1,
+                    "stars": 5,
+                }
+            ]
+        },
+    )
     with patch.object(api, "_request_recommend", AsyncMock(return_value=response)) as request:
         await api.get_recommend(991001, "mania")
         await api.get_recommend(991001, "mania")
@@ -75,10 +89,21 @@ async def test_slow_assets_do_not_hold_up_render(app):
     async def slow(*args):
         await asyncio.sleep(30)
 
-    data = RecommendData(recommendations=[{
-        "map_id": 1, "mod": 0, "mod_str": "NM", "stars": 5, "pred_pp": 200,
-        "pred_acc": 98, "final_score": 1, "title": "Test", "beatmapset_id": 1,
-    }])
+    data = RecommendData(
+        recommendations=[
+            {
+                "map_id": 1,
+                "mod": 0,
+                "mod_str": "NM",
+                "stars": 5,
+                "pred_pp": 200,
+                "pred_acc": 98,
+                "final_score": 1,
+                "title": "Test",
+                "beatmapset_id": 1,
+            }
+        ]
+    )
     with (
         patch.object(drawing.plugin_config, "osu_recommend_asset_timeout", 0.01),
         patch.object(drawing, "_cover_data_uri", slow),
@@ -92,10 +117,24 @@ async def test_slow_assets_do_not_hold_up_render(app):
 async def test_changed_filters_do_not_reuse_old_results(app):
     from nonebot_plugin_osubot import api
 
-    response = Response(200, json={"items": [{
-        "beatmap_id": 1, "beatmapset_id": 2, "mods": "NM", "title": "Test", "version": "Test",
-        "pred_pp": 200, "pred_acc": 98, "ranking_score": 1, "stars": 5,
-    }]})
+    response = Response(
+        200,
+        json={
+            "items": [
+                {
+                    "beatmap_id": 1,
+                    "beatmapset_id": 2,
+                    "mods": "NM",
+                    "title": "Test",
+                    "version": "Test",
+                    "pred_pp": 200,
+                    "pred_acc": 98,
+                    "ranking_score": 1,
+                    "stars": 5,
+                }
+            ]
+        },
+    )
     with patch.object(api, "_request_recommend", AsyncMock(return_value=response)) as request:
         await api.get_recommend(991003, "mania", filters={"key_counts": [4]})
         await api.get_recommend(991003, "mania", filters={"key_counts": [7]})

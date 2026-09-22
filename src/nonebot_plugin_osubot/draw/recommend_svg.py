@@ -161,8 +161,9 @@ def _card(item: dict, rank: int, x: float, y: float, key: str) -> str:
     gain = item.get("weighted_gain")
     if gain is not None:
         parts.append(text(right, y + 77, f"{float(gain):+.2f} pp", 14, fill=CYAN, anchor="end", weight=700))
-    parts.append(fitted_text(info_x, y + 78, item.get("evidence_line", ""), 10,
-                             COLUMN_WIDTH - COVER_WIDTH - 12 - 96, fill=MUTED))
+    parts.append(
+        fitted_text(info_x, y + 78, item.get("evidence_line", ""), 10, COLUMN_WIDTH - COVER_WIDTH - 12 - 96, fill=MUTED)
+    )
     return f'<g data-role="recommend-card">{"".join(parts)}</g>'
 
 
