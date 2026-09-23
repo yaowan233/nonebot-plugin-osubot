@@ -29,6 +29,39 @@ def test_goal_pp_and_gain_are_not_model_prediction(mode):
     assert ("7K" if mode == "mania" else "FC") in result["evidence_line"]
 
 
+@pytest.mark.parametrize("mode", ["osu", "fruits", "mania", "taiko"])
+@pytest.mark.parametrize(("observed", "expected"), [(6, "4/6"), (None, "4"), (3, "4"), (True, "4"), ("6", "4")])
+def test_goal_support_counts_unique_players(mode, observed, expected):
+    from nonebot_plugin_osubot.recommendation import prediction_display
+
+    goal_key = "practice_target" if mode == "fruits" else "accuracy_target"
+    evidence_key = "fc_evidence" if mode == "fruits" else "accuracy_evidence"
+    item = {
+        goal_key: {"pp": 300, "accuracy": 98, "weighted_gain": 12},
+        evidence_key: {
+            "observed_players": observed,
+            "references": [{"player_id": player_id} for player_id in [1, 2, 3, 4, 4]],
+        },
+    }
+    result = prediction_display(item, mode)
+    assert result["evidence_line"].endswith(f"{expected} 人支持目标")
+    assert result["pred_pp"] == 300
+    assert result["pred_acc"] == 98
+
+
+def test_own_map_references_are_not_reported_as_players():
+    from nonebot_plugin_osubot.recommendation import prediction_display
+
+    result = prediction_display(
+        {
+            "practice_target": {"pp": 300, "accuracy": 98},
+            "fc_evidence": {"references": [{"map_id": 1}, {"map_id": 2}]},
+        },
+        "fruits",
+    )
+    assert result["evidence_line"].endswith("2 条参考实绩")
+
+
 def test_std_prediction_and_zero_gain():
     from nonebot_plugin_osubot.recommendation import prediction_display
 

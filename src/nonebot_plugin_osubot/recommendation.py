@@ -38,7 +38,20 @@ def prediction_display(item, mode):
                 line += f" · {int(combo)}x"
         references = (evidence or {}).get("references", [])
         if references:
-            line += f" · {len(references)}人实绩"
+            players = {
+                reference["player_id"]
+                for reference in references
+                if isinstance(reference, dict)
+                and type(reference.get("player_id")) is int
+                and reference["player_id"] > 0
+            }
+            observed = (evidence or {}).get("observed_players")
+            if players:
+                supported = len(players)
+                count = f"{supported}/{observed}" if type(observed) is int and observed >= supported else str(supported)
+                line += f" · {count} 人支持目标"
+            else:
+                line += f" · {len(references)} 条参考实绩"
         return {
             "pred_pp": goal["pp"],
             "pred_acc": goal["accuracy"],
