@@ -1803,6 +1803,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
 
         普通/综合推荐用 mixed，吃分用 farm，高难用 peak，练习/风格用 style，均衡用 balanced。
         filters 支持星数、BPM、秒数时长、Mods 组合、Mania 4K-10K、多模式特征范围和结果数量。
+        四模式均可控制已有成绩：允许 BP 内谱面/包含已打过的图/重刷，传 filters={exclude_recorded_plays:false}；
+        排除 BP/只要新图，传 filters={exclude_recorded_plays:true}；未要求则不填，默认排除。
+        false 只是允许已有成绩参与推荐，不是只推荐 BP 内谱面，也不保证它们入选。
         例如 filters={key_counts:[4,7],max_length:180,feature_ranges:{ln_ratio:{min:0.2,max:0.5}}}。
         只填用户明确的条件，比例用 0..1；不支持的条件应说明而非忽略。
         查询当前发言人不要填写 target_user_id；它是 QQ/群用户 ID，不是 osu ID。
@@ -2134,6 +2137,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "想难一点/更难/冲分/高难传 target='peak'，想练习/风格推荐传 target='style'，"
             "想均衡传 target='balanced'。filters 可指定星数、BPM、时长（秒）、Mods、Mania 键数、转谱、重刷、"
             "数量及模式特征范围。比例用 0..1；只填明确条件，不猜数值；空结果先询问再放宽。"
+            "四模式通用：允许 BP 内谱面/包含已打过的图/重刷，设置 filters.exclude_recorded_plays=false；"
+            "排除 BP/只要新图设 true；未要求则不填，默认排除。允许不等于仅推荐 BP 内谱面，不保证入选。"
             "返回 applied_filters 和各图 feature_values 可核对条件；不要把练习目标说成单次必达成绩。",
             "- send_osu_profile_url: 用户想要 osu 主页链接、个人主页、mu 时使用。",
             "- send_osu_match_history: 用户想查 match/multiplayer 对局历史图时使用。"

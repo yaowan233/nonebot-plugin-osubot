@@ -64,7 +64,12 @@ class RecommendationFilters(BaseModel):
         default=None, min_length=1, max_length=7, description="仅 Mania：多选 4K 到 10K，不填则不限"
     )
     include_converts: bool | None = Field(default=None, description="是否包含转谱；CTB 和太鼓默认包含，其他默认排除")
-    exclude_recorded_plays: bool | None = Field(default=None, description="默认排除已记录成绩；允许重刷时设 false")
+    exclude_recorded_plays: bool | None = Field(
+        default=None,
+        description="四模式通用：默认 true 排除已有成绩（含 BP）；"
+        "用户要求允许 BP 内谱面、包含已打过的图或重刷时设 false，"
+        "要求排除 BP、只要新图时设 true。不填保持默认；允许参与推荐不代表只推荐 BP 内谱面，也不保证入选。",
+    )
     result_limit: int | None = Field(default=None, strict=True, ge=1, le=50, description="返回谱面数，1 到 50")
     feature_ranges: dict[str, RecommendationFeatureRange] | None = Field(
         default=None,

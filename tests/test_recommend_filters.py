@@ -28,6 +28,20 @@ def test_mania_filters_are_preserved_without_changing_defaults():
     assert body["max_length"] == 180
 
 
+@pytest.mark.parametrize("mode", ["osu", "fruits", "mania", "taiko"])
+@pytest.mark.parametrize("exclude", [True, False])
+def test_agent_bp_switch_is_preserved_for_every_mode(mode, exclude):
+    from nonebot_plugin_osubot.recommendation import personal_request
+    from nonebot_plugin_osubot.recommendation_filters import RecommendationFilters
+
+    filters = RecommendationFilters.model_validate({"exclude_recorded_plays": exclude, "max_stars": 6})
+    normalized = filters.model_dump(mode="json", exclude_none=True)
+    body = personal_request(42, mode, "mixed", 500, 20, normalized)
+    assert body["exclude_recorded_plays"] is exclude
+    assert body["max_stars"] == 6
+    assert personal_request(42, mode, "mixed", 500, 20)["exclude_recorded_plays"] is True
+
+
 def test_ctb_converts_can_be_explicitly_excluded():
     from nonebot_plugin_osubot.recommendation import personal_request
 
