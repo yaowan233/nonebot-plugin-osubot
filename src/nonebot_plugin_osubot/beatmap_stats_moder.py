@@ -15,24 +15,26 @@ AR_MS_STEP1 = (AR0_MS - AR5_MS) / 5
 AR_MS_STEP2 = (AR5_MS - AR10_MS) / 5
 
 
-def modify_ar(base_ar, speed_mul, multiplier):
+def modify_ar(base_ar, speed_mul, multiplier, *, clamp=True):
     ar = base_ar
     ar *= multiplier
 
     arms = AR0_MS - AR_MS_STEP1 * ar if ar < 5 else AR5_MS - AR_MS_STEP2 * (ar - 5)
 
-    arms = min(AR0_MS, max(AR10_MS, arms))
+    if clamp:
+        arms = min(AR0_MS, max(AR10_MS, arms))
     arms /= speed_mul
 
     ar = (AR0_MS - arms) / AR_MS_STEP1 if arms > AR5_MS else 5 + (AR5_MS - arms) / AR_MS_STEP2
     return ar
 
 
-def modify_od(base_od, speed_mul, multiplier):
+def modify_od(base_od, speed_mul, multiplier, *, clamp=True):
     od = base_od
     od *= multiplier
     odms = OD0_MS - OD_MS_STEP * od
-    odms = min(OD0_MS, max(OD10_MS, odms))
+    if clamp:
+        odms = min(OD0_MS, max(OD10_MS, odms))
     odms /= speed_mul
     od = (OD0_MS - odms) / OD_MS_STEP
     return od
@@ -41,17 +43,21 @@ def modify_od(base_od, speed_mul, multiplier):
 def with_mods(mapinfo: Beatmap, scoreinfo: Optional[UnifiedScore], mods: list[Mod]):
     speed_mul = 1
     od_ar_hp_multiplier = 1
+    adjusted_ar = False
+    adjusted_od = False
     mode = GM[scoreinfo.ruleset_id] if scoreinfo else mapinfo.mode
     for mod in mods:
         if mod.acronym == "DA" and mod.settings:
-            if mod.settings.get("circle_size"):
+            if mod.settings.get("circle_size") is not None:
                 mapinfo.cs = mod.settings["circle_size"]
-            if mod.settings.get("approach_rate"):
+            if mod.settings.get("approach_rate") is not None:
                 mapinfo.ar = mod.settings["approach_rate"]
-            if mod.settings.get("drain_rate"):
+                adjusted_ar = True
+            if mod.settings.get("drain_rate") is not None:
                 mapinfo.drain = mod.settings["drain_rate"]
-            if mod.settings.get("overall_difficulty"):
+            if mod.settings.get("overall_difficulty") is not None:
                 mapinfo.accuracy = mod.settings["overall_difficulty"]
+                adjusted_od = True
         if mod.acronym == "DT" or mod.acronym == "NC":
             speed_mul = 1.5
             if mod.settings and mod.settings.get("speed_change"):
@@ -71,10 +77,11 @@ def with_mods(mapinfo: Beatmap, scoreinfo: Optional[UnifiedScore], mods: list[Mo
     if mode == "mania":
         speed_mul = 1
     if mode not in ("mania", "taiko"):
-        mapinfo.ar = modify_ar(mapinfo.ar, speed_mul, od_ar_hp_multiplier)
+        # DA supports extended values; only ordinary map stats use the 0–10 cap.
+        mapinfo.ar = modify_ar(mapinfo.ar, speed_mul, od_ar_hp_multiplier, clamp=not adjusted_ar)
     if mode == "fruits":
         speed_mul = 1
-    mapinfo.accuracy = modify_od(mapinfo.accuracy, speed_mul, od_ar_hp_multiplier)
+    mapinfo.accuracy = modify_od(mapinfo.accuracy, speed_mul, od_ar_hp_multiplier, clamp=not adjusted_od)
     if mode not in ("mania", "taiko"):
         if Mod(acronym="HR") in mods:
             mapinfo.cs *= 1.3

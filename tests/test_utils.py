@@ -202,6 +202,57 @@ def test_with_mods_no_mods():
     assert abs(result.bpm - 200.0) < 0.01
 
 
+@pytest.mark.parametrize("value", [-5.0, -0.5, 0.0, 11.0])
+def test_with_mods_da_preserves_extended_ar_od(value):
+    from nonebot_plugin_osubot.beatmap_stats_moder import with_mods
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    result = with_mods(
+        _make_beatmap(),
+        None,
+        [Mod(acronym="DA", settings={"approach_rate": value, "overall_difficulty": value})],
+    )
+    assert result.ar == pytest.approx(value)
+    assert result.accuracy == pytest.approx(value)
+
+
+@pytest.mark.parametrize(
+    ("speed_mod", "expected_ar", "expected_od"),
+    [("DT", -1 / 3, 28 / 9), ("HT", -47 / 3, -64 / 9)],
+)
+def test_with_mods_da_negative_stats_apply_clock_rate(speed_mod, expected_ar, expected_od):
+    from nonebot_plugin_osubot.beatmap_stats_moder import with_mods
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    result = with_mods(
+        _make_beatmap(), None,
+        [Mod(acronym="DA", settings={"approach_rate": -8, "overall_difficulty": -2}), Mod(acronym=speed_mod)],
+    )
+    assert result.ar == pytest.approx(expected_ar)
+    assert result.accuracy == pytest.approx(expected_od)
+
+
+@pytest.mark.parametrize("settings", [{}, {"approach_rate": None, "overall_difficulty": None}])
+def test_with_mods_da_without_overrides_keeps_regular_caps(settings):
+    from nonebot_plugin_osubot.beatmap_stats_moder import with_mods
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    result = with_mods(_make_beatmap(), None, [Mod(acronym="DA", settings=settings), Mod(acronym="HR")])
+    assert result.ar == pytest.approx(10)
+    assert result.accuracy == pytest.approx(10)
+
+
+def test_with_mods_da_zero_cs_hp():
+    from nonebot_plugin_osubot.beatmap_stats_moder import with_mods
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    result = with_mods(
+        _make_beatmap(), None, [Mod(acronym="DA", settings={"circle_size": 0, "drain_rate": 0})]
+    )
+    assert result.cs == 0
+    assert result.drain == 0
+
+
 def test_with_mods_dt():
     """DT 使 BPM 变为 1.5x，AR 提升。"""
     from nonebot_plugin_osubot.beatmap_stats_moder import with_mods
