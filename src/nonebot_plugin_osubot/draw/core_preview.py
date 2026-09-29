@@ -27,7 +27,8 @@ _CONVERT_MAP: dict[int, ConvertMode] = {
     2: "ctb",
     3: "mania",
 }
-_NON_OSU_MODS = {"GI", "F", "GIF"}
+# GIF is a command marker; Classic is score metadata unsupported by the renderer.
+_IGNORED_PREVIEW_MODS = {"GI", "F", "GIF", "CL"}
 _plugin_config = get_plugin_config(Config)
 _render_semaphore = asyncio.Semaphore(_plugin_config.osu_render_max_concurrency)
 
@@ -40,10 +41,10 @@ def mode_to_convert(source_mode: int | None, target_mode: int | None) -> Convert
 
 
 def mods_to_renderer(mods: Sequence[str] | None) -> str | None:
-    """Normalize osubot mods while dropping the matcher-only GIF marker."""
+    """Normalize render mods, omitting GIF markers and unsupported Classic metadata."""
     if not mods:
         return None
-    cleaned = [mod.lower() for mod in mods if mod and mod.upper() not in _NON_OSU_MODS]
+    cleaned = [mod.lower() for mod in mods if mod and mod.upper() not in _IGNORED_PREVIEW_MODS]
     return "+".join(cleaned) or None
 
 

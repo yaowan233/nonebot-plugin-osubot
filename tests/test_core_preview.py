@@ -50,6 +50,24 @@ async def test_core_adapter_rejects_missing_output(monkeypatch: pytest.MonkeyPat
         await core_preview.render_with_core(123, "png")
 
 
+@pytest.mark.parametrize(("mods", "expected"), [(["CL"], None), (["cl", "HD", "DT"], "hd+dt")])
+async def test_core_adapter_ignores_classic_mod(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mods, expected):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    output = tmp_path / "preview.gif"
+    output.write_bytes(b"GIF89a")
+
+    async def render(_beatmap_id, **kwargs):
+        # Native renderer rejects the Classic marker attached to stable scores.
+        if "cl" in (kwargs["mods"] or "").split("+"):
+            raise core_preview.PreviewError("unknown or unsupported mod token: 'CL'")
+        assert kwargs["mods"] == expected
+        return {"preview-img": str(output)}
+
+    monkeypatch.setattr(core_preview, "generate_preview_async", render)
+    assert await core_preview.render_with_core(123, "gif", mods=mods) == output
+
+
 def test_core_adapter_wraps_artifact_read_failures(monkeypatch: pytest.MonkeyPatch):
     from nonebot_plugin_osubot.draw import core_preview
 
