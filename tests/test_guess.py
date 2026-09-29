@@ -1,7 +1,7 @@
 """Tests for matcher/guess.py - GameManager 和猜歌指令。"""
 
 import pytest
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from nonebot.adapters.onebot.v11 import Adapter as OnebotV11Adapter, Bot, Message, MessageSegment
 from nonebug import App
 
@@ -10,6 +10,21 @@ from utils import make_mock_session, make_mock_user, patch_session
 
 MODULE = "nonebot_plugin_osubot.matcher.guess"
 UTILS_MODULE = "nonebot_plugin_osubot.matcher.utils"
+
+
+@pytest.fixture(autouse=True)
+def clear_guess_games(after_nonebot_init):
+    from nonebot_plugin_osubot.matcher.guess import game_manager, guess_song_cache
+
+    for games in game_manager.games.values():
+        games.clear()
+    for hints in game_manager.group_hints.values():
+        hints.clear()
+    for timers in game_manager.timers.values():
+        for timer in timers.values():
+            timer.cancel()
+        timers.clear()
+    guess_song_cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -337,101 +352,6 @@ def test_taiko_preview_can_hide_beatmap_metadata():
 
 
 @pytest.mark.asyncio
-async def test_guess_chart_mode_0_supported(app: App):
-    """osu 模式（mode=0）支持谱面猜歌并发送预览图。"""
-    try:
-        from nonebot_plugin_osubot.matcher.guess import guess_chart
-    except ImportError:
-        pytest.skip("nonebot_plugin_osubot not available")
-    import nonebot
-
-    event = fake_group_message_event_v11(message=Message("/谱面猜歌"))
-    score = make_mock_score()
-
-    with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=0)):
-        with patch_session(MODULE, make_binded_id_session(["12345678"])):
-            with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))):
-                with patch(f"{MODULE}.chart_set_timeout"):
-                    with patch(f"{MODULE}.draw_osu_preview", new=AsyncMock(return_value=b"img")):
-                        async with app.test_matcher(guess_chart) as ctx:
-                            adapter = nonebot.get_adapter(OnebotV11Adapter)
-                            bot = ctx.create_bot(base=Bot, adapter=adapter)
-                            ctx.should_call_send(event, ANY, result={"message_id": 1})
-                            ctx.receive_event(bot, event)
-                            ctx.should_finished()
-
-
-@pytest.mark.asyncio
-async def test_guess_chart_taiko_hides_beatmap_metadata(app: App):
-    """太鼓谱面猜歌的题面不能在图片页脚泄露曲名等谱面信息。"""
-    try:
-        from nonebot_plugin_osubot.matcher.guess import guess_chart
-    except ImportError:
-        pytest.skip("nonebot_plugin_osubot not available")
-    import nonebot
-
-    event = fake_group_message_event_v11(message=Message("/谱面猜歌"))
-    score = make_mock_score(title="Secret Song")
-    osu_file = MagicMock()
-    beatmap = MagicMock()
-
-    with patch(f"{MODULE}.chart_games", {}):
-        with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=1)):
-            with patch_session(MODULE, make_binded_id_session(["12345678"])):
-                with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))):
-                    with patch(f"{MODULE}.chart_set_timeout"):
-                        with patch(f"{MODULE}.download_osu", new=AsyncMock(return_value=osu_file)):
-                            with patch(f"{MODULE}.parse_map", return_value=beatmap):
-                                with patch(f"{MODULE}.map_to_image", return_value=b"img") as render:
-                                    async with app.test_matcher(guess_chart) as ctx:
-                                        adapter = nonebot.get_adapter(OnebotV11Adapter)
-                                        bot = ctx.create_bot(base=Bot, adapter=adapter)
-                                        ctx.should_call_send(event, ANY, result={"message_id": 1})
-                                        ctx.receive_event(bot, event)
-                                        ctx.should_finished()
-
-        render.assert_called_once_with(beatmap, show_metadata=False)
-
-
-@pytest.mark.asyncio
-async def test_guess_chart_catch_uses_unified_native_renderer(app: App):
-    """CTB 谱面猜歌应走统一原生预览入口，不再直接调用 HTML 渲染器。"""
-    try:
-        from nonebot_plugin_osubot.matcher.guess import guess_chart
-    except ImportError:
-        pytest.skip("nonebot_plugin_osubot not available")
-    import nonebot
-
-    event = fake_group_message_event_v11(message=Message("/谱面猜歌"))
-    score = make_mock_score()
-    score.beatmap.mode = 2
-    score.mods = [MagicMock(acronym="HR")]
-
-    with patch(f"{MODULE}.chart_games", {}):
-        with patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=2)):
-            with patch_session(MODULE, make_binded_id_session(["12345678"])):
-                with patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))):
-                    with patch(f"{MODULE}.chart_set_timeout"):
-                        with patch(f"{MODULE}.render_preview", new=AsyncMock(return_value=b"img")) as render:
-                            async with app.test_matcher(guess_chart) as ctx:
-                                adapter = nonebot.get_adapter(OnebotV11Adapter)
-                                bot = ctx.create_bot(base=Bot, adapter=adapter)
-                                ctx.should_call_send(event, ANY, result={"message_id": 1})
-                                ctx.receive_event(bot, event)
-                                ctx.should_finished()
-
-        render.assert_awaited_once_with(
-            score.beatmap.id,
-            score.beatmapset.id,
-            2,
-            fmt="png",
-            mods=["HR"],
-            source_mode=2,
-            full_image=False,
-        )
-
-
-@pytest.mark.asyncio
 async def test_guess_chart_no_binded_users(app: App):
     """mode=3（mania），无人绑定时，回复提示并 finish。"""
     try:
@@ -487,6 +407,82 @@ async def test_guess_chart_all_songs_guessed(app: App):
 # ---------------------------------------------------------------------------
 # create_word_matcher_handler 逻辑测试
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", [0, 1, 2, 3])
+@pytest.mark.parametrize(
+    "command", ["/谱面猜歌", "/GIF猜歌", "/gif猜歌", "/动图猜歌", "/谱面猜歌 +GIF", "/谱面猜歌 +gif"]
+)
+async def test_guess_chart_native_modes_and_commands(app: App, mode: int, command: str, tmp_path):
+    import nonebot
+    from nonebot_plugin_osubot.matcher.guess import guess_chart
+
+    event = fake_group_message_event_v11(message=Message(command))
+    want_gif = command != "/谱面猜歌"
+    fmt = "gif" if want_gif or mode == 0 else "png"
+    image = b"GIF89a" if fmt == "gif" else b"png-image"
+    output = tmp_path / f"preview.{fmt}"
+    output.write_bytes(image)
+    game_name = "GIF" if want_gif else "谱面"
+    score = make_mock_score()
+    score.beatmap.mode = mode
+    score.mods = [MagicMock(acronym="HR")]
+
+    with (
+        patch(f"{MODULE}.chart_games", {}),
+        patch_session(UTILS_MODULE, make_bound_utils_session(osu_mode=mode)),
+        patch_session(MODULE, make_binded_id_session(["12345678"])),
+        patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))),
+        patch(f"{MODULE}.chart_set_timeout") as timer,
+        patch(f"{MODULE}.render_with_core", new=AsyncMock(return_value=output)) as render,
+    ):
+        async with app.test_matcher(guess_chart) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(
+                event,
+                Message(f"开始{game_name}猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 testuser 的bp")
+                + MessageSegment.image(image),
+                result={"message_id": 1},
+            )
+            ctx.should_finished()
+
+        render.assert_awaited_once_with(
+            score.beatmap.id, fmt=fmt, mods=["HR"], source_mode=mode, target_mode=mode
+        )
+        timer.assert_called_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("command", ["/谱面猜歌", "/GIF猜歌"])
+async def test_guess_chart_render_failure_clears_game(app: App, command: str):
+    import nonebot
+    from nonebot_plugin_osubot.matcher.guess import guess_chart
+
+    event = fake_group_message_event_v11(message=Message(command))
+    score = make_mock_score()
+    score.beatmap.mode = 0
+    games = {}
+
+    with (
+        patch(f"{MODULE}.chart_games", games),
+        patch_session(UTILS_MODULE, make_bound_utils_session()),
+        patch_session(MODULE, make_binded_id_session(["12345678"])),
+        patch(f"{MODULE}.select_score_from_user", new=AsyncMock(return_value=(score, "testuser"))),
+        patch(f"{MODULE}.chart_set_timeout") as timer,
+        patch(f"{MODULE}.render_with_core", new=AsyncMock(side_effect=RuntimeError("render failed"))),
+    ):
+        async with app.test_matcher(guess_chart) as ctx:
+            adapter = nonebot.get_adapter(OnebotV11Adapter)
+            bot = ctx.create_bot(base=Bot, adapter=adapter)
+            ctx.receive_event(bot, event)
+            ctx.should_call_send(event, "谱面生成失败，请稍后重试", result={"message_id": 1})
+            ctx.should_finished()
+
+        assert not games
+        timer.assert_not_called()
 
 
 def test_create_word_matcher_handler_correct_answer():

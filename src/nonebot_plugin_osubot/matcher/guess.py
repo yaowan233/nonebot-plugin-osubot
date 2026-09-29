@@ -18,7 +18,6 @@ from nonebot_plugin_session import SessionId, SessionIdType
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
-from ..draw.taiko_preview import parse_map, map_to_image
 from ..schema.score import UnifiedScore
 from ..utils import NGM
 from ..info import get_bg
@@ -26,10 +25,9 @@ from .utils import split_msg
 from ..schema import NewScore
 from ..exceptions import NetworkError
 from ..database.models import UserData
-from ..mania import generate_preview_pic
 from ..api import safe_async_get, get_user_scores
-from ..file import map_path, download_osu
-from ..draw.osu_preview import draw_osu_preview, render_preview
+from ..file import map_path
+from ..draw.core_preview import render_with_core, read_core_output
 
 
 class GameType:
@@ -100,7 +98,7 @@ group_hint = game_manager.group_hints[GameType.AUDIO]
 pic_group_hint = game_manager.group_hints[GameType.PIC]
 chart_group_hint = game_manager.group_hints[GameType.CHART]
 guess_audio = on_command("音频猜歌", priority=11, block=True)
-guess_chart = on_command("谱面猜歌", priority=11, block=True)
+guess_chart = on_command("谱面猜歌", aliases={"GIF猜歌", "gif猜歌", "动图猜歌"}, priority=11, block=True)
 guess_song_cache = ExpiringDict(1000, 60 * 60 * 24)
 data_path = Path() / "data" / "osu"
 pcm_path = data_path / "out.pcm"
@@ -451,8 +449,15 @@ async def _(
     msg: UniMsg,
     session_id: str = SessionId(SessionIdType.GROUP),
 ):
+    if chart_games.get(session_id):
+        await matcher.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
+
+    command = state.get("_prefix", {}).get("command", [""])[0]
+    want_gif = command.lower() == "gif猜歌" or command == "动图猜歌"
+    want_gif = want_gif or "GIF" in "".join(state.get("mods", [])).upper()
     if "error" in state:
         mode = str(random.randint(0, 3))
+        state["mode"] = mode
         await UniMessage.text("由于未绑定OSU账号，本次随机选择模式进行猜歌\n" + state["error"]).send(reply_to=True)
     else:
         mode = state["mode"]
@@ -474,29 +479,26 @@ async def _(
         await guess_pic.finish("现在还有进行中的猜歌呢，请等待当前猜歌结束")
 
     chart_games[session_id] = selected_score
-    chart_set_timeout(matcher, session_id)
-    if mode == "3":
-        osu = await download_osu(selected_score.beatmapset.id, selected_score.beatmap.id)
-        pic = await generate_preview_pic(osu)
-    elif mode == "1":
-        osu = await download_osu(selected_score.beatmapset.id, selected_score.beatmap.id)
-        beatmap = parse_map(osu)
-        pic = map_to_image(beatmap, show_metadata=False)
-    elif mode == "0":
-        pic = await draw_osu_preview(selected_score.beatmap.id, selected_score.beatmapset.id)
-    else:
-        mods = [i.acronym for i in selected_score.mods]
-        pic = await render_preview(
+    try:
+        output = await render_with_core(
             selected_score.beatmap.id,
-            selected_score.beatmapset.id,
-            2,
-            fmt="png",
-            mods=mods,
+            fmt="gif" if want_gif or mode == "0" else "png",
+            mods=[mod.acronym for mod in selected_score.mods],
             source_mode=int(selected_score.beatmap.mode),
-            full_image=False,
+            target_mode=int(mode),
         )
+        pic = read_core_output(output)
+    except Exception:
+        logger.exception("谱面猜歌题面生成失败")
+        chart_games.pop(session_id, None)
+        guessed = guess_song_cache.get(session_id)
+        if guessed is not None:
+            guessed.discard(selected_score.beatmapset.id)
+        await matcher.finish("谱面生成失败，请稍后重试")
+    chart_set_timeout(matcher, session_id)
+    game_name = "GIF" if want_gif else "谱面"
     await (
-        UniMessage.text(f"开始谱面猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 {selected_user} 的bp")
+        UniMessage.text(f"开始{game_name}猜歌游戏，猜猜下面谱面的曲名吧，该曲抽选自 {selected_user} 的bp")
         + UniMessage.image(raw=pic)
     ).finish()
 
