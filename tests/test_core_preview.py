@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -48,6 +49,83 @@ async def test_core_adapter_rejects_missing_output(monkeypatch: pytest.MonkeyPat
 
     with pytest.raises(core_preview.CorePreviewError, match="preview-img"):
         await core_preview.render_with_core(123, "png")
+
+
+@pytest.mark.parametrize("status", ["ranked", "pending"])
+async def test_core_download_failure_uses_plugin_download(monkeypatch, tmp_path, status):
+    from nonebot_plugin_osubot.draw import core_preview, core_preview_recovery
+    from nonebot_plugin_osubot import file
+
+    source = tmp_path / "5493993.osu"
+    source.write_text("osu file format v14\n[HitObjects]\n", encoding="utf-8")
+    output = tmp_path / "preview.gif"
+    output.write_bytes(b"GIF89a")
+    download = AsyncMock(return_value=source)
+    monkeypatch.setattr(file, "download_osu", download)
+    monkeypatch.setattr(file, "map_path", tmp_path)
+    monkeypatch.setattr(core_preview, "osu_api", AsyncMock(return_value={"status": status}))
+    renderer = AsyncMock(
+        side_effect=core_preview.PreviewError(
+            "download error: failed to download beatmap 5493993: "
+            "https://osu.ppy.sh/osu/5493993: Connection Failed: tls connection init failed: unexpected end of file"
+        )
+    )
+
+    async def render(kwargs):
+        bid = kwargs["bid"]
+        config = json.loads(kwargs["config"])
+        cached = Path(config["paths"]["CACHE_DIR"]) / "osu-download-cache" / f"{bid}.osu"
+        assert cached.read_bytes() == source.read_bytes()
+        assert kwargs["no_cache"] is False
+        assert kwargs["mods"] == "hr"
+        assert kwargs["format"] == "gif"
+        return {"preview-img": str(output)}
+
+    worker = AsyncMock(side_effect=render)
+    monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
+    monkeypatch.setattr(core_preview_recovery, "run_core_worker", worker)
+    result = await core_preview.render_with_core(5493993, "gif", mods=["HR"])
+    assert result.read_bytes() == output.read_bytes()
+    download.assert_awaited_once()
+    renderer.assert_awaited_once()
+    worker.assert_awaited_once()
+
+
+async def test_download_recovery_renders_local_map_with_native_library(monkeypatch, tmp_path):
+    from nonebot_plugin_osubot.draw.core_preview_recovery import recover_preview_download
+    from nonebot_plugin_osubot import file
+
+    source = Path(__file__).parent / "fixtures" / "calculator-mania.osu"
+    monkeypatch.setattr(file, "download_osu", AsyncMock(return_value=source))
+    monkeypatch.setattr(file, "map_path", tmp_path)
+    result = await recover_preview_download(5493993, {"format": "png", "no_cache": True})
+    assert Path(result["preview-img"]).read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+async def test_core_does_not_retry_non_download_errors(monkeypatch):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    recovery = AsyncMock()
+    monkeypatch.setattr(core_preview, "recover_preview_download", recovery)
+    monkeypatch.setattr(
+        core_preview, "generate_preview_async", AsyncMock(side_effect=core_preview.PreviewError("bad mod"))
+    )
+    with pytest.raises(core_preview.CorePreviewError, match="bad mod"):
+        await core_preview.render_with_core(123, "gif")
+    recovery.assert_not_awaited()
+
+
+async def test_core_download_recovery_failure_is_bounded(monkeypatch):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    recovery = AsyncMock(side_effect=RuntimeError("all mirrors failed"))
+    renderer = AsyncMock(side_effect=core_preview.PreviewError("failed to download beatmap 123: tls error"))
+    monkeypatch.setattr(core_preview, "recover_preview_download", recovery)
+    monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
+    with pytest.raises(core_preview.CorePreviewError, match="all mirrors failed"):
+        await core_preview.render_with_core(123, "gif")
+    renderer.assert_awaited_once()
+    recovery.assert_awaited_once()
 
 
 @pytest.mark.parametrize(("mods", "expected"), [(["CL"], None), (["cl", "HD", "DT"], "hd+dt")])

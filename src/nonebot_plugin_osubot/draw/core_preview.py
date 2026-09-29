@@ -8,11 +8,13 @@ from typing import Literal
 from collections.abc import Sequence
 
 from nonebot import get_plugin_config
+from nonebot.log import logger
 from osu_beatmap_preview import PreviewError, generate_preview_async
 
 from ..api import osu_api
 from ..config import Config
 from ..exceptions import NetworkError
+from .core_preview_recovery import recover_preview_download
 
 PreviewFormat = Literal["png", "gif", "mp4"]
 ConvertMode = Literal["taiko", "ctb", "mania"]
@@ -71,15 +73,24 @@ async def render_with_core(
     no_cache = not await preview_cache_enabled(beatmap_id)
     try:
         async with _render_semaphore:
-            result = await generate_preview_async(
-                beatmap_id,
-                format=fmt,
-                convert=mode_to_convert(source_mode, target_mode),
-                mods=mods_to_renderer(mods),
-                times=time_range,
-                fps=fps,
-                no_cache=no_cache,
-            )
+            options = {
+                "format": fmt,
+                "convert": mode_to_convert(source_mode, target_mode),
+                "mods": mods_to_renderer(mods),
+                "times": time_range,
+                "fps": fps,
+                "no_cache": no_cache,
+            }
+            try:
+                result = await generate_preview_async(beatmap_id, **options)
+            except PreviewError as error:
+                if f"failed to download beatmap {beatmap_id}:" not in str(error):
+                    raise
+                logger.warning("原生谱面下载失败，尝试插件下载源并重新渲染: {}", beatmap_id)
+                try:
+                    result = await recover_preview_download(beatmap_id, options)
+                except Exception as recovery_error:
+                    raise CorePreviewError(f"谱面下载恢复失败: {recovery_error}") from recovery_error
         output = result.get("preview-img")
         if not isinstance(output, str) or not output:
             raise CorePreviewError("原生渲染结果缺少 preview-img")
