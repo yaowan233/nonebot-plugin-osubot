@@ -225,7 +225,8 @@ def test_with_mods_da_negative_stats_apply_clock_rate(speed_mod, expected_ar, ex
     from nonebot_plugin_osubot.schema.score import Mod
 
     result = with_mods(
-        _make_beatmap(), None,
+        _make_beatmap(),
+        None,
         [Mod(acronym="DA", settings={"approach_rate": -8, "overall_difficulty": -2}), Mod(acronym=speed_mod)],
     )
     assert result.ar == pytest.approx(expected_ar)
@@ -246,9 +247,7 @@ def test_with_mods_da_zero_cs_hp():
     from nonebot_plugin_osubot.beatmap_stats_moder import with_mods
     from nonebot_plugin_osubot.schema.score import Mod
 
-    result = with_mods(
-        _make_beatmap(), None, [Mod(acronym="DA", settings={"circle_size": 0, "drain_rate": 0})]
-    )
+    result = with_mods(_make_beatmap(), None, [Mod(acronym="DA", settings={"circle_size": 0, "drain_rate": 0})])
     assert result.cs == 0
     assert result.drain == 0
 

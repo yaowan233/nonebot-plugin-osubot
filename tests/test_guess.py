@@ -449,9 +449,7 @@ async def test_guess_chart_native_modes_and_commands(app: App, mode: int, comman
             )
             ctx.should_finished()
 
-        render.assert_awaited_once_with(
-            score.beatmap.id, fmt=fmt, mods=["HR"], source_mode=mode, target_mode=mode
-        )
+        render.assert_awaited_once_with(score.beatmap.id, fmt=fmt, mods=["HR"], source_mode=mode, target_mode=mode)
         timer.assert_called_once()
 
 
