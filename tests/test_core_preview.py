@@ -91,14 +91,18 @@ async def test_core_download_failure_uses_plugin_download(monkeypatch, tmp_path,
     worker.assert_awaited_once()
 
 
-async def test_download_recovery_renders_local_map_with_native_library(monkeypatch, tmp_path):
+@pytest.mark.parametrize("speed_mod", ["DT", "HT"])
+async def test_download_recovery_renders_local_map_with_native_library(monkeypatch, tmp_path, speed_mod):
+    from nonebot_plugin_osubot.draw.core_preview import mods_to_renderer
     from nonebot_plugin_osubot.draw.core_preview_recovery import recover_preview_download
     from nonebot_plugin_osubot import file
 
     source = Path(__file__).parent / "fixtures" / "calculator-mania.osu"
     monkeypatch.setattr(file, "download_osu", AsyncMock(return_value=source))
     monkeypatch.setattr(file, "map_path", tmp_path)
-    result = await recover_preview_download(5493993, {"format": "png", "no_cache": True})
+    result = await recover_preview_download(
+        5493993, {"format": "png", "no_cache": True, "mods": mods_to_renderer([speed_mod], "png")}
+    )
     assert Path(result["preview-img"]).read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
@@ -144,6 +148,25 @@ async def test_core_adapter_ignores_classic_mod(monkeypatch: pytest.MonkeyPatch,
 
     monkeypatch.setattr(core_preview, "generate_preview_async", render)
     assert await core_preview.render_with_core(123, "gif", mods=mods) == output
+
+
+@pytest.mark.parametrize("fmt", ["png", "gif", "mp4"])
+@pytest.mark.parametrize("speed_mod", ["DT", "HT", "dt", "ht"])
+async def test_core_adapter_filters_speed_mods_for_png(monkeypatch, tmp_path, fmt, speed_mod):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    output = tmp_path / f"preview.{fmt}"
+    output.write_bytes(b"preview")
+
+    async def render(_bid, **kwargs):
+        mods = (kwargs["mods"] or "").split("+")
+        if kwargs["format"] == "png" and {"dt", "ht"}.intersection(mods):
+            raise core_preview.PreviewError("mod conflict: DT/HT are only supported for GIF output, not PNG")
+        assert kwargs["mods"] == ("hr" if fmt == "png" else f"hr+{speed_mod.lower()}")
+        return {"preview-img": str(output)}
+
+    monkeypatch.setattr(core_preview, "generate_preview_async", render)
+    assert await core_preview.render_with_core(123, fmt, mods=["CL", "HR", speed_mod]) == output
 
 
 def test_core_adapter_wraps_artifact_read_failures(monkeypatch: pytest.MonkeyPatch):

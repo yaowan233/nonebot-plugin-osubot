@@ -42,11 +42,13 @@ def mode_to_convert(source_mode: int | None, target_mode: int | None) -> Convert
     return _CONVERT_MAP.get(target_mode)
 
 
-def mods_to_renderer(mods: Sequence[str] | None) -> str | None:
-    """Normalize render mods, omitting GIF markers and unsupported Classic metadata."""
+def mods_to_renderer(mods: Sequence[str] | None, fmt: PreviewFormat = "gif") -> str | None:
+    """Normalize mods and omit speed changes unsupported by static previews."""
     if not mods:
         return None
     cleaned = [mod.lower() for mod in mods if mod and mod.upper() not in _IGNORED_PREVIEW_MODS]
+    if fmt == "png":
+        cleaned = [mod for mod in cleaned if mod not in {"dt", "ht"}]
     return "+".join(cleaned) or None
 
 
@@ -76,7 +78,7 @@ async def render_with_core(
             options = {
                 "format": fmt,
                 "convert": mode_to_convert(source_mode, target_mode),
-                "mods": mods_to_renderer(mods),
+                "mods": mods_to_renderer(mods, fmt),
                 "times": time_range,
                 "fps": fps,
                 "no_cache": no_cache,
