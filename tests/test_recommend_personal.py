@@ -62,6 +62,56 @@ def test_own_map_references_are_not_reported_as_players():
     assert result["evidence_line"].endswith("2 条参考实绩")
 
 
+def test_ctb_personal_goal_uses_supporters_instead_of_personal_map_sample_count():
+    from nonebot_plugin_osubot.recommendation import prediction_display
+
+    result = prediction_display(
+        {
+            "pred_pp": 534.804068,
+            "pred_acc": 99.731544,
+            "accuracy_target": {
+                "kind": "personal-achievable-model",
+                "pp": 534.804068,
+                "accuracy": 99.731544,
+                "misses": 0,
+                "combo": 592,
+                "weighted_gain": 0,
+                "calibration": {"samples": 11},
+            },
+            "accuracy_evidence": {
+                "references": [{"player_id": uid} for uid in [1, 2, 3, 4, 5, 6, 7, 7]],
+                "observed_players": 90,
+            },
+            "fc_evidence": {"references": [{"player_id": uid} for uid in range(100, 120)]},
+        },
+        "fruits",
+    )
+    assert result["evidence_line"] == "FC 目标 · 592x · 7/90 人支持目标"
+    assert result["pred_pp"] == 534.804068
+    assert result["pred_acc"] == 99.731544
+    assert result["weighted_gain"] == 0
+
+
+def test_ctb_model_goal_uses_its_filtered_accuracy_evidence():
+    from nonebot_plugin_osubot.recommendation import prediction_display
+
+    result = prediction_display(
+        {
+            "accuracy_target": {
+                "kind": "model-prediction",
+                "pp": 323.568,
+                "accuracy": 98.12,
+                "misses": 8,
+                "combo": 365,
+            },
+            "accuracy_evidence": {"references": [{"player_id": uid} for uid in [1, 2, 3]]},
+        },
+        "fruits",
+    )
+    assert result["evidence_line"] == "8 Miss 目标 · 365x · 3 人支持目标"
+    assert result["pred_pp"] == 323.568
+
+
 def test_std_prediction_and_zero_gain():
     from nonebot_plugin_osubot.recommendation import prediction_display
 

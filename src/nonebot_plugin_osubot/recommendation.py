@@ -24,8 +24,11 @@ def personal_request(uid, mode, target, candidate_limit, result_limit, filters=N
 
 
 def prediction_display(item, mode):
-    goal = item.get("practice_target") if mode == "fruits" else item.get("accuracy_target")
-    evidence = item.get("fc_evidence") if mode == "fruits" else item.get("accuracy_evidence")
+    goal = item.get("accuracy_target")
+    evidence = item.get("accuracy_evidence")
+    if mode == "fruits" and not goal:
+        goal = item.get("practice_target")
+        evidence = item.get("fc_evidence")
     line = ""
     if goal:
         if mode == "mania":
