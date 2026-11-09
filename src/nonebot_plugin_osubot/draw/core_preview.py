@@ -12,9 +12,11 @@ from nonebot.log import logger
 from osu_beatmap_preview import PreviewError, generate_preview_async
 
 from ..api import osu_api
+from ..file import ensure_osu_file
 from ..config import Config
 from ..exceptions import NetworkError
 from .core_preview_recovery import recover_preview_download
+from .core_preview_settings import native_render_config
 
 PreviewFormat = Literal["png", "gif", "mp4"]
 ConvertMode = Literal["taiko", "ctb", "mania"]
@@ -62,7 +64,7 @@ async def preview_cache_enabled(beatmap_id: int | str) -> bool:
 
 
 async def render_with_core(
-    beatmap_id: int | str,
+    beatmap_id: int | str | None,
     fmt: PreviewFormat,
     *,
     source_mode: int | None = None,
@@ -70,10 +72,25 @@ async def render_with_core(
     mods: Sequence[str] | None = None,
     time_range: str | None = None,
     fps: int | None = None,
+    osu_file: str | Path | None = None,
+    osz_file: str | Path | None = None,
 ) -> Path:
     """Render a preview in-process and return its validated output path."""
-    no_cache = not await preview_cache_enabled(beatmap_id)
     try:
+        no_cache = True
+        # Explicit local input must also work without osu! API access.
+        if osu_file is None and osz_file is None and beatmap_id is not None:
+            try:
+                data = await osu_api("map", map_id=int(beatmap_id))
+            except NetworkError:
+                data = {}
+            no_cache = data.get("status") != "ranked"
+            # Standalone .osu input cannot supply the audio required by MP4.
+            if fmt != "mp4" and data.get("beatmapset_id"):
+                try:
+                    osu_file = await ensure_osu_file(data["beatmapset_id"], beatmap_id, data.get("checksum"))
+                except Exception as error:
+                    raise CorePreviewError(f"读取或下载本地谱面失败: {error}") from error
         async with _render_semaphore:
             options = {
                 "format": fmt,
@@ -82,29 +99,43 @@ async def render_with_core(
                 "times": time_range,
                 "fps": fps,
                 "no_cache": no_cache,
+                "config": native_render_config(),
             }
+            if osu_file is not None:
+                options["osu_file"] = Path(osu_file).resolve()
+            if osz_file is not None:
+                options["osz_file"] = Path(osz_file).resolve()
             try:
                 result = await generate_preview_async(beatmap_id, **options)
             except PreviewError as error:
-                if f"failed to download beatmap {beatmap_id}:" not in str(error):
+                if (
+                    osu_file is not None
+                    or osz_file is not None
+                    or fmt == "mp4"
+                    or (f"failed to download beatmap {beatmap_id}:" not in str(error))
+                ):
                     raise
                 logger.warning("原生谱面下载失败，尝试插件下载源并重新渲染: {}", beatmap_id)
                 try:
                     result = await recover_preview_download(beatmap_id, options)
                 except Exception as recovery_error:
                     raise CorePreviewError(f"谱面下载恢复失败: {recovery_error}") from recovery_error
-        output = result.get("preview-img")
-        if not isinstance(output, str) or not output:
-            raise CorePreviewError("原生渲染结果缺少 preview-img")
-
-        path = Path(output)
-        if not path.is_file() or path.stat().st_size == 0:
-            raise CorePreviewError(f"原生渲染产物不存在或为空: {path}")
-        return path
+        return core_output_path(result)
     except CorePreviewError:
         raise
-    except (PreviewError, OSError, TypeError, ValueError) as error:
+    except (PreviewError, NetworkError, OSError, TypeError, ValueError) as error:
         raise CorePreviewError(f"原生渲染失败: {error}") from error
+
+
+def core_output_path(result: dict) -> Path:
+    """Validate the common artifact field of beatmap and replay results."""
+    output = result.get("preview-img")
+    if not isinstance(output, str) or not output:
+        raise CorePreviewError("原生渲染结果缺少 preview-img")
+    path = Path(output)
+    if not path.is_file() or path.stat().st_size == 0:
+        raise CorePreviewError(f"原生渲染产物不存在或为空: {path}")
+    return path
 
 
 def read_core_output(path: Path) -> bytes:

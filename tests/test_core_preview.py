@@ -1,5 +1,4 @@
 from pathlib import Path
-import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -71,24 +70,23 @@ async def test_core_download_failure_uses_plugin_download(monkeypatch, tmp_path,
         )
     )
 
-    async def render(kwargs):
-        bid = kwargs["bid"]
-        config = json.loads(kwargs["config"])
-        cached = Path(config["paths"]["CACHE_DIR"]) / "osu-download-cache" / f"{bid}.osu"
-        assert cached.read_bytes() == source.read_bytes()
-        assert kwargs["no_cache"] is False
+    async def render(bid, **kwargs):
+        assert bid == 5493993
+        assert kwargs["osu_file"] == source.resolve()
+        assert kwargs["config"] == core_preview.native_render_config()
+        assert kwargs["no_cache"] is (status != "ranked")
         assert kwargs["mods"] == "hr"
         assert kwargs["format"] == "gif"
         return {"preview-img": str(output)}
 
-    worker = AsyncMock(side_effect=render)
+    local_renderer = AsyncMock(side_effect=render)
     monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
-    monkeypatch.setattr(core_preview_recovery, "run_core_worker", worker)
+    monkeypatch.setattr(core_preview_recovery, "generate_preview_async", local_renderer)
     result = await core_preview.render_with_core(5493993, "gif", mods=["HR"])
     assert result.read_bytes() == output.read_bytes()
     download.assert_awaited_once()
     renderer.assert_awaited_once()
-    worker.assert_awaited_once()
+    local_renderer.assert_awaited_once()
 
 
 @pytest.mark.parametrize("speed_mod", ["DT", "HT"])
@@ -97,11 +95,14 @@ async def test_download_recovery_renders_local_map_with_native_library(monkeypat
     from nonebot_plugin_osubot.draw.core_preview_recovery import recover_preview_download
     from nonebot_plugin_osubot import file
 
-    source = Path(__file__).parent / "fixtures" / "calculator-mania.osu"
+    fixture = Path(__file__).parent / "fixtures" / "calculator-mania.osu"
+    source = tmp_path / "5493993.osu"
+    source.write_text(fixture.read_text(encoding="utf-8").replace("BeatmapID:0", "BeatmapID:5493993"), encoding="utf-8")
     monkeypatch.setattr(file, "download_osu", AsyncMock(return_value=source))
     monkeypatch.setattr(file, "map_path", tmp_path)
     result = await recover_preview_download(
-        5493993, {"format": "png", "no_cache": True, "mods": mods_to_renderer([speed_mod], "png")}
+        5493993,
+        {"format": "png", "no_cache": True, "mods": mods_to_renderer([speed_mod], "png"), "output_dir": tmp_path},
     )
     assert Path(result["preview-img"]).read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
@@ -250,3 +251,72 @@ async def test_preview_disables_cache_when_status_lookup_fails(monkeypatch: pyte
 
     assert await core_preview.render_with_core(123, "png") == output
     assert renderer.call_args.kwargs["no_cache"] is True
+
+
+@pytest.mark.parametrize("stale", [False, True])
+async def test_native_preview_uses_checksum_validated_plugin_cache(monkeypatch, tmp_path, stale):
+    import hashlib
+
+    from nonebot_plugin_osubot import file
+    from nonebot_plugin_osubot.draw import core_preview
+
+    source = tmp_path / "456" / "123.osu"
+    source.parent.mkdir()
+    content = b"osu file format v14\n[Metadata]\nBeatmapID:123\n"
+    source.write_bytes(b"old revision" if stale else content)
+    output = tmp_path / "preview.png"
+    output.write_bytes(b"png")
+
+    async def download(*_args):
+        source.write_bytes(content)
+        return source
+
+    downloader = AsyncMock(side_effect=download)
+    renderer = AsyncMock(return_value={"preview-img": str(output)})
+    monkeypatch.setattr(file, "map_path", tmp_path)
+    monkeypatch.setattr(file, "download_osu", downloader)
+    monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
+    monkeypatch.setattr(
+        core_preview,
+        "osu_api",
+        AsyncMock(
+            return_value={
+                "status": "ranked",
+                "beatmapset_id": 456,
+                "checksum": hashlib.md5(content).hexdigest(),
+            }
+        ),
+    )
+
+    assert await core_preview.render_with_core(123, "png") == output
+    assert renderer.call_args.kwargs["osu_file"] == source.resolve()
+    assert source.read_bytes() == content
+    assert downloader.await_count == int(stale)
+
+
+async def test_explicit_local_preview_does_not_query_api(monkeypatch, tmp_path):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    api = AsyncMock(side_effect=AssertionError("local rendering must stay offline"))
+    monkeypatch.setattr(core_preview, "osu_api", api)
+    fixture = Path(__file__).parent / "fixtures" / "calculator-mania.osu"
+    # This fixture has BeatmapID:0: omit bid to support unpublished local maps.
+    result = await core_preview.render_with_core(None, "png", osu_file=fixture)
+    assert result.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    api.assert_not_awaited()
+
+
+async def test_online_mp4_keeps_media_download_path(monkeypatch, tmp_path):
+    from nonebot_plugin_osubot.draw import core_preview
+
+    output = tmp_path / "preview.mp4"
+    output.write_bytes(b"video")
+    ensure = AsyncMock()
+    renderer = AsyncMock(return_value={"preview-img": str(output)})
+    monkeypatch.setattr(core_preview, "osu_api", AsyncMock(return_value={"status": "ranked", "beatmapset_id": 456}))
+    monkeypatch.setattr(core_preview, "ensure_osu_file", ensure)
+    monkeypatch.setattr(core_preview, "generate_preview_async", renderer)
+
+    assert await core_preview.render_with_core(123, "mp4") == output
+    assert "osu_file" not in renderer.call_args.kwargs
+    ensure.assert_not_awaited()

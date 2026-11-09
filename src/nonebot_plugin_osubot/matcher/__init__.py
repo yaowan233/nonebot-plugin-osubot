@@ -20,6 +20,7 @@ from .url_match import url_match
 from .bp_analyze import bp_analyze
 from .update_mode import update_mode
 from .preview import generate_preview
+from .replay import replay_analysis
 from .map_convert import change, convert, generate_full_ln
 from .update import update_info
 from .guess import hint, pic_hint, guess_pic, guess_audio, word_matcher, pic_word_matcher
@@ -47,6 +48,7 @@ __all__ = [
     "recommend",
     "update_info",
     "generate_preview",
+    "replay_analysis",
     "getbg",
     "bind",
     "unbind",

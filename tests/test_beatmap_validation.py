@@ -74,7 +74,9 @@ def test_all_calculator_entries_reject_before_decoder(tmp_path, monkeypatch, ent
     from nonebot_plugin_osubot.calculator import CachedOsuCalculator
     from nonebot_plugin_osubot.beatmap_validation import SuspiciousBeatmapError
 
-    calculator = CachedOsuCalculator()
+    # These guards must reject input before accessing calculator/.NET state.
+    # Avoid starting CoreCLR while the plugin's startup task is warming it up.
+    calculator = CachedOsuCalculator.__new__(CachedOsuCalculator)
     path = write_map(tmp_path, [circle("nan")])
 
     def forbidden(*args, **kwargs):

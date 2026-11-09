@@ -64,6 +64,18 @@ HELP_TOPICS = {
         "/mu：已绑定玩家主页；/update：刷新个人信息缓存\n"
         "/rank：群内 PP 排名；/推荐：个性化谱面推荐"
     ),
+    "replay": (
+        "回放分析（仅 osu! 官网，别名 /replay、/ra）\n"
+        "/回放分析 <成绩ID或新版成绩链接>：分析该成绩的回放，无需绑定\n"
+        "/回放分析 [玩家]:[模式]：分析最近一次完成的成绩，省略玩家时使用绑定账号\n"
+        "/回放分析 <玩家> <mapid>：分析该谱面最高分；也可写 user=<玩家或UID> bid=<mapid>\n"
+        "添加 recent 查询最近成绩，+fail 包含未通过；best 需要指定谱面。\n"
+        "默认 std 输出 GIF，其他模式输出全谱 PNG 判定概览；+png、+gif、+mp4 可指定格式。\n"
+        "times=30 duration=10 截取从首个物件后 30 秒开始的 10 秒区间；+gif/+mp4 默认从 0 秒开始截取 10 秒。\n"
+        "duration 最大 30 秒，GIF 最多 4 个采样起点（用 + 分隔），MP4 只接受一个。\n"
+        "示例：/ra 6086051920；/ra peppy 4498112 +gif；/ra :m recent +fail +png。\n"
+        "返回回放图像及重算的准确率、最大连击、判定摘要。模式和 Mods 从回放读取，目标成绩需有可访问的回放。"
+    ),
     "game": (
         "多人和其他功能\n"
         "/mp <matchid>：多人对局历史；/rt <matchid>：多人房评分\n"
@@ -144,6 +156,10 @@ TOPIC_ALIASES = {
     "完整预览": "map",
     "视频预览": "map",
     "vp": "map",
+    "回放": "replay",
+    "回放分析": "replay",
+    "replay": "replay",
+    "ra": "replay",
     "资料": "profile",
     "设置": "profile",
     "用户": "profile",
@@ -171,7 +187,7 @@ TOPIC_ALIASES = {
     "guunbind": "g0v0",
 }
 
-TOPIC_LABELS = "概览、绑定、模式、成绩、谱面、资料、多人、SB服、g0v0、全部"
+TOPIC_LABELS = "概览、绑定、模式、成绩、谱面、回放、资料、多人、SB服、g0v0、全部"
 
 
 def get_command_help(topic: str | None = "overview") -> str:

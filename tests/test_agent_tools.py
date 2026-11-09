@@ -4,6 +4,7 @@ from importlib.util import find_spec
 from io import BytesIO
 from types import SimpleNamespace
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -1124,7 +1125,7 @@ async def test_get_osu_bp_range_fetches_tags_for_analysis(monkeypatch):
     monkeypatch.setattr(bp, "get_beatmapsets_info", fetch_tags)
     bundle = agent_tools.build_osu_agent_tools(_range_context())
     range_tool = next(tool for tool in bundle.tools if tool.name == "get_osu_bp_range")
-    result = json.loads(await range_tool.ainvoke({"filters": "tag=anime"}))
+    result = json.loads(await range_tool.ainvoke({"range_text": "1-20", "filters": "tag=anime"}))
 
     assert result["status"] == "ok", result
     assert result["total"] == 2
@@ -1787,3 +1788,181 @@ def test_match_player_summary_includes_top1_rate_for_head_to_head():
     assert summary["top1_rate"] == 75.0
     assert "wins" not in summary
     assert "win_rate" not in summary
+
+
+@pytest.fixture
+def replay_agent(monkeypatch, tmp_path):
+    from nonebot_plugin_osubot import agent_tools
+    from nonebot_plugin_osubot.draw.replay import ReplayPreview
+
+    output = tmp_path / "replay.png"
+    output.write_bytes(b"replay-image")
+    replay_info = {
+        "player": "player",
+        "rulesetId": 3,
+        "state": {"accuracy": 0.98, "max_combo": 123, "statistics": {"great": 99, "miss": 1}},
+    }
+    renderer = AsyncMock(return_value=ReplayPreview(output, replay_info, {"meta-data": {"title": "song"}}))
+    resolve = AsyncMock(return_value=agent_tools.ResolvedOsuUser(42, "player", "3"))
+    send = AsyncMock()
+    monkeypatch.setattr(agent_tools, "render_replay_with_core", renderer)
+    monkeypatch.setattr(agent_tools, "_resolve_osu_user", resolve)
+    monkeypatch.setattr(agent_tools.UniMessage, "send", send)
+    context = SimpleNamespace(user_id="12345678", request_id=None, bot_id="bot", event=None, send_target="target")
+    bundle = agent_tools.build_osu_agent_tools(context)
+    replay_tool = next(item for item in bundle.tools if item.name == "send_osu_replay_analysis")
+    return SimpleNamespace(
+        module=agent_tools,
+        tool=replay_tool,
+        renderer=renderer,
+        resolve=resolve,
+        send=send,
+        context=context,
+        bundle=bundle,
+        preview=renderer.return_value,
+    )
+
+
+def test_replay_tool_exposes_options_and_analysis_instructions(replay_agent):
+    properties = replay_agent.tool.args_schema.model_json_schema()["properties"]
+    assert properties["send_media"]["default"] is True
+    assert properties["include_fails"]["default"] is False
+    assert "查询当前发言用户时必须省略" in properties["target_user_id"]["description"]
+    assert "source" not in properties
+    instructions = "\n".join(replay_agent.bundle.instructions)
+    assert "send_osu_replay_analysis" in instructions
+    assert "最近一条已通过成绩" in instructions
+    assert "不要编造数据中没有" in instructions
+
+
+@pytest.mark.asyncio
+async def test_replay_tool_defaults_to_bound_user_mode_and_recent_pass(replay_agent):
+    result = json.loads(await replay_agent.tool.ainvoke({}))
+
+    replay_agent.resolve.assert_awaited_once_with(replay_agent.context, None, "osu", None)
+    options = replay_agent.renderer.call_args.kwargs
+    assert options["user"] == "42"
+    assert options["mode"] == "mania"
+    assert options["include_fails"] is False
+    assert options["score_select"] is None
+    assert result["status"] == "sent"
+    assert result["media_sent"] is True
+    assert result["replay"]["state"]["statistics"]["miss"] == 1
+    assert "98.00%" in result["summary"]
+    replay_agent.send.assert_awaited_once_with(target="target")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("score_id", ["123", "https://osu.ppy.sh/scores/123"])
+async def test_replay_tool_accepts_score_id_and_link_without_binding(replay_agent, score_id):
+    result = json.loads(await replay_agent.tool.ainvoke({"score_id": score_id, "send_media": False}))
+
+    replay_agent.resolve.assert_not_awaited()
+    assert replay_agent.renderer.call_args.kwargs["score_id"] == "123"
+    assert replay_agent.renderer.call_args.kwargs["user"] is None
+    assert replay_agent.renderer.call_args.kwargs["mode"] is None
+    assert result["status"] == "ok"
+    assert result["media_sent"] is False
+    assert result["replay"]["state"]["accuracy"] == 0.98
+    replay_agent.send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_replay_tool_passes_player_target_mode_fail_and_clip_options(replay_agent):
+    result = json.loads(
+        await replay_agent.tool.ainvoke(
+            {
+                "username": "peppy",
+                "target_user_id": "998877",
+                "beatmap_id": "123",
+                "mode": "catch",
+                "score_select": "recent",
+                "include_fails": True,
+                "format": "gif",
+                "times": "30",
+                "duration": 5,
+            }
+        )
+    )
+
+    replay_agent.resolve.assert_awaited_once_with(replay_agent.context, "peppy", "osu", "998877")
+    options = replay_agent.renderer.call_args.kwargs
+    assert options["bid"] == "123"
+    assert options["mode"] == "fruits"
+    assert options["score_select"] == "recent"
+    assert options["include_fails"] is True
+    assert options["fmt"] == "gif"
+    assert options["times"] == "30"
+    assert options["duration"] == 5
+    assert result["status"] == "sent"
+
+
+@pytest.mark.asyncio
+async def test_replay_tool_sends_video_with_default_ten_second_clip(replay_agent, monkeypatch):
+    video_path = replay_agent.preview.path.with_suffix(".mp4")
+    video_path.write_bytes(b"video")
+    replay_agent.preview.path = video_path
+    video = MagicMock(wraps=replay_agent.module.UniMessage.video)
+    monkeypatch.setattr(replay_agent.module.UniMessage, "video", video)
+
+    result = json.loads(await replay_agent.tool.ainvoke({"score_id": "123", "format": "mp4"}))
+
+    options = replay_agent.renderer.call_args.kwargs
+    assert options["times"] == "0"
+    assert options["duration"] == 10
+    video.assert_called_once_with(raw=b"video", name="replay.mp4")
+    assert result["status"] == "sent"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"score_id": "123", "username": "peppy"},
+        {"score_id": "123", "mode": "mania"},
+        {"score_id": "https://osu.ppy.sh/scores/osu/123"},
+        {"score_select": "best"},
+        {"score_select": "best", "beatmap_id": "123", "include_fails": True},
+        {"format": "gif", "duration": 31},
+        {"format": "mp4", "times": "0+30"},
+    ],
+)
+async def test_replay_tool_rejects_invalid_requests_before_rendering(replay_agent, arguments):
+    result = json.loads(await replay_agent.tool.ainvoke(arguments))
+
+    assert result["status"] == "failed"
+    replay_agent.renderer.assert_not_awaited()
+    replay_agent.send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("expired_after_render", [False, True])
+async def test_replay_tool_does_not_send_for_expired_request(replay_agent, monkeypatch, expired_after_render):
+    replay_agent.context.request_id = "request"
+    active = AsyncMock(side_effect=[True, False] if expired_after_render else [False])
+    monkeypatch.setattr(replay_agent.module, "_is_context_request_active", active)
+
+    result = json.loads(await replay_agent.tool.ainvoke({"score_id": "123"}))
+
+    assert result["status"] == "expired"
+    assert replay_agent.renderer.await_count == int(expired_after_render)
+    replay_agent.send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_replay_tool_reports_missing_replay_without_sending(replay_agent):
+    from nonebot_plugin_osubot.draw.core_preview import CorePreviewError
+
+    replay_agent.renderer.side_effect = CorePreviewError("no replay available")
+    result = json.loads(await replay_agent.tool.ainvoke({"score_id": "123"}))
+
+    assert result["status"] == "failed"
+    assert "no replay available" in result["message"]
+    replay_agent.send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_agent_help_lists_replay_topic(replay_agent):
+    help_tool = next(item for item in replay_agent.bundle.tools if item.name == "get_osubot_command_help")
+    assert "replay" in help_tool.description
+    assert "/回放分析" in await help_tool.ainvoke({"topic": "replay"})

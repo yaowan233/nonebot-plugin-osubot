@@ -43,6 +43,8 @@ from .schema.alphaosu import RecommendData, RecommendItem
 from .draw.score import cal_score_info, draw_selected_score
 from .draw.bp import draw_pfm, filter_bp_scores, select_bp_scores
 from .draw.rating import draw_rating
+from .draw.replay import replay_summary, render_replay_with_core
+from .draw.core_preview import read_core_output
 from .draw.recommend import draw_recommend
 from .draw.echarts import build_bpa_data, draw_bpa_plot, draw_history_plot
 from .draw.osu_preview import draw_osu_preview, draw_full_osu_preview, render_preview
@@ -53,6 +55,7 @@ from .recommendation_filters import RecommendationFilters
 from .agent_recommend_delivery import RecommendationDelivery, shared_recommendation_delivery
 from .history_data import merge_osutrack_history
 from .matcher.utils import parse_bp_filter_text
+from .matcher.replay import ReplayQuery, parse_replay_query, validate_replay_query
 
 ContentBlock = str | dict[str, Any]
 UsernameArg = Annotated[
@@ -939,7 +942,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
     async def get_osubot_command_help(topic: str = "overview") -> str:
         """
         查询 OSUBot 的手动聊天指令、格式、简称和示例，不执行成绩查询。
-        topic 可用 overview、bind、mode、score、map、profile、game、sb、all，也可传中文主题。
+        topic 可用 overview、bind、mode、score、map、replay、profile、game、sb、all，也可传中文主题。
         """
         return get_command_help(topic)
 
@@ -1914,6 +1917,95 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         except Exception as e:
             return f"发送 match rating 失败: {e}"
 
+    @tool("send_osu_replay_analysis")
+    async def send_osu_replay_analysis(
+        score_id: str | None = None,
+        username: UsernameArg = None,
+        target_user_id: TargetUserIdArg = None,
+        beatmap_id: str | None = None,
+        mode: str | None = None,
+        score_select: Literal["best", "recent"] | None = None,
+        include_fails: bool = False,
+        format: Literal["png", "gif", "mp4"] | None = None,
+        times: str | None = None,
+        duration: float | None = None,
+        send_media: bool = True,
+    ) -> str:
+        """分析 osu! 官网回放，返回重算判定数据，并按 send_media 发送回放图像/视频和摘要。
+
+        score_id 为新版成绩 ID 或 https://osu.ppy.sh/scores/<ID> 链接，无需绑定。
+        不提供 score_id 时查询玩家；省略玩家使用绑定账号及默认模式，默认最近通过成绩。
+        beatmap_id 指定谱面时默认最高分，score_select 可选 best/recent；include_fails 仅用于 recent。
+        mode 只筛选玩家成绩，回放模式和 Mods 保持原样。format 省略时 std 为 GIF，其余为全谱 PNG。
+        显式指定 gif/mp4 默认从开头截取 10 秒。times 是首物件后的秒数或 preview，多个起点用 + 分隔；
+        duration 大于 0 且不超过 30 秒，PNG 截取须同时提供 times 和 duration，MP4 仅支持一个起点。
+        仅返回数据、不发图时设 send_media=false。目标成绩必须有可访问的回放。
+        """
+        try:
+            if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
+                return json.dumps({"status": "expired", "message": "请求已过期，已取消回放分析。"}, ensure_ascii=False)
+            score = _clean_optional_text(score_id)
+            if score is not None:
+                if _clean_optional_text(username) is not None or _clean_user_id(target_user_id) is not None:
+                    raise ValueError("成绩 ID 查询不能同时指定玩家")
+                parsed_score = parse_replay_query(score)
+                if parsed_score.score_id is None:
+                    raise ValueError("score_id 应为新版成绩 ID 或成绩链接")
+                score = parsed_score.score_id
+            query = validate_replay_query(
+                ReplayQuery(
+                    score_id=score,
+                    bid=_clean_optional_text(beatmap_id),
+                    mode=_normalize_mode(mode, "osu"),
+                    fmt=format,
+                    times=times,
+                    duration=duration,
+                    score_select=score_select,
+                    include_fails=include_fails,
+                )
+            )
+            if query.score_id is None:
+                user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
+                query.user = str(user.user_id)
+                query.mode = get_server("osu").parse_mode(_resolve_mode(mode, user, "osu")).key
+            preview = await render_replay_with_core(
+                score_id=query.score_id,
+                user=query.user,
+                bid=query.bid,
+                mode=query.mode,
+                score_select=query.score_select,
+                include_fails=query.include_fails,
+                fmt=query.fmt,
+                times=query.times,
+                duration=query.duration,
+            )
+            if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
+                return json.dumps(
+                    {"status": "expired", "message": "请求已过期，已取消发送回放分析。"}, ensure_ascii=False
+                )
+            summary = replay_summary(preview)
+            if send_media:
+                raw = read_core_output(preview.path)
+                message = UniMessage.text(summary + "\n")
+                if preview.path.suffix.lower() == ".mp4":
+                    message += UniMessage.video(raw=raw, name=preview.path.name)
+                else:
+                    message += UniMessage.image(raw=raw)
+                await message.send(target=ctx.send_target)
+            return json.dumps(
+                {
+                    "status": "sent" if send_media else "ok",
+                    "message": "已发送回放分析。" if send_media else "已完成回放分析，未发送媒体。",
+                    "media_sent": send_media,
+                    "summary": summary,
+                    "replay": preview.replay_info,
+                    "beatmap": preview.beatmap_info,
+                },
+                ensure_ascii=False,
+            )
+        except Exception as error:
+            return json.dumps({"status": "failed", "message": f"回放分析失败: {error}"}, ensure_ascii=False)
+
     @tool("send_osu_preview")
     async def send_osu_preview(
         map_id: str,
@@ -2047,6 +2139,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             send_osu_match_history,
             send_osu_match_rating,
             send_osu_preview,
+            send_osu_replay_analysis,
             send_osu_background,
             send_osu_medal,
             send_osu_map_info,
@@ -2146,6 +2239,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_match_rating: 用户想查 match rating、多人房评分图时使用。"
             "工具会返回结构化评分数据（各玩家 rating/胜率/总分/MVP），可直接用于评价表现。",
             "- send_osu_preview: 用户想看谱面预览、preview、完整预览时使用。",
+            "- send_osu_replay_analysis: 用户想分析回放、复盘最近一局、查看回放判定或生成回放片段时使用，"
+            "仅支持 osu! 官网。未指定成绩或谱面时默认分析绑定账号默认模式下最近一条已通过成绩；"
+            "只有用户要求包含失败时才设 include_fails=true。用户提供成绩 ID/链接时只传 score_id，"
+            "不传玩家、模式或 best/recent；指定玩家和谱面时默认查询该图最高分。"
+            "用户明确不要发图/视频时设 send_media=false。依据返回的 replay.state 判定和准确率分析，"
+            "结合 recorded-result-differences 说明重算与记录差异；不要编造数据中没有的具体失误段落、手法或 UR。"
+            "工具已发送媒体后不要重复发图；只要回放图时成功后结束，要求评价时再依据结构化数据回复。",
             "- send_osu_background: 用户想提取谱面背景、bg/getbg、背景图时使用。",
             "- send_osu_medal: 用户想查 medal/成就获得方式时使用。",
             "- send_osu_map_info: 用户想实际查询单张谱面 m/map/beatmap 信息时使用。",
