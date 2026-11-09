@@ -78,8 +78,22 @@ async def test_replay_adapter_passes_local_files_without_mod_overrides(monkeypat
     args, kwargs = renderer.call_args
     assert args == (Path("play.osr").resolve(),)
     assert kwargs["osu_file"] == Path("map.osu").resolve()
+    assert kwargs["approximate_replay"] is True
     assert not {"mods", "convert", "mode", "score_select", "include_fails"}.intersection(kwargs)
     assert json.loads(kwargs["config"])["download"]["auth"]["OSU_CLIENT_ID"] == "42"
+
+
+def test_replay_summary_discloses_approximation(tmp_path):
+    from nonebot_plugin_osubot.draw.replay import ReplayPreview, replay_summary
+
+    preview = ReplayPreview(
+        tmp_path / "preview.png",
+        {"player": "test", "rulesetId": 0, "approximation-warnings": ["未还原 Mod：XX"]},
+        {},
+    )
+    summary = replay_summary(preview)
+    assert "简化回放" in summary
+    assert "未还原 Mod：XX" in summary
 
 
 @pytest.mark.parametrize("sources", [{}, {"osr_file": "play.osr", "score_id": 1}])

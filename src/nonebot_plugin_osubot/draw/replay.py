@@ -37,6 +37,7 @@ async def render_replay_with_core(
         raise CorePreviewError("回放文件、成绩 ID、玩家必须且只能提供一种")
     options = {
         "score_id": score_id,
+        "approximate_replay": True,
         "user": user,
         "bid": bid,
         "osu_file": Path(osu_file).resolve() if osu_file is not None else None,
@@ -70,6 +71,8 @@ def replay_summary(preview: ReplayPreview) -> str:
     metadata = preview.beatmap_info.get("meta-data") or {}
     mode = {0: "osu!", 1: "Taiko", 2: "Catch", 3: "Mania"}.get(info.get("rulesetId"), "未知模式")
     lines = [f"回放分析 · {info.get('player') or '未知玩家'} · {mode}"]
+    for warning in info.get("approximation-warnings") or []:
+        lines.append(f"⚠ 简化回放：{warning}")
     title = metadata.get("title-unicode") or metadata.get("title")
     if title:
         lines.append(f"{title} [{metadata.get('version', '')}]")
