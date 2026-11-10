@@ -5,7 +5,7 @@ import json
 import asyncio
 import base64
 import datetime
-from dataclasses import dataclass
+from dataclasses import replace, dataclass
 from io import BytesIO
 from typing import Any, Literal, Annotated
 from pathlib import Path
@@ -17,6 +17,11 @@ from nonebot_plugin_alconna import UniMessage
 
 from nonebot_plugin_ai_groupmate.agent import AgentToolBundle, AgentToolContext, register_agent_tool
 from nonebot_plugin_ai_groupmate.reply_guard import is_request_active
+
+try:
+    from nonebot_plugin_ai_groupmate.agent import AgentSkill
+except ImportError:
+    AgentSkill = None  # type: ignore[assignment,misc]
 
 from .api import (
     _recommend_target,
@@ -892,6 +897,62 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
         return map_to_image(parse_map(osu)), None
     image = await draw_osu_preview(int(map_id), beatmapset_id)
     return image, f"点击预览：\nhttps://beatmap.try-z.net/?b={map_id}\nhttps://beatmap.try-z.net/dev/?b={map_id}"
+
+
+def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
+    """Use optional host skill support; old hosts keep the original bundle."""
+    if (AgentSkill is None or "tools" not in getattr(AgentSkill, "__dataclass_fields__", {})
+            or "defer_instructions" not in getattr(AgentToolBundle, "__dataclass_fields__", {})):
+        return bundle
+    groups = (
+        ("osu_help", "osu 命令、用法和缩写说明", ("get_osubot_command_help",)),
+        ("osu_player", "osu 玩家资料、主页和 pp/rank 历史", (
+            "send_osu_user_info", "send_osu_profile_url", "send_osu_history",
+        )),
+        ("osu_bp", "osu BP、最好成绩列表、筛选与 BP 分析", (
+            "send_osu_bp", "get_osu_bp_data", "get_osu_bp_range", "send_osu_bp_list", "send_osu_bp_analysis",
+        )),
+        ("osu_scores", "osu 最近成绩、单图成绩及按谱名查询成绩", (
+            "send_osu_recent_or_pr", "send_osu_score", "get_osu_scores_by_map_name",
+        )),
+        ("osu_firsts", "osu 榜一及第一名成绩列表", ("send_osu_firsts",)),
+        ("osu_maps", "osu 谱面搜索、谱面信息、预览和背景图", (
+            "search_osu_beatmaps", "send_osu_preview", "send_osu_background", "send_osu_map_info",
+            "send_osu_beatmapset_info",
+        )),
+        ("osu_recommend", "osu 推荐谱面及推荐筛选", ("send_osu_recommend",)),
+        ("osu_matches", "osu 多人房、对局历史及 match rating", ("send_osu_match_history", "send_osu_match_rating")),
+        ("osu_replay", "osu 回放分析、复盘、判定和回放视频", ("send_osu_replay_analysis",)),
+        ("osu_medal", "osu 成就及 medal 获得方法", ("send_osu_medal",)),
+    )
+    tools = list(bundle.tools)
+    by_name = {item.name: item for item in tools}
+    grouped_names = {name for _, _, names in groups for name in names}
+    if grouped_names != set(by_name):
+        return bundle
+    instructions = list(bundle.instructions)
+    shared_markers = (
+        "当前请求的发言用户 ID", "未指定玩家", "用户想查被 @", "用户明确给出群友",
+        "未指定模式", "分析/评价类请求", "include_image_for_analysis",
+    )
+    shared = [line for line in instructions if any(marker in line for marker in shared_markers)]
+    skills = []
+    for name, description, names in groups:
+        patterns = [
+            re.compile(r"(?<![a-zA-Z0-9_])" + re.escape(tool_name) + r"(?![a-zA-Z0-9_])")
+            for tool_name in names
+        ]
+        selected = [line for line in instructions if any(pattern.search(line) for pattern in patterns)]
+        if name in {"osu_bp", "osu_firsts"}:
+            markers = ("将自然语言 BP/榜一条件", "Mods 参数语义", "按谱面标签")
+            selected += [line for line in instructions if any(marker in line for marker in markers)]
+        if name == "osu_help":
+            selected += [line for line in instructions if "区分教学和执行" in line]
+        prompt = "\n".join(dict.fromkeys([*shared, *selected]))
+        skills.append(AgentSkill(
+            name=name, description=description, prompt=prompt, tools=[by_name[item] for item in names],
+        ))
+    return replace(bundle, skills=skills, defer_instructions=True)
 
 
 @register_agent_tool
@@ -2143,7 +2204,7 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         except Exception as e:
             return f"发送 beatmapset 信息失败: {e}"
 
-    return AgentToolBundle(
+    bundle = AgentToolBundle(
         tools=[
             get_osubot_command_help,
             send_osu_user_info,
@@ -2279,3 +2340,4 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "- send_osu_beatmapset_info: 用户想实际查询谱面集 bm/bmap/beatmapset 信息时使用。",
         ],
     )
+    return _defer_osu_tools(bundle)
