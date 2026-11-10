@@ -1966,3 +1966,31 @@ async def test_agent_help_lists_replay_topic(replay_agent):
     help_tool = next(item for item in replay_agent.bundle.tools if item.name == "get_osubot_command_help")
     assert "replay" in help_tool.description
     assert "/回放分析" in await help_tool.ainvoke({"topic": "replay"})
+
+
+@pytest.mark.asyncio
+async def test_replay_tool_reads_uploaded_file_without_account_lookup(replay_agent, monkeypatch):
+    uploaded = AsyncMock(return_value=replay_agent.preview)
+    replay_agent.context.bot = object()
+    replay_agent.context.event = object()
+    monkeypatch.setattr(replay_agent.module, "analyse_replay_upload", uploaded)
+    result = json.loads(
+        await replay_agent.tool.ainvoke({"use_uploaded_replay": True, "send_media": False, "format": "png"})
+    )
+
+    assert result["status"] == "ok"
+    assert result["replay"]["player"] == "player"
+    replay_agent.resolve.assert_not_awaited()
+    replay_agent.renderer.assert_not_awaited()
+    uploaded.assert_awaited_once()
+    assert uploaded.call_args.args[:2] == (replay_agent.context.bot, replay_agent.context.event)
+    assert uploaded.call_args.args[2].fmt == "png"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("arguments", [{"score_id": "123"}, {"mode": "mania"}, {"username": "peppy"}])
+async def test_uploaded_replay_tool_rejects_online_source_options(replay_agent, arguments):
+    result = json.loads(await replay_agent.tool.ainvoke({"use_uploaded_replay": True, **arguments}))
+    assert result["status"] == "failed"
+    replay_agent.resolve.assert_not_awaited()
+    replay_agent.renderer.assert_not_awaited()

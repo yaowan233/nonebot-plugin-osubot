@@ -21,6 +21,7 @@ from .bp_analyze import bp_analyze
 from .update_mode import update_mode
 from .preview import generate_preview
 from .replay import replay_analysis
+from .replay_upload import replay_file_message, replay_file_notice
 from .map_convert import change, convert, generate_full_ln
 from .update import update_info
 from .guess import hint, pic_hint, guess_pic, guess_audio, word_matcher, pic_word_matcher
@@ -49,6 +50,8 @@ __all__ = [
     "update_info",
     "generate_preview",
     "replay_analysis",
+    "replay_file_message",
+    "replay_file_notice",
     "getbg",
     "bind",
     "unbind",

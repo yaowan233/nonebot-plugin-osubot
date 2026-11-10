@@ -4,7 +4,9 @@ from dataclasses import dataclass
 
 from nonebot import on_command
 from nonebot.params import CommandArg
-from nonebot.internal.adapter import Event, Message
+from nonebot.exception import ActionFailed
+from httpx import HTTPError
+from nonebot.internal.adapter import Bot, Event, Message
 from nonebot_plugin_orm import get_session
 from nonebot_plugin_alconna import UniMessage
 
@@ -12,6 +14,14 @@ from ..api import get_server
 from ..bindings import find_binding
 from ..draw.replay import replay_summary, render_replay_with_core
 from ..draw.core_preview import CorePreviewError, read_core_output
+from ..replay_uploads import (
+    UPLOAD_LIMITS,
+    get_replay_upload,
+    replay_attachments,
+    analyse_replay_upload,
+    store_replay_attachments,
+)
+from .replay_upload import replay_result_message, upload_options
 
 replay_analysis = on_command("回放分析", aliases={"回放", "replay", "ra"}, priority=11, block=True)
 
@@ -129,6 +139,40 @@ def validate_replay_query(query: ReplayQuery) -> ReplayQuery:
     elif (query.times is None) != (query.duration is None):
         raise ValueError("截取回放区间需同时提供 times=<起点秒数> 和 duration=<时长秒数>")
     return query
+
+
+@replay_analysis.handle()
+async def _replay_upload_command(bot: Bot, event: Event, arg: Message = CommandArg()):
+    text = arg.extract_plain_text().strip()
+    local = re.match(r"^(上传|本地|文件)(?:\s+|$)", text)
+    files = [item for item in await replay_attachments(bot, event) if item.suffix in UPLOAD_LIMITS]
+    if not local and not files:
+        return
+    try:
+        query = parse_replay_query(text[local.end() :] if local else text)
+        options = upload_options(query)
+        session = get_replay_upload(bot, event, create=True)
+        async with session.processing_lock:
+            await _handle_local_replay(bot, event, files, local, options)
+    except (ValueError, CorePreviewError, HTTPError, ActionFailed, OSError) as error:
+        await UniMessage.text(f"{error}\n发送 /oh 回放 查看上传用法。").finish(reply_to=True)
+
+
+async def _handle_local_replay(bot, event, files, local, options):
+    if files:
+        await store_replay_attachments(bot, event, files, options)
+        if not any(item.suffix == ".osr" for item in files):
+            await UniMessage.text("已暂存谱面资源，请继续发送 .osr 回放文件。").finish(reply_to=True)
+    elif local and local[1] == "上传":
+        session = get_replay_upload(bot, event, create=True)
+        session.options = options
+        await UniMessage.text(
+            "请在 10 分钟内发送 .osr；自制谱面请先发送匹配的 .osu，视频可先发送含音频的 .osz。"
+            "也可直接发送 .osr 开始默认分析。"
+        ).finish(reply_to=True)
+    await UniMessage.text("正在分析上传的回放，请稍候…").send(reply_to=True)
+    preview = await analyse_replay_upload(bot, event, options)
+    await replay_result_message(preview).finish(reply_to=True)
 
 
 @replay_analysis.handle()

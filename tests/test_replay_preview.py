@@ -227,3 +227,34 @@ async def test_replay_handler_uses_bound_user_and_mode(monkeypatch, tmp_path):
     assert renderer.call_args.kwargs["mode"] == "mania"
     assert renderer.call_args.kwargs["score_select"] == "recent"
     assert renderer.call_args.kwargs["include_fails"] is True
+
+
+@pytest.mark.parametrize("command", ["/ra", "/replay", "/回放", "/回放分析", "/ra:m recent +fail +png"])
+async def test_replay_commands_are_registered_and_dispatched(app, monkeypatch, command):
+    import nonebot
+    from nonebot.adapters.onebot.v11 import Adapter, Bot, MessageSegment
+    from nonebot.matcher import matchers
+
+    from fake import fake_group_message_event_v11
+    from nonebot_plugin_osubot.matcher import replay
+
+    plugin = nonebot.get_plugin("nonebot_plugin_osubot")
+    assert replay.replay_analysis in plugin.matcher
+    assert replay.replay_analysis in matchers[11]
+    monkeypatch.setattr(replay, "find_binding", AsyncMock(return_value=None))
+    event = fake_group_message_event_v11(message=Message(command))
+    async with app.test_matcher() as ctx:
+        bot = ctx.create_bot(base=Bot, adapter=nonebot.get_adapter(Adapter))
+        ctx.receive_event(bot, event)
+        ctx.should_pass_rule(replay.replay_analysis)
+        ctx.should_call_send(
+            event,
+            Message(
+                [
+                    MessageSegment.reply(event.message_id),
+                    MessageSegment.text("请提供成绩 ID、玩家名，或先用 /bind 绑定账号。发送 /oh 回放 查看用法。"),
+                ]
+            ),
+            result={"message_id": 2},
+        )
+        ctx.should_finished(replay.replay_analysis)
