@@ -45,6 +45,7 @@ from .draw.bp import draw_pfm, filter_bp_scores, select_bp_scores
 from .draw.rating import draw_rating
 from .draw.replay import replay_summary, render_replay_with_core
 from .draw.core_preview import read_core_output
+from .replay_uploads import ReplayUploadOptions, analyse_replay_upload
 from .draw.recommend import draw_recommend
 from .draw.echarts import build_bpa_data, draw_bpa_plot, draw_history_plot
 from .draw.osu_preview import draw_osu_preview, draw_full_osu_preview, render_preview
@@ -1930,8 +1931,9 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         times: str | None = None,
         duration: float | None = None,
         send_media: bool = True,
+        use_uploaded_replay: bool = False,
     ) -> str:
-        """分析 osu! 官网回放，返回重算判定数据，并按 send_media 发送回放图像/视频和摘要。
+        """分析官网或用户上传的回放，返回重算判定数据，并按 send_media 发送图像/视频和摘要。
 
         score_id 为新版成绩 ID 或 https://osu.ppy.sh/scores/<ID> 链接，无需绑定。
         不提供 score_id 时查询玩家；省略玩家使用绑定账号及默认模式，默认最近通过成绩。
@@ -1940,6 +1942,8 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
         显式指定 gif/mp4 默认从开头截取 10 秒。times 是首物件后的秒数或 preview，多个起点用 + 分隔；
         duration 大于 0 且不超过 30 秒，PNG 截取须同时提供 times 和 duration，MP4 仅支持一个起点。
         仅返回数据、不发图时设 send_media=false。目标成绩必须有可访问的回放。
+        用户要求分析刚上传的 .osr 时设 use_uploaded_replay=true，读取当前会话中该用户 10 分钟内
+        上传的文件；不要同时传 score_id、玩家、beatmap_id、mode、score_select 或 include_fails。
         """
         try:
             if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
@@ -1964,21 +1968,41 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
                     include_fails=include_fails,
                 )
             )
-            if query.score_id is None:
-                user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
-                query.user = str(user.user_id)
-                query.mode = get_server("osu").parse_mode(_resolve_mode(mode, user, "osu")).key
-            preview = await render_replay_with_core(
-                score_id=query.score_id,
-                user=query.user,
-                bid=query.bid,
-                mode=query.mode,
-                score_select=query.score_select,
-                include_fails=query.include_fails,
-                fmt=query.fmt,
-                times=query.times,
-                duration=query.duration,
-            )
+            if use_uploaded_replay:
+                if any(
+                    (
+                        score,
+                        _clean_optional_text(username),
+                        _clean_user_id(target_user_id),
+                        query.bid,
+                        query.mode,
+                        score_select,
+                        include_fails,
+                    )
+                ):
+                    raise ValueError("上传回放分析不能同时指定成绩、玩家、谱面、模式或成绩筛选条件")
+                bot, event = getattr(ctx, "bot", None), getattr(ctx, "event", None)
+                if bot is None or event is None:
+                    raise ValueError("当前上下文无法读取上传文件，请先发送 .osr 或使用 /ra 本地")
+                preview = await analyse_replay_upload(
+                    bot, event, ReplayUploadOptions(query.fmt, query.times, query.duration)
+                )
+            else:
+                if query.score_id is None:
+                    user = await _resolve_osu_user(ctx, username, "osu", target_user_id)
+                    query.user = str(user.user_id)
+                    query.mode = get_server("osu").parse_mode(_resolve_mode(mode, user, "osu")).key
+                preview = await render_replay_with_core(
+                    score_id=query.score_id,
+                    user=query.user,
+                    bid=query.bid,
+                    mode=query.mode,
+                    score_select=query.score_select,
+                    include_fails=query.include_fails,
+                    fmt=query.fmt,
+                    times=query.times,
+                    duration=query.duration,
+                )
             if getattr(ctx, "request_id", None) is not None and not await _is_context_request_active(ctx):
                 return json.dumps(
                     {"status": "expired", "message": "请求已过期，已取消发送回放分析。"}, ensure_ascii=False
@@ -2240,10 +2264,13 @@ def build_osu_agent_tools(ctx: AgentToolContext) -> AgentToolBundle:
             "工具会返回结构化评分数据（各玩家 rating/胜率/总分/MVP），可直接用于评价表现。",
             "- send_osu_preview: 用户想看谱面预览、preview、完整预览时使用。",
             "- send_osu_replay_analysis: 用户想分析回放、复盘最近一局、查看回放判定或生成回放片段时使用，"
-            "仅支持 osu! 官网。未指定成绩或谱面时默认分析绑定账号默认模式下最近一条已通过成绩；"
+            "在线成绩查询仅支持 osu! 官网，也可读取用户上传的本地回放。未指定成绩、谱面或上传来源时，"
+            "默认分析绑定账号默认模式下最近一条已通过成绩；"
             "只有用户要求包含失败时才设 include_fails=true。用户提供成绩 ID/链接时只传 score_id，"
             "不传玩家、模式或 best/recent；指定玩家和谱面时默认查询该图最高分。"
             "用户明确不要发图/视频时设 send_media=false。依据返回的 replay.state 判定和准确率分析，"
+            "用户说分析上传的 .osr/刚发的回放文件时设 use_uploaded_replay=true，只传格式和区间参数，"
+            "不要查询最近成绩代替上传文件，也不要要求绑定账号。"
             "结合 recorded-result-differences 说明重算与记录差异；不要编造数据中没有的具体失误段落、手法或 UR。"
             "工具已发送媒体后不要重复发图；只要回放图时成功后结束，要求评价时再依据结构化数据回复。",
             "- send_osu_background: 用户想提取谱面背景、bg/getbg、背景图时使用。",
