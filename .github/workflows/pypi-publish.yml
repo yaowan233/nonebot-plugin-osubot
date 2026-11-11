@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish or retry
+        required: true
+        type: string
 
 jobs:
   pypi-publish:
@@ -14,6 +20,8 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@master
+      with:
+        ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v7
       with:
@@ -23,10 +31,14 @@ jobs:
 
     - name: Get Version
       id: version
+      env:
+        INPUT_TAG: ${{ inputs.tag }}
       run: |
+        TAG_NAME="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+        git check-ref-format "refs/tags/$TAG_NAME"
         echo "VERSION=$(uv version --short)" >> $GITHUB_OUTPUT
-        echo "TAG_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-        echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        echo "TAG_VERSION=${TAG_NAME#v}" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
 
     - name: Check Version
       if: steps.version.outputs.VERSION != steps.version.outputs.TAG_VERSION
@@ -37,8 +49,11 @@ jobs:
 
     - name: Publish a Python distribution to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip-existing: true
 
     - name: Upload Release Asset
-      run: gh release upload --clobber ${{ steps.version.outputs.TAG_NAME }} dist/*.tar.gz dist/*.whl
+      run: gh release upload --clobber "$TAG_NAME" dist/*.tar.gz dist/*.whl
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG_NAME: ${{ steps.version.outputs.TAG_NAME }}
