@@ -18,6 +18,7 @@ from ..replay_uploads import (
     UPLOAD_LIMITS,
     get_replay_upload,
     replay_attachments,
+    claim_replay_attachments,
     analyse_replay_upload,
     store_replay_attachments,
 )
@@ -148,6 +149,10 @@ async def _replay_upload_command(bot: Bot, event: Event, arg: Message = CommandA
     files = [item for item in await replay_attachments(bot, event) if item.suffix in UPLOAD_LIMITS]
     if not local and not files:
         return
+    if files:
+        files = claim_replay_attachments(bot, event, files)
+        if not files:
+            await replay_analysis.finish()
     try:
         query = parse_replay_query(text[local.end() :] if local else text)
         options = upload_options(query)

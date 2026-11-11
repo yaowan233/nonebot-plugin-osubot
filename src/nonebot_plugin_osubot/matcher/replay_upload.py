@@ -12,6 +12,7 @@ from ..replay_uploads import (
     UPLOAD_LIMITS,
     ReplayUploadOptions,
     replay_attachments,
+    claim_replay_attachments,
     get_replay_upload,
     analyse_replay_upload,
     store_replay_attachments,
@@ -36,6 +37,9 @@ async def accept_replay_attachments(bot: Bot, event: Event, state: T_State) -> b
     if not files:
         return False
     if not any(item.suffix == ".osr" for item in files) and get_replay_upload(bot, event) is None:
+        return False
+    files = claim_replay_attachments(bot, event, files)
+    if not files:
         return False
     state["replay_attachments"] = files
     return True
