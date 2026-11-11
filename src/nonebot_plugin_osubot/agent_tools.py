@@ -901,25 +901,55 @@ async def _draw_preview(map_id: str, mode: str, mods: str, full: bool) -> tuple[
 
 def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
     """Use optional host skill support; old hosts keep the original bundle."""
-    if (AgentSkill is None or "tools" not in getattr(AgentSkill, "__dataclass_fields__", {})
-            or "defer_instructions" not in getattr(AgentToolBundle, "__dataclass_fields__", {})):
+    if (
+        AgentSkill is None
+        or "tools" not in getattr(AgentSkill, "__dataclass_fields__", {})
+        or "defer_instructions" not in getattr(AgentToolBundle, "__dataclass_fields__", {})
+    ):
         return bundle
     groups = (
         ("osu_help", "osu 命令、用法和缩写说明", ("get_osubot_command_help",)),
-        ("osu_player", "osu 玩家资料、主页和 pp/rank 历史", (
-            "send_osu_user_info", "send_osu_profile_url", "send_osu_history",
-        )),
-        ("osu_bp", "osu BP、最好成绩列表、筛选与 BP 分析", (
-            "send_osu_bp", "get_osu_bp_data", "get_osu_bp_range", "send_osu_bp_list", "send_osu_bp_analysis",
-        )),
-        ("osu_scores", "osu 最近成绩、单图成绩及按谱名查询成绩", (
-            "send_osu_recent_or_pr", "send_osu_score", "get_osu_scores_by_map_name",
-        )),
+        (
+            "osu_player",
+            "osu 玩家资料、主页和 pp/rank 历史",
+            (
+                "send_osu_user_info",
+                "send_osu_profile_url",
+                "send_osu_history",
+            ),
+        ),
+        (
+            "osu_bp",
+            "osu BP、最好成绩列表、筛选与 BP 分析",
+            (
+                "send_osu_bp",
+                "get_osu_bp_data",
+                "get_osu_bp_range",
+                "send_osu_bp_list",
+                "send_osu_bp_analysis",
+            ),
+        ),
+        (
+            "osu_scores",
+            "osu 最近成绩、单图成绩及按谱名查询成绩",
+            (
+                "send_osu_recent_or_pr",
+                "send_osu_score",
+                "get_osu_scores_by_map_name",
+            ),
+        ),
         ("osu_firsts", "osu 榜一及第一名成绩列表", ("send_osu_firsts",)),
-        ("osu_maps", "osu 谱面搜索、谱面信息、预览和背景图", (
-            "search_osu_beatmaps", "send_osu_preview", "send_osu_background", "send_osu_map_info",
-            "send_osu_beatmapset_info",
-        )),
+        (
+            "osu_maps",
+            "osu 谱面搜索、谱面信息、预览和背景图",
+            (
+                "search_osu_beatmaps",
+                "send_osu_preview",
+                "send_osu_background",
+                "send_osu_map_info",
+                "send_osu_beatmapset_info",
+            ),
+        ),
         ("osu_recommend", "osu 推荐谱面及推荐筛选", ("send_osu_recommend",)),
         ("osu_matches", "osu 多人房、对局历史及 match rating", ("send_osu_match_history", "send_osu_match_rating")),
         ("osu_replay", "osu 回放分析、复盘、判定和回放视频", ("send_osu_replay_analysis",)),
@@ -934,8 +964,13 @@ def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
         return bundle
     instructions = list(bundle.instructions)
     shared_markers = (
-        "当前请求的发言用户 ID", "未指定玩家", "用户想查被 @", "用户明确给出群友",
-        "未指定模式", "分析/评价类请求", "include_image_for_analysis",
+        "当前请求的发言用户 ID",
+        "未指定玩家",
+        "用户想查被 @",
+        "用户明确给出群友",
+        "未指定模式",
+        "分析/评价类请求",
+        "include_image_for_analysis",
     )
     shared = [line for line in instructions if any(marker in line for marker in shared_markers)]
     skills = []
@@ -944,8 +979,7 @@ def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
         if not present:
             continue
         patterns = [
-            re.compile(r"(?<![a-zA-Z0-9_])" + re.escape(tool_name) + r"(?![a-zA-Z0-9_])")
-            for tool_name in present
+            re.compile(r"(?<![a-zA-Z0-9_])" + re.escape(tool_name) + r"(?![a-zA-Z0-9_])") for tool_name in present
         ]
         selected = [line for line in instructions if any(pattern.search(line) for pattern in patterns)]
         if name in {"osu_bp", "osu_firsts"}:
@@ -954,9 +988,14 @@ def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
         if name == "osu_help":
             selected += [line for line in instructions if "区分教学和执行" in line]
         prompt = "\n".join(dict.fromkeys([*shared, *selected]))
-        skills.append(AgentSkill(
-            name=name, description=description, prompt=prompt, tools=[by_name[item] for item in present],
-        ))
+        skills.append(
+            AgentSkill(
+                name=name,
+                description=description,
+                prompt=prompt,
+                tools=[by_name[item] for item in present],
+            )
+        )
     return replace(bundle, skills=skills, defer_instructions=True)
 
 

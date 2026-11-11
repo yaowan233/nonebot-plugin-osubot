@@ -51,8 +51,12 @@ def test_missing_optional_replay_tool_keeps_other_tools_deferred():
     if "tools" not in getattr(agent_tools.AgentSkill, "__dataclass_fields__", {}):
         pytest.skip("host does not support deferred skill tools")
     bundle = agent_tools.build_osu_agent_tools(SimpleNamespace(user_id="123"))
-    legacy = replace(bundle, tools=[t for t in bundle.tools if t.name != "send_osu_replay_analysis"],
-                     skills=[], defer_instructions=False)
+    legacy = replace(
+        bundle,
+        tools=[t for t in bundle.tools if t.name != "send_osu_replay_analysis"],
+        skills=[],
+        defer_instructions=False,
+    )
     result = agent_tools._defer_osu_tools(legacy)
     assert result.defer_instructions
     assert "osu_replay" not in {skill.name for skill in result.skills}
@@ -65,8 +69,9 @@ def test_unrecognized_tool_keeps_original_bundle():
     from nonebot_plugin_osubot import agent_tools
 
     bundle = agent_tools.build_osu_agent_tools(SimpleNamespace(user_id="123"))
-    original = replace(bundle, tools=[*bundle.tools, SimpleNamespace(name="future_osu_tool")],
-                       skills=[], defer_instructions=False)
+    original = replace(
+        bundle, tools=[*bundle.tools, SimpleNamespace(name="future_osu_tool")], skills=[], defer_instructions=False
+    )
     assert agent_tools._defer_osu_tools(original) is original
 
 
@@ -91,8 +96,9 @@ async def test_real_osu_registration_is_deferred_in_chat_graph(monkeypatch):
         return object()
 
     monkeypatch.setattr(agent, "build_chat_graph", build)
-    await agent.create_chat_graph(SimpleNamespace(commit=AsyncMock()), "group", None, "123", "User", history=[],
-                                  group_members=[])  # pyright: ignore[reportArgumentType]
+    await agent.create_chat_graph(
+        SimpleNamespace(commit=AsyncMock()), "group", None, "123", "User", history=[], group_members=[]
+    )  # pyright: ignore[reportArgumentType]
     visible = {tool.name for tool in captured["base_tools"]}
     all_tools = {tool.name for tool in captured["tools"]}
     assert "send_osu_bp" not in visible
@@ -107,8 +113,9 @@ async def test_real_osu_registration_is_deferred_in_chat_graph(monkeypatch):
     lazy_count = len(visible)
     monkeypatch.setattr(agent_tools, "AgentSkill", None)
     captured.clear()
-    await agent.create_chat_graph(SimpleNamespace(commit=AsyncMock()), "group", None, "123", "User", history=[],
-                                  group_members=[])  # pyright: ignore[reportArgumentType]
+    await agent.create_chat_graph(
+        SimpleNamespace(commit=AsyncMock()), "group", None, "123", "User", history=[], group_members=[]
+    )  # pyright: ignore[reportArgumentType]
     legacy_visible = {tool.name for tool in captured["base_tools"]}
     assert "send_osu_bp" in legacy_visible
     assert len(legacy_visible) - lazy_count == 23
