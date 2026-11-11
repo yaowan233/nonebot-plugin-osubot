@@ -43,6 +43,33 @@ def test_osu_tools_fall_back_for_older_host(monkeypatch):
     assert list(bundle.instructions)
 
 
+def test_missing_optional_replay_tool_keeps_other_tools_deferred():
+    from dataclasses import replace
+
+    from nonebot_plugin_osubot import agent_tools
+
+    if "tools" not in getattr(agent_tools.AgentSkill, "__dataclass_fields__", {}):
+        pytest.skip("host does not support deferred skill tools")
+    bundle = agent_tools.build_osu_agent_tools(SimpleNamespace(user_id="123"))
+    legacy = replace(bundle, tools=[t for t in bundle.tools if t.name != "send_osu_replay_analysis"],
+                     skills=[], defer_instructions=False)
+    result = agent_tools._defer_osu_tools(legacy)
+    assert result.defer_instructions
+    assert "osu_replay" not in {skill.name for skill in result.skills}
+    assert {tool.name for skill in result.skills for tool in skill.tools} == {tool.name for tool in legacy.tools}
+
+
+def test_unrecognized_tool_keeps_original_bundle():
+    from dataclasses import replace
+
+    from nonebot_plugin_osubot import agent_tools
+
+    bundle = agent_tools.build_osu_agent_tools(SimpleNamespace(user_id="123"))
+    original = replace(bundle, tools=[*bundle.tools, SimpleNamespace(name="future_osu_tool")],
+                       skills=[], defer_instructions=False)
+    assert agent_tools._defer_osu_tools(original) is original
+
+
 @pytest.mark.asyncio
 async def test_real_osu_registration_is_deferred_in_chat_graph(monkeypatch):
     from unittest.mock import AsyncMock

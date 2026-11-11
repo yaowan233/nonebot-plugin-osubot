@@ -928,7 +928,9 @@ def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
     tools = list(bundle.tools)
     by_name = {item.name: item for item in tools}
     grouped_names = {name for _, _, names in groups for name in names}
-    if grouped_names != set(by_name):
+    # A host may run an older osubot without every optional capability. Keep
+    # unknown or duplicate tools on the existing safe fallback path.
+    if not set(by_name).issubset(grouped_names) or len(by_name) != len(tools):
         return bundle
     instructions = list(bundle.instructions)
     shared_markers = (
@@ -938,9 +940,12 @@ def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
     shared = [line for line in instructions if any(marker in line for marker in shared_markers)]
     skills = []
     for name, description, names in groups:
+        present = tuple(item for item in names if item in by_name)
+        if not present:
+            continue
         patterns = [
             re.compile(r"(?<![a-zA-Z0-9_])" + re.escape(tool_name) + r"(?![a-zA-Z0-9_])")
-            for tool_name in names
+            for tool_name in present
         ]
         selected = [line for line in instructions if any(pattern.search(line) for pattern in patterns)]
         if name in {"osu_bp", "osu_firsts"}:
@@ -950,7 +955,7 @@ def _defer_osu_tools(bundle: AgentToolBundle) -> AgentToolBundle:
             selected += [line for line in instructions if "区分教学和执行" in line]
         prompt = "\n".join(dict.fromkeys([*shared, *selected]))
         skills.append(AgentSkill(
-            name=name, description=description, prompt=prompt, tools=[by_name[item] for item in names],
+            name=name, description=description, prompt=prompt, tools=[by_name[item] for item in present],
         ))
     return replace(bundle, skills=skills, defer_instructions=True)
 
