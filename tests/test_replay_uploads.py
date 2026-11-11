@@ -250,9 +250,10 @@ async def test_one_group_upload_is_handled_once_across_notice_message_and_balanc
         user_id=2, group_id=3, message=Message(MessageSegment("file", {"name": "play.osr", "file_id": "file-id"}))
     )
     results = await asyncio.gather(
-        *(accept_replay_attachments(bot, event, {}) for bot, event in (
-            (u.bot, notice), (bot2, notice), (u.bot, message), (bot2, message)
-        ))
+        *(
+            accept_replay_attachments(bot, event, {})
+            for bot, event in ((u.bot, notice), (bot2, notice), (u.bot, message), (bot2, message))
+        )
     )
     assert sum(results) == 1
     session = u.module.get_replay_upload(u.bot, message, create=True)
