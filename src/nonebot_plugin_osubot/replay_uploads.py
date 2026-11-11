@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from tempfile import TemporaryDirectory
 
 from expiringdict import ExpiringDict
+from nonebot import get_plugin, get_plugin_config
 from nonebot.adapters import Bot, Event
 from nonebot_plugin_alconna import File, UniMessage
 
@@ -23,6 +24,17 @@ from .draw.core_preview import PreviewFormat
 UPLOAD_LIMITS = {".osr": 64 * 1024**2, ".osu": 16 * 1024**2, ".osz": 128 * 1024**2}
 UPLOAD_TTL = 600
 _uploads: ExpiringDict = ExpiringDict(max_len=16, max_age_seconds=UPLOAD_TTL)
+_recent_group_files: ExpiringDict = ExpiringDict(max_len=1024, max_age_seconds=30)
+
+
+def _shared_balancer_enabled() -> bool:
+    plugin = get_plugin("nonebot_plugin_bot_load_balancer")
+    if plugin is None:
+        return False
+    try:
+        return bool(get_plugin_config(plugin.module.Config).bot_load_balancer.enabled)
+    except (AttributeError, TypeError, ValueError):
+        return False
 
 
 @dataclass(frozen=True)
@@ -67,11 +79,32 @@ def replay_upload_key(bot: Bot, event: Event) -> tuple[str, ...]:
     user = event.get_user_id()
     if group := getattr(event, "group_id", None):
         conversation = f"group:{group}"
+        bot_id = "__balanced_pool__" if _shared_balancer_enabled() else str(bot.self_id)
     elif channel := getattr(event, "channel_id", None):
         conversation = f"channel:{getattr(event, 'guild_id', '')}:{channel}"
+        bot_id = str(bot.self_id)
     else:
         conversation = f"private:{user}"
-    return bot.adapter.get_name(), str(bot.self_id), conversation, user
+        bot_id = str(bot.self_id)
+    return bot.adapter.get_name(), bot_id, conversation, user
+
+
+def claim_replay_attachments(bot: Bot, event: Event, attachments: list[ReplayAttachment]) -> list[ReplayAttachment]:
+    """Claim duplicate OneBot group upload notices and messages as one event."""
+    if bot.adapter.get_name() != "OneBot V11" or not getattr(event, "group_id", None):
+        return attachments
+    session_key = replay_upload_key(bot, event)
+    unique = []
+    for attachment in attachments:
+        if not attachment.file_id:
+            unique.append(attachment)
+            continue
+        key = (*session_key, str(attachment.file_id))
+        if key in _recent_group_files:
+            continue
+        _recent_group_files[key] = True
+        unique.append(attachment)
+    return unique
 
 
 def get_replay_upload(bot: Bot, event: Event, *, create: bool = False) -> ReplayUploadSession | None:

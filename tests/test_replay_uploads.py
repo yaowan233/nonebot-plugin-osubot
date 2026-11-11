@@ -25,6 +25,8 @@ def uploads(monkeypatch):
 
     cache = ExpiringDict(max_len=16, max_age_seconds=600)
     monkeypatch.setattr(module, "_uploads", cache)
+    monkeypatch.setattr(module, "_recent_group_files", ExpiringDict(max_len=1024, max_age_seconds=30))
+    monkeypatch.setattr(module, "_shared_balancer_enabled", lambda: False)
     bot = SimpleNamespace(
         self_id="1",
         adapter=SimpleNamespace(get_name=lambda: "OneBot V11"),
@@ -227,6 +229,108 @@ async def test_file_rule_ignores_unrelated_notices_and_ordinary_resources(upload
     state = {}
     assert await accept_replay_attachments(u.bot, resource, state)
     assert state["replay_attachments"][0].name == "map.osu"
+
+
+async def test_one_group_upload_is_handled_once_across_notice_message_and_balanced_bots(uploads, monkeypatch):
+    from nonebot_plugin_osubot.matcher.replay_upload import accept_replay_attachments
+
+    u = uploads
+    monkeypatch.setattr(u.module, "_shared_balancer_enabled", lambda: True)
+    bot2 = SimpleNamespace(self_id="5", adapter=u.bot.adapter)
+    notice = GroupUploadNoticeEvent(
+        time=1,
+        self_id=1,
+        post_type="notice",
+        notice_type="group_upload",
+        user_id=2,
+        group_id=3,
+        file={"name": "play.osr", "id": "file-id", "size": 100, "busid": 102},
+    )
+    message = fake_group_message_event_v11(
+        user_id=2, group_id=3, message=Message(MessageSegment("file", {"name": "play.osr", "file_id": "file-id"}))
+    )
+    results = await asyncio.gather(
+        *(
+            accept_replay_attachments(bot, event, {})
+            for bot, event in ((u.bot, notice), (bot2, notice), (u.bot, message), (bot2, message))
+        )
+    )
+    assert sum(results) == 1
+    session = u.module.get_replay_upload(u.bot, message, create=True)
+    assert u.module.get_replay_upload(bot2, message) is session
+
+
+async def test_distinct_group_file_uploads_remain_independent(uploads, monkeypatch):
+    from nonebot_plugin_osubot.matcher.replay_upload import accept_replay_attachments
+
+    u = uploads
+    monkeypatch.setattr(u.module, "_shared_balancer_enabled", lambda: True)
+
+    def message(user=2, group=3, file_id="file-id"):
+        return fake_group_message_event_v11(
+            user_id=user,
+            group_id=group,
+            message=Message(MessageSegment("file", {"name": "play.osr", "file_id": file_id})),
+        )
+
+    assert await accept_replay_attachments(u.bot, message(), {})
+    assert not await accept_replay_attachments(u.bot, message(), {})
+    assert await accept_replay_attachments(u.bot, message(file_id="new-upload"), {})
+    assert await accept_replay_attachments(u.bot, message(user=4), {})
+    assert await accept_replay_attachments(u.bot, message(group=5), {})
+
+
+async def test_duplicate_upload_events_render_and_reply_only_once(uploads, monkeypatch):
+    from nonebot_plugin_osubot.matcher import replay_upload
+
+    u = uploads
+    monkeypatch.setattr(u.module, "_shared_balancer_enabled", lambda: True)
+    bot2 = SimpleNamespace(self_id="5", adapter=u.bot.adapter, call_api=u.bot.call_api)
+    notice = GroupUploadNoticeEvent(
+        time=1,
+        self_id=1,
+        post_type="notice",
+        notice_type="group_upload",
+        user_id=2,
+        group_id=3,
+        file={"name": "play.osr", "id": "file-id", "size": 100, "busid": 102},
+    )
+    message = fake_group_message_event_v11(
+        user_id=2, group_id=3, message=Message(MessageSegment("file", {"name": "play.osr", "file_id": "file-id"}))
+    )
+    _, osr, _ = map_and_replay()
+    send = AsyncMock()
+    monkeypatch.setattr(replay_upload.UniMessage, "send", send)
+
+    async def dispatch(bot, event):
+        state = {}
+        if await replay_upload.accept_replay_attachments(bot, event, state):
+            await replay_upload.receive_replay_attachments(bot, event, state)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200, content=osr))) as client:
+        monkeypatch.setattr(u.module.network_manager, "get_client", AsyncMock(return_value=client))
+        await asyncio.gather(*(dispatch(bot, event) for bot in (u.bot, bot2) for event in (notice, message)))
+
+    u.renderer.assert_awaited_once()
+    assert send.await_count == 2  # one acknowledgement and one result
+
+
+async def test_independent_bots_and_unidentified_files_are_not_combined(uploads):
+    from nonebot_plugin_osubot.matcher.replay_upload import accept_replay_attachments
+
+    u = uploads
+    bot2 = SimpleNamespace(self_id="5", adapter=u.bot.adapter)
+    message = fake_group_message_event_v11(
+        user_id=2, group_id=3, message=Message(MessageSegment("file", {"name": "play.osr", "file_id": "file-id"}))
+    )
+    assert await accept_replay_attachments(u.bot, message, {})
+    assert await accept_replay_attachments(bot2, message, {})
+    assert not await accept_replay_attachments(u.bot, message, {})
+    no_id = fake_group_message_event_v11(
+        user_id=2, group_id=3, message=Message(MessageSegment("file", {"name": "play.osr"}))
+    )
+    assert await accept_replay_attachments(u.bot, no_id, {})
+    assert await accept_replay_attachments(u.bot, no_id, {})
 
 
 @pytest.mark.parametrize("command", ["/ra 上传 +png", "/replay 上传 +gif"])
