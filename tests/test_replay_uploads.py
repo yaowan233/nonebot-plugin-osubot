@@ -399,7 +399,7 @@ async def test_actual_uploaded_file_event_dispatches_analysis(app, uploads, monk
                 event,
                 Message(
                     [
-                        MessageSegment.text("回放分析 · uploaded · Mania\n未知 · — · 准确率 — · 最大连击 0x\n"),
+                        MessageSegment.text("回放分析 · uploaded · Mania\n未知 · — · 准确率 — · 最大连击 —\n"),
                         MessageSegment.image(file="base64://" + base64.b64encode(b"png").decode()),
                     ]
                 ),
