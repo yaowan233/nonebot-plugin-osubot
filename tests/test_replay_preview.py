@@ -82,6 +82,26 @@ async def test_replay_adapter_passes_local_files_without_mod_overrides(monkeypat
     assert json.loads(kwargs["config"])["download"]["auth"]["OSU_CLIENT_ID"] == "42"
 
 
+@pytest.mark.parametrize("source", [{"osr_file": "play.osr"}, {"score_id": 123}, {"user": "player", "bid": 42}])
+async def test_replay_adapter_uses_installed_renderer_signature(monkeypatch, tmp_path, source):
+    import inspect
+
+    from osu_beatmap_preview import generate_replay_preview_async
+
+    from nonebot_plugin_osubot.draw import replay
+
+    output = tmp_path / "preview.png"
+    output.write_bytes(b"png")
+    signature = inspect.signature(generate_replay_preview_async)
+
+    async def render(*args, **kwargs):
+        signature.bind(*args, **kwargs)
+        return {"preview-img": str(output)}
+
+    monkeypatch.setattr(replay, "generate_replay_preview_async", render)
+    assert (await replay.render_replay_with_core(**source)).path == output
+
+
 @pytest.mark.parametrize("sources", [{}, {"osr_file": "play.osr", "score_id": 1}])
 async def test_replay_adapter_rejects_ambiguous_sources(sources):
     from nonebot_plugin_osubot.draw.replay import render_replay_with_core

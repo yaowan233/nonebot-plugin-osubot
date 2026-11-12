@@ -1,6 +1,6 @@
 [project]
 name = "nonebot_plugin_osubot"
-version = "7.10.0"
+version = "7.10.1"
 description = "OSUbot in NoneBot2"
 authors = [
     {name = "yaowan233", email = "572473053@qq.com"},
@@ -21,7 +21,7 @@ dependencies = [
     "nonebot-plugin-htmlrender[playwright]>=0.8.0,<0.9",
     "nonebot-plugin-waiter>=0.6.1",
     "osu-tools-py>=0.1.7",
-    "osu-beatmap-preview-py>=0.1.14,<0.2.0",
+    "osu-beatmap-preview-py>=0.1.15,<0.2.0",
     "rhythmgame-tools>=2.0.0",
     "nonebot-plugin-uninfo>=0.11.1",
     "resvg-py>=0.4.0",
