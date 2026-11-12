@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from dataclasses import dataclass
+from math import isfinite
 
 from osu_beatmap_preview import PreviewError, generate_replay_preview_async
 
@@ -64,6 +65,37 @@ async def render_replay_with_core(
         raise CorePreviewError(f"回放分析失败: {error}") from error
 
 
+def _replay_values(value: object) -> tuple[object | None, object | None]:
+    """Split the renderer's calculated/recorded pair, preserving missing values."""
+    if isinstance(value, str) and "/" in value:
+        calculated, recorded = value.split("/", 1)
+        return (calculated.strip() or None, recorded.strip() or None)
+    return value, None
+
+
+def _display_replay_value(value: object, *, suffix: str = "") -> str:
+    calculated, recorded = _replay_values(value)
+    if calculated not in (None, "", "-"):
+        return f"{calculated}{suffix}"
+    if recorded not in (None, "", "-"):
+        return f"{recorded}{suffix}（回放记录）"
+    return "—"
+
+
+def _display_replay_accuracy(value: object) -> str:
+    calculated, recorded = _replay_values(value)
+    for number, suffix in ((calculated, ""), (recorded, "（回放记录）")):
+        if number is None or isinstance(number, bool):
+            continue
+        try:
+            accuracy = float(number)
+        except (TypeError, ValueError):
+            continue
+        if isfinite(accuracy) and 0 <= accuracy <= 1:
+            return f"{accuracy * 100:.2f}%{suffix}"
+    return "—"
+
+
 def replay_summary(preview: ReplayPreview) -> str:
     info = preview.replay_info
     state = info.get("state") or {}
@@ -74,16 +106,27 @@ def replay_summary(preview: ReplayPreview) -> str:
     if title:
         lines.append(f"{title} [{metadata.get('version', '')}]")
     status = {"Completed": "已完成", "Failed": "未通过", "Playing": "播放中"}.get(state.get("status"), "未知")
-    accuracy = state.get("accuracy")
-    accuracy_text = f"{accuracy * 100:.2f}%" if isinstance(accuracy, (float, int)) else "—"
-    lines.append(
-        f"{status} · {state.get('rank') or '—'} · 准确率 {accuracy_text} · 最大连击 {state.get('max_combo', 0)}x"
-    )
+    accuracy_text = _display_replay_accuracy(state.get("accuracy"))
+    rank = _display_replay_value(state.get("rank"))
+    combo = _display_replay_value(state.get("max_combo"), suffix="x")
+    lines.append(f"{status} · {rank} · 准确率 {accuracy_text} · 最大连击 {combo}")
     statistics = state.get("statistics") or {}
     if statistics:
-        lines.append("判定：" + " / ".join(f"{name}: {count}" for name, count in statistics.items()))
+        pairs = {name: _replay_values(count) for name, count in statistics.items()}
+        lines.append("判定（重算）：" + " / ".join(f"{name}: {value[0]}" for name, value in pairs.items()))
+        if any(
+            recorded not in (None, "", "-") and str(calculated) != str(recorded)
+            for calculated, recorded in pairs.values()
+        ):
+            lines.append(
+                "判定（回放记录）："
+                + " / ".join(
+                    f"{name}: {recorded if recorded not in (None, '', '-') else '—'}"
+                    for name, (_, recorded) in pairs.items()
+                )
+            )
     if info.get("recorded-score") is not None:
         lines.append(f"回放记录分数：{info['recorded-score']:,}")
     if info.get("recorded-result-differences"):
-        lines.append("重算判定与回放记录存在差异，图中显示重算结果。")
+        lines.append("重算结果与回放记录存在差异，图中显示重算结果。")
     return "\n".join(lines)
