@@ -111,6 +111,79 @@ async def test_replay_adapter_rejects_ambiguous_sources(sources):
         await render_replay_with_core(**sources)
 
 
+def test_replay_summary_separates_calculated_and_recorded_results():
+    from nonebot_plugin_osubot.draw.replay import ReplayPreview, replay_summary
+
+    preview = ReplayPreview(
+        Path("preview.png"),
+        {
+            "player": "player",
+            "rulesetId": 3,
+            "state": {
+                "status": "Completed",
+                "rank": "S/-",
+                "accuracy": "0.9875/-",
+                "max_combo": "3135/3135",
+                "statistics": {"good": "9/9", "great": "620/657", "perfect": "2506/2469", "miss": "0/0"},
+            },
+            "recorded-score": 985773,
+            "recorded-result-differences": {"statistics": {"recorded": {"great": 657}}},
+        },
+        {},
+    )
+
+    summary = replay_summary(preview)
+    assert "已完成 · S · 准确率 98.75% · 最大连击 3135x" in summary
+    assert "判定（重算）：good: 9 / great: 620 / perfect: 2506 / miss: 0" in summary
+    assert "判定（回放记录）：good: 9 / great: 657 / perfect: 2469 / miss: 0" in summary
+    assert "回放记录分数：985,773" in summary
+
+
+def test_replay_summary_supports_numeric_fields_and_missing_recorded_values():
+    from nonebot_plugin_osubot.draw.replay import ReplayPreview, replay_summary
+
+    preview = ReplayPreview(
+        Path("preview.png"),
+        {"state": {"status": "Playing", "rank": "A/-", "accuracy": 0.95, "max_combo": 42, "statistics": {"great": 3}}},
+        {},
+    )
+    summary = replay_summary(preview)
+    assert "播放中 · A · 准确率 95.00% · 最大连击 42x" in summary
+    assert "判定（重算）：great: 3" in summary
+    assert "判定（回放记录）" not in summary
+
+
+def test_replay_summary_labels_recorded_only_fields():
+    from nonebot_plugin_osubot.draw.replay import ReplayPreview, replay_summary
+
+    preview = ReplayPreview(
+        Path("preview.png"),
+        {"state": {"rank": "-/S", "accuracy": "-/0.98", "max_combo": "-/42", "statistics": {"great": "2/-"}}},
+        {},
+    )
+    summary = replay_summary(preview)
+    assert "S（回放记录）" in summary
+    assert "准确率 98.00%（回放记录）" in summary
+    assert "最大连击 42x（回放记录）" in summary
+    assert "判定（回放记录）" not in summary
+
+
+def test_replay_summary_handles_score_only_difference():
+    from nonebot_plugin_osubot.draw.replay import ReplayPreview, replay_summary
+
+    preview = ReplayPreview(
+        Path("preview.png"),
+        {
+            "state": {"statistics": {"great": "1/1", "large_tick_miss": "0/-"}},
+            "recorded-result-differences": {"score": {"recorded": 5, "calculated": 6}},
+        },
+        {},
+    )
+    summary = replay_summary(preview)
+    assert "判定（回放记录）" not in summary
+    assert "重算结果与回放记录存在差异" in summary
+
+
 async def test_replay_adapter_reports_native_errors_and_missing_output(monkeypatch):
     from nonebot_plugin_osubot.draw import replay
 
@@ -190,7 +263,8 @@ async def test_native_replay_renders_all_rulesets_offline(tmp_path, mode, fmt):
     summary = replay_summary(result)
     assert "Offline player" in summary
     assert "Offline test [Test]" in summary
-    assert "准确率" in summary
+    assert "准确率 100.00%" in summary
+    assert "判定（重算）" in summary
 
 
 @pytest.mark.parametrize("fmt", ["png", "mp4"])
