@@ -27,7 +27,7 @@ from ..exceptions import NetworkError
 from ..database.models import UserData
 from ..api import safe_async_get, get_user_scores
 from ..file import map_path
-from ..draw.core_preview import render_with_core, read_core_output
+from ..draw.core_preview import guess_preview_options, render_with_core, read_core_output
 
 
 class GameType:
@@ -480,10 +480,11 @@ async def _(
 
     chart_games[session_id] = selected_score
     try:
+        fmt, mods = guess_preview_options(selected_score.mods, int(mode), want_gif)
         output = await render_with_core(
             selected_score.beatmap.id,
-            fmt="gif" if want_gif or mode == "0" else "png",
-            mods=[mod.acronym for mod in selected_score.mods],
+            fmt=fmt,
+            mods=mods,
             source_mode=int(selected_score.beatmap.mode),
             target_mode=int(mode),
         )

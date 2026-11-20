@@ -427,7 +427,8 @@ async def test_guess_chart_native_modes_and_commands(app: App, mode: int, comman
     game_name = "GIF" if want_gif else "谱面"
     score = make_mock_score()
     score.beatmap.mode = mode
-    score.mods = [MagicMock(acronym="HR")]
+    code = "MR" if mode == 3 else "HR"
+    score.mods = [MagicMock(acronym=code), MagicMock(acronym="BL"), MagicMock(acronym="CL")]
 
     with (
         patch(f"{MODULE}.chart_games", {}),
@@ -449,8 +450,26 @@ async def test_guess_chart_native_modes_and_commands(app: App, mode: int, comman
             )
             ctx.should_finished()
 
-        render.assert_awaited_once_with(score.beatmap.id, fmt=fmt, mods=["HR"], source_mode=mode, target_mode=mode)
+        render.assert_awaited_once_with(score.beatmap.id, fmt=fmt, mods=[code], source_mode=mode, target_mode=mode)
         timer.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("mode", "mods", "expected"),
+    [
+        (0, [("DA", {"approach_rate": 9.5, "drain_rate": 0}), ("SD", None), ("PF", None)], ("gif", ["DAAR9.5HP0"])),
+        (1, [("DT", {"speed_change": 1.2}), ("NC", None), ("NF", None)], ("gif", ["NC1.2"])),
+        (2, [("DC", {"speed_change": 0.6}), ("CL", None)], ("gif", ["DC0.6"])),
+        (3, [("HD", None), ("FI", None), ("FL", None), ("RD", None)], ("gif", ["HD"])),
+        (3, [("DA", {"overall_difficulty": 4}), ("RD", None)], ("png", [])),
+    ],
+)
+def test_guess_preview_options(mode, mods, expected):
+    from nonebot_plugin_osubot.draw.core_preview import guess_preview_options
+    from nonebot_plugin_osubot.schema.score import Mod
+
+    scores = [Mod(acronym=code, settings=settings) for code, settings in mods]
+    assert guess_preview_options(scores, mode, want_gif=False) == expected
 
 
 @pytest.mark.asyncio
