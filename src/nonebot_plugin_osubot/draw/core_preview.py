@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 from collections.abc import Sequence
@@ -15,6 +16,7 @@ from ..api import osu_api
 from ..file import ensure_osu_file
 from ..config import Config
 from ..exceptions import NetworkError
+from ..schema.score import Mod
 from .core_preview_recovery import recover_preview_download
 from .core_preview_settings import native_render_config
 
@@ -33,6 +35,21 @@ _CONVERT_MAP: dict[int, ConvertMode] = {
 }
 # GIF is a command marker; Classic is score metadata unsupported by the renderer.
 _IGNORED_PREVIEW_MODS = {"GI", "F", "GIF", "CL"}
+_RATE_MODS = {"DT", "NC", "HT", "DC"}
+# 猜歌按核心的 PNG/GIF 支持范围保留谱面效果，未知 Mod 不影响出题。
+_GUESS_PNG_MODS = (
+    {"EZ", "HR", "HD", "FL", "DA", "TC", "MR"},
+    {"EZ", "HR", "SW"},
+    {"EZ", "HR", "MR"},
+    {"DS", "IN", "HO", "MR", *(f"{keys}K" for keys in range(1, 11))},
+)
+_GUESS_GIF_MODS = (set(), {"HD", "FL", "CS"}, {"HD", "FL"}, {"HD", "FL", "FI", "CS"})
+_DA_SETTINGS = (
+    ("circle_size", "CS", 0),
+    ("approach_rate", "AR", -10),
+    ("overall_difficulty", "OD", 0),
+    ("drain_rate", "HP", 0),
+)
 _plugin_config = get_plugin_config(Config)
 _render_semaphore = asyncio.Semaphore(_plugin_config.osu_render_max_concurrency)
 
@@ -52,6 +69,63 @@ def mods_to_renderer(mods: Sequence[str] | None, fmt: PreviewFormat = "gif") -> 
     if fmt == "png":
         cleaned = [mod for mod in cleaned if mod not in {"dt", "ht"}]
     return "+".join(cleaned) or None
+
+
+def _mod_number(value: object, minimum: float, maximum: float) -> str:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not minimum <= value <= maximum:
+        return ""
+    return format(Decimal(str(value)), "f")
+
+
+def guess_preview_options(mods: Sequence[Mod], mode: int, want_gif: bool) -> tuple[PreviewFormat, list[str]]:
+    acronyms = {mod.acronym.upper() for mod in mods}
+    gif_only = _GUESS_GIF_MODS[mode] | _RATE_MODS
+    fmt: PreviewFormat = "gif" if want_gif or mode == 0 or acronyms & gif_only else "png"
+    supported = _GUESS_PNG_MODS[mode]
+    if fmt == "gif":
+        supported = supported | gif_only
+
+    tokens: dict[str, str] = {}
+    for mod in mods:
+        code = mod.acronym.upper()
+        if code not in supported:
+            continue
+        settings = mod.settings or {}
+        if code in _RATE_MODS:
+            # stable 成绩可能同时带 DT 和 NC，保留带变调效果的 NC。
+            if (code == "DT" and "NC" in acronyms) or (code == "HT" and "DC" in acronyms):
+                continue
+            if tokens.keys() & _RATE_MODS:
+                continue
+            minimum, maximum = (1.01, 2.0) if code in {"DT", "NC"} else (0.5, 0.99)
+            base = {"NC": "DT", "DC": "HT"}.get(code)
+            rate = settings.get("speed_change")
+            if rate is None and base in acronyms:
+                rate = next((item.settings or {}).get("speed_change") for item in mods if item.acronym.upper() == base)
+            tokens[code] = code + _mod_number(rate, minimum, maximum)
+        elif code == "DA":
+            params = []
+            for field, suffix, minimum in _DA_SETTINGS:
+                if value := _mod_number(settings.get(field), minimum, 11):
+                    params.append(suffix + value)
+            if params and not acronyms & {"EZ", "HR"}:
+                tokens[code] = code + "".join(params)
+        elif code == "MR" and mode == 0 and "HR" in acronyms:
+            continue
+        elif mode == 3 and (
+            code == "HO"
+            and "IN" in acronyms
+            or code == "FL"
+            and "HD" in acronyms
+            or code == "FI"
+            and acronyms & {"HD", "FL"}
+            or code.endswith("K")
+            and any(key.endswith("K") for key in tokens)
+        ):
+            continue
+        else:
+            tokens[code] = code
+    return fmt, list(tokens.values())
 
 
 async def preview_cache_enabled(beatmap_id: int | str) -> bool:
